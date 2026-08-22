@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: db_testing
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # pnpm 11 is required: pnpm-workspace.yaml uses the `allowBuilds` format
+      # (pnpm 11) to whitelist native build scripts (argon2, better-sqlite3).
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare test environment
+        run: |
+          cp .env.test .env
+          mkdir -p tmp
+
+      # Browser suite (tests/browser/**) uses Playwright/Chromium.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check (backend + frontend)
+        run: pnpm typecheck
+
+      # Migrations run automatically in the Japa test setup; Postgres + Redis
+      # come from the services above (.env.test points at localhost).
+      - name: Backend tests (unit + functional + browser)
+        run: pnpm test:e2e
+
+      - name: Frontend tests (Vitest)
+        run: pnpm test:ui
+
+      - name: Build
+        run: pnpm build

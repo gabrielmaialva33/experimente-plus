@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "outDir": "./build",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "rewriteRelativeImportExtensions": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "app/**/*.ts",
+    "config/**/*.ts",
+    "database/**/*.ts",
+    "start/**/*.ts",
+    "bin/**/*.ts",
+    "providers/**/*.ts",
+    "adonisrc.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", "build", "inertia", "tmp"]
+}
