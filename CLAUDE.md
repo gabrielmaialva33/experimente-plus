@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Product Context
+
+Experimente+ is a regional discovery platform initially intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities.
+
+`Sobral` is the name of a person involved with the project. It is not a city, tenant, product name, repository name, or codename. Never model it as geographic data.
+
+Product domains and the meaning of tenancy have not been finalized. Do not invent partner, catalog, booking, review, recommendation, or concierge architecture before the planning stage records those decisions.
+
 ## ⚠️ CRITICAL RULE: KEEP THE MODULAR STRUCTURE
 
 This project does **NOT** use the default AdonisJS layout (`app/controllers`, `app/models`, …).
@@ -200,7 +208,7 @@ and are being phased out — prefer the top-level `ui/` components for new work.
 
 - **ORM**: Lucid with snake_case naming strategy
 - **Migrations**: `database/migrations/` (includes `create_tenants_table`, `create_user_tenants_table`)
-- **Pre-1.0 migration policy**: this is an unreleased template, so unshipped schema changes belong in the original `create_*` migration. Recreate dev/test databases instead of adding compatibility alters. Add a new migration only for a genuinely new table/schema object. After the first stable release, migrations become append-only.
+- **Pre-1.0 migration policy**: this application has not published a stable schema, so unshipped schema changes belong in the original `create_*` migration. Recreate dev/test databases instead of adding compatibility alters. Add a new migration only for a genuinely new table/schema object. After the first stable release, migrations become append-only.
 - **Soft Deletes**: `User` uses an `is_deleted` flag; other domains must opt in explicitly
 - **Relationships**: heavy use of many-to-many (RBAC roles/permissions, user↔tenant)
 

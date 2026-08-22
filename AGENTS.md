@@ -1,5 +1,13 @@
 # Repository Guidelines
 
+## Product Context
+
+Experimente+ is a regional discovery platform initially intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities.
+
+`Sobral` is a person's name. It is not a city, tenant, repository name, product name, or codename. Do not model it as geographic data.
+
+The product domains have not been finalized. Do not assume what a tenant represents or introduce partner, catalog, booking, review, recommendation, or concierge architecture before those decisions are recorded during planning.
+
 ## Project Structure & Module Organization
 
 This is an AdonisJS 7, React 19, and Inertia application. Backend features live in `app/modules/<domain>/`; each domain owns its controllers, services, repositories, models, validators, and `routes.ts`. Put cross-cutting middleware, JWT support, the shared Lucid repository, and shared services in `app/shared/`, and typed errors in `app/exceptions/`.
@@ -21,7 +29,7 @@ Use Node 24 from `.nvmrc`. Copy `.env.example` to `.env` for local development; 
 
 ## Migration Policy Before 1.0
 
-This repository is still a pre-release template. Keep migrations optimized for a clean installation: when an unshipped table or constraint changes, update its original `create_*` migration and recreate the development/test database. Add a new migration only for a genuinely new table or other new schema object. After the first stable release, switch to append-only forward migrations and never rewrite published history.
+This application has not published a stable schema. Keep migrations optimized for a clean installation: when an unshipped table or constraint changes, update its original `create_*` migration and recreate the development/test database. Add a new migration only for a genuinely new table or other new schema object. After the first stable release, switch to append-only forward migrations and never rewrite published history.
 
 ## Coding Style & Naming Conventions
 

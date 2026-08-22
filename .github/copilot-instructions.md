@@ -1,117 +1,62 @@
-# Copilot Instructions for Adonis Web Kit
+# Copilot Instructions for Experimente+
 
-## 🚨 Critical Rule: Use AdonisJS Commands
+## Product context
 
-**NEVER manually create files.** Always use AdonisJS Ace commands:
+Experimente+ is a regional discovery platform initially intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities.
 
-- `node ace make:controller User` for controllers
-- `node ace make:model Post -m` for models with migrations
-- `node ace make:service users/CreateUser` for services
-- `node ace make:middleware Auth` for middleware
+`Sobral` is the name of a person involved with the project. It is not a city, tenant, product name, repository name, or codename. Do not model it as geographic data.
 
-## Architecture Overview
+Product domains have not been finalized yet. Do not invent city, partner, catalog, booking, review, or AI architecture before the planning stage records those decisions.
 
-This is an **AdonisJS v6 + React 19 + Inertia.js** monorepo with comprehensive RBAC system.
+## Architecture
 
-### Key Patterns
+This is an AdonisJS 7, React 19, and Inertia application organized by domain.
 
-**Service-Repository Pattern**: Business logic in `/app/services/` organized by domain (users/, roles/, permissions/). Repositories in `/app/repositories/` extend `LucidRepository` base class.
+Backend code belongs under `app/modules/<domain>/`. A domain owns its controllers, services, repositories, models, validators, interfaces, and `routes.ts`. Cross-cutting code belongs in `app/shared/`; typed exceptions belong in `app/exceptions/`.
 
-**Dependency Injection**: All services use `@inject()` decorator with constructor injection:
+Use these aliases:
 
-```typescript
-@inject()
-export default class CreateUserService {
-  constructor(private userRepository: UsersRepository) {}
-}
+- `#modules/*`
+- `#shared/*`
+- `#exceptions/*`
+- `#providers/*`
+- `#database/*`
+- `#tests/*`
+- `#start/*`
+- `#config/*`
+
+Never restore removed aliases such as `#controllers/*`, `#models/*`, or `#services/*`.
+
+## Adonis generators
+
+Run Ace through pnpm:
+
+```bash
+pnpm ace <command>
 ```
 
-**Domain Events**: Authentication actions emit events (`auth:login_succeeded`, `auth:user_registered`) handled by `AuthEventService` and logged via `AuthEventsProvider`.
+Adonis generators use the framework's default directory layout. After using `make:*`, move generated files into the owning `app/modules/<domain>/` directory and replace default imports with the aliases above. Copying a neighboring module is often safer.
 
-## Import Aliases (Always Use These)
+## Multi-tenancy
 
-Essential aliases defined in `package.json`:
+Tenant-scoped tables must have a non-null `tenant_id`. Protect their routes with tenant middleware and scope every read and write by `ctx.tenant.id`. Roles, permissions, and audit logs are global in the current foundation.
 
-- `#controllers/*` → `./app/controllers/*.js`
-- `#services/*` → `./app/services/*.js`
-- `#repositories/*` → `./app/repositories/*.js`
-- `#models/*` → `./app/models/*.js`
-- `#middleware/*` → `./app/middleware/*.js`
-- `#validators/*` → `./app/validators/*.js`
-- `#interfaces/*` → `./app/interfaces/*.js`
-- `#config/*` → `./config/*.js`
+Do not decide what a tenant represents for the Experimente+ product until the planning stage explicitly defines it.
 
-## Authentication System
+## Migrations before 1.0
 
-**Multi-Guard Setup**: JWT (default), API tokens, session, basic auth in `config/auth.ts`.
+The application has not published a stable schema. Fold changes to unpublished tables and constraints into their original `create_*` migration, then recreate disposable databases. Add a new migration only for a genuinely new table or schema object. After the first stable release, migrations become append-only.
 
-**Custom JWT Guard**: Located in `app/shared/jwt/` - handles token generation, verification, and cookie/header extraction.
+## Validation
 
-**Authentication Flow**:
+Use Node.js 24 and run:
 
-1. Sign-in → `SignInService` → `JwtAuthTokensService` → returns `{ access_token, refresh_token }`
-2. Auth middleware checks JWT via custom guard
-3. Events emitted for login attempts, successes, failures
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:e2e
+pnpm test:ui
+pnpm build
+```
 
-## Permission System
-
-**RBAC with Inheritance**: Users → Roles → Permissions with caching via Redis.
-
-**Key Middleware**:
-
-- `acl` - Role-based access: `middleware.acl({ role_slugs: [IRole.Slugs.ADMIN] })`
-- `permission` - Permission-based: `middleware.permission({ permissions: ['users.read'] })`
-- `ownership` - Resource ownership validation
-
-**Permission Checking**: Services use `PermissionRepository.checkUserPermission(userId, permission)` with Redis caching.
-
-## Data Layer
-
-**Base Repository**: All repositories extend `LucidRepository` with common CRUD operations, pagination, and soft deletes.
-
-**Model Patterns**:
-
-- Snake_case naming strategy
-- Soft deletes in User model
-- Extensive M:N relationships for RBAC
-- Metadata JSON columns for flexible storage
-
-## Testing Strategy
-
-**Two Test Suites** in `adonisrc.ts`:
-
-- Unit tests: `tests/unit/**/*.spec.ts` (2s timeout)
-- Functional tests: `tests/functional/**/*.spec.ts` (30s timeout)
-
-**Testing Patterns**: Each test wraps in `testUtils.db().withGlobalTransaction()` for isolation.
-
-## File Organization
-
-**Domain Modules**: `app/modules/<domain>/` owns its controllers, services, repositories, models, validators, interfaces, and routes.
-
-**Shared Infrastructure**: Cross-cutting middleware, JWT support, Lucid repository helpers, and ownership checks live under `app/shared/`.
-
-**Event-Driven**: Authentication events live in `app/modules/auth/events/auth_events.ts` with listeners registered by `providers/auth_events_provider.ts`.
-
-## Development Commands
-
-**Essential Commands**:
-
-- `pnpm dev` - Development with HMR
-- `pnpm ace migration:run` - Run migrations
-- `pnpm ace db:seed` - Seed the development database
-- `pnpm test` - Unit tests only
-- `pnpm test:e2e` - All tests
-
-**Production**:
-
-- `pnpm build` - Build for production
-- `pnpm start` - Production server
-
-## Frontend Integration
-
-**Inertia.js Bridge**: Controllers return `inertia.render('PageName', data)` to React components in `/inertia/pages/`.
-
-**Type Safety**: Shared TypeScript interfaces ensure end-to-end type safety between backend and frontend.
-
-**Auth Service**: Frontend uses `/inertia/services/auth_service.ts` for API authentication calls.
+Add regression coverage in the closest unit, functional, browser, or frontend suite whenever behavior changes.
