@@ -6,8 +6,8 @@ test.group('Basic API', () => {
 
     response.assertStatus(200)
     response.assertBodyContains({
-      name: 'adonis-web-kit',
-      version: '0.9.0',
+      name: 'experimente-plus',
+      version: '0.1.0',
     })
   })
 

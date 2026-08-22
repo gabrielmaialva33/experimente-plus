@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: Adonis Web Kit API
-  version: 0.9.0
+  title: Experimente+ API
+  version: 0.1.0
   description: |
-    ## Welcome to the Adonis Web Kit API
+    ## Experimente+ API
 
-    An AdonisJS 7 starter API with global RBAC, N:N tenant workspaces, file management, health checks, and a React/Inertia web application.
+    API da plataforma regional Experimente+, construída com AdonisJS 7, React e Inertia. Neste estágio inicial, o contrato documenta a fundação compartilhada de identidade, autorização, workspaces, arquivos e saúde da aplicação. Os domínios específicos do produto serão adicionados após o planejamento funcional.
 
-    ### Key Features
+    ### Foundation capabilities
 
     - **Access JWTs**: Short-lived signed bearer tokens for API requests
     - **Opaque Refresh Tokens**: Rotated on every use and persisted only as HMAC hashes
@@ -54,8 +54,7 @@ info:
     ```
 
   contact:
-    name: API Support
-    email: support@example.com
+    name: Experimente+ Engineering
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -63,8 +62,8 @@ info:
 servers:
   - url: http://127.0.0.1:3333
     description: Local development server
-  - url: https://api.yourdomain.com
-    description: Production server
+  - url: https://api.example.com
+    description: Production placeholder (replace when the public domain is defined)
 
 security:
   - bearerAuth: []
@@ -461,13 +460,13 @@ paths:
                 properties:
                   name:
                     type: string
-                    example: 'adonis-web-kit'
+                    example: 'experimente-plus'
                   description:
                     type: string
-                    example: 'Full-stack AdonisJS 7 and React starter kit'
+                    example: 'Plataforma regional para descobrir lugares, experiências e negócios locais.'
                   version:
                     type: string
-                    example: '0.9.0'
+                    example: '0.1.0'
                   author:
                     type: string
                     example: 'Gabriel Maia'
