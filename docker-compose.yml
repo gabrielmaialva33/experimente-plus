@@ -1,24 +1,26 @@
-# Local containerized environment for the AdonisJS web kit.
-# - `docker compose up postgres redis mailpit` -> local infrastructure, app on the host
-# - `docker compose up --build`                -> full stack in containers
+# Local development environment for Experimente+.
+# - `docker compose up -d postgres redis mailpit` starts local infrastructure.
+# - `docker compose up --build` starts the complete stack.
 #
-# Generate a real APP_KEY once: `pnpm ace generate:key` (then export APP_KEY=...).
-name: adonis-web-kit
+# Host ports come from `.env`; container-to-container connections use the
+# standard internal ports declared in the `app` service below.
+name: experimente-plus
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: adonis_web_kit
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-experimente_plus}
     ports:
-      - '5432:5432'
+      - '${DB_PORT:-5435}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d adonis_web_kit']
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres} -d ${DB_DATABASE:-experimente_plus}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,13 +28,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ['redis-server', '--requirepass', 'redis']
+    command: ['redis-server', '--requirepass', '${REDIS_PASSWORD:-redis}']
     ports:
-      - '6379:6379'
+      - '${REDIS_PORT:-6381}:6379'
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', 'redis', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-redis}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,8 +43,8 @@ services:
     image: axllent/mailpit:v1.30.4
     restart: unless-stopped
     ports:
-      - '1025:1025'
-      - '8025:8025'
+      - '${SMTP_PORT:-1026}:1025'
+      - '${MAILPIT_UI_PORT:-8026}:8025'
 
   app:
     build:
@@ -57,28 +59,29 @@ services:
       mailpit:
         condition: service_started
     ports:
-      - '3333:3333'
+      - '${PORT:-3333}:3333'
     environment:
-      TZ: UTC
+      TZ: ${TZ:-UTC}
       NODE_ENV: production
       PORT: 3333
       HOST: 0.0.0.0
-      LOG_LEVEL: info
-      APP_NAME: ${APP_NAME:-Adonis Web Kit}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_LOCALE: ${APP_LOCALE:-pt}
+      APP_NAME: ${APP_NAME:-Experimente+}
       APP_URL: ${APP_URL:-http://localhost:3333}
-      APP_SOURCE_URL: ${APP_SOURCE_URL:-https://github.com/gabrielmaialva33/adonis-web-kit}
-      # Development placeholders only. Override every secret outside disposable environments.
+      APP_SOURCE_URL: ${APP_SOURCE_URL:-https://github.com/gabrielmaialva33/experimente-plus}
+      # Development fallbacks only. Override every secret outside disposable environments.
       APP_KEY: ${APP_KEY:-dev_app_key_change_me_32_chars_min}
       ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:-dev_access_token_secret_change_me}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-dev_refresh_token_secret_change_me}
       EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:-dev_email_verification_secret_change_me}
       PASSWORD_RESET_SECRET: ${PASSWORD_RESET_SECRET:-dev_password_reset_secret_change_me}
       PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-60}
-      JWT_ISSUER: ${JWT_ISSUER:-adonis-web-kit}
-      JWT_AUDIENCE: ${JWT_AUDIENCE:-adonis-web-kit}
-      JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-token}
-      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-adonis-web-kit-session}
-      REGISTRATION_WORKSPACE_MODE: ${REGISTRATION_WORKSPACE_MODE:-personal}
+      JWT_ISSUER: ${JWT_ISSUER:-experimente-plus}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-experimente-plus}
+      JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-experimente-plus-token}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-experimente-plus-session}
+      REGISTRATION_WORKSPACE_MODE: ${REGISTRATION_WORKSPACE_MODE:-none}
       DEMO_PAGES_ENABLED: 'false'
       SESSION_DRIVER: cookie
       LIMITER_STORE: redis
@@ -86,19 +89,19 @@ services:
       DB_CONNECTION: postgres
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_DATABASE: adonis_web_kit
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_DATABASE: ${DB_DATABASE:-experimente_plus}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis}
       REDIS_DB: 0
       QUEUE_REDIS_HOST: redis
       QUEUE_REDIS_PORT: 6379
-      QUEUE_REDIS_PASSWORD: redis
+      QUEUE_REDIS_PASSWORD: ${REDIS_PASSWORD:-redis}
       MAIL_MAILER: smtp
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@example.com}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Adonis Web Kit}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Experimente+}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
 

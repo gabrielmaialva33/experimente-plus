@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # Multi-stage image to run the AdonisJS v7 app in a container (local/dev infra).
-# Build: `docker compose build` (or `docker build -t adonis-web-kit .`).
+# Build: `docker compose build` (or `docker build -t experimente-plus .`).
 #
 ARG NODE_VERSION=24.13.0
 

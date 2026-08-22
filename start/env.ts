@@ -16,6 +16,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   PORT: Env.schema.number(),
   HOST: Env.schema.string({ format: 'host' }),
   LOG_LEVEL: Env.schema.string(),
+  APP_LOCALE: Env.schema.enum.optional(['en', 'pt'] as const),
 
   APP_NAME: Env.schema.string.optional(),
   APP_URL: Env.schema.string.optional(),
@@ -32,6 +33,12 @@ export default await Env.create(new URL('../', import.meta.url), {
   SESSION_COOKIE_NAME: Env.schema.string.optional(),
   REGISTRATION_WORKSPACE_MODE: Env.schema.enum.optional(['none', 'personal'] as const),
   DEMO_PAGES_ENABLED: Env.schema.boolean.optional(),
+
+  DEV_ADMIN_NAME: Env.schema.string.optional(),
+  DEV_ADMIN_USERNAME: Env.schema.string.optional(),
+  DEV_ADMIN_EMAIL: Env.schema.string.optional(),
+  DEV_ADMIN_PASSWORD: Env.schema.string.optional(),
+  DEV_WORKSPACE_NAME: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------

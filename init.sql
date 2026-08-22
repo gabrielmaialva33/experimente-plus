@@ -1,13 +1,4 @@
-CREATE
-  DATABASE db;
-CREATE
-  DATABASE db_development;
-CREATE
-  DATABASE db_testing;
+CREATE DATABASE experimente_plus_test;
 
-GRANT ALL PRIVILEGES ON DATABASE
-  db TO postgres;
-GRANT ALL PRIVILEGES ON DATABASE
-  db_development TO postgres;
-GRANT ALL PRIVILEGES ON DATABASE
-  db_testing TO postgres;
+GRANT ALL PRIVILEGES ON DATABASE experimente_plus TO postgres;
+GRANT ALL PRIVILEGES ON DATABASE experimente_plus_test TO postgres;

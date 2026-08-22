@@ -1,8 +1,10 @@
 import app from '@adonisjs/core/services/app'
 import { defineConfig, formatters, loaders } from '@adonisjs/i18n'
 
+import env from '#start/env'
+
 const i18nConfig = defineConfig({
-  defaultLocale: 'en',
+  defaultLocale: env.get('APP_LOCALE', 'pt'),
   formatter: formatters.icu(),
 
   loaders: [

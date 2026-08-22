@@ -12,7 +12,7 @@ const loggerConfig = defineConfig({
   loggers: {
     app: {
       enabled: true,
-      name: env.get('APP_NAME', 'Adonis Web Kit'),
+      name: env.get('APP_NAME', 'Experimente+'),
       level: env.get('LOG_LEVEL'),
       transport: {
         targets: targets()
