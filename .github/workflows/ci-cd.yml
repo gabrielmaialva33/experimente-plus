@@ -9,6 +9,12 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      DB_PORT: 5432
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ''
+      QUEUE_REDIS_PORT: 6379
+      QUEUE_REDIS_PASSWORD: ''
 
     services:
       postgres:
@@ -16,7 +22,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: db_testing
+          POSTGRES_DB: experimente_plus_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
