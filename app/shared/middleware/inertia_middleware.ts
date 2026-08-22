@@ -27,7 +27,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
 
     return {
       app: {
-        name: env.get('APP_NAME', 'Adonis Web Kit'),
+        name: env.get('APP_NAME', 'Experimente+'),
         url: env.get('APP_URL', `http://${env.get('HOST')}:${env.get('PORT')}`),
         sourceUrl: env.get('APP_SOURCE_URL') ?? null,
         environment,

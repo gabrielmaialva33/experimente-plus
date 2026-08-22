@@ -7,7 +7,7 @@ import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 import { ThemeProvider } from '~/providers/theme_provider'
 import { QueryProvider } from '~/providers/query_provider'
 
-const appName = import.meta.env.VITE_APP_NAME || 'AdonisJS'
+const appName = import.meta.env.VITE_APP_NAME || 'Experimente+'
 
 createInertiaApp({
   progress: { color: '#5468FF' },
