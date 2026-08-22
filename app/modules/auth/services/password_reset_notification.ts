@@ -5,7 +5,7 @@ import type User from '#modules/users/models/user'
 import env from '#start/env'
 
 export default class PasswordResetNotification extends BaseMail {
-  subject = 'Reset your password'
+  subject = 'Redefina sua senha'
 
   constructor(
     private user: User,
@@ -20,7 +20,7 @@ export default class PasswordResetNotification extends BaseMail {
   }
 
   prepare() {
-    const appName = env.get('MAIL_FROM_NAME', env.get('APP_NAME', 'Adonis Web Kit'))
+    const appName = env.get('MAIL_FROM_NAME', env.get('APP_NAME', 'Experimente+'))
     const resetUrl = `${env.get('APP_URL', 'http://localhost:3333')}/reset-password?token=${encodeURIComponent(this.token)}`
     const expiresInMinutes = Math.max(1, Math.ceil(this.expiresAt.diffNow('minutes').minutes))
 
@@ -29,34 +29,36 @@ export default class PasswordResetNotification extends BaseMail {
 
     if (env.get('NODE_ENV') === 'test') {
       this.message.html(`
-        <h1>Reset your password</h1>
-        <p>Hi ${this.user.full_name},</p>
-        <p>Use the link below to choose a new password:</p>
-        <p><a href="${resetUrl}">Reset password</a></p>
-        <p>This link expires in ${expiresInMinutes} minutes.</p>
+        <h1>Redefina sua senha</h1>
+        <p>Olá, ${this.user.full_name}.</p>
+        <p>Use o link abaixo para escolher uma nova senha:</p>
+        <p><a href="${resetUrl}">Redefinir senha</a></p>
+        <p>Este link expira em ${expiresInMinutes} minutos.</p>
       `)
-      this.message.text(`
-        Hi ${this.user.full_name},
-
-        Reset your password using this URL:
-        ${resetUrl}
-
-        This link expires in ${expiresInMinutes} minutes.
-      `)
-      return
+    } else {
+      this.message.htmlView('emails/password_reset_html', {
+        user: this.user,
+        resetUrl,
+        appName,
+        expiresInMinutes,
+      })
     }
 
-    this.message.htmlView('emails/password_reset_html', {
-      user: this.user,
-      resetUrl,
-      appName,
-      expiresInMinutes,
-    })
-    this.message.textView('emails/password_reset_text', {
-      user: this.user,
-      resetUrl,
-      appName,
-      expiresInMinutes,
-    })
+    this.message.text(`
+      Redefina sua senha
+
+      Olá, ${this.user.full_name}.
+
+      Recebemos uma solicitação para redefinir a senha da sua conta no ${appName}.
+
+      Abra o endereço abaixo para escolher uma nova senha:
+      ${resetUrl}
+
+      O link expira em ${expiresInMinutes} minutos e pode ser utilizado apenas uma vez.
+
+      Se você não solicitou a alteração, ignore esta mensagem.
+
+      Equipe ${appName}
+    `)
   }
 }
