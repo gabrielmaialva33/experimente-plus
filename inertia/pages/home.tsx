@@ -6,19 +6,20 @@ import { useApp } from '~/hooks/use_app'
 
 const highlights = [
   {
-    title: 'Descobrir',
-    description: 'Encontrar lugares, experiências e negócios locais que merecem ser conhecidos.',
+    title: 'Comer e beber',
+    description: 'Descobrir restaurantes, bares, cafés e outras experiências gastronômicas.',
+    icon: Store,
+  },
+  {
+    title: 'Viver a cidade',
+    description:
+      'Encontrar cinemas, cultura, lazer, bem-estar e serviços que fazem parte da rotina.',
     icon: Compass,
   },
   {
-    title: 'Planejar',
-    description: 'Organizar passeios e roteiros com informações confiáveis sobre cada destino.',
+    title: 'Explorar a região',
+    description: 'Navegar por diferentes cidades e categorias em uma experiência única e simples.',
     icon: Route,
-  },
-  {
-    title: 'Fortalecer a região',
-    description: 'Aproximar pessoas e parceiros locais em uma experiência digital simples.',
-    icon: Store,
   },
 ]
 
@@ -66,16 +67,16 @@ export default function Home() {
             <div>
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1 text-sm text-muted-foreground">
                 <MapPinned className="size-4 text-primary" />
-                Produto regional em construção
+                Guia regional multicidade e multicategoria
               </div>
 
               <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
-                Descubra lugares e experiências que valem a visita.
+                Descubra o melhor de cada cidade, em todas as categorias.
               </h1>
               <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground">
-                O {application.name} está sendo preparado para conectar pessoas, experiências e
-                negócios locais no norte do Paraná, entre Cornélio Procópio, Londrina e municípios
-                próximos.
+                Restaurantes, bares e cafés são o ponto de partida. O {application.name} também
+                nasce preparado para reunir cinemas, estúdios de tatuagem, lazer e outros serviços
+                locais em cidades entre Cornélio Procópio, Londrina e municípios próximos.
               </p>
 
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -94,17 +95,18 @@ export default function Home() {
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-              <p className="text-sm font-medium text-primary">Estado do projeto</p>
-              <h2 className="mt-2 text-2xl font-semibold">Fundação técnica pronta</h2>
+              <p className="text-sm font-medium text-primary">EP-01 concluído</p>
+              <h2 className="mt-2 text-2xl font-semibold">Geografia e taxonomia implementadas</h2>
               <p className="mt-3 leading-7 text-muted-foreground">
-                Autenticação, segurança, permissões, workspaces, arquivos, testes e infraestrutura
-                já estão configurados. A próxima etapa será definir o produto e seus domínios.
+                Regiões, cidades, famílias, categorias e atributos já possuem schema, APIs, catálogo
+                público e regressões de isolamento. O próximo corte conecta usuários a organizações
+                e prepara a propriedade das futuras unidades.
               </p>
               <div className="mt-6 h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-1/4 rounded-full bg-primary" />
+                <div className="h-full w-1/2 rounded-full bg-primary" />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Setup concluído · planejamento a seguir
+                Fundação, produto, arquitetura e EP-01 validados · EP-02 a seguir
               </p>
             </div>
           </div>
