@@ -1,7 +1,7 @@
 {
   "name": "experimente-plus",
   "version": "0.1.0",
-  "description": "Plataforma regional para descobrir lugares, experiências e negócios locais.",
+  "description": "Plataforma regional multicidade e multicategoria para descobrir gastronomia, lazer e serviços locais.",
   "private": true,
   "type": "module",
   "license": "MIT",

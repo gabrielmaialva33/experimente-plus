@@ -2,11 +2,15 @@
 
 ## Product Context
 
-Experimente+ is a regional discovery platform initially intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities.
+Experimente+ is a multi-city, multi-category regional discovery platform initially intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities.
+
+Tour Londrina is a product-experience reference, not an implementation contract. Experimente+ must not be reduced to restaurants or to a voucher model. Restaurants, bars, and cafés are the primary categories, but the product must remain extensible to cinemas, tattoo studios, leisure, culture, wellness, and other local services.
 
 `Sobral` is a person's name. It is not a city, tenant, repository name, product name, or codename. Do not model it as geographic data.
 
-The product domains have not been finalized. Do not assume what a tenant represents or introduce partner, catalog, booking, review, recommendation, or concierge architecture before those decisions are recorded during planning.
+City and category are core discovery dimensions. A city is not a tenant: tenant represents an isolated platform operation, while organizations may own multiple public establishments across multiple cities. Public discovery must not require tenant membership. Monetization, benefit rules, review policies, and later AI behavior remain staged product decisions documented under `docs/product/`.
+
+Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content is versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role. EP-01 — Geography and Taxonomy is implemented; EP-02 — Organizations and memberships is the next implementation milestone.
 
 ## Project Structure & Module Organization
 

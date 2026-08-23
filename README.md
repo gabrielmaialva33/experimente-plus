@@ -1,14 +1,37 @@
 # Experimente+
 
-Plataforma regional para descobrir lugares, experiências e negócios locais.
+Guia regional multicidade e multicategoria para descobrir gastronomia, lazer e serviços locais.
 
 [Português](README.md) · [English](README.en.md)
 
 ## Estado do projeto
 
-O repositório foi criado a partir do template interno e já está configurado como uma aplicação independente. A fundação técnica está pronta; a próxima etapa será o planejamento funcional e a definição dos domínios do produto.
+O repositório foi criado a partir do template interno e já está configurado como uma aplicação independente. A fundação técnica, o planejamento inicial, os ADRs do EP-00 e o EP-01 de Geografia e Taxonomia estão concluídos; as próximas etapas são validar as hipóteses locais e implementar EP-02 — Organizações e memberships.
 
-O lançamento inicial será pensado para o norte do Paraná, na região de Cornélio Procópio, Londrina e municípios próximos. Nenhuma cidade foi transformada em tenant ou domínio definitivo nesta etapa de setup.
+O lançamento inicial será pensado para o norte do Paraná, na região de Cornélio Procópio, Londrina e municípios próximos. Cidade é uma dimensão de descoberta; tenant representa uma operação isolada da plataforma.
+
+## Direção do produto
+
+O Tour Londrina é uma referência de experiência para descoberta de estabelecimentos locais, mas não um contrato funcional a ser copiado. O Experimente+ amplia esse conceito em duas dimensões:
+
+- **múltiplas cidades**, começando pela região de Cornélio Procópio, Londrina e municípios próximos;
+- **múltiplas categorias**, com restaurantes, bares e cafés como núcleo, além de possibilidades como cinemas, estúdios de tatuagem, lazer, cultura, bem-estar e outros serviços locais.
+
+O produto deverá permitir descoberta por cidade e categoria, sem ficar limitado ao setor gastronômico. Cidade não é tenant: tenant representa uma operação isolada da plataforma. Benefícios, vouchers, assinatura, avaliações e monetização permanecem evoluções planejadas; reservas internas estão fora do produto inicial.
+
+## Planejamento de produto
+
+O plano canônico está em [`docs/product/`](docs/product/README.md), e os contratos técnicos aceitos estão em [`docs/architecture/decisions/`](docs/architecture/decisions/README.md). O conjunto cobre:
+
+- visão e modelo de negócio;
+- atores e jornadas;
+- MVP, métricas e roadmap;
+- modelo de cidades, organizações e unidades;
+- mapa de domínios;
+- decisões aceitas e questões abertas;
+- referências de mercado.
+
+Nenhuma migration de negócio deve ser criada antes de a decisão correspondente estar registrada no planejamento e, quando estrutural, em um ADR aceito.
 
 ## Fundação técnica
 
@@ -19,7 +42,9 @@ O lançamento inicial será pensado para o norte do Paraná, na região de Corn�
 - JWTs de acesso e refresh tokens opacos com rotação
 - verificação de e-mail e recuperação de senha
 - RBAC global, permissões contextuais e ownership
-- workspaces N:N com tenant ativo
+- operações multi-tenant N:N com tenant ativo
+- regiões, cidades e catálogo geográfico público
+- taxonomia hierárquica com atributos tipados
 - upload e gerenciamento de arquivos
 - Mailpit para e-mails locais
 - Japa, Playwright, Vitest e Testing Library
@@ -34,6 +59,8 @@ database/               migrations, factories e seeders
 inertia/                páginas, layouts, componentes e hooks
 resources/              traduções, templates Edge e e-mails
 tests/                  testes unitários, funcionais e browser
+docs/product/           visão, MVP, roadmap e decisões de produto
+docs/architecture/      ADRs e contratos técnicos aceitos
 docs/                   OpenAPI, Redoc e requisições HTTP
 ```
 

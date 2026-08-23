@@ -1,14 +1,29 @@
 # Experimente+
 
-A regional platform for discovering places, experiences, and local businesses.
+A multi-city, multi-category regional guide for discovering food, leisure, and local services.
 
 [Português](README.md) · [English](README.en.md)
 
 ## Project status
 
-This repository was created from the internal template and is now configured as an independent application. The technical foundation is ready; functional planning and product-domain definition come next.
+This repository was created from the internal template and is now configured as an independent application. The technical foundation, initial product plan, EP-00 ADRs, and EP-01 Geography and Taxonomy implementation are complete; the next steps are local validation and EP-02 — Organizations and memberships.
 
-The initial launch is intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities. No city has been made a tenant or definitive domain during this setup stage.
+The initial launch is intended for northern Paraná, around Cornélio Procópio, Londrina, and nearby municipalities. City is a discovery dimension; tenant represents an isolated platform operation.
+
+## Product direction
+
+Tour Londrina is a product-experience reference for local discovery, not a functional contract to copy. Experimente+ broadens that idea in two directions:
+
+- **multiple cities**, initially around Cornélio Procópio, Londrina, and nearby municipalities;
+- **multiple categories**, with restaurants, bars, and cafés at the core, while remaining open to cinemas, tattoo studios, leisure, culture, wellness, and other local services.
+
+Discovery by city and category is part of the product direction. A city is not a tenant: tenant represents an isolated platform operation. Benefits, vouchers, subscriptions, reviews, and monetization remain staged evolutions; internal bookings are outside the initial product.
+
+## Product planning
+
+The canonical plan is stored under [`docs/product/`](docs/product/README.md), and accepted technical contracts live under [`docs/architecture/decisions/`](docs/architecture/decisions/README.md). Together they define the business vision, actors, journeys, MVP, roadmap, city/organization/establishment model, domain boundaries, accepted decisions, open questions, and market references.
+
+No product-domain migration should be introduced before its decision is recorded in the plan and, when structural, in an accepted ADR.
 
 ## Technical foundation
 
@@ -19,7 +34,9 @@ The initial launch is intended for northern Paraná, around Cornélio Procópio,
 - access JWTs and rotating opaque refresh tokens
 - email verification and password recovery
 - global RBAC, contextual permissions, and ownership
-- N:N workspaces with an active tenant
+- N:N multi-tenant operations with an active tenant
+- regions, cities, and public geography catalog
+- hierarchical taxonomy with typed attributes
 - file upload and management
 - Mailpit for local email testing
 - Japa, Playwright, Vitest, and Testing Library
