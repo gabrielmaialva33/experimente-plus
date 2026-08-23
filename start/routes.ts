@@ -19,6 +19,8 @@ import '#modules/roles/routes'
 import '#modules/permissions/routes'
 import '#modules/files/routes'
 import '#modules/tenants/routes'
+import '#modules/geography/routes'
+import '#modules/taxonomy/routes'
 import '#modules/health/routes'
 
 import '#modules/web/routes'
