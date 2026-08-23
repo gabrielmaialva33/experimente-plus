@@ -77,6 +77,384 @@ components:
       description: Short-lived access JWT. Opaque refresh tokens are never accepted here.
 
   schemas:
+    Region:
+      type: object
+      required: [id, tenant_id, name, slug, sort_order, is_active]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, 'null']
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        cities:
+          type: array
+          items:
+            $ref: '#/components/schemas/City'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    City:
+      type: object
+      required:
+        [
+          id,
+          tenant_id,
+          region_id,
+          name,
+          slug,
+          state_code,
+          country_code,
+          timezone,
+          sort_order,
+          is_active,
+        ]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        region_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        state_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        country_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        ibge_code:
+          type: [string, 'null']
+        timezone:
+          type: string
+          example: America/Sao_Paulo
+        latitude:
+          type: [number, 'null']
+          format: double
+        longitude:
+          type: [number, 'null']
+          format: double
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        region:
+          oneOf:
+            - $ref: '#/components/schemas/Region'
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CategoryFamily:
+      type: object
+      required: [id, tenant_id, name, slug, sort_order, is_active]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Category:
+      type: object
+      required: [id, tenant_id, family_id, name, slug, sort_order, is_active]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        family_id:
+          type: integer
+        parent_id:
+          type: [integer, 'null']
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        attribute_definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryAttributeDefinition'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CategoryAttributeDefinition:
+      type: object
+      required:
+        [
+          id,
+          tenant_id,
+          category_id,
+          key,
+          name,
+          data_type,
+          is_required,
+          is_filterable,
+          is_public,
+          applies_to_descendants,
+          sort_order,
+          is_active,
+        ]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        category_id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        data_type:
+          type: string
+          enum: [text, long_text, boolean, integer, decimal, single_select, multi_select, url]
+        unit:
+          type: [string, 'null']
+        validation_rules:
+          type: object
+          additionalProperties: true
+        is_required:
+          type: boolean
+        is_filterable:
+          type: boolean
+        is_public:
+          type: boolean
+        applies_to_descendants:
+          type: boolean
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryAttributeOption'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CategoryAttributeOption:
+      type: object
+      required: [id, tenant_id, attribute_definition_id, label, value, sort_order, is_active]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        attribute_definition_id:
+          type: integer
+        label:
+          type: string
+        value:
+          type: string
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRegionInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, 'null']
+        sort_order:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+
+    CreateCityInput:
+      type: object
+      required: [region_id, name, state_code, timezone]
+      properties:
+        region_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        state_code:
+          type: string
+        country_code:
+          type: string
+          default: BR
+        ibge_code:
+          type: [string, 'null']
+        timezone:
+          type: string
+          example: America/Sao_Paulo
+        latitude:
+          type: [number, 'null']
+        longitude:
+          type: [number, 'null']
+        sort_order:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+
+    CreateCategoryFamilyInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+        sort_order:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+
+    CreateCategoryInput:
+      type: object
+      required: [family_id, name]
+      properties:
+        family_id:
+          type: integer
+        parent_id:
+          type: [integer, 'null']
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+        sort_order:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+
+    CreateCategoryAttributeDefinitionInput:
+      type: object
+      required: [category_id, key, name, data_type]
+      properties:
+        category_id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        data_type:
+          type: string
+          enum: [text, long_text, boolean, integer, decimal, single_select, multi_select, url]
+        unit:
+          type: [string, 'null']
+        is_required:
+          type: boolean
+        is_filterable:
+          type: boolean
+        is_public:
+          type: boolean
+        applies_to_descendants:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+
+    CreateCategoryAttributeOptionInput:
+      type: object
+      required: [attribute_definition_id, label]
+      properties:
+        attribute_definition_id:
+          type: integer
+        label:
+          type: string
+        value:
+          type: string
+        sort_order:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+
     User:
       type: object
       properties:
@@ -442,6 +820,650 @@ tags:
     description: Permission management operations (admin only)
 
 paths:
+  /api/v1/catalog/regions:
+    get:
+      operationId: listPublicRegions
+      summary: List active public regions
+      tags: [Catalog]
+      security: []
+      responses:
+        '200':
+          description: Active regions with their active cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Region'
+        '404':
+          description: Public operation could not be resolved
+
+  /api/v1/catalog/cities:
+    get:
+      operationId: listPublicCities
+      summary: List active public cities
+      tags: [Catalog]
+      security: []
+      parameters:
+        - in: query
+          name: region_slug
+          schema:
+            type: string
+          description: Optional active region slug
+      responses:
+        '200':
+          description: Active cities for the resolved operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+        '404':
+          description: Public operation could not be resolved
+
+  /api/v1/catalog/cities/{citySlug}:
+    get:
+      operationId: getPublicCity
+      summary: Get an active public city by slug
+      tags: [Catalog]
+      security: []
+      parameters:
+        - in: path
+          name: citySlug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public city
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '404':
+          description: City or public operation not found
+
+  /api/v1/catalog/categories:
+    get:
+      operationId: listPublicTaxonomy
+      summary: List the active public taxonomy tree
+      tags: [Catalog]
+      security: []
+      responses:
+        '200':
+          description: Active category families, categories, attributes, and options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryFamily'
+        '404':
+          description: Public operation could not be resolved
+
+  /api/v1/admin/geography/regions:
+    get:
+      operationId: listRegions
+      summary: List regions in the active operation
+      tags: [Geography Admin]
+      parameters:
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Tenant-scoped regions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Region'
+        '401':
+          description: Authentication required
+        '403':
+          description: Insufficient permission or inaccessible operation
+    post:
+      operationId: createRegion
+      summary: Create a region in the active operation
+      tags: [Geography Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRegionInput'
+      responses:
+        '201':
+          description: Region created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Region'
+        '400':
+          description: Domain rule rejected the request
+        '401':
+          description: Authentication required
+        '403':
+          description: Insufficient permission
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/geography/regions/{id}:
+    get:
+      operationId: getRegion
+      summary: Get a region in the active operation
+      tags: [Geography Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Region
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Region'
+        '404':
+          description: Region not found
+    put:
+      operationId: updateRegion
+      summary: Update mutable region fields
+      tags: [Geography Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Any mutable subset of CreateRegionInput
+              additionalProperties: true
+      responses:
+        '200':
+          description: Region updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Region'
+        '400':
+          description: Domain rule rejected the request
+        '404':
+          description: Region not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/geography/cities:
+    get:
+      operationId: listCities
+      summary: List cities in the active operation
+      tags: [Geography Admin]
+      parameters:
+        - in: query
+          name: region_id
+          schema:
+            type: integer
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Tenant-scoped cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+    post:
+      operationId: createCity
+      summary: Create a city in the active operation
+      tags: [Geography Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCityInput'
+      responses:
+        '201':
+          description: City created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '400':
+          description: Invalid timezone, coordinates, region, or uniqueness rule
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/geography/cities/{id}:
+    get:
+      operationId: getCity
+      summary: Get a city in the active operation
+      tags: [Geography Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: City
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '404':
+          description: City not found
+    put:
+      operationId: updateCity
+      summary: Update mutable city fields
+      tags: [Geography Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Any mutable subset of CreateCityInput
+              additionalProperties: true
+      responses:
+        '200':
+          description: City updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '400':
+          description: Domain rule rejected the request
+        '404':
+          description: City not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/families:
+    get:
+      operationId: listCategoryFamilies
+      summary: List category families in the active operation
+      tags: [Taxonomy Admin]
+      responses:
+        '200':
+          description: Tenant-scoped category families
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryFamily'
+    post:
+      operationId: createCategoryFamily
+      summary: Create a category family
+      tags: [Taxonomy Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryFamilyInput'
+      responses:
+        '201':
+          description: Category family created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryFamily'
+        '400':
+          description: Slug or domain rule rejected the request
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/families/{id}:
+    get:
+      operationId: getCategoryFamily
+      summary: Get a category family
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category family
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryFamily'
+        '404':
+          description: Category family not found
+    put:
+      operationId: updateCategoryFamily
+      summary: Update mutable category-family fields
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Category family updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryFamily'
+        '404':
+          description: Category family not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/categories:
+    get:
+      operationId: listCategories
+      summary: List categories in the active operation
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: query
+          name: family_id
+          schema:
+            type: integer
+        - in: query
+          name: parent_id
+          schema:
+            type: integer
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Tenant-scoped categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+    post:
+      operationId: createCategory
+      summary: Create a root category or subcategory
+      tags: [Taxonomy Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryInput'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid family, parent, depth, or slug
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/categories/{id}:
+    get:
+      operationId: getCategory
+      summary: Get a category with its relations
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: Category not found
+    put:
+      operationId: updateCategory
+      summary: Update mutable category fields
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid hierarchy or domain rule
+        '404':
+          description: Category not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/attribute-definitions:
+    get:
+      operationId: listCategoryAttributeDefinitions
+      summary: List category attribute definitions
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: query
+          name: category_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tenant-scoped attribute definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryAttributeDefinition'
+    post:
+      operationId: createCategoryAttributeDefinition
+      summary: Create a typed category attribute
+      tags: [Taxonomy Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryAttributeDefinitionInput'
+      responses:
+        '201':
+          description: Attribute definition created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAttributeDefinition'
+        '400':
+          description: Invalid category, key, or filterability rule
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/attribute-definitions/{id}:
+    get:
+      operationId: getCategoryAttributeDefinition
+      summary: Get an attribute definition with options
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Attribute definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAttributeDefinition'
+        '404':
+          description: Attribute definition not found
+    put:
+      operationId: updateCategoryAttributeDefinition
+      summary: Update mutable attribute metadata
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Attribute definition updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAttributeDefinition'
+        '404':
+          description: Attribute definition not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/attribute-options:
+    get:
+      operationId: listCategoryAttributeOptions
+      summary: List options for a select attribute
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: query
+          name: attribute_definition_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tenant-scoped options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryAttributeOption'
+    post:
+      operationId: createCategoryAttributeOption
+      summary: Create an option for a select attribute
+      tags: [Taxonomy Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryAttributeOptionInput'
+      responses:
+        '201':
+          description: Attribute option created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAttributeOption'
+        '400':
+          description: Definition is not selectable or option value is invalid
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/taxonomy/attribute-options/{id}:
+    get:
+      operationId: getCategoryAttributeOption
+      summary: Get an attribute option
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Attribute option
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAttributeOption'
+        '404':
+          description: Attribute option not found
+    put:
+      operationId: updateCategoryAttributeOption
+      summary: Update mutable option fields
+      tags: [Taxonomy Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Attribute option updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAttributeOption'
+        '404':
+          description: Attribute option not found
+        '422':
+          description: Validation failed
   /version:
     get:
       operationId: getApiInfo
