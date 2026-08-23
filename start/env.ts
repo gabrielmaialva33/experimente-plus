@@ -21,6 +21,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_NAME: Env.schema.string.optional(),
   APP_URL: Env.schema.string.optional(),
   APP_SOURCE_URL: Env.schema.string.optional(),
+  PUBLIC_TENANT_SLUG: Env.schema.string.optional(),
   APP_KEY: Env.schema.string(),
   ACCESS_TOKEN_SECRET: Env.schema.string.optional(),
   REFRESH_TOKEN_SECRET: Env.schema.string.optional(),
