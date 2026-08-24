@@ -8,6 +8,7 @@ export default [
       'tmp/**',
       'build/**',
       'node_modules/**',
+      '.winx/**',
       '.DS_Store',
       'coverage/**',
       'database/schema.ts',

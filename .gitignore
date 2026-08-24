@@ -24,11 +24,13 @@ yarn-error.log
 # Platform specific
 .DS_Store
 
-# Claude Code
+# Local coding agents
 .claude
+.winx
 
 # AdonisJS specific
 storage/uploads/*
+storage/seed-media/*
 
 # Lucid v7 auto-generated schema classes
 database/schema.ts
