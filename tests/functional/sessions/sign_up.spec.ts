@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken'
 
 import User from '#modules/users/models/user'
 import Role from '#modules/roles/models/role'
+import Tenant from '#modules/tenants/models/tenant'
 
 import PermissionService from '#modules/permissions/services/permission_service'
 import IRole from '#modules/roles/interfaces/role_interface'
@@ -62,6 +63,43 @@ test.group('Sessions sign up', (group) => {
       env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY'))
     ) as { tenantId?: number }
     assert.equal(payload.tenantId, workspaces[0].id)
+  })
+
+  test('should attach a public registration to the configured operation atomically', async ({
+    client,
+    assert,
+    cleanup,
+  }) => {
+    const previousMode = env.get('REGISTRATION_WORKSPACE_MODE', 'personal')
+    env.set('REGISTRATION_WORKSPACE_MODE', 'operation')
+    cleanup(() => env.set('REGISTRATION_WORKSPACE_MODE', previousMode))
+
+    const operation = await Tenant.create({
+      name: 'Public Test Operation',
+      slug: 'public-test',
+      is_active: true,
+    })
+
+    const response = await client.post('/api/v1/sessions/sign-up').json({
+      full_name: 'Operation Member',
+      email: 'operation-member@example.com',
+      username: 'operation-member',
+      password: 'password123',
+      password_confirmation: 'password123',
+    })
+
+    response.assertStatus(201)
+    const user = await User.findByOrFail('email', 'operation-member@example.com')
+    const workspaces = await user.related('tenants').query()
+    assert.lengthOf(workspaces, 1)
+    assert.equal(workspaces[0].id, operation.id)
+    assert.equal(workspaces[0].$extras.pivot_role, 'member')
+
+    const payload = jwt.verify(
+      response.body().auth.access_token,
+      env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY'))
+    ) as { tenantId?: number }
+    assert.equal(payload.tenantId, operation.id)
   })
 
   test('should keep a persisted registration successful when email delivery fails', async ({
@@ -251,6 +289,11 @@ test.group('Sessions sign up', (group) => {
       'tenants.create',
       'tenants.read',
       'tenants.list',
+      'establishments.create',
+      'establishments.read',
+      'establishments.update',
+      'establishments.list',
+      'establishments.archive',
     ])
     assert.notInclude(permissions, 'users.list')
     assert.notInclude(permissions, 'users.read')

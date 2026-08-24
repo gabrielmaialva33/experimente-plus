@@ -32,7 +32,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   JWT_AUDIENCE: Env.schema.string.optional(),
   JWT_COOKIE_NAME: Env.schema.string.optional(),
   SESSION_COOKIE_NAME: Env.schema.string.optional(),
-  REGISTRATION_WORKSPACE_MODE: Env.schema.enum.optional(['none', 'personal'] as const),
+  REGISTRATION_WORKSPACE_MODE: Env.schema.enum.optional(['none', 'personal', 'operation'] as const),
+  ORGANIZATION_INVITATION_SECRET: Env.schema.string.optional(),
+  ORGANIZATION_INVITATION_TTL_HOURS: Env.schema.number.optional(),
   DEMO_PAGES_ENABLED: Env.schema.boolean.optional(),
 
   DEV_ADMIN_NAME: Env.schema.string.optional(),

@@ -40,7 +40,10 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       error.code === 'E_VALIDATION_ERROR'
     ) {
       const validationError = error as any
-      if (ctx.request.accepts(['html', 'json']) === 'json') {
+      const isApiRequest = ctx.request.url().startsWith('/api/')
+      const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
+
+      if (isApiRequest || acceptsJson) {
         return ctx.response.status(422).json({
           errors: validationError.messages || [],
         })

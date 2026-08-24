@@ -6,14 +6,18 @@ import JwtAuthTokensService, {
   type GenerateAuthTokensResponse,
 } from '#modules/auth/services/jwt_auth_tokens_service'
 import SendVerificationEmailService from '#modules/auth/services/send_verification_email_service'
+import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
 import type IUser from '#modules/users/interfaces/user_interface'
 import User from '#modules/users/models/user'
 import CreateUserService from '#modules/users/services/create_user_service'
 import IRole from '#modules/roles/interfaces/role_interface'
 import env from '#start/env'
 
+export type RegistrationWorkspaceMode = 'none' | 'personal' | 'operation'
+
 export type SignUpOptions = {
   issueApiTokens?: boolean
+  registrationWorkspaceMode?: RegistrationWorkspaceMode
 }
 
 export type SignUpResult = {
@@ -28,14 +32,22 @@ export default class SignUpService {
   constructor(
     private createUserService: CreateUserService,
     private jwtAuthTokensService: JwtAuthTokensService,
-    private sendVerificationEmailService: SendVerificationEmailService
+    private sendVerificationEmailService: SendVerificationEmailService,
+    private publicOperationResolver: PublicOperationResolver
   ) {}
 
   async run(payload: IUser.CreatePayload, options: SignUpOptions = {}): Promise<SignUpResult> {
     const ctx = HttpContext.getOrFail()
-    const createPersonalWorkspace =
-      env.get('REGISTRATION_WORKSPACE_MODE', 'personal') === 'personal'
-    const user = await this.createUserService.run(payload, { createPersonalWorkspace })
+    const workspaceMode =
+      options.registrationWorkspaceMode ?? env.get('REGISTRATION_WORKSPACE_MODE', 'operation')
+    const publicOperation =
+      workspaceMode === 'operation'
+        ? await this.publicOperationResolver.resolve(ctx.request.hostname())
+        : null
+    const user = await this.createUserService.run(payload, {
+      createPersonalWorkspace: workspaceMode === 'personal',
+      attachTenantId: publicOperation?.id,
+    })
     await user.load('roles')
 
     const activeTenant = await user

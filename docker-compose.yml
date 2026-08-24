@@ -70,6 +70,7 @@ services:
       APP_NAME: ${APP_NAME:-Experimente+}
       APP_URL: ${APP_URL:-http://localhost:3333}
       APP_SOURCE_URL: ${APP_SOURCE_URL:-https://github.com/gabrielmaialva33/experimente-plus}
+      PUBLIC_TENANT_SLUG: ${PUBLIC_TENANT_SLUG:-development}
       # Development fallbacks only. Override every secret outside disposable environments.
       APP_KEY: ${APP_KEY:-dev_app_key_change_me_32_chars_min}
       ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:-dev_access_token_secret_change_me}
@@ -81,7 +82,9 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:-experimente-plus}
       JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-experimente-plus-token}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-experimente-plus-session}
-      REGISTRATION_WORKSPACE_MODE: ${REGISTRATION_WORKSPACE_MODE:-none}
+      REGISTRATION_WORKSPACE_MODE: ${REGISTRATION_WORKSPACE_MODE:-operation}
+      ORGANIZATION_INVITATION_SECRET: ${ORGANIZATION_INVITATION_SECRET:-dev_organization_invitation_secret_change_me}
+      ORGANIZATION_INVITATION_TTL_HOURS: ${ORGANIZATION_INVITATION_TTL_HOURS:-72}
       DEMO_PAGES_ENABLED: 'false'
       SESSION_DRIVER: cookie
       LIMITER_STORE: redis
