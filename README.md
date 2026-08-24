@@ -6,7 +6,7 @@ Guia regional multicidade e multicategoria para descobrir gastronomia, lazer e s
 
 ## Estado do projeto
 
-O repositório foi criado a partir do template interno e já está configurado como uma aplicação independente. A fundação técnica e os cortes EP-00 a EP-04 estão implementados: Geografia, Taxonomia, Organizações, memberships, o núcleo revisionado de Unidades e a composição versionada de mídia. O próximo marco é o EP-05 — Submissão e moderação da ficha, antes do catálogo público completo.
+O repositório foi criado a partir do template interno e já está configurado como uma aplicação independente. A fundação técnica e os cortes EP-00 a EP-06 estão implementados: Geografia, Taxonomia, Organizações, memberships, Unidades revisionadas, Mídia, Submissão e moderação, além do Catálogo público com busca PostgreSQL e páginas SSR. O próximo marco é o EP-07 — Analytics de descoberta e métricas agregadas.
 
 O lançamento inicial será pensado para o norte do Paraná, na região de Cornélio Procópio, Londrina e municípios próximos. Cidade é uma dimensão de descoberta; tenant representa uma operação isolada da plataforma.
 
