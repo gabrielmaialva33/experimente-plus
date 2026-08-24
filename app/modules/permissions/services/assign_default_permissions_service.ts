@@ -32,6 +32,9 @@ export default class AssignDefaultPermissionsService {
     // ADMIN - All except permission management
     await this.assignAdminPermissions(trx)
 
+    // MODERATOR - Organization and claim review permissions
+    await this.assignModeratorPermissions(trx)
+
     // USER - Basic permissions
     await this.assignUserPermissions(trx)
 
@@ -52,6 +55,16 @@ export default class AssignDefaultPermissionsService {
     if (adminRole) {
       const permissionIds = await this.permissionRepository.findAdminPermissionIds(trx)
       await this.syncRolePermissionsService.handle(adminRole.id, permissionIds, trx)
+    }
+  }
+
+  private async assignModeratorPermissions(trx?: TransactionClientContract): Promise<void> {
+    const moderatorRole = await this.rolesRepository.findBy('slug', IRole.Slugs.MODERATOR, {
+      client: trx,
+    })
+    if (moderatorRole) {
+      const permissionIds = await this.permissionRepository.findModeratorPermissionIds(trx)
+      await this.syncRolePermissionsService.handle(moderatorRole.id, permissionIds, trx)
     }
   }
 

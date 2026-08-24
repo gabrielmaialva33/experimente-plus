@@ -5,12 +5,30 @@ const defaultPermissionActions: Record<string, readonly string[]> = {
   roles: ['create', 'read', 'update', 'delete', 'list', 'assign', 'revoke'],
   permissions: ['create', 'read', 'update', 'delete', 'list', 'assign', 'revoke'],
   files: ['create', 'read', 'delete', 'list'],
+  media: ['create', 'read', 'update', 'delete', 'list', 'approve', 'reject'],
   tenants: ['create', 'read', 'update', 'delete', 'list'],
   regions: ['create', 'read', 'update', 'delete', 'list'],
   cities: ['create', 'read', 'update', 'delete', 'list'],
   category_families: ['create', 'read', 'update', 'delete', 'list'],
   categories: ['create', 'read', 'update', 'delete', 'list'],
   category_attributes: ['create', 'read', 'update', 'delete', 'list'],
+  organizations: [
+    'create',
+    'read',
+    'update',
+    'list',
+    'submit',
+    'approve',
+    'reject',
+    'request_changes',
+    'suspend',
+    'restore',
+    'archive',
+  ],
+  organization_members: ['read', 'update', 'delete', 'list'],
+  organization_invitations: ['create', 'read', 'list', 'resend', 'revoke', 'accept'],
+  organization_claims: ['create', 'read', 'list', 'approve', 'reject'],
+  establishments: ['create', 'read', 'update', 'list', 'archive'],
   settings: ['read', 'update'],
   reports: ['read', 'create', 'export'],
   audit: ['read', 'list', 'export'],
@@ -49,6 +67,53 @@ const userPermissionNames = new Set([
   'tenants.create',
   'tenants.read',
   'tenants.list',
+  'organizations.create',
+  'organizations.read',
+  'organizations.update',
+  'organizations.list',
+  'organizations.submit',
+  'organizations.archive',
+  'organization_members.read',
+  'organization_members.update',
+  'organization_members.delete',
+  'organization_members.list',
+  'organization_invitations.create',
+  'organization_invitations.read',
+  'organization_invitations.list',
+  'organization_invitations.resend',
+  'organization_invitations.revoke',
+  'organization_invitations.accept',
+  'organization_claims.create',
+  'organization_claims.read',
+  'organization_claims.list',
+  'establishments.create',
+  'establishments.read',
+  'establishments.update',
+  'establishments.list',
+  'establishments.archive',
+  'media.create',
+  'media.read',
+  'media.update',
+  'media.delete',
+  'media.list',
+])
+
+const moderatorPermissionNames = new Set([
+  'organizations.read',
+  'organizations.list',
+  'organizations.approve',
+  'organizations.reject',
+  'organizations.request_changes',
+  'organizations.suspend',
+  'organizations.restore',
+  'organization_claims.read',
+  'organization_claims.list',
+  'organization_claims.approve',
+  'organization_claims.reject',
+  'media.read',
+  'media.list',
+  'media.approve',
+  'media.reject',
 ])
 
 export default class extends BaseSchema {
@@ -70,7 +135,7 @@ export default class extends BaseSchema {
         .select(['id', 'name', 'resource', 'action'])
       const roles = await trx
         .from('roles')
-        .whereIn('slug', ['root', 'admin', 'user'])
+        .whereIn('slug', ['root', 'admin', 'moderator', 'user'])
         .select(['id', 'slug'])
 
       const roleIds = new Map(roles.map((role) => [role.slug, role.id]))
@@ -83,6 +148,7 @@ export default class extends BaseSchema {
 
       const rootRoleId = roleIds.get('root')
       const adminRoleId = roleIds.get('admin')
+      const moderatorRoleId = roleIds.get('moderator')
       const userRoleId = roleIds.get('user')
 
       for (const permission of permissions) {
@@ -100,6 +166,15 @@ export default class extends BaseSchema {
         if (adminRoleId && adminCanUsePermission) {
           pivotRows.push({
             role_id: adminRoleId,
+            permission_id: permission.id,
+            created_at: now,
+            updated_at: now,
+          })
+        }
+
+        if (moderatorRoleId && moderatorPermissionNames.has(permission.name)) {
+          pivotRows.push({
+            role_id: moderatorRoleId,
             permission_id: permission.id,
             created_at: now,
             updated_at: now,

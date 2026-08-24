@@ -7,6 +7,7 @@ namespace IRole {
   export enum Slugs {
     ROOT = 'root',
     ADMIN = 'admin',
+    MODERATOR = 'moderator',
     USER = 'user',
     GUEST = 'guest',
     EDITOR = 'editor',
@@ -17,8 +18,9 @@ namespace IRole {
   }
 
   export const ROLE_HIERARCHY: RoleHierarchy = {
-    [Slugs.ROOT]: [Slugs.ADMIN, Slugs.USER, Slugs.GUEST, Slugs.EDITOR],
-    [Slugs.ADMIN]: [Slugs.USER, Slugs.GUEST, Slugs.EDITOR],
+    [Slugs.ROOT]: [Slugs.ADMIN, Slugs.MODERATOR, Slugs.USER, Slugs.GUEST, Slugs.EDITOR],
+    [Slugs.ADMIN]: [Slugs.MODERATOR, Slugs.USER, Slugs.GUEST, Slugs.EDITOR],
+    [Slugs.MODERATOR]: [Slugs.USER],
     [Slugs.EDITOR]: [Slugs.USER],
     [Slugs.USER]: [Slugs.GUEST],
     [Slugs.GUEST]: [],

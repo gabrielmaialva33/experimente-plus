@@ -17,6 +17,53 @@ const userPermissionNames = [
   'tenants.create',
   'tenants.list',
   'tenants.read',
+  'organizations.create',
+  'organizations.read',
+  'organizations.update',
+  'organizations.list',
+  'organizations.submit',
+  'organizations.archive',
+  'organization_members.read',
+  'organization_members.update',
+  'organization_members.delete',
+  'organization_members.list',
+  'organization_invitations.create',
+  'organization_invitations.read',
+  'organization_invitations.list',
+  'organization_invitations.resend',
+  'organization_invitations.revoke',
+  'organization_invitations.accept',
+  'organization_claims.create',
+  'organization_claims.read',
+  'organization_claims.list',
+  'establishments.create',
+  'establishments.read',
+  'establishments.update',
+  'establishments.list',
+  'establishments.archive',
+  'media.create',
+  'media.read',
+  'media.update',
+  'media.delete',
+  'media.list',
+]
+
+const moderatorPermissionNames = [
+  'organizations.read',
+  'organizations.list',
+  'organizations.approve',
+  'organizations.reject',
+  'organizations.request_changes',
+  'organizations.suspend',
+  'organizations.restore',
+  'organization_claims.read',
+  'organization_claims.list',
+  'organization_claims.approve',
+  'organization_claims.reject',
+  'media.read',
+  'media.list',
+  'media.approve',
+  'media.reject',
 ]
 
 test.group('Database bootstrap', (group) => {
@@ -36,6 +83,13 @@ test.group('Database bootstrap', (group) => {
     assert.sameMembers(
       root.permissions.map((permission) => permission.name),
       expectedPermissionNames
+    )
+
+    const moderator = await Role.findByOrFail('slug', IRole.Slugs.MODERATOR)
+    await moderator.load('permissions')
+    assert.sameMembers(
+      moderator.permissions.map((permission) => permission.name),
+      moderatorPermissionNames
     )
 
     const user = await Role.findByOrFail('slug', IRole.Slugs.USER)

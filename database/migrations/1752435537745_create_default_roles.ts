@@ -12,6 +12,11 @@ const defaultRoles = [
     description: 'Platform administrator without unrestricted permission-management access.',
   },
   {
+    name: 'Moderator',
+    slug: 'moderator',
+    description: 'Platform moderator for organization and claim review workflows.',
+  },
+  {
     name: 'Editor',
     slug: 'editor',
     description: 'Content-oriented role that inherits the standard user capabilities.',

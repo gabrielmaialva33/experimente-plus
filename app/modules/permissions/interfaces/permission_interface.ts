@@ -28,6 +28,8 @@ namespace IPermission {
 
     findAdminPermissionIds(trx?: TransactionClientContract): Promise<number[]>
 
+    findModeratorPermissionIds(trx?: TransactionClientContract): Promise<number[]>
+
     findUserPermissionIds(trx?: TransactionClientContract): Promise<number[]>
 
     findGuestPermissionIds(trx?: TransactionClientContract): Promise<number[]>
@@ -56,12 +58,18 @@ namespace IPermission {
     ROLES = 'roles',
     PERMISSIONS = 'permissions',
     FILES = 'files',
+    MEDIA = 'media',
     TENANTS = 'tenants',
     REGIONS = 'regions',
     CITIES = 'cities',
     CATEGORY_FAMILIES = 'category_families',
     CATEGORIES = 'categories',
     CATEGORY_ATTRIBUTES = 'category_attributes',
+    ORGANIZATIONS = 'organizations',
+    ORGANIZATION_MEMBERS = 'organization_members',
+    ORGANIZATION_INVITATIONS = 'organization_invitations',
+    ORGANIZATION_CLAIMS = 'organization_claims',
+    ESTABLISHMENTS = 'establishments',
     SETTINGS = 'settings',
     REPORTS = 'reports',
     AUDIT = 'audit',
@@ -78,6 +86,15 @@ namespace IPermission {
     IMPORT = 'import',
     ASSIGN = 'assign',
     REVOKE = 'revoke',
+    SUBMIT = 'submit',
+    APPROVE = 'approve',
+    REJECT = 'reject',
+    REQUEST_CHANGES = 'request_changes',
+    SUSPEND = 'suspend',
+    RESTORE = 'restore',
+    RESEND = 'resend',
+    ACCEPT = 'accept',
+    ARCHIVE = 'archive',
   }
 
   export enum Contexts {

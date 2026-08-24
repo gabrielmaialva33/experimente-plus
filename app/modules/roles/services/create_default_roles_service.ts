@@ -8,6 +8,7 @@ import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 export const AvailableRoles = [
   { name: 'Root', slug: IRole.Slugs.ROOT },
   { name: 'Admin', slug: IRole.Slugs.ADMIN },
+  { name: 'Moderator', slug: IRole.Slugs.MODERATOR },
   { name: 'User', slug: IRole.Slugs.USER },
   { name: 'Guest', slug: IRole.Slugs.GUEST },
   { name: 'Editor', slug: IRole.Slugs.EDITOR },

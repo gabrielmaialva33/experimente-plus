@@ -110,6 +110,28 @@ export default class PermissionRepository
     return rows.map((row) => row.id)
   }
 
+  async findModeratorPermissionIds(trx?: TransactionClientContract): Promise<number[]> {
+    const names = [
+      'organizations.read',
+      'organizations.list',
+      'organizations.approve',
+      'organizations.reject',
+      'organizations.request_changes',
+      'organizations.suspend',
+      'organizations.restore',
+      'organization_claims.read',
+      'organization_claims.list',
+      'organization_claims.approve',
+      'organization_claims.reject',
+      'media.read',
+      'media.list',
+      'media.approve',
+      'media.reject',
+    ]
+    const rows = await this.model.query({ client: trx }).whereIn('name', names).select('id')
+    return rows.map((row) => row.id)
+  }
+
   /**
    * The default USER role is intentionally narrow: it can enter the dashboard
    * and work with files, but cannot enumerate or mutate platform users/roles.
@@ -117,39 +139,46 @@ export default class PermissionRepository
    * global user-management permissions.
    */
   async findUserPermissionIds(trx?: TransactionClientContract): Promise<number[]> {
-    const rows = await this.model
-      .query({ client: trx })
-      .where((query) => {
-        query
-          .where('resource', IPermission.Resources.FILES)
-          .whereIn('action', [
-            IPermission.Actions.CREATE,
-            IPermission.Actions.READ,
-            IPermission.Actions.LIST,
-          ])
-      })
-      .orWhere((query) => {
-        query
-          .where('resource', IPermission.Resources.FILES)
-          .where('action', IPermission.Actions.DELETE)
-          .where('context', IPermission.Contexts.OWN)
-      })
-      .orWhere((query) => {
-        query
-          .where('resource', IPermission.Resources.TENANTS)
-          .whereIn('action', [
-            IPermission.Actions.CREATE,
-            IPermission.Actions.READ,
-            IPermission.Actions.LIST,
-          ])
-      })
-      .orWhere((query) => {
-        query
-          .where('resource', IPermission.Resources.DASHBOARD)
-          .where('action', IPermission.Actions.READ)
-      })
-      .select('id')
-
+    const names = [
+      'dashboard.read',
+      'files.create',
+      'files.read',
+      'files.list',
+      'files.delete.own',
+      'tenants.create',
+      'tenants.read',
+      'tenants.list',
+      'organizations.create',
+      'organizations.read',
+      'organizations.update',
+      'organizations.list',
+      'organizations.submit',
+      'organizations.archive',
+      'organization_members.read',
+      'organization_members.update',
+      'organization_members.delete',
+      'organization_members.list',
+      'organization_invitations.create',
+      'organization_invitations.read',
+      'organization_invitations.list',
+      'organization_invitations.resend',
+      'organization_invitations.revoke',
+      'organization_invitations.accept',
+      'organization_claims.create',
+      'organization_claims.read',
+      'organization_claims.list',
+      'establishments.create',
+      'establishments.read',
+      'establishments.update',
+      'establishments.list',
+      'establishments.archive',
+      'media.create',
+      'media.read',
+      'media.update',
+      'media.delete',
+      'media.list',
+    ]
+    const rows = await this.model.query({ client: trx }).whereIn('name', names).select('id')
     return rows.map((row) => row.id)
   }
 
