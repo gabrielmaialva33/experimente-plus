@@ -20,6 +20,7 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 | [ADR-0012](0012-estabelecimentos-estaveis-e-revisoes-publicas.md)     | Estabelecimentos estáveis e revisões públicas      | identidade estável, snapshots e ponteiro publicado          |
 | [ADR-0013](0013-disponibilidade-categorias-e-atributos-de-unidade.md) | Disponibilidade, categorias e atributos de unidade | endereço, horários, herança, atributos tipados e completude |
 | [ADR-0014](0014-midia-estavel-e-composicao-versionada.md)             | Mídia estável e composição versionada por revisão  | assets, storage, capa, ordenação, moderação e visibilidade  |
+| [ADR-0015](0015-submissao-moderacao-e-publicacao-atomica.md)          | Submissão, moderação e publicação atômica          | gates, fila, issues, eventos, clonagem e ponteiro publicado |
 
 ## Regra de evolução
 
@@ -35,5 +36,6 @@ EP-00 — decisões arquiteturais iniciais       concluído
 EP-01 — geografia e taxonomia                 implementado e validado
 EP-02 — organizações e memberships            implementado e validado
 EP-03 — unidades, horários e atributos        implementado e validado
-EP-04 — mídia                                 próximo marco
+EP-04 — mídia                                 implementado e validado
+EP-05 — submissão e moderação                 em implementação
 ```

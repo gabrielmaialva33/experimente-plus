@@ -191,7 +191,7 @@ Contratos e entregas concluídos:
 
 ## EP-05 — Submissão e moderação
 
-**Estado:** próximo marco de implementação.
+**Estado:** concluído em 24 de agosto de 2026.
 
 ### Histórias
 
@@ -228,6 +228,10 @@ Uma unidade só pode ser submetida quando possuir:
 
 ## EP-06 — Catálogo público
 
+**Estado:** concluído em 24 de agosto de 2026.
+
+**Estado:** próximo marco de implementação.
+
 ### Histórias
 
 - como Visitante, vejo cidades ativas;
@@ -252,6 +256,8 @@ Uma unidade só pode ser submetida quando possuir:
 - sitemap e dados estruturados em fase apropriada.
 
 ## EP-07 — Analytics de descoberta
+
+**Estado:** próximo marco de implementação.
 
 ### Histórias
 

@@ -65,11 +65,12 @@ Ações de descoberta são registradas
 - [`07-validacao-de-negocio.md`](07-validacao-de-negocio.md) — entrevistas, experimentos e critérios de avanço.
 - [`08-backlog-inicial.md`](08-backlog-inicial.md) — epics, dependências e Definition of Done da primeira vertical.
 - [`09-rastreabilidade-da-especificacao.md`](09-rastreabilidade-da-especificacao.md) — relação entre cada requisito do documento inicial e o roadmap.
+- [`10-revisao-da-sobral-spec.md`](10-revisao-da-sobral-spec.md) — reconciliação explícita do rascunho recebido com domínio, ADRs e marcos.
 - [`../architecture/decisions/`](../architecture/decisions/README.md) — ADRs aceitos que transformam o planejamento em contratos técnicos.
 
 ## Estado arquitetural
 
-Os marcos EP-00 e EP-01 foram concluídos. Tenant como operação, organização/unidade, catálogo público, publicação versionada, gates, busca e autorização possuem ADRs aceitos; regiões, cidades e taxonomia já possuem implementação canônica e regressões. A próxima etapa de engenharia é EP-02 — Organizações e memberships.
+Os marcos EP-00 a EP-05 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia e o workflow auditável de revisão possuem ADRs aceitos e implementação canônica com regressões. A etapa atual de engenharia é EP-06 — Catálogo público e descoberta regional.
 
 ## Regra de mudança
 
