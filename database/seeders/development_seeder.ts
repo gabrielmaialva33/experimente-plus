@@ -6,6 +6,7 @@ import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import Category from '#modules/taxonomy/models/category'
 import CategoryFamily from '#modules/taxonomy/models/category_family'
+import { seedDevelopmentEstablishments } from '#database/support/development_establishments'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
 import env from '#start/env'
@@ -88,6 +89,24 @@ export default class extends BaseSeeder {
       }
     )
 
+    await City.updateOrCreate(
+      { tenant_id: tenant.id, slug: 'bandeirantes' },
+      {
+        tenant_id: tenant.id,
+        region_id: region.id,
+        name: 'Bandeirantes',
+        slug: 'bandeirantes',
+        state_code: 'PR',
+        country_code: 'BR',
+        ibge_code: null,
+        timezone: 'America/Sao_Paulo',
+        latitude: null,
+        longitude: null,
+        sort_order: 20,
+        is_active: true,
+      }
+    )
+
     const foodFamily = await CategoryFamily.updateOrCreate(
       { tenant_id: tenant.id, slug: 'comer-e-beber' },
       {
@@ -125,5 +144,7 @@ export default class extends BaseSeeder {
         }
       )
     }
+
+    await seedDevelopmentEstablishments(tenant, user)
   }
 }
