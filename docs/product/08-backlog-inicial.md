@@ -257,7 +257,7 @@ Uma unidade só pode ser submetida quando possuir:
 
 ## EP-07 — Analytics de descoberta
 
-**Estado:** próximo marco de implementação.
+**Estado:** concluído em 24 de agosto de 2026.
 
 ### Histórias
 
