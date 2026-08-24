@@ -15,6 +15,8 @@ import EstablishmentRevisionAddress from '#modules/establishments/models/establi
 import EstablishmentRevisionAttributeValue from '#modules/establishments/models/establishment_revision_attribute_value'
 import EstablishmentRevisionCategory from '#modules/establishments/models/establishment_revision_category'
 import EstablishmentRevisionHour from '#modules/establishments/models/establishment_revision_hour'
+import EstablishmentRevisionEvent from '#modules/establishments/models/establishment_revision_event'
+import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
 import EstablishmentRevisionSpecialDay from '#modules/establishments/models/establishment_revision_special_day'
 import City from '#modules/geography/models/city'
 import EstablishmentRevisionMedia from '#modules/media/models/establishment_revision_media'
@@ -131,6 +133,12 @@ export default class EstablishmentRevision extends BaseModel {
 
   @hasMany(() => EstablishmentRevisionSpecialDay, { foreignKey: 'revision_id' })
   declare special_days: HasMany<typeof EstablishmentRevisionSpecialDay>
+
+  @hasMany(() => EstablishmentRevisionEvent, { foreignKey: 'revision_id' })
+  declare events: HasMany<typeof EstablishmentRevisionEvent>
+
+  @hasMany(() => EstablishmentRevisionReviewIssue, { foreignKey: 'revision_id' })
+  declare review_issues: HasMany<typeof EstablishmentRevisionReviewIssue>
 
   @hasMany(() => EstablishmentRevisionMedia, { foreignKey: 'revision_id' })
   declare media: HasMany<typeof EstablishmentRevisionMedia>

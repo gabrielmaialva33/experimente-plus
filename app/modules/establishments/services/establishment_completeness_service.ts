@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 import { DateTime } from 'luxon'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import NotFoundException from '#exceptions/not_found_exception'
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
@@ -21,19 +22,21 @@ export default class EstablishmentCompletenessService {
   async check(
     tenantId: number,
     establishmentId: number,
-    actor: User
+    actor: User,
+    revisionIdOverride?: number,
+    client?: TransactionClientContract
   ): Promise<IEstablishment.CompletenessResult> {
     const establishment = await this.accessService.getReadable(tenantId, establishmentId, actor)
-    const openRevision = await this.revisionRepository.findOpenForEstablishment(
-      tenantId,
-      establishment.id
-    )
-    const revisionId = openRevision?.id ?? establishment.published_revision_id
+    const openRevision = revisionIdOverride
+      ? null
+      : await this.revisionRepository.findOpenForEstablishment(tenantId, establishment.id)
+    const revisionId = revisionIdOverride ?? openRevision?.id ?? establishment.published_revision_id
     if (!revisionId) {
       throw new NotFoundException('Establishment revision not found')
     }
-    const revision = await this.revisionRepository.findAggregate(tenantId, revisionId)
-    if (!revision) {
+
+    const revision = await this.revisionRepository.findAggregate(tenantId, revisionId, client)
+    if (!revision || revision.establishment_id !== establishment.id) {
       throw new NotFoundException('Establishment revision not found')
     }
 
@@ -41,10 +44,12 @@ export default class EstablishmentCompletenessService {
     const warnings: IEstablishment.CompletenessIssue[] = []
     let score = 0
 
-    const organization = await Organization.query()
-      .where('tenant_id', tenantId)
-      .where('id', establishment.organization_id)
-      .first()
+    const organizationQuery = client ? Organization.query({ client }) : Organization.query()
+    organizationQuery.where('tenant_id', tenantId).where('id', establishment.organization_id)
+    if (client) {
+      organizationQuery.forUpdate()
+    }
+    const organization = await organizationQuery.first()
     if (organization?.status === 'active') {
       score += 15
     } else {

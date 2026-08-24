@@ -14,6 +14,7 @@ import EstablishmentRepository from '#modules/establishments/repositories/establ
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
+import EstablishmentRevisionEventService from '#modules/establishments/services/establishment_revision_event_service'
 import City from '#modules/geography/models/city'
 import Organization from '#modules/organizations/models/organization'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
@@ -27,6 +28,7 @@ export default class EstablishmentService {
     private revisionRepository: EstablishmentRevisionRepository,
     private accessService: EstablishmentAccessService,
     private organizationPolicy: OrganizationPolicyService,
+    private eventService: EstablishmentRevisionEventService,
     private auditService: EstablishmentAuditService
   ) {}
 
@@ -132,6 +134,20 @@ export default class EstablishmentService {
           created_by: actor.id,
         },
         { client }
+      )
+
+      await this.eventService.record(
+        revision,
+        'created',
+        actor.id,
+        null,
+        'draft',
+        null,
+        {
+          organization_id: organization.id,
+          rules_version: revision.rules_version,
+        },
+        client
       )
 
       return { establishment, revision }
