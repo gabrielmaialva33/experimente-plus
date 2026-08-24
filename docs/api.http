@@ -1,3 +1,8 @@
+@publicHost = development.experimente.test
+@catalogCitySlug = londrina
+@catalogCategorySlug = bares
+@catalogEstablishmentSlug = bar-estacao-43-londrina
+
 ### Experimente+ API HTTP Requests
 ### Base URL: http://localhost:3333
 ###
@@ -23,7 +28,9 @@
 @fileId = 1
 @establishmentId = 1
 @mediaId = 1
+@revisionId = 1
 @moderatorToken = replace-with-platform-moderator-access-token
+@adminToken = replace-with-platform-admin-access-token
 
 ###############################################################################
 ### HEALTH ENDPOINTS
@@ -434,6 +441,111 @@ x-tenant-id: {{tenantId}}
 
 ###############################################################################
 ### ============================================================================
+# ESTABLISHMENT REVIEW AND PUBLICATION ENDPOINTS
+# ============================================================================
+
+### Read Partner Review Status
+GET {{baseUrl}}/api/v1/establishments/{{establishmentId}}/review
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Submit Editable Revision
+# Recomputes completeness under lock. A successful submission freezes the revision.
+POST {{baseUrl}}/api/v1/establishments/{{establishmentId}}/submit
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Create Next Draft from Published Revision
+# Use "latest_terminal" only when intentionally reusing the most recent approved/rejected revision.
+POST {{baseUrl}}/api/v1/establishments/{{establishmentId}}/revisions
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "source": "published"
+}
+
+### List Tenant-Scoped Moderation Queue
+GET {{baseUrl}}/api/v1/admin/establishment-revisions?page=1&per_page=20
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Read Revision Moderation Detail
+GET {{baseUrl}}/api/v1/admin/establishment-revisions/{{revisionId}}
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Request Structured Corrections
+POST {{baseUrl}}/api/v1/admin/establishment-revisions/{{revisionId}}/request-changes
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "A ficha precisa de uma correção antes da publicação",
+  "issues": [
+    {
+      "code": "description_needs_revision",
+      "field": "short_description",
+      "message": "Explique o principal diferencial da unidade",
+      "severity": "blocking"
+    }
+  ]
+}
+
+### Approve and Atomically Publish Revision
+# Requires one approved cover, no pending/quarantined media and no open blocking issue.
+POST {{baseUrl}}/api/v1/admin/establishment-revisions/{{revisionId}}/approve
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Ficha e mídia verificadas"
+}
+
+### Reject Revision Without Replacing Current Publication
+POST {{baseUrl}}/api/v1/admin/establishment-revisions/{{revisionId}}/reject
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "A revisão não atende à política editorial"
+}
+
+### Suspend Establishment and Preserve Publication History
+POST {{baseUrl}}/api/v1/admin/establishments/{{establishmentId}}/suspend
+Authorization: Bearer {{adminToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Verificação administrativa temporária"
+}
+
+### Restore Suspended Establishment
+POST {{baseUrl}}/api/v1/admin/establishments/{{establishmentId}}/restore
+Authorization: Bearer {{adminToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Verificação concluída"
+}
+
+# ============================================================================
 # ESTABLISHMENT MEDIA ENDPOINTS
 # ============================================================================
 
@@ -558,6 +670,56 @@ DELETE {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media/{{mediaId}}
 Authorization: Bearer {{token}}
 x-tenant-id: {{tenantId}}
 Accept: application/json
+
+
+# ============================================================================
+# PUBLIC CATALOG — EP-06
+# ============================================================================
+
+### List Published Cities
+GET {{baseUrl}}/api/v1/catalog/cities
+Host: {{publicHost}}
+Accept: application/json
+
+### List Categories Available in a City
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/categories
+Host: {{publicHost}}
+Accept: application/json
+
+### Search Published Establishments
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?q=estacao&category_slug={{catalogCategorySlug}}&page=1&per_page=20
+Host: {{publicHost}}
+Accept: application/json
+
+### Filter Establishments Open Now
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?open_now=true&page=1&per_page=20
+Host: {{publicHost}}
+Accept: application/json
+
+### Read a Published Establishment by Slugs
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments/{{catalogEstablishmentSlug}}
+Host: {{publicHost}}
+Accept: application/json
+
+### Public SSR — Cities
+GET {{baseUrl}}/cidades
+Host: {{publicHost}}
+Accept: text/html
+
+### Public SSR — City Catalog
+GET {{baseUrl}}/cidades/{{catalogCitySlug}}
+Host: {{publicHost}}
+Accept: text/html
+
+### Public SSR — Category
+GET {{baseUrl}}/cidades/{{catalogCitySlug}}/categorias/{{catalogCategorySlug}}
+Host: {{publicHost}}
+Accept: text/html
+
+### Public SSR — Establishment
+GET {{baseUrl}}/cidades/{{catalogCitySlug}}/estabelecimentos/{{catalogEstablishmentSlug}}
+Host: {{publicHost}}
+Accept: text/html
 
 # EXAMPLE RESPONSES
 ###############################################################################

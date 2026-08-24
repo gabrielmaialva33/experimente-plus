@@ -1304,6 +1304,509 @@ components:
           items:
             $ref: '#/components/schemas/EstablishmentMedia'
 
+    EstablishmentRevisionSummary:
+      type: object
+      required:
+        - id
+        - establishment_id
+        - version
+        - status
+        - submitted_at
+        - reviewed_at
+        - review_notes
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [draft, pending_review, changes_requested, approved, rejected]
+        submitted_at:
+          type: [string, 'null']
+          format: date-time
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        review_notes:
+          type: [string, 'null']
+          maxLength: 1000
+
+    EstablishmentReviewIssue:
+      type: object
+      required: [id, code, field, message, severity, created_at, resolved_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,79}$'
+        field:
+          type: string
+          minLength: 1
+          maxLength: 160
+        message:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        severity:
+          type: string
+          enum: [blocking, warning]
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: [string, 'null']
+          format: date-time
+
+    EstablishmentRevisionEvent:
+      type: object
+      required: [id, event_type, from_status, to_status, reason, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        event_type:
+          type: string
+          enum:
+            - created
+            - submitted
+            - changes_requested
+            - resubmitted
+            - approved
+            - rejected
+            - published
+            - draft_cloned
+        from_status:
+          type: [string, 'null']
+          enum: [draft, pending_review, changes_requested, approved, rejected, null]
+        to_status:
+          type: string
+          enum: [draft, pending_review, changes_requested, approved, rejected]
+        reason:
+          type: [string, 'null']
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+
+    EstablishmentReviewStatus:
+      type: object
+      required: [establishment_id, revision, gate, review_issues, events]
+      properties:
+        establishment_id:
+          type: integer
+          minimum: 1
+        revision:
+          oneOf:
+            - $ref: '#/components/schemas/EstablishmentRevisionSummary'
+            - type: 'null'
+        gate:
+          oneOf:
+            - $ref: '#/components/schemas/EstablishmentCompleteness'
+            - type: 'null'
+        review_issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentReviewIssue'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentRevisionEvent'
+
+    EstablishmentSubmissionResult:
+      type: object
+      required: [submitted, revision, gate]
+      properties:
+        submitted:
+          type: boolean
+        revision:
+          $ref: '#/components/schemas/EstablishmentRevisionSummary'
+        gate:
+          $ref: '#/components/schemas/EstablishmentCompleteness'
+
+    CreateEstablishmentRevisionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          type: string
+          enum: [published, latest_terminal]
+          default: published
+
+    CreateEstablishmentRevisionResponse:
+      type: object
+      required: [id, establishment_id, version, status, based_on_revision_id]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [draft]
+        based_on_revision_id:
+          type: integer
+          minimum: 1
+
+    EstablishmentReviewIssueInput:
+      type: object
+      required: [code, field, message, severity]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,79}$'
+        field:
+          type: string
+          minLength: 1
+          maxLength: 160
+        message:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        severity:
+          type: string
+          enum: [blocking, warning]
+
+    RequestEstablishmentChangesRequest:
+      type: object
+      required: [reason, issues]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        issues:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/EstablishmentReviewIssueInput'
+
+    EstablishmentModerationReasonRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 1000
+
+    EstablishmentRequiredModerationReasonRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 1000
+
+    EstablishmentReviewQueueItem:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - establishment_id
+        - version
+        - status
+        - submitted_at
+        - public_name
+        - city_id
+        - organization_id
+        - organization_name
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [pending_review]
+        submitted_at:
+          type: string
+          format: date-time
+        public_name:
+          type: [string, 'null']
+        city_id:
+          type: [integer, 'null']
+          minimum: 1
+        organization_id:
+          type: integer
+          minimum: 1
+        organization_name:
+          type: string
+
+    EstablishmentReviewQueuePage:
+      type: object
+      required: [meta, data]
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentReviewQueueItem'
+
+    EstablishmentModerationDetail:
+      type: object
+      required: [revision, publication_gate, review_issues, events]
+      properties:
+        revision:
+          type: object
+          additionalProperties: true
+        publication_gate:
+          $ref: '#/components/schemas/EstablishmentCompleteness'
+        review_issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentReviewIssue'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentRevisionEvent'
+
+    EstablishmentApprovalResult:
+      type: object
+      required: [approved, revision, publication_gate]
+      properties:
+        approved:
+          type: boolean
+        revision:
+          type: object
+          additionalProperties: true
+        publication_gate:
+          $ref: '#/components/schemas/EstablishmentCompleteness'
+
+    EstablishmentLifecycleModerationResult:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - organization_id
+        - lifecycle_status
+        - business_status
+        - published_revision_id
+        - suspended_at
+        - archived_at
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        organization_id:
+          type: integer
+          minimum: 1
+        lifecycle_status:
+          type: string
+          enum: [active, suspended, archived]
+        business_status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+        published_revision_id:
+          type: [integer, 'null']
+          minimum: 1
+        suspended_at:
+          type: [string, 'null']
+          format: date-time
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+
+    CatalogCity:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+        state_code:
+          type: [string, 'null']
+          minLength: 2
+          maxLength: 2
+        establishment_count:
+          type: integer
+          minimum: 0
+
+    CatalogCategory:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        establishment_count:
+          type: integer
+          minimum: 0
+
+    CatalogCover:
+      type: object
+      required: [url, alt_text]
+      properties:
+        url:
+          type: string
+          format: uri
+        alt_text:
+          type: string
+          minLength: 1
+        caption:
+          type: [string, 'null']
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+
+    CatalogEstablishmentCard:
+      type: object
+      required:
+        - slug
+        - public_name
+        - city_slug
+        - city_name
+        - short_description
+        - open_now
+      properties:
+        slug:
+          type: string
+        public_name:
+          type: string
+        short_description:
+          type: [string, 'null']
+        city_slug:
+          type: string
+        city_name:
+          type: string
+        state_code:
+          type: [string, 'null']
+        primary_category_slug:
+          type: [string, 'null']
+        primary_category_name:
+          type: [string, 'null']
+        open_now:
+          type: [boolean, 'null']
+          description: Calculated by PostgreSQL using timezone, weekly hours and special days.
+        temporarily_closed:
+          type: boolean
+        cover:
+          oneOf:
+            - $ref: '#/components/schemas/CatalogCover'
+            - type: 'null'
+
+    CatalogSearchPage:
+      type: object
+      required: [meta, data]
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogEstablishmentCard'
+
+    CatalogAddress:
+      type: object
+      properties:
+        postal_code:
+          type: [string, 'null']
+        street:
+          type: [string, 'null']
+        number:
+          type: [string, 'null']
+        district:
+          type: [string, 'null']
+        city_name:
+          type: [string, 'null']
+        state_code:
+          type: [string, 'null']
+        latitude:
+          type: [number, 'null']
+        longitude:
+          type: [number, 'null']
+
+    CatalogHour:
+      type: object
+      properties:
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+        opens_at:
+          type: [string, 'null']
+          pattern: '^([01]\\d|2[0-3]):[0-5]\\d$'
+        closes_at:
+          type: [string, 'null']
+          pattern: '^([01]\\d|2[0-3]):[0-5]\\d$'
+        spans_next_day:
+          type: boolean
+
+    CatalogEstablishmentDetail:
+      allOf:
+        - $ref: '#/components/schemas/CatalogEstablishmentCard'
+        - type: object
+          properties:
+            description:
+              type: [string, 'null']
+            public_phone:
+              type: [string, 'null']
+            whatsapp:
+              type: [string, 'null']
+            public_email:
+              type: [string, 'null']
+              format: email
+            website:
+              type: [string, 'null']
+              format: uri
+            instagram:
+              type: [string, 'null']
+            booking_url:
+              type: [string, 'null']
+              format: uri
+            permanently_closed:
+              type: boolean
+            address:
+              oneOf:
+                - $ref: '#/components/schemas/CatalogAddress'
+                - type: 'null'
+            categories:
+              type: array
+              items:
+                $ref: '#/components/schemas/CatalogCategory'
+            hours:
+              type: array
+              items:
+                $ref: '#/components/schemas/CatalogHour'
   parameters:
     pathId:
       name: id
@@ -1404,6 +1907,8 @@ components:
             $ref: '#/components/schemas/Error'
 
 tags:
+  - name: Catalog
+    description: Public regional discovery backed by the published catalog projection.
   - name: Health
     description: System health monitoring endpoints
   - name: Authentication
@@ -1425,8 +1930,396 @@ tags:
 
   - name: Media
     description: Versioned establishment images, cover selection, ordering and moderation.
+  - name: Establishment Review
+    description: Submission, structured corrections, moderation, atomic publication and lifecycle controls.
 
 paths:
+  /api/v1/establishments/{id}/review:
+    get:
+      operationId: getEstablishmentReviewStatus
+      summary: Read the current establishment review state
+      description: Returns the open revision when one exists, otherwise the published revision, together with completeness, structured review issues and immutable workflow events.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Review state visible to an authorized organization member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReviewStatus'
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Establishment not found in the tenant or membership scope
+
+  /api/v1/establishments/{id}/revisions:
+    post:
+      operationId: createNextEstablishmentRevision
+      summary: Clone a terminal establishment revision into a new draft
+      description: Creates the next version transactionally and copies address, categories, typed attributes, hours, special dates and media associations without changing the published revision.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEstablishmentRevisionRequest'
+      responses:
+        '201':
+          description: New draft created from the selected source revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateEstablishmentRevisionResponse'
+        '400':
+          description: An open revision exists or the selected source cannot be cloned
+        '401':
+          description: Authentication required
+        '403':
+          description: Organization management capability required
+        '404':
+          description: Establishment or source revision not found
+        '422':
+          description: Request validation failed
+
+  /api/v1/establishments/{id}/submit:
+    post:
+      operationId: submitEstablishmentRevision
+      summary: Submit the editable establishment revision for moderation
+      description: Recomputes the submission gate under lock. Eligible drafts and changes_requested revisions become pending_review and are frozen. Ineligible revisions remain editable and return actionable diagnostics.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Revision submitted and frozen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentSubmissionResult'
+        '401':
+          description: Authentication required
+        '403':
+          description: Owner, admin or editor membership required
+        '404':
+          description: Establishment or editable revision not found
+        '422':
+          description: Submission gate failed; response includes blocking issues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentSubmissionResult'
+
+  /api/v1/admin/establishment-revisions:
+    get:
+      operationId: listEstablishmentReviewQueue
+      summary: List pending establishment revisions for moderation
+      description: Returns only pending_review revisions from the active tenant, ordered by submission time. Requires global moderator capability and establishments.list.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: query
+          name: organization_id
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: city_id
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated tenant-scoped moderation queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReviewQueuePage'
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '422':
+          description: Query validation failed
+
+  /api/v1/admin/establishment-revisions/{id}:
+    get:
+      operationId: getEstablishmentRevisionModerationDetail
+      summary: Read a revision, publication gate, issues and workflow history
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Moderation detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentModerationDetail'
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Revision not found in the active tenant
+
+  /api/v1/admin/establishment-revisions/{id}/approve:
+    post:
+      operationId: approveAndPublishEstablishmentRevision
+      summary: Approve a revision and atomically publish it
+      description: Recomputes the publication gate under lock. On success, the revision becomes approved and the establishment published_revision_id changes in the same transaction.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentModerationReasonRequest'
+      responses:
+        '200':
+          description: Revision approved and published atomically
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentApprovalResult'
+        '400':
+          description: Revision is not pending_review or establishment lifecycle disallows moderation
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Revision or establishment not found
+        '422':
+          description: Publication gate failed; the published pointer was not changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentApprovalResult'
+
+  /api/v1/admin/establishment-revisions/{id}/request-changes:
+    post:
+      operationId: requestEstablishmentRevisionChanges
+      summary: Return a pending revision to the partner with structured issues
+      description: Moves pending_review to changes_requested and stores unique actionable issues while preserving the immutable decision history.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestEstablishmentChangesRequest'
+      responses:
+        '200':
+          description: Revision returned for correction
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Revision is not pending_review or issue pairs are duplicated
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Revision not found
+        '422':
+          description: Reason or issue validation failed
+
+  /api/v1/admin/establishment-revisions/{id}/reject:
+    post:
+      operationId: rejectEstablishmentRevision
+      summary: Reject a pending revision with a required reason
+      description: The revision becomes terminal and the currently published revision remains unchanged.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentRequiredModerationReasonRequest'
+      responses:
+        '200':
+          description: Rejected terminal revision
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Revision is not pending_review
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Revision not found
+        '422':
+          description: Reason validation failed
+
+  /api/v1/admin/establishments/{id}/suspend:
+    post:
+      operationId: suspendEstablishment
+      summary: Suspend an establishment without deleting its publication history
+      description: Removes the establishment from public discovery while preserving published_revision_id, media and immutable history. Requires a global administrator.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentRequiredModerationReasonRequest'
+      responses:
+        '200':
+          description: Suspended establishment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentLifecycleModerationResult'
+        '400':
+          description: Archived establishment cannot be suspended
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator capability required
+        '404':
+          description: Establishment not found
+        '422':
+          description: Reason validation failed
+
+  /api/v1/admin/establishments/{id}/restore:
+    post:
+      operationId: restoreEstablishment
+      summary: Restore a suspended establishment
+      description: Restores public eligibility without discarding or recreating the preserved published revision.
+      tags: [Establishment Review]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentModerationReasonRequest'
+      responses:
+        '200':
+          description: Restored establishment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentLifecycleModerationResult'
+        '400':
+          description: Archived establishment cannot be restored
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator capability required
+        '404':
+          description: Establishment not found
+
   /api/v1/public/establishments/{id}/media:
     get:
       operationId: getPublicEstablishmentMedia
@@ -1459,7 +2352,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1489,7 +2382,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1548,7 +2441,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1590,7 +2483,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1634,7 +2527,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1666,7 +2559,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1704,7 +2597,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: query
           name: status
           schema:
@@ -1752,7 +2645,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1791,7 +2684,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
@@ -1831,7 +2724,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/tenantHeader'
         - in: path
           name: id
           required: true
