@@ -10,7 +10,7 @@ Tour Londrina is a product-experience reference, not an implementation contract.
 
 City and category are core discovery dimensions. A city is not a tenant: tenant represents an isolated platform operation, while organizations may own multiple public establishments across multiple cities. Public discovery must not require tenant membership. Monetization, benefit rules, review policies, and later AI behavior remain staged product decisions documented under `docs/product/`.
 
-Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content is versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role. EP-01 — Geography and Taxonomy is implemented; EP-02 — Organizations and memberships is the next implementation milestone.
+Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content and media composition are versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role. EP-01 through EP-04 are implemented. EP-05 — establishment submission, moderation and publication — is the next implementation milestone.
 
 ## Project Structure & Module Organization
 

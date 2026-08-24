@@ -6,7 +6,7 @@ Guia regional multicidade e multicategoria para descobrir gastronomia, lazer e s
 
 ## Estado do projeto
 
-O repositório foi criado a partir do template interno e já está configurado como uma aplicação independente. A fundação técnica, o planejamento inicial, os ADRs do EP-00 e o EP-01 de Geografia e Taxonomia estão concluídos; as próximas etapas são validar as hipóteses locais e implementar EP-02 — Organizações e memberships.
+O repositório foi criado a partir do template interno e já está configurado como uma aplicação independente. A fundação técnica e os cortes EP-00 a EP-04 estão implementados: Geografia, Taxonomia, Organizações, memberships, o núcleo revisionado de Unidades e a composição versionada de mídia. O próximo marco é o EP-05 — Submissão e moderação da ficha, antes do catálogo público completo.
 
 O lançamento inicial será pensado para o norte do Paraná, na região de Cornélio Procópio, Londrina e municípios próximos. Cidade é uma dimensão de descoberta; tenant representa uma operação isolada da plataforma.
 
@@ -44,7 +44,11 @@ Nenhuma migration de negócio deve ser criada antes de a decisão correspondente
 - RBAC global, permissões contextuais e ownership
 - operações multi-tenant N:N com tenant ativo
 - regiões, cidades e catálogo geográfico público
-- taxonomia hierárquica com atributos tipados
+- taxonomia hierárquica com atributos tipados e herança efetiva
+- organizações, memberships, convites e claims transacionais
+- unidades com identidade estável e conteúdo público revisionado
+- endereço, categorias, atributos tipados, horários e exceções
+- completude versionada com gates para publicação
 - upload e gerenciamento de arquivos
 - Mailpit para e-mails locais
 - Japa, Playwright, Vitest e Testing Library
@@ -125,16 +129,16 @@ pnpm ace db:seed         # dados determinísticos de desenvolvimento
 
 ## Configuração
 
-| Variável                                             | Finalidade                                  |
-| ---------------------------------------------------- | ------------------------------------------- |
-| `APP_NAME`, `VITE_APP_NAME`, `APP_URL`               | identidade e URLs da aplicação              |
-| `APP_LOCALE`                                         | locale padrão (`pt` ou `en`)                |
-| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`        | segredos independentes da API               |
-| `EMAIL_VERIFICATION_SECRET`, `PASSWORD_RESET_SECRET` | HMAC de links de uso único                  |
-| `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_COOKIE_NAME`      | identidade dos tokens e cookie web          |
-| `REGISTRATION_WORKSPACE_MODE`                        | permanece `none` até a modelagem do produto |
-| `DEMO_PAGES_ENABLED`                                 | páginas internas de referência visual       |
-| `DRIVE_DISK`                                         | `fs`, `s3`, `spaces`, `r2` ou `gcs`         |
+| Variável                                             | Finalidade                                   |
+| ---------------------------------------------------- | -------------------------------------------- |
+| `APP_NAME`, `VITE_APP_NAME`, `APP_URL`               | identidade e URLs da aplicação               |
+| `APP_LOCALE`                                         | locale padrão (`pt` ou `en`)                 |
+| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`        | segredos independentes da API                |
+| `EMAIL_VERIFICATION_SECRET`, `PASSWORD_RESET_SECRET` | HMAC de links de uso único                   |
+| `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_COOKIE_NAME`      | identidade dos tokens e cookie web           |
+| `REGISTRATION_WORKSPACE_MODE`                        | onboarding `none`, `personal` ou `operation` |
+| `DEMO_PAGES_ENABLED`                                 | páginas internas de referência visual        |
+| `DRIVE_DISK`                                         | `fs`, `s3`, `spaces`, `r2` ou `gcs`          |
 
 Os segredos opcionais usam `APP_KEY` como fallback apenas durante o desenvolvimento. Produção deve utilizar valores longos, independentes e armazenados fora do repositório.
 
