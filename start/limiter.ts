@@ -156,6 +156,28 @@ export const uploadThrottle = limiter.define('upload', async (ctx) => {
  * - 200 requests per minute
  * - Only for authenticated admin/root users
  */
+export const analyticsEventsThrottle = limiter.define('analytics-events', (ctx) => {
+  return limiter
+    .allowRequests(60)
+    .every('1 minute')
+    .blockFor('2 minutes')
+    .usingKey(`analytics_events_${ctx.request.ip()}`)
+    .limitExceeded((error) => {
+      error.setMessage('Too many analytics event requests. Please try again shortly.')
+    })
+})
+
+export const analyticsRedirectThrottle = limiter.define('analytics-redirect', (ctx) => {
+  return limiter
+    .allowRequests(120)
+    .every('1 minute')
+    .blockFor('1 minute')
+    .usingKey(`analytics_redirect_${ctx.request.ip()}`)
+    .limitExceeded((error) => {
+      error.setMessage('Too many tracked action requests. Please try again shortly.')
+    })
+})
+
 export const adminThrottle = limiter.define('admin', async (ctx) => {
   try {
     const isAuthenticated = await ctx.auth.check()

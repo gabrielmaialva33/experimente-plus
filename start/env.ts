@@ -35,6 +35,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   REGISTRATION_WORKSPACE_MODE: Env.schema.enum.optional(['none', 'personal', 'operation'] as const),
   ORGANIZATION_INVITATION_SECRET: Env.schema.string.optional(),
   ORGANIZATION_INVITATION_TTL_HOURS: Env.schema.number.optional(),
+  ANALYTICS_HASH_SECRET: Env.schema.string(),
+  ANALYTICS_RAW_RETENTION_DAYS: Env.schema.number.optional(),
+  ANALYTICS_AGGREGATE_RETENTION_MONTHS: Env.schema.number.optional(),
+  ANALYTICS_SESSION_COOKIE_DAYS: Env.schema.number.optional(),
   DEMO_PAGES_ENABLED: Env.schema.boolean.optional(),
 
   DEV_ADMIN_NAME: Env.schema.string.optional(),

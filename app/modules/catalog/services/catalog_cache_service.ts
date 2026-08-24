@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
 import redis from '@adonisjs/redis/services/main'
 
+import env from '#start/env'
+
 export default class CatalogCacheService {
   private readonly prefix = 'catalog:v1'
 
@@ -13,6 +15,13 @@ export default class CatalogCacheService {
   }
 
   async remember<T>(key: string, ttlSeconds: number, factory: () => Promise<T>): Promise<T> {
+    // Functional tests run inside an uncommitted global PostgreSQL transaction.
+    // Redis cannot observe the matching projection-version update, so using it
+    // would leak stale values between requests in the same test transaction.
+    if (env.get('NODE_ENV') === 'test') {
+      return factory()
+    }
+
     try {
       const cached = await redis.get(key)
       if (cached) {

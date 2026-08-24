@@ -7,6 +7,8 @@ import { passwordResetRequestThrottle, passwordResetThrottle } from '#start/limi
 
 const InertiaAuthController = () => import('#modules/web/controllers/auth_controller')
 const InertiaDashboardController = () => import('#modules/web/controllers/dashboard_controller')
+const InertiaAnalyticsController = () =>
+  import('#modules/analytics/controllers/analytics_pages_controller')
 const InertiaUsersController = () => import('#modules/web/controllers/users_controller')
 const InertiaFilesController = () => import('#modules/web/controllers/files_controller')
 const InertiaTenantController = () => import('#modules/web/controllers/tenant_controller')
@@ -72,6 +74,16 @@ router
         middleware.tenant(),
         middleware.permission({
           permissions: permission(IPermission.Resources.DASHBOARD, IPermission.Actions.READ),
+        }),
+      ])
+
+    router
+      .get('/organizations/:organizationId/analytics', [InertiaAnalyticsController, 'organization'])
+      .as('analytics.organization')
+      .use([
+        middleware.tenant({ required: true }),
+        middleware.permission({
+          permissions: permission(IPermission.Resources.ANALYTICS, IPermission.Actions.READ),
         }),
       ])
 

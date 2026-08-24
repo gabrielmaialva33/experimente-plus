@@ -23,7 +23,25 @@ const tenantHeader = (tenantId: number) => ({ 'x-tenant-id': String(tenantId) })
 const publicHeaders = (scenario: EstablishmentScenario) => ({
   'host': `${scenario.tenant.slug}.experimente.test`,
   'x-forwarded-host': `${scenario.tenant.slug}.experimente.test`,
+  'x-forwarded-for': `198.51.100.${(scenario.tenant.id % 250) + 1}`,
 })
+
+interface TestInertiaPage {
+  component: string
+  props: Record<string, unknown>
+}
+
+function parseInertiaPage(response: { text(): string }): TestInertiaPage {
+  const match = response
+    .text()
+    .match(/<script data-page="app" type="application\/json">([\s\S]*?)<\/script>/)
+
+  if (!match?.[1]) {
+    throw new Error('The response does not contain an Inertia page payload')
+  }
+
+  return JSON.parse(match[1]) as TestInertiaPage
+}
 
 async function createDraftEstablishment(
   client: ApiClient,
@@ -302,39 +320,46 @@ test.group('Public catalog', (group) => {
 
     const citiesPage = await client.get('/cidades').headers(publicHeaders(scenario))
     citiesPage.assertStatus(200)
-    citiesPage.assertTextIncludes(published.city_name)
+    const citiesInertia = parseInertiaPage(citiesPage)
+    assert.equal(citiesInertia.component, 'catalog/cities')
+    assert.include(JSON.stringify(citiesInertia.props.catalog), published.city_name)
 
     const cityPage = await client
       .get(`/cidades/${published.city_slug}`)
       .headers(publicHeaders(scenario))
     cityPage.assertStatus(200)
-    cityPage.assertInertiaComponent('catalog/establishments')
-    cityPage.assertInertiaPropsContains({
-      catalog: {
-        organic_results: [{ public_name: published.public_name }],
-      },
-      city_slug: published.city_slug,
-    })
+    const cityInertia = parseInertiaPage(cityPage)
+    assert.equal(cityInertia.component, 'catalog/establishments')
+    assert.equal(cityInertia.props.city_slug, published.city_slug)
+    assert.include(JSON.stringify(cityInertia.props.catalog), published.public_name)
 
     const categoriesPage = await client
       .get(`/cidades/${published.city_slug}/categorias`)
       .headers(publicHeaders(scenario))
     categoriesPage.assertStatus(200)
-    categoriesPage.assertInertiaComponent('catalog/categories')
-    categoriesPage.assertInertiaPropsContains({ city_slug: published.city_slug })
-    categoriesPage.assertTextIncludes(published.category_name)
+    const categoriesInertia = parseInertiaPage(categoriesPage)
+    assert.equal(categoriesInertia.component, 'catalog/categories')
+    assert.equal(categoriesInertia.props.city_slug, published.city_slug)
+    assert.include(JSON.stringify(categoriesInertia.props.catalog), published.category_name)
 
     const categoryPage = await client
       .get(`/cidades/${published.city_slug}/categorias/${published.category_slug}`)
       .headers(publicHeaders(scenario))
     categoryPage.assertStatus(200)
-    categoryPage.assertTextIncludes(published.public_name)
+    const categoryInertia = parseInertiaPage(categoryPage)
+    assert.equal(categoryInertia.component, 'catalog/category')
+    assert.equal(categoryInertia.props.city_slug, published.city_slug)
+    assert.equal(categoryInertia.props.category_slug, published.category_slug)
+    assert.include(JSON.stringify(categoryInertia.props.catalog), published.public_name)
 
     const detailPage = await client
       .get(`/cidades/${published.city_slug}/estabelecimentos/${published.establishment_slug}`)
       .headers(publicHeaders(scenario))
     detailPage.assertStatus(200)
-    detailPage.assertTextIncludes(published.public_name)
+    const detailInertia = parseInertiaPage(detailPage)
+    assert.equal(detailInertia.component, 'catalog/establishment')
+    assert.equal(detailInertia.props.city_slug, published.city_slug)
+    assert.include(JSON.stringify(detailInertia.props.catalog), published.public_name)
   })
 
   test('supports deterministic text, typo, category and pagination filters', async ({
