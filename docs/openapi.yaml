@@ -1807,6 +1807,213 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CatalogHour'
+    AnalyticsEventInput:
+      type: object
+      required: [event_id, event_type, city_slug]
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - catalog_impression
+            - establishment_view
+            - route_click
+            - whatsapp_click
+            - phone_click
+            - website_click
+            - share_click
+            - search_without_results
+        city_slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        establishment_slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        category_slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        search_term:
+          type: string
+          minLength: 1
+          maxLength: 160
+
+    AnalyticsEventsRequest:
+      type: object
+      required: [events]
+      additionalProperties: false
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/AnalyticsEventInput'
+
+    AnalyticsEventsAccepted:
+      type: object
+      required: [accepted, recorded, deduplicated, suppressed]
+      properties:
+        accepted:
+          type: integer
+          minimum: 1
+          maximum: 20
+        recorded:
+          type: integer
+          minimum: 0
+          maximum: 20
+        deduplicated:
+          type: integer
+          minimum: 0
+          maximum: 20
+        suppressed:
+          type: integer
+          minimum: 0
+          maximum: 20
+          description: Events intentionally ignored because the request expressed DNT or Global Privacy Control.
+
+    AnalyticsMetricTotal:
+      type: object
+      required: [event_type, event_count, unique_sessions]
+      properties:
+        event_type:
+          type: string
+        event_count:
+          type: integer
+          minimum: 0
+        unique_sessions:
+          type: integer
+          minimum: 0
+
+    AnalyticsMetricDay:
+      type: object
+      required: [date, impressions, views, conversions, unique_sessions]
+      properties:
+        date:
+          type: string
+          format: date
+        impressions:
+          type: integer
+          minimum: 0
+        views:
+          type: integer
+          minimum: 0
+        conversions:
+          type: integer
+          minimum: 0
+        unique_sessions:
+          type: integer
+          minimum: 0
+
+    AnalyticsEstablishmentSummary:
+      type: object
+      required:
+        - establishment_id
+        - public_name
+        - slug
+        - impressions
+        - views
+        - conversions
+        - unique_sessions
+      properties:
+        establishment_id:
+          type: integer
+          minimum: 1
+        public_name:
+          type: string
+        slug:
+          type: string
+        impressions:
+          type: integer
+          minimum: 0
+        views:
+          type: integer
+          minimum: 0
+        conversions:
+          type: integer
+          minimum: 0
+        unique_sessions:
+          type: integer
+          minimum: 0
+
+    OrganizationAnalyticsDashboard:
+      type: object
+      required: [organization_id, from, to, totals, timeseries, establishments]
+      properties:
+        organization_id:
+          type: integer
+          minimum: 1
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        totals:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsMetricTotal'
+        timeseries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsMetricDay'
+        establishments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsEstablishmentSummary'
+
+    AnalyticsSearchTerm:
+      type: object
+      required: [date, city_id, city_name, term, category_slug, searches, unique_sessions]
+      properties:
+        date:
+          type: string
+          format: date
+        city_id:
+          type: integer
+          minimum: 1
+        city_name:
+          type: string
+        term:
+          type: string
+          description: Privacy-redacted search term. Email addresses and phone numbers are never returned.
+        category_slug:
+          type: [string, 'null']
+        searches:
+          type: integer
+          minimum: 0
+        unique_sessions:
+          type: integer
+          minimum: 0
+
+    AnalyticsSearchTermsPage:
+      type: object
+      required: [meta, data]
+      properties:
+        meta:
+          type: object
+          required: [total, page, per_page, last_page]
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            page:
+              type: integer
+              minimum: 1
+            per_page:
+              type: integer
+              minimum: 1
+              maximum: 100
+            last_page:
+              type: integer
+              minimum: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSearchTerm'
+
   parameters:
     pathId:
       name: id
@@ -1933,7 +2140,183 @@ tags:
   - name: Establishment Review
     description: Submission, structured corrections, moderation, atomic publication and lifecycle controls.
 
+  - name: Analytics
+    description: Privacy-preserving discovery events, partner aggregates and platform search diagnostics.
+
 paths:
+  /api/v1/analytics/events:
+    post:
+      operationId: ingestDiscoveryAnalyticsEvents
+      summary: Record a small batch of privacy-safe discovery events
+      description: Resolves the public operation from the hostname, validates targets against the published catalog, deduplicates events and updates daily aggregates. Raw IP addresses, user agents and authenticated user IDs are not stored.
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEventsRequest'
+      responses:
+        '202':
+          description: Events accepted for the privacy-preserving analytics pipeline
+          headers:
+            Set-Cookie:
+              description: Encrypted first-party anonymous analytics session cookie when absent.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsEventsAccepted'
+        '400':
+          description: Event semantics do not match the event type
+        '404':
+          description: Public operation, city, category or published establishment was not found
+        '422':
+          description: Payload validation failed
+        '429':
+          description: Public analytics rate limit exceeded
+
+  /go/{citySlug}/{establishmentSlug}/{action}:
+    get:
+      operationId: redirectTrackedEstablishmentAction
+      summary: Redirect to an allowlisted establishment action
+      description: Derives the destination exclusively from the published catalog and records the corresponding action event. Arbitrary redirect destinations are never accepted.
+      tags: [Analytics]
+      parameters:
+        - in: path
+          name: citySlug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: establishmentSlug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: action
+          required: true
+          schema:
+            type: string
+            enum: [route, whatsapp, phone, website]
+      responses:
+        '302':
+          description: Redirect to Google Maps, WhatsApp, telephone or the published HTTP(S) website
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        '404':
+          description: Establishment or requested action is unavailable
+        '429':
+          description: Public action rate limit exceeded
+
+  /api/v1/organizations/{organizationId}/analytics:
+    get:
+      operationId: getOrganizationDiscoveryAnalytics
+      summary: Read discovery analytics for one organization
+      description: Requires an active organization membership with owner, admin or analyst capability. Editors and unrelated users cannot read analytics.
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: organizationId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: establishment_id
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Aggregated discovery metrics for the requested organization and period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationAnalyticsDashboard'
+        '400':
+          description: Invalid date range
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Organization or scoped establishment not found
+        '422':
+          description: Query validation failed
+
+  /api/v1/admin/analytics/searches/no-results:
+    get:
+      operationId: listNoResultSearchAnalytics
+      summary: List privacy-redacted no-result searches for the active operation
+      description: Restricted to global Administrators and Root users. Terms are aggregated and stripped of email addresses and telephone numbers.
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: city_id
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated no-result search aggregates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSearchTermsPage'
+        '400':
+          description: Invalid date range
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform administrator capability required
+        '404':
+          description: Requested city not found in the active operation
+        '422':
+          description: Query validation failed
   /api/v1/establishments/{id}/review:
     get:
       operationId: getEstablishmentReviewStatus
