@@ -31,6 +31,7 @@ export default class extends BaseSchema {
       table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(this.now())
 
+      table.unique(['id', 'tenant_id'], 'files_id_tenant_unique')
       table.index(['owner_id'], 'idx_files_owner_id')
       table.index(['tenant_id', 'created_at'], 'idx_files_tenant_created_at')
     })
