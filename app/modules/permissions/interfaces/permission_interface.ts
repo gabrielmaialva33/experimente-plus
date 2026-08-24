@@ -70,6 +70,7 @@ namespace IPermission {
     ORGANIZATION_INVITATIONS = 'organization_invitations',
     ORGANIZATION_CLAIMS = 'organization_claims',
     ESTABLISHMENTS = 'establishments',
+    ANALYTICS = 'analytics',
     SETTINGS = 'settings',
     REPORTS = 'reports',
     AUDIT = 'audit',

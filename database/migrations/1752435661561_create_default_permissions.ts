@@ -6,6 +6,7 @@ const defaultPermissionActions: Record<string, readonly string[]> = {
   permissions: ['create', 'read', 'update', 'delete', 'list', 'assign', 'revoke'],
   files: ['create', 'read', 'delete', 'list'],
   media: ['create', 'read', 'update', 'delete', 'list', 'approve', 'reject'],
+  analytics: ['read', 'list'],
   tenants: ['create', 'read', 'update', 'delete', 'list'],
   regions: ['create', 'read', 'update', 'delete', 'list'],
   cities: ['create', 'read', 'update', 'delete', 'list'],
@@ -109,6 +110,7 @@ const userPermissionNames = new Set([
   'media.update',
   'media.delete',
   'media.list',
+  'analytics.read',
 ])
 
 const moderatorPermissionNames = new Set([

@@ -137,6 +137,7 @@ export const DEFAULT_PERMISSION_ACTIONS: Partial<
     IPermission.Actions.APPROVE,
     IPermission.Actions.REJECT,
   ],
+  [IPermission.Resources.ANALYTICS]: [IPermission.Actions.READ, IPermission.Actions.LIST],
   [IPermission.Resources.SETTINGS]: [IPermission.Actions.READ, IPermission.Actions.UPDATE],
   [IPermission.Resources.REPORTS]: [
     IPermission.Actions.READ,
