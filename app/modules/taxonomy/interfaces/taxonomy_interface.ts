@@ -39,6 +39,7 @@ namespace ITaxonomy {
     icon?: string | null
     sort_order?: number
     is_active?: boolean
+    allows_always_open?: boolean
   }
 
   export interface CategoryUpdatePayload {
@@ -50,6 +51,7 @@ namespace ITaxonomy {
     icon?: string | null
     sort_order?: number
     is_active?: boolean
+    allows_always_open?: boolean
   }
 
   export interface AttributeDefinitionPayload {

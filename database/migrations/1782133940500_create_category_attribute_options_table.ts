@@ -26,6 +26,10 @@ export default class extends BaseSchema {
         ['tenant_id', 'attribute_definition_id', 'value'],
         'category_attribute_options_scope_value_unique'
       )
+      table.unique(
+        ['id', 'tenant_id', 'attribute_definition_id'],
+        'category_attribute_options_id_tenant_definition_unique'
+      )
       table.index(
         ['tenant_id', 'attribute_definition_id', 'is_active', 'sort_order'],
         'category_attribute_options_catalog_index'

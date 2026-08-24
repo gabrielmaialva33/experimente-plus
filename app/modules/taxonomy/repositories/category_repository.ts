@@ -79,6 +79,7 @@ export default class CategoryRepository {
     icon: string | null
     sort_order: number
     is_active: boolean
+    allows_always_open: boolean
   }): Promise<Category> {
     return Category.create(data)
   }

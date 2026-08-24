@@ -51,6 +51,7 @@ export default class CategoryService {
       icon: this.nullableText(payload.icon),
       sort_order: payload.sort_order ?? 0,
       is_active: payload.is_active ?? true,
+      allows_always_open: payload.allows_always_open ?? false,
     })
   }
 
@@ -102,6 +103,9 @@ export default class CategoryService {
     }
     if (payload.is_active !== undefined) {
       category.is_active = payload.is_active
+    }
+    if (payload.allows_always_open !== undefined) {
+      category.allows_always_open = payload.allows_always_open
     }
 
     await category.save()

@@ -33,6 +33,7 @@ const categoryFields = {
   icon: vine.string().trim().maxLength(80).nullable().optional(),
   sort_order: vine.number().min(0).optional(),
   is_active: vine.boolean().optional(),
+  allows_always_open: vine.boolean().optional(),
 }
 
 export const createCategoryValidator = vine.compile(vine.object(categoryFields))
@@ -47,6 +48,7 @@ export const updateCategoryValidator = vine.compile(
     icon: categoryFields.icon,
     sort_order: categoryFields.sort_order,
     is_active: categoryFields.is_active,
+    allows_always_open: categoryFields.allows_always_open,
   })
 )
 

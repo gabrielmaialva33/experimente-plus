@@ -21,6 +21,7 @@ export default class extends BaseSchema {
       table.string('icon', 80).nullable()
       table.integer('sort_order').notNullable().defaultTo(0)
       table.boolean('is_active').notNullable().defaultTo(true)
+      table.boolean('allows_always_open').notNullable().defaultTo(false)
 
       table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(this.now())

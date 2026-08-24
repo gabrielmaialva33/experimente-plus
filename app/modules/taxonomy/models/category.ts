@@ -40,6 +40,9 @@ export default class Category extends BaseModel {
   @column()
   declare is_active: boolean
 
+  @column()
+  declare allows_always_open: boolean
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 
