@@ -31,6 +31,7 @@ declare module '@adonisjs/inertia/types' {
     'ui_demo': Record<string, never>
     'data_grid_demo': Record<string, never>
     'dashboard': { stats: DashboardStats }
+    'analytics/organization': { dashboard: Record<string, any> }
 
     // Catalog
     'catalog/cities': { catalog: any }
