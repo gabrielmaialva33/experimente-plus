@@ -120,6 +120,12 @@ export const DEFAULT_PERMISSION_ACTIONS: Partial<
     IPermission.Actions.READ,
     IPermission.Actions.UPDATE,
     IPermission.Actions.LIST,
+    IPermission.Actions.SUBMIT,
+    IPermission.Actions.APPROVE,
+    IPermission.Actions.REJECT,
+    IPermission.Actions.REQUEST_CHANGES,
+    IPermission.Actions.SUSPEND,
+    IPermission.Actions.RESTORE,
     IPermission.Actions.ARCHIVE,
   ],
   [IPermission.Resources.MEDIA]: [
