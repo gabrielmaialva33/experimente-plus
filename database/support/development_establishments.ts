@@ -8,6 +8,7 @@ import EstablishmentRevisionAttributeValue from '#modules/establishments/models/
 import EstablishmentRevisionAttributeValueOption from '#modules/establishments/models/establishment_revision_attribute_value_option'
 import EstablishmentRevisionCategory from '#modules/establishments/models/establishment_revision_category'
 import EstablishmentRevisionHour from '#modules/establishments/models/establishment_revision_hour'
+import EstablishmentRevisionEvent from '#modules/establishments/models/establishment_revision_event'
 import EstablishmentRevisionSpecialDay from '#modules/establishments/models/establishment_revision_special_day'
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
@@ -458,6 +459,7 @@ async function seedVenue(
 
   establishment.published_revision_id = revision.id
   await establishment.save()
+  await seedRevisionEvents(tenant, rootUser, establishment, revision)
 }
 
 async function seedAttributes(
@@ -581,6 +583,81 @@ async function seedSpecialClosure(tenant: Tenant, revision: EstablishmentRevisio
     status: 'closed',
     note: 'Fechado no feriado de Natal',
   })
+}
+
+async function seedRevisionEvents(
+  tenant: Tenant,
+  rootUser: User,
+  establishment: Establishment,
+  revision: EstablishmentRevision
+): Promise<void> {
+  const events = [
+    {
+      event_type: 'created' as const,
+      from_status: null,
+      to_status: 'draft' as const,
+      reason: null,
+      metadata: {
+        source: 'development_seeder',
+        rules_version: ESTABLISHMENT_COMPLETENESS_RULES_VERSION,
+      },
+    },
+    {
+      event_type: 'submitted' as const,
+      from_status: 'draft' as const,
+      to_status: 'pending_review' as const,
+      reason: null,
+      metadata: {
+        source: 'development_seeder',
+        score: 100,
+        rules_version: ESTABLISHMENT_COMPLETENESS_RULES_VERSION,
+      },
+    },
+    {
+      event_type: 'approved' as const,
+      from_status: 'pending_review' as const,
+      to_status: 'approved' as const,
+      reason: 'Ficha aprovada pelo seeder de desenvolvimento',
+      metadata: {
+        source: 'development_seeder',
+        score: 100,
+        rules_version: ESTABLISHMENT_COMPLETENESS_RULES_VERSION,
+      },
+    },
+    {
+      event_type: 'published' as const,
+      from_status: 'approved' as const,
+      to_status: 'approved' as const,
+      reason: null,
+      metadata: {
+        source: 'development_seeder',
+        published_revision_id: revision.id,
+      },
+    },
+  ]
+
+  for (const event of events) {
+    await EstablishmentRevisionEvent.firstOrCreate(
+      {
+        tenant_id: tenant.id,
+        establishment_id: establishment.id,
+        revision_id: revision.id,
+        event_type: event.event_type,
+      },
+      {
+        tenant_id: tenant.id,
+        establishment_id: establishment.id,
+        revision_id: revision.id,
+        event_type: event.event_type,
+        from_status: event.from_status,
+        to_status: event.to_status,
+        actor_id: rootUser.id,
+        reason: event.reason,
+        metadata: event.metadata,
+        created_at: APPROVED_AT,
+      }
+    )
+  }
 }
 
 async function seedMedia(
