@@ -95,18 +95,18 @@ export default function Home() {
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-              <p className="text-sm font-medium text-primary">EP-01 concluído</p>
-              <h2 className="mt-2 text-2xl font-semibold">Geografia e taxonomia implementadas</h2>
+              <p className="text-sm font-medium text-primary">EP-04 concluído</p>
+              <h2 className="mt-2 text-2xl font-semibold">Mídia versionada e moderada</h2>
               <p className="mt-3 leading-7 text-muted-foreground">
-                Regiões, cidades, famílias, categorias e atributos já possuem schema, APIs, catálogo
-                público e regressões de isolamento. O próximo corte conecta usuários a organizações
-                e prepara a propriedade das futuras unidades.
+                As unidades agora possuem assets estáveis, galeria por revisão, capa única,
+                ordenação, acessibilidade, moderação auditável e uma projeção pública restrita a
+                imagens aprovadas. O próximo corte fecha submissão e publicação da ficha completa.
               </p>
               <div className="mt-6 h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-1/2 rounded-full bg-primary" />
+                <div className="h-full w-4/5 rounded-full bg-primary" />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Fundação, produto, arquitetura e EP-01 validados · EP-02 a seguir
+                Fundação e EP-01 a EP-04 implementados · EP-05 submissão e moderação a seguir
               </p>
             </div>
           </div>
