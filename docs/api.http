@@ -21,6 +21,9 @@
 @userId = 3
 @roleId = 3
 @fileId = 1
+@establishmentId = 1
+@mediaId = 1
+@moderatorToken = replace-with-platform-moderator-access-token
 
 ###############################################################################
 ### HEALTH ENDPOINTS
@@ -430,7 +433,133 @@ Authorization: Bearer {{token}}
 x-tenant-id: {{tenantId}}
 
 ###############################################################################
-### EXAMPLE RESPONSES
+### ============================================================================
+# ESTABLISHMENT MEDIA ENDPOINTS
+# ============================================================================
+
+### List Administrative Media Composition
+GET {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Upload JPEG to Editable Revision
+# Supported: JPEG, PNG and WebP, up to 10 MiB. Binary signature, MIME and extension must agree.
+POST {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Content-Type: multipart/form-data; boundary=ExperimenteMediaBoundary
+Accept: application/json
+
+--ExperimenteMediaBoundary
+Content-Disposition: form-data; name="purpose"
+
+gallery
+--ExperimenteMediaBoundary
+Content-Disposition: form-data; name="is_cover"
+
+true
+--ExperimenteMediaBoundary
+Content-Disposition: form-data; name="alt_text"
+
+Fachada principal do estabelecimento
+--ExperimenteMediaBoundary
+Content-Disposition: form-data; name="caption"
+
+Entrada principal vista da rua
+--ExperimenteMediaBoundary
+Content-Disposition: form-data; name="file"; filename="valid.jpg"
+Content-Type: image/jpeg
+
+< ../tests/fixtures/media/valid.jpg
+--ExperimenteMediaBoundary--
+
+### Update Media Metadata
+# Changing moderated metadata returns the association to pending review.
+PATCH {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media/{{mediaId}}
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "purpose": "exterior",
+  "alt_text": "Fachada principal iluminada durante o dia",
+  "caption": "Entrada acessível pela rua principal"
+}
+
+### Select Cover
+PATCH {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media/{{mediaId}}/cover
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Replace Complete Media Order
+# Supply every current association exactly once with contiguous positions starting at zero.
+PUT {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media/order
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "media": [
+    { "id": {{mediaId}}, "sort_order": 0 }
+  ]
+}
+
+### List Pending Media Moderation Queue
+GET {{baseUrl}}/api/v1/admin/media?status=pending&page=1&per_page=20
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Approve Media
+# Alternative text is mandatory before approval. Approval does not publish the establishment revision.
+POST {{baseUrl}}/api/v1/admin/media/{{mediaId}}/approve
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Reject Media
+POST {{baseUrl}}/api/v1/admin/media/{{mediaId}}/reject
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "A imagem não representa o estabelecimento informado"
+}
+
+### Quarantine Media
+# Quarantined media is removed from cover eligibility and blocks submission while associated.
+POST {{baseUrl}}/api/v1/admin/media/{{mediaId}}/quarantine
+Authorization: Bearer {{moderatorToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Conteúdo requer análise adicional antes de qualquer exposição"
+}
+
+### Read Approved Public Media
+# No authentication. Returns only approved media from the published revision.
+GET {{baseUrl}}/api/v1/public/establishments/{{establishmentId}}/media
+Accept: application/json
+
+### Remove Media from Editable Revision
+# The physical object is removed only after the final revision reference disappears.
+DELETE {{baseUrl}}/api/v1/establishments/{{establishmentId}}/media/{{mediaId}}
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+# EXAMPLE RESPONSES
 ###############################################################################
 
 ### Success Response - User Object

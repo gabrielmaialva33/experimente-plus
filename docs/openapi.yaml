@@ -702,6 +702,608 @@ components:
           type: string
           example: 'pdf'
 
+    EstablishmentRevision:
+      type: object
+      required: [id, tenant_id, establishment_id, version, status, rules_version]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        establishment_id:
+          type: integer
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [draft, pending_review, changes_requested, approved, rejected]
+        city_id:
+          type: [integer, 'null']
+        public_name:
+          type: [string, 'null']
+        slug:
+          type: [string, 'null']
+        short_description:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        public_phone:
+          type: [string, 'null']
+        whatsapp:
+          type: [string, 'null']
+        public_email:
+          type: [string, 'null']
+        website:
+          type: [string, 'null']
+          format: uri
+        instagram:
+          type: [string, 'null']
+        booking_url:
+          type: [string, 'null']
+          format: uri
+        availability_type:
+          type: string
+          enum: [regular_hours, appointment_only, always_open]
+        rules_version:
+          type: integer
+          minimum: 1
+        submitted_at:
+          type: [string, 'null']
+          format: date-time
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        review_notes:
+          type: [string, 'null']
+        address:
+          oneOf:
+            - $ref: '#/components/schemas/EstablishmentAddress'
+            - type: 'null'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentCategory'
+        hours:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentHour'
+        special_days:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentSpecialDay'
+
+    Establishment:
+      type: object
+      required:
+        [id, tenant_id, organization_id, lifecycle_status, business_status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        organization_id:
+          type: integer
+        lifecycle_status:
+          type: string
+          enum: [active, suspended, archived]
+        business_status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+        published_revision_id:
+          type: [integer, 'null']
+        published_revision:
+          oneOf:
+            - $ref: '#/components/schemas/EstablishmentRevision'
+            - type: 'null'
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentRevision'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EstablishmentRevisionInput:
+      type: object
+      properties:
+        public_name:
+          type: string
+          minLength: 2
+          maxLength: 160
+        city_id:
+          type: [integer, 'null']
+          minimum: 1
+        slug:
+          type: [string, 'null']
+          maxLength: 180
+        short_description:
+          type: [string, 'null']
+          maxLength: 320
+        description:
+          type: [string, 'null']
+          maxLength: 10000
+        public_phone:
+          type: [string, 'null']
+        whatsapp:
+          type: [string, 'null']
+        public_email:
+          type: [string, 'null']
+          format: email
+        website:
+          type: [string, 'null']
+          format: uri
+        instagram:
+          type: [string, 'null']
+        booking_url:
+          type: [string, 'null']
+          format: uri
+        availability_type:
+          type: [string, 'null']
+          enum: [regular_hours, appointment_only, always_open, null]
+
+    EstablishmentCreateInput:
+      allOf:
+        - $ref: '#/components/schemas/EstablishmentRevisionInput'
+        - type: object
+          required: [public_name]
+
+    EstablishmentAddress:
+      type: object
+      properties:
+        postal_code:
+          type: [string, 'null']
+        street:
+          type: [string, 'null']
+        number:
+          type: [string, 'null']
+        without_number:
+          type: boolean
+        complement:
+          type: [string, 'null']
+        district:
+          type: [string, 'null']
+        reference:
+          type: [string, 'null']
+        latitude:
+          type: [number, string, 'null']
+        longitude:
+          type: [number, string, 'null']
+        coordinate_source:
+          type: [string, 'null']
+          enum: [manual, geocoded, imported, null]
+
+    EstablishmentCategory:
+      type: object
+      required: [category_id, is_primary, sort_order]
+      properties:
+        category_id:
+          type: integer
+        is_primary:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+        category:
+          $ref: '#/components/schemas/Category'
+
+    EstablishmentCategoryListInput:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            required: [category_id]
+            properties:
+              category_id:
+                type: integer
+                minimum: 1
+              is_primary:
+                type: boolean
+                default: false
+              sort_order:
+                type: integer
+                minimum: 0
+                default: 0
+
+    EstablishmentAttributeListInput:
+      type: object
+      required: [attributes]
+      properties:
+        attributes:
+          type: array
+          items:
+            type: object
+            required: [attribute_definition_id]
+            properties:
+              attribute_definition_id:
+                type: integer
+                minimum: 1
+              value:
+                nullable: true
+              option_ids:
+                type: array
+                uniqueItems: true
+                items:
+                  type: integer
+                  minimum: 1
+
+    EstablishmentHour:
+      type: object
+      required: [weekday, opens_at, closes_at, spans_next_day, sort_order]
+      properties:
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+        opens_at:
+          type: string
+          example: '08:00'
+        closes_at:
+          type: string
+          example: '18:00'
+        spans_next_day:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+
+    EstablishmentHoursInput:
+      type: object
+      required: [hours]
+      properties:
+        hours:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentHour'
+
+    EstablishmentSpecialDay:
+      type: object
+      required: [date, status]
+      properties:
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [closed, custom_hours]
+        note:
+          type: [string, 'null']
+        intervals:
+          type: array
+          items:
+            type: object
+            required: [opens_at, closes_at]
+            properties:
+              opens_at:
+                type: string
+                example: '09:00'
+              closes_at:
+                type: string
+                example: '14:00'
+              spans_next_day:
+                type: boolean
+                default: false
+              sort_order:
+                type: integer
+                minimum: 0
+                default: 0
+
+    EstablishmentSpecialDaysInput:
+      type: object
+      required: [special_days]
+      properties:
+        special_days:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentSpecialDay'
+
+    EstablishmentBusinessStatusInput:
+      type: object
+      required: [business_status]
+      properties:
+        business_status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+
+    EstablishmentCompletenessIssue:
+      type: object
+      required: [code, field, message, severity]
+      properties:
+        code:
+          type: string
+        field:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [blocking, warning]
+
+    EstablishmentCompleteness:
+      type: object
+      required: [eligible, score, blocking_issues, warnings, checked_at, rules_version]
+      properties:
+        eligible:
+          type: boolean
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        blocking_issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentCompletenessIssue'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentCompletenessIssue'
+        checked_at:
+          type: string
+          format: date-time
+        rules_version:
+          type: integer
+          minimum: 1
+
+    EffectiveCategoryAttribute:
+      type: object
+      required: [definition, source_category_id, required_for_primary]
+      properties:
+        definition:
+          $ref: '#/components/schemas/CategoryAttributeDefinition'
+        source_category_id:
+          type: integer
+        inherited_from_category_id:
+          type: [integer, 'null']
+        required_for_primary:
+          type: boolean
+
+    MediaAsset:
+      type: object
+      required:
+        - id
+        - media_type
+        - file_extension
+        - mime_type
+        - width
+        - height
+        - checksum_sha256
+        - url
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        media_type:
+          type: string
+          enum: [image]
+        file_extension:
+          type: string
+          enum: [jpg, jpeg, png, webp]
+        mime_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        width:
+          type: integer
+          minimum: 1
+          maximum: 12000
+        height:
+          type: integer
+          minimum: 1
+          maximum: 12000
+        checksum_sha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        url:
+          type: string
+          format: uri
+
+    EstablishmentMedia:
+      type: object
+      required:
+        - id
+        - establishment_id
+        - revision_id
+        - purpose
+        - is_cover
+        - sort_order
+        - alt_text
+        - caption
+        - moderation_status
+        - review_notes
+        - reviewed_at
+        - created_at
+        - updated_at
+        - asset
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+        revision_id:
+          type: integer
+          minimum: 1
+        purpose:
+          type: string
+          enum: [gallery, logo, menu, interior, exterior, product, team, service]
+        is_cover:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+          maximum: 19
+        alt_text:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 180
+        caption:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 500
+        moderation_status:
+          type: string
+          enum: [pending, approved, rejected, quarantined]
+        review_notes:
+          type: [string, 'null']
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        asset:
+          $ref: '#/components/schemas/MediaAsset'
+
+    PublicMediaAsset:
+      type: object
+      required: [id, media_type, file_extension, mime_type, width, height, url]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        media_type:
+          type: string
+          enum: [image]
+        file_extension:
+          type: string
+          enum: [jpg, jpeg, png, webp]
+        mime_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        url:
+          type: string
+          format: uri
+
+    PublicEstablishmentMedia:
+      type: object
+      required: [id, purpose, is_cover, sort_order, alt_text, caption, asset]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        purpose:
+          type: string
+          enum: [gallery, logo, menu, interior, exterior, product, team, service]
+        is_cover:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+        alt_text:
+          type: string
+          minLength: 1
+          maxLength: 180
+        caption:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 500
+        asset:
+          $ref: '#/components/schemas/PublicMediaAsset'
+
+    PublicEstablishmentMediaCollection:
+      type: object
+      required: [establishment_id, revision_id, media]
+      properties:
+        establishment_id:
+          type: integer
+          minimum: 1
+        revision_id:
+          type: integer
+          minimum: 1
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicEstablishmentMedia'
+
+    UpdateEstablishmentMediaRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        purpose:
+          type: string
+          enum: [gallery, logo, menu, interior, exterior, product, team, service]
+        alt_text:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 180
+        caption:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 500
+
+    MediaOrderItem:
+      type: object
+      required: [id, sort_order]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        sort_order:
+          type: integer
+          minimum: 0
+          maximum: 19
+
+    ReorderEstablishmentMediaRequest:
+      type: object
+      required: [media]
+      additionalProperties: false
+      properties:
+        media:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: Complete current collection with a contiguous zero-based order.
+          items:
+            $ref: '#/components/schemas/MediaOrderItem'
+
+    MediaOptionalReviewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 1000
+
+    MediaRequiredReviewRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 1000
+
+    MediaModerationPage:
+      type: object
+      required: [meta, data]
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentMedia'
+
   parameters:
     pathId:
       name: id
@@ -818,8 +1420,447 @@ tags:
     description: Current user profile operations
   - name: Permissions
     description: Permission management operations (admin only)
+  - name: Establishments
+    description: Stable units, revisioned public content, schedules, attributes, and completeness
+
+  - name: Media
+    description: Versioned establishment images, cover selection, ordering and moderation.
 
 paths:
+  /api/v1/public/establishments/{id}/media:
+    get:
+      operationId: getPublicEstablishmentMedia
+      summary: Read approved media from the published establishment revision
+      description: Returns only approved media associated with the currently published revision of an active establishment.
+      tags: [Media]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Approved public media projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicEstablishmentMediaCollection'
+        '404':
+          description: Published establishment not found
+
+  /api/v1/establishments/{id}/media:
+    get:
+      operationId: listEstablishmentMedia
+      summary: List the editable or published media composition
+      description: Requires media.read plus authorized organization membership. Draft content remains tenant-scoped and private.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Administrative media composition ordered by sort_order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstablishmentMedia'
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Establishment not found in the active tenant or membership scope
+    post:
+      operationId: uploadEstablishmentMedia
+      summary: Upload an image to the editable establishment revision
+      description: Accepts valid JPEG, PNG or WebP up to 10 MiB. Extension, reported MIME type and binary signature must agree. The first image becomes the cover unless is_cover is supplied.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                purpose:
+                  type: string
+                  enum: [gallery, logo, menu, interior, exterior, product, team, service]
+                  default: gallery
+                is_cover:
+                  type: boolean
+                alt_text:
+                  type: [string, 'null']
+                  minLength: 1
+                  maxLength: 180
+                caption:
+                  type: [string, 'null']
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '201':
+          description: Pending media created and associated with the editable revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: Invalid binary content, MIME mismatch, unsupported image or domain rule failure
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Editable establishment revision not found
+        '422':
+          description: Multipart or metadata validation failed
+
+  /api/v1/establishments/{id}/media/order:
+    put:
+      operationId: reorderEstablishmentMedia
+      summary: Replace the complete media order atomically
+      description: The payload must contain every current media item exactly once and use a contiguous zero-based order.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderEstablishmentMediaRequest'
+      responses:
+        '200':
+          description: Reordered media collection
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: Incomplete collection, duplicate identifiers or invalid order
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Editable establishment revision not found
+        '422':
+          description: Validation failed
+
+  /api/v1/establishments/{id}/media/{mediaId}:
+    patch:
+      operationId: updateEstablishmentMedia
+      summary: Update media purpose, alternative text or caption
+      description: Changing moderated metadata returns approved, rejected or quarantined media to pending review.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: path
+          name: mediaId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEstablishmentMediaRequest'
+      responses:
+        '200':
+          description: Updated media
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: No effective field or domain rule rejected the update
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Media not found in the editable revision
+        '422':
+          description: Validation failed
+    delete:
+      operationId: removeEstablishmentMedia
+      summary: Remove media from the editable revision
+      description: Deletes the physical object only after the last revision association is removed and the database transaction commits.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: path
+          name: mediaId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Media association removed
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Media not found in the editable revision
+
+  /api/v1/establishments/{id}/media/{mediaId}/cover:
+    patch:
+      operationId: selectEstablishmentMediaCover
+      summary: Select the single cover image for the editable revision
+      description: Rejected and quarantined media cannot become the cover. Cover selection does not change content moderation status.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: path
+          name: mediaId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Selected cover media
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: Media is not eligible to become the cover
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission or organization capability denied
+        '404':
+          description: Media not found in the editable revision
+
+  /api/v1/admin/media:
+    get:
+      operationId: listMediaModerationQueue
+      summary: List the global media moderation queue
+      description: Requires a platform moderator capability. The active tenant header remains mandatory and tenant_id may narrow the queue.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, quarantined]
+            default: pending
+        - in: query
+          name: tenant_id
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated moderation queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaModerationPage'
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '422':
+          description: Invalid query parameters
+
+  /api/v1/admin/media/{id}/approve:
+    post:
+      operationId: approveEstablishmentMedia
+      summary: Approve media for public eligibility
+      description: Alternative text is required before approval. Approval alone does not publish the establishment revision.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaOptionalReviewRequest'
+      responses:
+        '200':
+          description: Approved media
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: Alternative text is missing or transition is invalid
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Media not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/media/{id}/reject:
+    post:
+      operationId: rejectEstablishmentMedia
+      summary: Reject media with a required reason
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaRequiredReviewRequest'
+      responses:
+        '200':
+          description: Rejected media; it is no longer eligible as cover
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: Moderation transition rejected
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Media not found
+        '422':
+          description: Reason validation failed
+
+  /api/v1/admin/media/{id}/quarantine:
+    post:
+      operationId: quarantineEstablishmentMedia
+      summary: Quarantine media with a required reason
+      description: Quarantined media blocks establishment submission until removed from the editable composition.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaRequiredReviewRequest'
+      responses:
+        '200':
+          description: Quarantined media; it is no longer eligible as cover
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentMedia'
+        '400':
+          description: Moderation transition rejected
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator capability required
+        '404':
+          description: Media not found
+        '422':
+          description: Reason validation failed
   /api/v1/catalog/regions:
     get:
       operationId: listPublicRegions
@@ -2581,3 +3622,369 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+
+    /api/v1/organizations/{organizationId}/establishments:
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/tenantHeader'
+      get:
+        operationId: listOrganizationEstablishments
+        summary: List units visible inside an organization
+        tags: [Establishments]
+        responses:
+          '200':
+            description: Organization units
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Establishment'
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+      post:
+        operationId: createEstablishment
+        summary: Create a stable unit and its first draft revision
+        tags: [Establishments]
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentCreateInput'
+        responses:
+          '201':
+            description: Unit created atomically
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Establishment'
+          '400':
+            description: Domain invariant rejected the request
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}:
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      get:
+        operationId: getEstablishment
+        summary: Get a unit and the readable revision aggregate
+        tags: [Establishments]
+        responses:
+          '200':
+            description: Unit aggregate
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Establishment'
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+      delete:
+        operationId: archiveEstablishment
+        summary: Archive a unit lifecycle
+        tags: [Establishments]
+        responses:
+          '204':
+            description: Unit archived
+          '400':
+            description: Lifecycle transition rejected
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+
+    /api/v1/establishments/{id}/revision:
+      put:
+        operationId: updateEstablishmentRevision
+        summary: Update the editable public revision
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentRevisionInput'
+        responses:
+          '200':
+            description: Updated draft revision
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/EstablishmentRevision'
+          '400':
+            description: Revision is not editable or a domain invariant failed
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/address:
+      put:
+        operationId: replaceEstablishmentAddress
+        summary: Replace the revisioned address
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentAddress'
+        responses:
+          '200':
+            description: Revisioned address
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/EstablishmentAddress'
+          '400':
+            description: Coordinates must be supplied as a pair
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/categories:
+      put:
+        operationId: replaceEstablishmentCategories
+        summary: Replace revisioned categories
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentCategoryListInput'
+        responses:
+          '200':
+            description: Revisioned category assignments
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EstablishmentCategory'
+          '400':
+            description: Duplicate, inactive, foreign, or redundant hierarchy
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/attributes:
+      put:
+        operationId: replaceEstablishmentAttributes
+        summary: Replace typed values for effective category attributes
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentAttributeListInput'
+        responses:
+          '200':
+            description: Revisioned typed attribute values
+          '400':
+            description: Attribute or option is not effective for the primary category
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/hours:
+      put:
+        operationId: replaceEstablishmentHours
+        summary: Replace revisioned weekly opening intervals
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentHoursInput'
+        responses:
+          '200':
+            description: Weekly intervals
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EstablishmentHour'
+          '400':
+            description: Invalid, overlapping, or inconsistent intervals
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/special-days:
+      put:
+        operationId: replaceEstablishmentSpecialDays
+        summary: Replace revisioned schedule exceptions
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentSpecialDaysInput'
+        responses:
+          '200':
+            description: Special days and custom intervals
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EstablishmentSpecialDay'
+          '400':
+            description: Closed days cannot contain intervals and custom days require them
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/business-status:
+      patch:
+        operationId: updateEstablishmentBusinessStatus
+        summary: Update operational availability independently from lifecycle
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentBusinessStatusInput'
+        responses:
+          '200':
+            description: Updated operational status
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Establishment'
+          '400':
+            description: Transition rejected for the current lifecycle
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+          '422':
+            $ref: '#/components/responses/ValidationError'
+
+    /api/v1/establishments/{id}/completeness:
+      get:
+        operationId: getEstablishmentCompleteness
+        summary: Evaluate the versioned EP-03 publication gates
+        tags: [Establishments]
+        parameters:
+          - $ref: '#/components/parameters/pathId'
+          - $ref: '#/components/parameters/tenantHeader'
+        responses:
+          '200':
+            description: Versioned completeness report
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/EstablishmentCompleteness'
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
+
+    /api/v1/taxonomy/categories/{categoryId}/effective-attributes:
+      get:
+        operationId: listEffectiveCategoryAttributes
+        summary: Resolve direct and inherited active attribute definitions
+        tags: [Establishments]
+        parameters:
+          - name: categoryId
+            in: path
+            required: true
+            schema:
+              type: integer
+              minimum: 1
+          - $ref: '#/components/parameters/tenantHeader'
+        responses:
+          '200':
+            description: Effective definitions in deterministic order
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EffectiveCategoryAttribute'
+          '401':
+            $ref: '#/components/responses/UnauthorizedError'
+          '403':
+            $ref: '#/components/responses/ForbiddenError'
+          '404':
+            $ref: '#/components/responses/NotFoundError'
