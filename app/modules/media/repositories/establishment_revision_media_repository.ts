@@ -54,6 +54,20 @@ export default class EstablishmentRevisionMediaRepository extends LucidRepositor
       .first()
   }
 
+  async lockForRevision(
+    tenantId: number,
+    establishmentId: number,
+    revisionId: number,
+    client: TransactionClientContract
+  ): Promise<EstablishmentRevisionMedia[]> {
+    return EstablishmentRevisionMedia.query({ client })
+      .where('tenant_id', tenantId)
+      .where('establishment_id', establishmentId)
+      .where('revision_id', revisionId)
+      .orderBy('id', 'asc')
+      .forUpdate()
+  }
+
   async findLockedForRevision(
     tenantId: number,
     establishmentId: number,

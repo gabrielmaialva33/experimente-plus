@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
+import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import type IMedia from '#modules/media/interfaces/media_interface'
 import EstablishmentRevisionMediaRepository from '#modules/media/repositories/establishment_revision_media_repository'
 import MediaAuditService from '#modules/media/services/media_audit_service'
@@ -16,6 +17,7 @@ import type User from '#modules/users/models/user'
 export default class MediaModerationService {
   constructor(
     private organizationPolicy: OrganizationPolicyService,
+    private revisionRepository: EstablishmentRevisionRepository,
     private mediaRepository: EstablishmentRevisionMediaRepository,
     private eventService: MediaEventService,
     private projectionService: MediaProjectionService,
@@ -70,10 +72,28 @@ export default class MediaModerationService {
       throw new BadRequestException('A moderation reason is required')
     }
 
-    const changed = await db.transaction(async (client) => {
-      const media = await this.mediaRepository.findLockedForModeration(mediaId, client)
+    const preview = await this.mediaRepository.findByIdWithDetails(mediaId)
+    if (!preview) {
+      throw new NotFoundException('Establishment media not found')
+    }
 
-      if (!media) {
+    const changed = await db.transaction(async (client) => {
+      const revision = await this.revisionRepository.findLocked(
+        preview.tenant_id,
+        preview.revision_id,
+        client
+      )
+      if (!revision || revision.establishment_id !== preview.establishment_id) {
+        throw new NotFoundException('Establishment revision not found')
+      }
+
+      const media = await this.mediaRepository.findLockedForModeration(mediaId, client)
+      if (
+        !media ||
+        media.tenant_id !== revision.tenant_id ||
+        media.establishment_id !== revision.establishment_id ||
+        media.revision_id !== revision.id
+      ) {
         throw new NotFoundException('Establishment media not found')
       }
 
