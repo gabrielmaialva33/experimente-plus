@@ -14,6 +14,10 @@ export default defineConfig({
     tailwindcss(),
   ],
 
+  server: {
+    allowedHosts: ['.experimente.test'],
+  },
+
   /**
    * Define aliases for importing modules from
    * your frontend code

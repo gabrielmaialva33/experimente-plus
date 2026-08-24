@@ -1,7 +1,7 @@
 /**
  * Inertia page registry.
  *
- * Inertia v4 types `inertia.render(page, props)` against this interface. Each
+ * Inertia v4 types inertia.render(page, props) against this interface. Each
  * key is a page component (relative to `inertia/pages`) and the value describes
  * the props passed from the controller. Pages without page-specific props use
  * an empty object.
@@ -31,6 +31,26 @@ declare module '@adonisjs/inertia/types' {
     'ui_demo': Record<string, never>
     'data_grid_demo': Record<string, never>
     'dashboard': { stats: DashboardStats }
+
+    // Catalog
+    'catalog/cities': { catalog: any }
+    'catalog/categories': {
+      catalog: any
+      city_slug: string | null
+    }
+    'catalog/establishments': {
+      catalog: any
+      city_slug: string | null
+    }
+    'catalog/category': {
+      catalog: any
+      city_slug: string | null
+      category_slug: string | null
+    }
+    'catalog/establishment': {
+      catalog: any
+      city_slug: string | null
+    }
 
     // Files
     'files/index': { files: FileListResult }
