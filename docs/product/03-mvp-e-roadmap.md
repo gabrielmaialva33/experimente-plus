@@ -162,7 +162,7 @@ Saída: autorização para desenhar e implementar as migrations canônicas de Ge
 
 ### Fase 1 — núcleo de oferta e publicação
 
-Estado: em andamento. Geografia e Taxonomia foram concluídas em 23 de agosto de 2026; Organizações e memberships são o próximo corte.
+Estado: em andamento. Geografia, Taxonomia, Organizações, memberships, o núcleo revisionado de Unidades e a composição versionada de Mídia foram concluídos até 24 de agosto de 2026. Submissão, moderação integral da ficha e publicação transacional formam o próximo corte.
 
 Domínios:
 

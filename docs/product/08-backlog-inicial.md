@@ -9,11 +9,11 @@ EP-00 Decisões e ADRs ✅
   ↓
 EP-01 Geografia e taxonomia ✅
   ↓
-EP-02 Organizações e memberships ← próximo
+EP-02 Organizações e memberships ✅
   ↓
-EP-03 Unidades, horários e atributos
+EP-03 Unidades, horários e atributos ✅
   ↓
-EP-04 Mídia e completude
+EP-04 Mídia e completude ← próximo
   ↓
 EP-05 Submissão e moderação
   ↓
@@ -98,6 +98,17 @@ Contratos e entregas concluídos:
 
 ## EP-02 — Organizações e memberships
 
+**Status:** implementado e validado em 23 de agosto de 2026.
+
+Contratos e entregas concluídos:
+
+- organizações com identidade legal, CNPJ normalizado e workflow de revisão;
+- memberships `owner`, `admin`, `editor` e `analyst` com proteção transacional do último owner;
+- convites com token de uso único persistido somente como HMAC;
+- claims de organizações importadas e rejeição atômica de concorrentes;
+- onboarding público no modo `operation`;
+- regressões de autorização, concorrência, replay e isolamento.
+
 ### Histórias
 
 - como usuário autenticado, solicito criação de organização;
@@ -123,6 +134,20 @@ Definir fluxo para pessoa física, MEI e claim de organização existente.
 
 ## EP-03 — Unidades, endereço, horários e atributos
 
+**Status:** implementado e validado em 23 de agosto de 2026.
+
+Contratos e entregas concluídos:
+
+- identidade estável da unidade separada de revisões públicas;
+- uma única revisão aberta por unidade e ponteiro explícito para a revisão publicada;
+- endereço e coordenadas revisionados com integridade por tenant;
+- categorias sem hierarquia redundante e exatamente uma primária no gate;
+- atributos efetivos herdados, tipados e validados por opções;
+- horários semanais, intervalos noturnos e dias especiais;
+- status operacional separado do ciclo de vida;
+- relatório de completude versionado;
+- regressões de IDOR, capabilities, constraints e snapshots.
+
 ### Histórias
 
 - como parceiro autorizado, crio uma unidade;
@@ -146,6 +171,8 @@ Definir fluxo para pessoa física, MEI e claim de organização existente.
 
 ## EP-04 — Mídia
 
+**Estado:** concluído em 24 de agosto de 2026.
+
 ### Histórias
 
 - como parceiro, envio foto para uma unidade própria;
@@ -163,6 +190,8 @@ Definir fluxo para pessoa física, MEI e claim de organização existente.
 - testes de ownership e visibilidade.
 
 ## EP-05 — Submissão e moderação
+
+**Estado:** próximo marco de implementação.
 
 ### Histórias
 

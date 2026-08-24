@@ -4,17 +4,22 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 ## Decisões aceitas
 
-| ADR                                                               | Decisão                                       | Impacto principal                                     |
-| ----------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------- |
-| [ADR-0001](0001-tenant-representa-operacao.md)                    | Tenant representa uma operação                | isolamento, URLs e expansão multicidade               |
-| [ADR-0002](0002-organizacao-e-unidade-sao-agregados-distintos.md) | Organização e unidade são agregados distintos | ownership, redes e dados legais                       |
-| [ADR-0003](0003-catalogo-publico-sem-membership.md)               | Catálogo público não exige membership         | rotas públicas, segurança, projeções e cache          |
-| [ADR-0004](0004-publicacao-versionada-e-maquinas-de-estado.md)    | Publicação versionada e máquinas de estado    | revisão, disponibilidade e histórico                  |
-| [ADR-0005](0005-completude-submissao-e-publicacao.md)             | Gates de completude, submissão e publicação   | invariantes, moderação e transações                   |
-| [ADR-0006](0006-busca-inicial-com-postgresql.md)                  | Busca inicial com PostgreSQL                  | FTS, trigram, ranking e evolução futura               |
-| [ADR-0007](0007-rbac-global-com-policies-de-dominio.md)           | RBAC global com policies de domínio           | autorização, memberships e prevenção de IDOR          |
-| [ADR-0008](0008-modelo-fisico-de-geografia.md)                    | Modelo físico de Geografia                    | regiões, cidades, timezone e integridade cross-tenant |
-| [ADR-0009](0009-modelo-fisico-de-taxonomia.md)                    | Modelo físico de Taxonomia                    | famílias, árvore de categorias e atributos tipados    |
+| ADR                                                                   | Decisão                                            | Impacto principal                                           |
+| --------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------- |
+| [ADR-0001](0001-tenant-representa-operacao.md)                        | Tenant representa uma operação                     | isolamento, URLs e expansão multicidade                     |
+| [ADR-0002](0002-organizacao-e-unidade-sao-agregados-distintos.md)     | Organização e unidade são agregados distintos      | ownership, redes e dados legais                             |
+| [ADR-0003](0003-catalogo-publico-sem-membership.md)                   | Catálogo público não exige membership              | rotas públicas, segurança, projeções e cache                |
+| [ADR-0004](0004-publicacao-versionada-e-maquinas-de-estado.md)        | Publicação versionada e máquinas de estado         | revisão, disponibilidade e histórico                        |
+| [ADR-0005](0005-completude-submissao-e-publicacao.md)                 | Gates de completude, submissão e publicação        | invariantes, moderação e transações                         |
+| [ADR-0006](0006-busca-inicial-com-postgresql.md)                      | Busca inicial com PostgreSQL                       | FTS, trigram, ranking e evolução futura                     |
+| [ADR-0007](0007-rbac-global-com-policies-de-dominio.md)               | RBAC global com policies de domínio                | autorização, memberships e prevenção de IDOR                |
+| [ADR-0008](0008-modelo-fisico-de-geografia.md)                        | Modelo físico de Geografia                         | regiões, cidades, timezone e integridade cross-tenant       |
+| [ADR-0009](0009-modelo-fisico-de-taxonomia.md)                        | Modelo físico de Taxonomia                         | famílias, árvore de categorias e atributos tipados          |
+| [ADR-0010](0010-organizacoes-identidade-legal-e-claims.md)            | Organizações, identidade legal e claims            | CNPJ, workflow, ownership e reivindicação                   |
+| [ADR-0011](0011-memberships-e-convites-de-organizacao.md)             | Memberships e convites de organização              | papéis internos, último owner e tokens de uso único         |
+| [ADR-0012](0012-estabelecimentos-estaveis-e-revisoes-publicas.md)     | Estabelecimentos estáveis e revisões públicas      | identidade estável, snapshots e ponteiro publicado          |
+| [ADR-0013](0013-disponibilidade-categorias-e-atributos-de-unidade.md) | Disponibilidade, categorias e atributos de unidade | endereço, horários, herança, atributos tipados e completude |
+| [ADR-0014](0014-midia-estavel-e-composicao-versionada.md)             | Mídia estável e composição versionada por revisão  | assets, storage, capa, ordenação, moderação e visibilidade  |
 
 ## Regra de evolução
 
@@ -27,6 +32,8 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 ```text
 EP-00 — decisões arquiteturais iniciais       concluído
-EP-01 — geografia e taxonomia                 implementado, em validação final
-EP-02 — organizações e memberships            próximo marco
+EP-01 — geografia e taxonomia                 implementado e validado
+EP-02 — organizações e memberships            implementado e validado
+EP-03 — unidades, horários e atributos        implementado e validado
+EP-04 — mídia                                 próximo marco
 ```

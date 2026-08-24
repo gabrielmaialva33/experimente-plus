@@ -256,7 +256,7 @@ Entidades conceituais:
 ```text
 media_assets
 establishment_revision_media
-review_media (posterior)
+media_moderation_events
 ```
 
 Estados aceitos:

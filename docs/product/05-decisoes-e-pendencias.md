@@ -183,14 +183,24 @@ Hipótese: lançar com densidade em poucas cidades produz mais retenção do que
 
 ### Mídia
 
-A especificação aceita JPG, PNG, WEBP e HEIC e proíbe violência, pornografia, marcas d'água e texto promocional. Ainda faltam decisões sobre:
+O ADR-0014 fecha a primeira vertical de mídia da unidade:
 
-- vídeo e duração;
-- tamanho máximo;
-- conversão de HEIC;
-- remoção de EXIF;
-- análise automática;
-- recurso contra rejeição.
+- JPEG, PNG e WebP válidos, com extensão, MIME type e assinatura binária coerentes;
+- limite de 10 MiB, 12.000 pixels por dimensão e 60 megapixels;
+- asset físico estável sobre `files`, com associação versionada por revisão;
+- uma capa elegível por revisão, ordenação atômica, texto alternativo e legenda;
+- estados `pending`, `approved`, `rejected` e `quarantined`, com histórico append-only;
+- apenas mídia aprovada da revisão publicada entra na projeção pública;
+- HEIC/HEIF é rejeitado explicitamente neste corte, em vez de ser armazenado sem pipeline compatível;
+- conteúdo proibido pela política é tratado pela fila humana de moderação até existir análise automática confiável.
+
+Continuam abertas:
+
+- vídeo, duração e transcodificação;
+- derivados, miniaturas e formatos responsivos;
+- remoção ou preservação seletiva de EXIF;
+- análise automática e quarentena assistida;
+- fluxo formal de recurso contra rejeição.
 
 ### Offline
 

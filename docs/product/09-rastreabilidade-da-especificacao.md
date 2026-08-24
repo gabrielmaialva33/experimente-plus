@@ -128,9 +128,12 @@ A especificação aceita JPG, PNG, WEBP e HEIC e proíbe violência, pornografia
 
 Tratamento:
 
-- primeira vertical suporta mídia da unidade;
-- mídia possui status de moderação;
-- HEIC, vídeo, tamanho, conversão, EXIF e análise automática ainda exigem decisão técnica;
+- o ADR-0014 define asset estável e composição versionada por revisão;
+- JPEG, PNG e WebP são validados por tamanho, assinatura, MIME type e dimensões;
+- capa, ordem, texto alternativo, legenda e ownership possuem invariantes próprias;
+- mídia usa `pending`, `approved`, `rejected` e `quarantined`, com eventos append-only;
+- a submissão aceita mídia pendente ou aprovada, enquanto a projeção pública aceita somente aprovada;
+- HEIC, vídeo, derivados, EXIF e análise automática permanecem fora da primeira vertical;
 - conteúdo enviado por Explorador entra somente com reviews ou outro caso definido.
 
 ## Concierge IA
