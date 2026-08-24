@@ -60,7 +60,6 @@ router
 router
   .group(() => {
     router.get('/regions', [PublicGeographyController, 'regions'])
-    router.get('/cities', [PublicGeographyController, 'cities'])
     router.get('/cities/:citySlug', [PublicGeographyController, 'city'])
   })
   .prefix('/api/v1/catalog')

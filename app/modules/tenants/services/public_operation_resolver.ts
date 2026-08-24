@@ -5,7 +5,7 @@ import Tenant from '#modules/tenants/models/tenant'
 export default class PublicOperationResolver {
   async resolve(hostname?: string | null): Promise<Tenant> {
     const configuredSlug = env.get('PUBLIC_TENANT_SLUG')?.trim().toLowerCase()
-    const resolvedSlug = configuredSlug || this.resolveHostnameSlug(hostname)
+    const resolvedSlug = this.resolveHostnameSlug(hostname) ?? configuredSlug
 
     if (resolvedSlug) {
       const tenant = await Tenant.query()
