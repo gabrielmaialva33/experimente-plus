@@ -1,6 +1,7 @@
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import EstablishmentRevisionAttributeValueOption from '#modules/establishments/models/establishment_revision_attribute_value_option'
 import LucidRepository from '#shared/lucid/lucid_repository'
 
 const OPEN_REVISION_STATUSES = ['draft', 'pending_review', 'changes_requested'] as const
@@ -126,19 +127,51 @@ export default class EstablishmentRevisionRepository extends LucidRepository<
   ): Promise<EstablishmentRevision | null> {
     const query = client ? EstablishmentRevision.query({ client }) : EstablishmentRevision.query()
 
-    return query
+    const revision = await query.where('tenant_id', tenantId).where('id', id).first()
+    if (!revision) {
+      return null
+    }
+
+    await revision.load('city')
+    await revision.load('address')
+    await revision.load('hours')
+    await revision.load('special_days', (specialDayQuery) => specialDayQuery.preload('intervals'))
+    await revision.load('categories', (categoryQuery) => categoryQuery.preload('category'))
+    await revision.load('attribute_values', (valueQuery) => valueQuery.preload('definition'))
+    await this.loadSelectedAttributeOptions(tenantId, revision, client)
+    await revision.load('media')
+
+    return revision
+  }
+
+  private async loadSelectedAttributeOptions(
+    tenantId: number,
+    revision: EstablishmentRevision,
+    client?: TransactionClientContract
+  ): Promise<void> {
+    const valueIds = revision.attribute_values.map((value) => value.id)
+    if (valueIds.length === 0) {
+      return
+    }
+
+    const query = client
+      ? EstablishmentRevisionAttributeValueOption.query({ client })
+      : EstablishmentRevisionAttributeValueOption.query()
+    const selectedOptions = await query
       .where('tenant_id', tenantId)
-      .where('id', id)
-      .preload('city')
-      .preload('address')
-      .preload('hours')
-      .preload('special_days', (specialDayQuery) => specialDayQuery.preload('intervals'))
-      .preload('categories', (categoryQuery) => categoryQuery.preload('category'))
-      .preload('attribute_values', (valueQuery) => {
-        valueQuery.preload('definition')
-        valueQuery.preload('selected_options', (optionQuery) => optionQuery.preload('option'))
-      })
-      .preload('media')
-      .first()
+      .whereIn('attribute_value_id', valueIds)
+      .preload('option')
+      .orderBy('id', 'asc')
+    const optionsByValue = new Map<number, EstablishmentRevisionAttributeValueOption[]>()
+
+    for (const selectedOption of selectedOptions) {
+      const options = optionsByValue.get(selectedOption.attribute_value_id) ?? []
+      options.push(selectedOption)
+      optionsByValue.set(selectedOption.attribute_value_id, options)
+    }
+
+    for (const value of revision.attribute_values) {
+      value.$setRelated('selected_options', optionsByValue.get(value.id) ?? [])
+    }
   }
 }
