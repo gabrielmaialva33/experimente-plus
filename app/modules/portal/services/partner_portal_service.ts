@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 
+import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentCompletenessService from '#modules/establishments/services/establishment_completeness_service'
 import EstablishmentService from '#modules/establishments/services/establishment_service'
 import City from '#modules/geography/models/city'
@@ -14,7 +15,8 @@ export default class PartnerPortalService {
   constructor(
     private organizationService: OrganizationService,
     private establishmentService: EstablishmentService,
-    private completenessService: EstablishmentCompletenessService
+    private completenessService: EstablishmentCompletenessService,
+    private effectiveAttributesService: EffectiveCategoryAttributesService
   ) {}
 
   async overview(tenantId: number, actor: User): Promise<IPortal.Overview> {
@@ -92,12 +94,17 @@ export default class PartnerPortalService {
       .where('is_active', true)
       .orderBy('sort_order', 'asc')
       .orderBy('name', 'asc')
+    const effectiveAttributes = await this.effectiveAttributes(
+      tenantId,
+      establishment as Record<string, unknown>
+    )
 
     return {
       establishment,
       completeness,
       cities: cities.map((city) => city.serialize()),
       categories: categories.map((category) => category.serialize()),
+      effective_attributes: effectiveAttributes,
     }
   }
 
@@ -249,10 +256,90 @@ export default class PartnerPortalService {
     }
   }
 
+  private async effectiveAttributes(
+    tenantId: number,
+    establishment: Record<string, unknown>
+  ): Promise<Record<string, unknown>[]> {
+    const revision = this.recordValue(establishment.revision)
+    const primaryCategory = this.recordArray(revision?.categories).find(
+      (category) => category.is_primary === true
+    )
+    const categoryId = this.numberValue(primaryCategory ?? null, 'category_id')
+    if (categoryId === null) {
+      return []
+    }
+
+    const existingValues = new Map<number, Record<string, unknown>>()
+    for (const value of this.recordArray(revision?.attribute_values)) {
+      const definitionId = this.numberValue(value, 'attribute_definition_id')
+      if (definitionId !== null) {
+        existingValues.set(definitionId, value)
+      }
+    }
+
+    const effective = await this.effectiveAttributesService.resolve(tenantId, categoryId)
+    return effective.map(({ definition, source_category_id, inherited }) => {
+      const currentValue = existingValues.get(definition.id) ?? null
+
+      return {
+        ...definition.serialize(),
+        options: definition.options.map((option) => option.serialize()),
+        source_category_id,
+        inherited,
+        value: this.attributeValue(definition.data_type, currentValue),
+        option_ids: this.recordArray(currentValue?.selected_options).flatMap((selectedOption) => {
+          const optionId =
+            this.numberValue(selectedOption, 'attribute_option_id') ??
+            this.numberValue(this.recordValue(selectedOption.option), 'id')
+          return optionId === null ? [] : [optionId]
+        }),
+      }
+    })
+  }
+
+  private attributeValue(
+    dataType: string,
+    value: Record<string, unknown> | null
+  ): string | number | boolean | null {
+    if (dataType === 'text' || dataType === 'long_text') {
+      return this.stringValue(value, 'value_text')
+    }
+    if (dataType === 'boolean') {
+      return typeof value?.value_boolean === 'boolean' ? value.value_boolean : null
+    }
+    if (dataType === 'integer') {
+      return this.numberValue(value, 'value_integer')
+    }
+    if (dataType === 'decimal') {
+      return this.numberValue(value, 'value_decimal')
+    }
+    if (dataType === 'url') {
+      return this.stringValue(value, 'value_url')
+    }
+    return null
+  }
+
+  private recordArray(value: unknown): Record<string, unknown>[] {
+    return Array.isArray(value)
+      ? value.filter((item): item is Record<string, unknown> => this.recordValue(item) !== null)
+      : []
+  }
+
   private recordValue(value: unknown): Record<string, unknown> | null {
     return value !== null && typeof value === 'object' && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : null
+  }
+
+  private numberValue(record: Record<string, unknown> | null, key: string): number | null {
+    const value = record?.[key]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+    if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) {
+      return Number(value)
+    }
+    return null
   }
 
   private stringValue(record: Record<string, unknown> | null, key: string): string | null {

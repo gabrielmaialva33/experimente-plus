@@ -74,6 +74,13 @@ router
       .as('portal.establishments.categories')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
     router
+      .put('/establishments/:establishmentId/attributes', [
+        PartnerPortalController,
+        'updateAttributes',
+      ])
+      .as('portal.establishments.attributes')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
       .put('/establishments/:establishmentId/hours', [PartnerPortalController, 'updateHours'])
       .as('portal.establishments.hours')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))

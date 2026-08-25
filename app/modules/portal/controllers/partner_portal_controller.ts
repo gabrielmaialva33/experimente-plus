@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import EstablishmentAddressService from '#modules/establishments/services/establishment_address_service'
+import EstablishmentAttributesService from '#modules/establishments/services/establishment_attributes_service'
 import EstablishmentCategoriesService from '#modules/establishments/services/establishment_categories_service'
 import EstablishmentHoursService from '#modules/establishments/services/establishment_hours_service'
 import EstablishmentService from '#modules/establishments/services/establishment_service'
@@ -9,6 +10,7 @@ import EstablishmentSubmissionService from '#modules/establishments/services/est
 import {
   createEstablishmentValidator,
   replaceEstablishmentAddressValidator,
+  replaceEstablishmentAttributesValidator,
   replaceEstablishmentCategoriesValidator,
   replaceEstablishmentHoursValidator,
   updateEstablishmentRevisionValidator,
@@ -31,6 +33,7 @@ export default class PartnerPortalController {
     private organizationWorkflowService: OrganizationWorkflowService,
     private establishmentService: EstablishmentService,
     private addressService: EstablishmentAddressService,
+    private attributesService: EstablishmentAttributesService,
     private categoriesService: EstablishmentCategoriesService,
     private hoursService: EstablishmentHoursService,
     private submissionService: EstablishmentSubmissionService,
@@ -184,6 +187,19 @@ export default class PartnerPortalController {
     )
 
     session.flash('success', 'Categorias atualizadas.')
+    return response.redirect().back()
+  }
+
+  async updateAttributes({ auth, request, response, session, params, tenant }: HttpContext) {
+    const payload = await request.validateUsing(replaceEstablishmentAttributesValidator)
+    await this.attributesService.replace(
+      tenant!.id,
+      Number(params.establishmentId),
+      auth.getUserOrFail(),
+      payload.attributes
+    )
+
+    session.flash('success', 'Características da unidade atualizadas.')
     return response.redirect().back()
   }
 
