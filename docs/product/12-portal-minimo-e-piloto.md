@@ -30,6 +30,7 @@ A descoberta regional continua nas páginas SSR e APIs do catálogo:
 /portal/organizations/:organizationId
 /portal/organizations/:organizationId/establishments/new
 /portal/establishments/:establishmentId
+PUT /portal/establishments/:establishmentId/attributes
 ```
 
 O portal permite:
@@ -40,6 +41,7 @@ O portal permite:
 - editar identidade pública, cidade, contatos e disponibilidade;
 - editar endereço e coordenadas;
 - selecionar categorias e categoria principal;
+- preencher os atributos efetivos da categoria, inclusive os herdados;
 - informar horários semanais com múltiplos intervalos;
 - enviar imagens iniciais para a composição versionada;
 - acompanhar completude e bloqueios;
@@ -65,6 +67,25 @@ O backoffice permite:
 - consultar e classificar feedback do piloto.
 
 Moderador e Administrador continuam sendo capacidades diferentes. Moderadores trabalham na moderação de conteúdo, mas não recebem automaticamente acesso ao feedback comercial do piloto.
+
+## Atributos efetivos no editor
+
+O editor resolve os atributos a partir da categoria principal com `EffectiveCategoryAttributesService`. A página recebe a definição efetiva, a categoria de origem, o indicador de herança, a obrigatoriedade, as opções e o valor atual. O React apenas coleta o payload canônico; validação de tipo, ownership, herança, opção, tenant e obrigatoriedade permanece em `EstablishmentAttributesService`.
+
+Tipos cobertos:
+
+```text
+text
+long_text
+boolean
+integer
+decimal
+single_select
+multi_select
+url
+```
+
+Quando a categoria principal muda, o backend recalcula o conjunto efetivo e remove valores que deixaram de ser aplicáveis. A completude é recalculada sobre os valores persistidos e pode chegar a 100% sem duplicar regra de domínio no frontend.
 
 ## Onboarding derivado
 
@@ -210,7 +231,7 @@ Esses itens permanecem no backlog posterior e dependem de políticas e evidênci
 - navegação pública, parceiro e backoffice separadas;
 - portal protegido por membership e policies;
 - onboarding derivado de dados canônicos;
-- editor de unidade funcional;
+- editor de unidade funcional, incluindo atributos efetivos e herdados;
 - completude e submissão reutilizando os services existentes;
 - fila de moderação funcional;
 - feedback privado e tenant-safe;

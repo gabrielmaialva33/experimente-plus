@@ -3853,7 +3853,7 @@ paths:
         '422':
           description: Validation failed
 
-  /api/v1/admin/taxonomy/attribute-definitions:
+  /api/v1/admin/taxonomy/attributes:
     get:
       operationId: listCategoryAttributeDefinitions
       summary: List category attribute definitions
@@ -3894,7 +3894,7 @@ paths:
         '422':
           description: Validation failed
 
-  /api/v1/admin/taxonomy/attribute-definitions/{id}:
+  /api/v1/admin/taxonomy/attributes/{id}:
     get:
       operationId: getCategoryAttributeDefinition
       summary: Get an attribute definition with options
@@ -3985,25 +3985,6 @@ paths:
           description: Validation failed
 
   /api/v1/admin/taxonomy/attribute-options/{id}:
-    get:
-      operationId: getCategoryAttributeOption
-      summary: Get an attribute option
-      tags: [Taxonomy Admin]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Attribute option
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CategoryAttributeOption'
-        '404':
-          description: Attribute option not found
     put:
       operationId: updateCategoryAttributeOption
       summary: Update mutable option fields
@@ -5150,368 +5131,368 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
-    /api/v1/organizations/{organizationId}/establishments:
+  /api/v1/organizations/{organizationId}/establishments:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/tenantHeader'
+    get:
+      operationId: listOrganizationEstablishments
+      summary: List units visible inside an organization
+      tags: [Establishments]
+      responses:
+        '200':
+          description: Organization units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Establishment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    post:
+      operationId: createEstablishment
+      summary: Create a stable unit and its first draft revision
+      tags: [Establishments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentCreateInput'
+      responses:
+        '201':
+          description: Unit created atomically
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Establishment'
+        '400':
+          description: Domain invariant rejected the request
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/pathId'
+      - $ref: '#/components/parameters/tenantHeader'
+    get:
+      operationId: getEstablishment
+      summary: Get a unit and the readable revision aggregate
+      tags: [Establishments]
+      responses:
+        '200':
+          description: Unit aggregate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Establishment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      operationId: archiveEstablishment
+      summary: Archive a unit lifecycle
+      tags: [Establishments]
+      responses:
+        '204':
+          description: Unit archived
+        '400':
+          description: Lifecycle transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/establishments/{id}/revision:
+    put:
+      operationId: updateEstablishmentRevision
+      summary: Update the editable public revision
+      tags: [Establishments]
       parameters:
-        - name: organizationId
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentRevisionInput'
+      responses:
+        '200':
+          description: Updated draft revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentRevision'
+        '400':
+          description: Revision is not editable or a domain invariant failed
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/address:
+    put:
+      operationId: replaceEstablishmentAddress
+      summary: Replace the revisioned address
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentAddress'
+      responses:
+        '200':
+          description: Revisioned address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentAddress'
+        '400':
+          description: Coordinates must be supplied as a pair
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/categories:
+    put:
+      operationId: replaceEstablishmentCategories
+      summary: Replace revisioned categories
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentCategoryListInput'
+      responses:
+        '200':
+          description: Revisioned category assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstablishmentCategory'
+        '400':
+          description: Duplicate, inactive, foreign, or redundant hierarchy
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/attributes:
+    put:
+      operationId: replaceEstablishmentAttributes
+      summary: Replace typed values for effective category attributes
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentAttributeListInput'
+      responses:
+        '200':
+          description: Revisioned typed attribute values
+        '400':
+          description: Attribute or option is not effective for the primary category
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/hours:
+    put:
+      operationId: replaceEstablishmentHours
+      summary: Replace revisioned weekly opening intervals
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentHoursInput'
+      responses:
+        '200':
+          description: Weekly intervals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstablishmentHour'
+        '400':
+          description: Invalid, overlapping, or inconsistent intervals
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/special-days:
+    put:
+      operationId: replaceEstablishmentSpecialDays
+      summary: Replace revisioned schedule exceptions
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentSpecialDaysInput'
+      responses:
+        '200':
+          description: Special days and custom intervals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstablishmentSpecialDay'
+        '400':
+          description: Closed days cannot contain intervals and custom days require them
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/business-status:
+    patch:
+      operationId: updateEstablishmentBusinessStatus
+      summary: Update operational availability independently from lifecycle
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstablishmentBusinessStatusInput'
+      responses:
+        '200':
+          description: Updated operational status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Establishment'
+        '400':
+          description: Transition rejected for the current lifecycle
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/establishments/{id}/completeness:
+    get:
+      operationId: getEstablishmentCompleteness
+      summary: Evaluate the versioned EP-03 publication gates
+      tags: [Establishments]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Versioned completeness report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentCompleteness'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/taxonomy/categories/{categoryId}/effective-attributes:
+    get:
+      operationId: listEffectiveCategoryAttributes
+      summary: Resolve direct and inherited active attribute definitions
+      tags: [Establishments]
+      parameters:
+        - name: categoryId
           in: path
           required: true
           schema:
             type: integer
             minimum: 1
         - $ref: '#/components/parameters/tenantHeader'
-      get:
-        operationId: listOrganizationEstablishments
-        summary: List units visible inside an organization
-        tags: [Establishments]
-        responses:
-          '200':
-            description: Organization units
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/Establishment'
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-      post:
-        operationId: createEstablishment
-        summary: Create a stable unit and its first draft revision
-        tags: [Establishments]
-        requestBody:
-          required: true
+      responses:
+        '200':
+          description: Effective definitions in deterministic order
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EstablishmentCreateInput'
-        responses:
-          '201':
-            description: Unit created atomically
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Establishment'
-          '400':
-            description: Domain invariant rejected the request
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}:
-      parameters:
-        - $ref: '#/components/parameters/pathId'
-        - $ref: '#/components/parameters/tenantHeader'
-      get:
-        operationId: getEstablishment
-        summary: Get a unit and the readable revision aggregate
-        tags: [Establishments]
-        responses:
-          '200':
-            description: Unit aggregate
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Establishment'
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-      delete:
-        operationId: archiveEstablishment
-        summary: Archive a unit lifecycle
-        tags: [Establishments]
-        responses:
-          '204':
-            description: Unit archived
-          '400':
-            description: Lifecycle transition rejected
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-
-    /api/v1/establishments/{id}/revision:
-      put:
-        operationId: updateEstablishmentRevision
-        summary: Update the editable public revision
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentRevisionInput'
-        responses:
-          '200':
-            description: Updated draft revision
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/EstablishmentRevision'
-          '400':
-            description: Revision is not editable or a domain invariant failed
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/address:
-      put:
-        operationId: replaceEstablishmentAddress
-        summary: Replace the revisioned address
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentAddress'
-        responses:
-          '200':
-            description: Revisioned address
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/EstablishmentAddress'
-          '400':
-            description: Coordinates must be supplied as a pair
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/categories:
-      put:
-        operationId: replaceEstablishmentCategories
-        summary: Replace revisioned categories
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentCategoryListInput'
-        responses:
-          '200':
-            description: Revisioned category assignments
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/EstablishmentCategory'
-          '400':
-            description: Duplicate, inactive, foreign, or redundant hierarchy
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/attributes:
-      put:
-        operationId: replaceEstablishmentAttributes
-        summary: Replace typed values for effective category attributes
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentAttributeListInput'
-        responses:
-          '200':
-            description: Revisioned typed attribute values
-          '400':
-            description: Attribute or option is not effective for the primary category
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/hours:
-      put:
-        operationId: replaceEstablishmentHours
-        summary: Replace revisioned weekly opening intervals
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentHoursInput'
-        responses:
-          '200':
-            description: Weekly intervals
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/EstablishmentHour'
-          '400':
-            description: Invalid, overlapping, or inconsistent intervals
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/special-days:
-      put:
-        operationId: replaceEstablishmentSpecialDays
-        summary: Replace revisioned schedule exceptions
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentSpecialDaysInput'
-        responses:
-          '200':
-            description: Special days and custom intervals
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/EstablishmentSpecialDay'
-          '400':
-            description: Closed days cannot contain intervals and custom days require them
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/business-status:
-      patch:
-        operationId: updateEstablishmentBusinessStatus
-        summary: Update operational availability independently from lifecycle
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EstablishmentBusinessStatusInput'
-        responses:
-          '200':
-            description: Updated operational status
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Establishment'
-          '400':
-            description: Transition rejected for the current lifecycle
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-          '422':
-            $ref: '#/components/responses/ValidationError'
-
-    /api/v1/establishments/{id}/completeness:
-      get:
-        operationId: getEstablishmentCompleteness
-        summary: Evaluate the versioned EP-03 publication gates
-        tags: [Establishments]
-        parameters:
-          - $ref: '#/components/parameters/pathId'
-          - $ref: '#/components/parameters/tenantHeader'
-        responses:
-          '200':
-            description: Versioned completeness report
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/EstablishmentCompleteness'
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
-
-    /api/v1/taxonomy/categories/{categoryId}/effective-attributes:
-      get:
-        operationId: listEffectiveCategoryAttributes
-        summary: Resolve direct and inherited active attribute definitions
-        tags: [Establishments]
-        parameters:
-          - name: categoryId
-            in: path
-            required: true
-            schema:
-              type: integer
-              minimum: 1
-          - $ref: '#/components/parameters/tenantHeader'
-        responses:
-          '200':
-            description: Effective definitions in deterministic order
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/EffectiveCategoryAttribute'
-          '401':
-            $ref: '#/components/responses/UnauthorizedError'
-          '403':
-            $ref: '#/components/responses/ForbiddenError'
-          '404':
-            $ref: '#/components/responses/NotFoundError'
+                type: array
+                items:
+                  $ref: '#/components/schemas/EffectiveCategoryAttribute'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

@@ -29,7 +29,7 @@ As superfícies podem compartilhar o mesmo processo Adonis/Inertia, mas possuem 
 O portal não cria novas tabelas paralelas para organizações, unidades, revisões, mídia, moderação ou analytics. Ele compõe os serviços canônicos já existentes:
 
 - `OrganizationService` e `OrganizationPolicyService`;
-- serviços de `establishments` e `EstablishmentCompletenessService`;
+- serviços de `establishments`, `EffectiveCategoryAttributesService` e `EstablishmentCompletenessService`;
 - `EstablishmentSubmissionService`;
 - `EstablishmentModerationService`;
 - `AnalyticsDashboardService`;
@@ -59,12 +59,15 @@ O editor do piloto organiza a ficha em seções:
 - identidade e contatos;
 - endereço;
 - categoria principal;
+- atributos efetivos tipados, diretos e herdados;
 - horários semanais;
 - mídia inicial;
 - checklist de completude;
 - submissão para moderação.
 
 O editor mostra bloqueios e warnings fornecidos pelo `EstablishmentCompletenessService`. Ele não tenta recalcular completude no navegador.
+
+A categoria principal define o conjunto de atributos efetivos. O Portal recebe do backend definição, origem, herança, obrigatoriedade, opções e valor atual, renderiza `text`, `long_text`, `boolean`, `integer`, `decimal`, `single_select`, `multi_select` e `url`, e envia o mesmo payload aceito pela API. Tipos, opções, ownership, tenant e limpeza de valores obsoletos continuam sob responsabilidade dos services canônicos.
 
 ### Backoffice
 
@@ -162,6 +165,9 @@ A aplicação complementa as constraints com policies, auditoria e projeções a
 - plataforma pode operar organizações do tenant sem membership local;
 - analyst lê o portal, mas não altera unidade;
 - editor altera ficha, mas não acessa funções administrativas;
+- atributos herdados e diretos são projetados com precedência da categoria específica;
+- troca de categoria remove valores incompatíveis sem apagar valores ainda aplicáveis;
+- atributo obrigatório bloqueia a completude até ser preenchido;
 - checklist reflete imediatamente o estado canônico;
 - submissão pelo portal usa os mesmos gates da API;
 - fila de moderação é tenant-scoped;
