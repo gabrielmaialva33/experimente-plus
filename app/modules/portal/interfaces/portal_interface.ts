@@ -16,6 +16,11 @@ export namespace IPortal {
     id: number
     legal_name: string
     trade_name: string
+    slug: string
+    tax_id: string
+    email: string
+    phone: string
+    website: string | null
     status: string
     role: string | null
     establishments: EstablishmentSummary[]

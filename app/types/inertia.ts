@@ -33,6 +33,18 @@ declare module '@adonisjs/inertia/types' {
     'dashboard': { stats: DashboardStats }
     'analytics/organization': { dashboard: Record<string, any> }
 
+    // Partner portal
+    'portal/index': Record<string, any>
+    'portal/organizations/new': Record<string, never>
+    'portal/organizations/show': Record<string, any>
+    'portal/establishments/new': Record<string, any>
+    'portal/establishments/edit': Record<string, any>
+
+    // Backoffice
+    'backoffice/moderation/index': Record<string, any>
+    'backoffice/moderation/show': Record<string, any>
+    'backoffice/feedback/index': Record<string, any>
+
     // Catalog
     'catalog/cities': { catalog: any }
     'catalog/categories': {

@@ -115,15 +115,22 @@ export default class PartnerPortalService {
 
   async feedbackTargets(tenantId: number, actor: User) {
     const overview = await this.overview(tenantId, actor)
-    return overview.organizations.map((organization) => ({
-      id: organization.id,
-      trade_name: organization.trade_name,
-      establishments: organization.establishments.map((establishment) => ({
-        id: establishment.id,
-        public_name:
-          this.stringValue(establishment.revision, 'public_name') ?? `Unidade ${establishment.id}`,
+
+    return {
+      organizations: overview.organizations.map((organization) => ({
+        id: organization.id,
+        label: organization.trade_name,
       })),
-    }))
+      establishments: overview.organizations.flatMap((organization) =>
+        organization.establishments.map((establishment) => ({
+          id: establishment.id,
+          organization_id: organization.id,
+          label:
+            this.stringValue(establishment.revision, 'public_name') ??
+            `Unidade ${establishment.id}`,
+        }))
+      ),
+    }
   }
 
   private async establishmentSummaries(
@@ -178,6 +185,14 @@ export default class PartnerPortalService {
       id,
       legal_name: String(organization.legal_name),
       trade_name: String(organization.trade_name),
+      slug: String(organization.slug),
+      tax_id: String(organization.tax_id),
+      email: String(organization.email),
+      phone: String(organization.phone),
+      website:
+        organization.website === null || organization.website === undefined
+          ? null
+          : String(organization.website),
       status,
       role,
       establishments,
