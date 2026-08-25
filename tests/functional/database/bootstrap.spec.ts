@@ -10,6 +10,7 @@ import User from '#modules/users/models/user'
 
 const userPermissionNames = [
   'analytics.read',
+  'pilot_feedback.create',
   'dashboard.read',
   'files.create',
   'files.delete.own',
