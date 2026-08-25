@@ -2,6 +2,8 @@
 @catalogCitySlug = londrina
 @catalogCategorySlug = bares
 @catalogEstablishmentSlug = bar-estacao-43-londrina
+@organizationId = 1
+@analyticsEventId = 0198f4a1-5d42-7a6f-9d3b-6c1a2f4e8b90
 
 ### Experimente+ API HTTP Requests
 ### Base URL: http://localhost:3333
@@ -718,6 +720,66 @@ Accept: text/html
 
 ### Public SSR — Establishment
 GET {{baseUrl}}/cidades/{{catalogCitySlug}}/estabelecimentos/{{catalogEstablishmentSlug}}
+Host: {{publicHost}}
+Accept: text/html
+
+# ============================================================================
+# DISCOVERY ANALYTICS — EP-07
+# ============================================================================
+
+### Ingest Privacy-Safe Discovery Events
+POST {{baseUrl}}/api/v1/analytics/events
+Host: {{publicHost}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "events": [
+    {
+      "event_id": "{{analyticsEventId}}",
+      "event_type": "establishment_view",
+      "city_slug": "{{catalogCitySlug}}",
+      "establishment_slug": "{{catalogEstablishmentSlug}}"
+    }
+  ]
+}
+
+### Read Organization Discovery Dashboard
+GET {{baseUrl}}/api/v1/organizations/{{organizationId}}/analytics?from=2026-08-01&to=2026-08-31
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Read Organization Analytics Page
+GET {{baseUrl}}/organizations/{{organizationId}}/analytics?from=2026-08-01&to=2026-08-31
+Cookie: experimente-plus-session=replace-with-browser-session
+x-tenant-id: {{tenantId}}
+Accept: text/html
+
+### List Searches Without Results
+GET {{baseUrl}}/api/v1/admin/analytics/searches/no-results?from=2026-08-01&to=2026-08-31&page=1&per_page=20
+Authorization: Bearer {{adminToken}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Tracked Route Redirect
+# The destination is derived from the published projection; clients never submit an arbitrary URL.
+GET {{baseUrl}}/go/{{catalogCitySlug}}/{{catalogEstablishmentSlug}}/route
+Host: {{publicHost}}
+Accept: text/html
+
+### Tracked WhatsApp Redirect
+GET {{baseUrl}}/go/{{catalogCitySlug}}/{{catalogEstablishmentSlug}}/whatsapp
+Host: {{publicHost}}
+Accept: text/html
+
+### Tracked Phone Redirect
+GET {{baseUrl}}/go/{{catalogCitySlug}}/{{catalogEstablishmentSlug}}/phone
+Host: {{publicHost}}
+Accept: text/html
+
+### Tracked Website Redirect
+GET {{baseUrl}}/go/{{catalogCitySlug}}/{{catalogEstablishmentSlug}}/website
 Host: {{publicHost}}
 Accept: text/html
 

@@ -2015,6 +2015,15 @@ components:
             $ref: '#/components/schemas/AnalyticsSearchTerm'
 
   parameters:
+    TenantHeader:
+      name: x-tenant-id
+      in: header
+      required: true
+      description: Identificador do tenant ativo para operações privadas.
+      schema:
+        type: integer
+        minimum: 1
+
     pathId:
       name: id
       in: path
