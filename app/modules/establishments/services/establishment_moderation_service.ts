@@ -65,11 +65,22 @@ export default class EstablishmentModerationService {
       throw new NotFoundException('Establishment revision not found')
     }
 
-    const [issues, events, gate] = await Promise.all([
-      this.issueRepository.listForRevision(tenantId, revision.establishment_id, revision.id),
-      this.eventRepository.listForRevision(tenantId, revision.establishment_id, revision.id),
-      this.publicationGate.check(tenantId, revision.establishment_id, revision.id, actor),
-    ])
+    const issues = await this.issueRepository.listForRevision(
+      tenantId,
+      revision.establishment_id,
+      revision.id
+    )
+    const events = await this.eventRepository.listForRevision(
+      tenantId,
+      revision.establishment_id,
+      revision.id
+    )
+    const gate = await this.publicationGate.check(
+      tenantId,
+      revision.establishment_id,
+      revision.id,
+      actor
+    )
 
     return {
       revision: this.projectRevision(revision),

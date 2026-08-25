@@ -69,11 +69,17 @@ export default class EstablishmentSubmissionService {
       }
     }
 
-    const [gate, issues, events] = await Promise.all([
-      this.completenessService.check(tenantId, establishmentId, actor),
-      this.issueRepository.listForRevision(tenantId, establishmentId, revision.id),
-      this.eventRepository.listForRevision(tenantId, establishmentId, revision.id),
-    ])
+    const gate = await this.completenessService.check(tenantId, establishmentId, actor)
+    const issues = await this.issueRepository.listForRevision(
+      tenantId,
+      establishmentId,
+      revision.id
+    )
+    const events = await this.eventRepository.listForRevision(
+      tenantId,
+      establishmentId,
+      revision.id
+    )
 
     return {
       establishment_id: establishment.id,
