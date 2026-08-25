@@ -11,7 +11,7 @@ import type { Page } from 'playwright'
 async function signIn(page: Page) {
   const user = await UserFactory.merge({ password: 'password123' }).create()
 
-  await page.goto('/login')
+  await page.goto('/login', { waitUntil: 'domcontentloaded' })
   await page.fill('input[name="uid"]', user.email)
   await page.fill('input[name="password"]', 'password123')
   await page.click('button[type="submit"]:has-text("Sign in")')

@@ -9,6 +9,7 @@ import Role from '#modules/roles/models/role'
 import User from '#modules/users/models/user'
 
 const userPermissionNames = [
+  'analytics.read',
   'dashboard.read',
   'files.create',
   'files.delete.own',

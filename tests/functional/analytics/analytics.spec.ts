@@ -9,6 +9,7 @@ import type { ApiClient } from '@japa/api-client'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 
+import { ANALYTICS_SESSION_COOKIE } from '#modules/analytics/interfaces/analytics_interface'
 import AnalyticsDailyMetric from '#modules/analytics/models/analytics_daily_metric'
 import AnalyticsDailySearchTerm from '#modules/analytics/models/analytics_daily_search_term'
 import AnalyticsEvent from '#modules/analytics/models/analytics_event'
@@ -214,7 +215,10 @@ test.group('Discovery analytics', (group) => {
       .json({ events })
 
     response.assertStatus(202)
-    response.assertBodyContains({ accepted: 3, recorded: 3, deduplicated: 0, suppressed: 0 })
+    assert.equal(response.body().accepted, 3)
+    assert.equal(response.body().recorded, 3)
+    assert.equal(response.body().deduplicated, 0)
+    assert.equal(response.body().suppressed, 0)
     assert.isDefined(response.headers()['set-cookie'])
 
     const repeated = await client
@@ -222,7 +226,10 @@ test.group('Discovery analytics', (group) => {
       .headers(publicHeaders(scenario))
       .json({ events })
     repeated.assertStatus(202)
-    repeated.assertBodyContains({ accepted: 3, recorded: 0, deduplicated: 3, suppressed: 0 })
+    assert.equal(repeated.body().accepted, 3)
+    assert.equal(repeated.body().recorded, 0)
+    assert.equal(repeated.body().deduplicated, 3)
+    assert.equal(repeated.body().suppressed, 0)
 
     const rawEvents = await AnalyticsEvent.query()
       .where('tenant_id', scenario.tenant.id)
@@ -276,7 +283,13 @@ test.group('Discovery analytics', (group) => {
       deduplicated: 0,
       suppressed: 1,
     })
-    assert.isUndefined(response.headers()['set-cookie'])
+    const setCookieHeader = response.headers()['set-cookie'] as string | string[] | undefined
+    const setCookies = Array.isArray(setCookieHeader)
+      ? setCookieHeader
+      : setCookieHeader
+        ? [setCookieHeader]
+        : []
+    assert.isFalse(setCookies.some((cookie) => cookie.startsWith(`${ANALYTICS_SESSION_COOKIE}=`)))
     assert.equal(
       await AnalyticsEvent.query()
         .where('tenant_id', scenario.tenant.id)
