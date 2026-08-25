@@ -39,7 +39,8 @@ function FeedbackCard({ item }: { item: JsonRecord }) {
   })
   const organization = record(item.organization)
   const establishment = record(item.establishment)
-  const user = record(item.user)
+  const establishmentRevision = collection(establishment?.revisions)[0] ?? null
+  const user = record(item.author) ?? record(item.user)
   const id = numeric(item, 'id')
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -62,7 +63,13 @@ function FeedbackCard({ item }: { item: JsonRecord }) {
           <p className="mt-3 text-sm text-muted-foreground">
             {text(user, 'full_name', 'Usuário do piloto')}
             {organization ? ` · ${text(organization, 'trade_name')}` : ''}
-            {establishment ? ` · ${text(establishment, 'public_name')}` : ''}
+            {establishment
+              ? ` · ${text(
+                  establishmentRevision,
+                  'public_name',
+                  text(establishment, 'public_name', `Unidade ${numeric(establishment, 'id')}`)
+                )}`
+              : ''}
           </p>
         </div>
         <div className="flex items-center gap-1 text-sm font-semibold">
