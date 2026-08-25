@@ -184,6 +184,7 @@ export default class PermissionRepository
       'media.delete',
       'media.list',
       'analytics.read',
+      'pilot_feedback.create',
     ]
     const rows = await this.model.query({ client: trx }).whereIn('name', names).select('id')
     return rows.map((row) => row.id)

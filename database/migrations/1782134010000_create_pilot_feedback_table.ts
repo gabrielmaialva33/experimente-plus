@@ -50,8 +50,11 @@ export default class extends BaseSchema {
         .inTable('organizations')
         .onDelete('RESTRICT')
       table
-        .foreign(['establishment_id', 'tenant_id'], 'pilot_feedback_establishment_tenant_foreign')
-        .references(['id', 'tenant_id'])
+        .foreign(
+          ['establishment_id', 'tenant_id', 'organization_id'],
+          'pilot_feedback_establishment_tenant_organization_foreign'
+        )
+        .references(['id', 'tenant_id', 'organization_id'])
         .inTable('establishments')
         .onDelete('RESTRICT')
       table

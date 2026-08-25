@@ -71,6 +71,7 @@ namespace IPermission {
     ORGANIZATION_CLAIMS = 'organization_claims',
     ESTABLISHMENTS = 'establishments',
     ANALYTICS = 'analytics',
+    PILOT_FEEDBACK = 'pilot_feedback',
     SETTINGS = 'settings',
     REPORTS = 'reports',
     AUDIT = 'audit',
