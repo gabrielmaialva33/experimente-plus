@@ -29,19 +29,20 @@ export default class PartnerPortalService {
       memberships.map((membership) => [membership.organization_id, membership.role])
     )
 
-    const organizationSummaries = await Promise.all(
-      organizations.map(async (organization) => {
-        const serialized = organization.serialize() as Record<string, unknown>
-        const organizationId = Number(serialized.id)
-        const establishments = await this.establishmentSummaries(tenantId, organizationId, actor)
+    const organizationSummaries: IPortal.OrganizationSummary[] = []
+    for (const organization of organizations) {
+      const serialized = organization.serialize() as Record<string, unknown>
+      const organizationId = Number(serialized.id)
+      const establishments = await this.establishmentSummaries(tenantId, organizationId, actor)
 
-        return this.organizationSummary(
+      organizationSummaries.push(
+        this.organizationSummary(
           serialized,
           roleByOrganization.get(organizationId) ?? null,
           establishments
         )
-      })
-    )
+      )
+    }
 
     return {
       organizations: organizationSummaries,
@@ -147,25 +148,28 @@ export default class PartnerPortalService {
   ): Promise<IPortal.EstablishmentSummary[]> {
     const establishments = await this.establishmentService.list(tenantId, organizationId, actor)
 
-    return Promise.all(
-      establishments.map(async (establishment) => {
-        const record = establishment as Record<string, unknown>
-        const id = Number(record.id)
-        return {
-          id,
-          organization_id: Number(record.organization_id),
-          lifecycle_status: String(record.lifecycle_status),
-          business_status: String(record.business_status),
-          published_revision_id:
-            record.published_revision_id === null || record.published_revision_id === undefined
-              ? null
-              : Number(record.published_revision_id),
-          revision: this.recordValue(record.revision),
-          published_revision: this.recordValue(record.published_revision),
-          completeness: await this.completenessService.check(tenantId, id, actor),
-        }
+    const summaries: IPortal.EstablishmentSummary[] = []
+    for (const establishment of establishments) {
+      const record = establishment as Record<string, unknown>
+      const id = Number(record.id)
+      const completeness = await this.completenessService.check(tenantId, id, actor)
+
+      summaries.push({
+        id,
+        organization_id: Number(record.organization_id),
+        lifecycle_status: String(record.lifecycle_status),
+        business_status: String(record.business_status),
+        published_revision_id:
+          record.published_revision_id === null || record.published_revision_id === undefined
+            ? null
+            : Number(record.published_revision_id),
+        revision: this.recordValue(record.revision),
+        published_revision: this.recordValue(record.published_revision),
+        completeness,
       })
-    )
+    }
+
+    return summaries
   }
 
   private organizationSummary(
