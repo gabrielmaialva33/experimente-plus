@@ -1,6 +1,16 @@
 import { Link, usePage } from '@inertiajs/react'
 import { useState } from 'react'
-import { ChevronDown, FileText, Home, type LucideIcon, Settings, Upload, Users } from 'lucide-react'
+import {
+  Building2,
+  ChevronDown,
+  ClipboardCheck,
+  FileText,
+  Home,
+  type LucideIcon,
+  Settings,
+  Upload,
+  Users,
+} from 'lucide-react'
 
 import { useApp } from '~/hooks/use_app'
 import { useAuth } from '~/hooks/use_auth'
@@ -24,12 +34,34 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: Home, permission: 'dashboard.read' },
   {
+    title: 'Portal do parceiro',
+    href: '/portal',
+    icon: Building2,
+    permission: 'organizations.list',
+  },
+  {
     title: 'Users',
     icon: Users,
     children: [
       { title: 'All Users', href: '/users', permission: 'users.list' },
       { title: 'Roles', href: '/roles', permission: 'roles.list' },
       { title: 'Permissions', href: '/permissions', permission: 'permissions.list' },
+    ],
+  },
+  {
+    title: 'Backoffice',
+    icon: ClipboardCheck,
+    children: [
+      {
+        title: 'Fila de moderação',
+        href: '/backoffice/moderation',
+        permission: 'establishments.approve',
+      },
+      {
+        title: 'Feedback do piloto',
+        href: '/backoffice/feedback',
+        permission: 'pilot_feedback.list',
+      },
     ],
   },
   { title: 'Files', href: '/files', icon: Upload, permission: 'files.list' },

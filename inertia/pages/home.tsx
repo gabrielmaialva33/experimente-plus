@@ -95,18 +95,19 @@ export default function Home() {
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-              <p className="text-sm font-medium text-primary">EP-05 concluído</p>
-              <h2 className="mt-2 text-2xl font-semibold">Publicação segura e auditável</h2>
+              <p className="text-sm font-medium text-primary">EP-08 concluído</p>
+              <h2 className="mt-2 text-2xl font-semibold">Portal operacional e piloto pronto</h2>
               <p className="mt-3 leading-7 text-muted-foreground">
-                Parceiros submetem revisões completas, moderadores devolvem correções ou decidem, e
-                a aprovação troca a ficha publicada de forma transacional. O próximo corte abre o
-                catálogo público regional sem expor drafts ou dados internos.
+                Parceiros possuem onboarding, editor de unidade, mídia, checklist, submissão e
+                métricas. Moderadores trabalham em uma fila própria, enquanto administradores
+                acompanham o feedback estruturado do piloto. O próximo passo é validar a operação
+                regional com parceiros reais.
               </p>
               <div className="mt-6 h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-5/6 rounded-full bg-primary" />
+                <div className="h-full w-full rounded-full bg-primary" />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Fundação e EP-01 a EP-05 implementados · EP-06 catálogo público a seguir
+                Fundação e EP-01 a EP-08 implementados · validação regional assistida a seguir
               </p>
             </div>
           </div>
