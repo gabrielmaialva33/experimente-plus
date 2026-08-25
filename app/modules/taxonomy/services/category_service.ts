@@ -136,7 +136,7 @@ export default class CategoryService {
       return
     }
 
-    const parent = await this.categoryRepository.findByIdForTenant(tenantId, parentId)
+    const parent = await this.categoryRepository.findRecordByIdForTenant(tenantId, parentId)
     if (!parent) {
       throw new BadRequestException('Parent category is invalid for the active operation')
     }

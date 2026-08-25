@@ -109,7 +109,7 @@ export default class CategoryAttributeDefinitionService {
   }
 
   private async ensureCategory(tenantId: number, categoryId: number): Promise<void> {
-    const category = await this.categoryRepository.findByIdForTenant(tenantId, categoryId)
+    const category = await this.categoryRepository.findRecordByIdForTenant(tenantId, categoryId)
     if (!category) {
       throw new BadRequestException('Category is invalid for the active operation')
     }

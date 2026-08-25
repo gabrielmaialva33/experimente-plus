@@ -94,7 +94,10 @@ export default class CategoryAttributeOptionService {
   }
 
   private async ensureSelectDefinition(tenantId: number, definitionId: number): Promise<void> {
-    const definition = await this.definitionRepository.findByIdForTenant(tenantId, definitionId)
+    const definition = await this.definitionRepository.findRecordByIdForTenant(
+      tenantId,
+      definitionId
+    )
     if (!definition) {
       throw new BadRequestException('Attribute definition is invalid for the active operation')
     }
