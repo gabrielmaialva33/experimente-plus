@@ -94,6 +94,7 @@ export namespace IAnalytics {
     accepted: number
     recorded: number
     deduplicated: number
+    suppressed: number
     events: RecordResult[]
   }
 

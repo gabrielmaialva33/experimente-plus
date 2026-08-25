@@ -128,6 +128,7 @@ export default class AnalyticsEventService {
       accepted: results.length,
       recorded,
       deduplicated: results.length - recorded,
+      suppressed: 0,
       events: results,
     }
   }
