@@ -12,6 +12,9 @@ import {
   Trash2,
 } from 'lucide-react'
 
+import EffectiveAttributesForm, {
+  type EffectiveAttribute,
+} from '~/components/portal/effective_attributes_form'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { MainLayout } from '~/layouts/main_layout'
 
@@ -43,6 +46,7 @@ interface EstablishmentEditorProps {
   completeness: Completeness
   cities: JsonRecord[]
   categories: JsonRecord[]
+  effective_attributes: EffectiveAttribute[]
   feedback_targets: {
     organizations: FeedbackTarget[]
     establishments: FeedbackTarget[]
@@ -98,6 +102,7 @@ export default function EstablishmentEditorPage({
   completeness,
   cities,
   categories,
+  effective_attributes,
   feedback_targets,
 }: EstablishmentEditorProps) {
   const revision = asRecord(establishment.revision)
@@ -106,6 +111,9 @@ export default function EstablishmentEditorPage({
   const organizationId = Number(establishment.organization_id)
   const revisionStatus = stringValue(revision, 'status', 'draft')
   const editable = ['draft', 'changes_requested'].includes(revisionStatus)
+  const effectiveAttributesKey = JSON.stringify(
+    effective_attributes.map(({ id, value, option_ids }) => [id, value, option_ids])
+  )
 
   const identityForm = useForm({
     public_name: stringValue(revision, 'public_name'),
@@ -696,6 +704,13 @@ export default function EstablishmentEditorPage({
             ) : null}
           </form>
         </div>
+
+        <EffectiveAttributesForm
+          key={effectiveAttributesKey}
+          establishmentId={establishmentId}
+          attributes={effective_attributes}
+          editable={editable}
+        />
 
         <section className="space-y-5 rounded-3xl border border-border bg-card p-6">
           <div>
