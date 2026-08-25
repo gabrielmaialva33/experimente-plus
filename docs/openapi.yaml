@@ -2014,6 +2014,125 @@ components:
           items:
             $ref: '#/components/schemas/AnalyticsSearchTerm'
 
+    PilotFeedback:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - user_id
+        - context
+        - rating
+        - message
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        user_id:
+          type: integer
+          minimum: 1
+        organization_id:
+          type: [integer, 'null']
+          minimum: 1
+        establishment_id:
+          type: [integer, 'null']
+          minimum: 1
+        context:
+          type: string
+          enum: [general, onboarding, organization, establishment, catalog, analytics, moderation]
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        message:
+          type: string
+          minLength: 3
+          maxLength: 4000
+        status:
+          type: string
+          enum: [new, in_review, resolved, dismissed]
+        reviewed_by:
+          type: [integer, 'null']
+          minimum: 1
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        internal_notes:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 4000
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        author:
+          type: [object, 'null']
+          additionalProperties: true
+        reviewer:
+          type: [object, 'null']
+          additionalProperties: true
+        organization:
+          type: [object, 'null']
+          additionalProperties: true
+        establishment:
+          type: [object, 'null']
+          additionalProperties: true
+
+    CreatePilotFeedbackRequest:
+      type: object
+      required: [context, rating, message]
+      additionalProperties: false
+      properties:
+        context:
+          type: string
+          enum: [general, onboarding, organization, establishment, catalog, analytics, moderation]
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        message:
+          type: string
+          minLength: 3
+          maxLength: 4000
+        organization_id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+
+    ReviewPilotFeedbackRequest:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [in_review, resolved, dismissed]
+        internal_notes:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 4000
+
+    PilotFeedbackPage:
+      type: object
+      required: [meta, data]
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PilotFeedback'
+
   parameters:
     TenantHeader:
       name: x-tenant-id
@@ -2152,7 +2271,130 @@ tags:
   - name: Analytics
     description: Privacy-preserving discovery events, partner aggregates and platform search diagnostics.
 
+  - name: Pilot Feedback
+    description: Authenticated pilot observations and the private administrative triage queue.
+
 paths:
+  /api/v1/pilot-feedback:
+    post:
+      operationId: createPilotFeedback
+      summary: Submit structured feedback about the regional pilot
+      description: The server validates tenant, organization membership and establishment ownership before associating a target.
+      tags: [Pilot Feedback]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePilotFeedbackRequest'
+      responses:
+        '201':
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PilotFeedback'
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '404':
+          description: Organization or establishment target not visible to the actor
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/pilot-feedback:
+    get:
+      operationId: listPilotFeedback
+      summary: List the tenant-scoped pilot feedback queue
+      description: Reserved for Administrator and Root. Moderators do not receive commercial pilot feedback access automatically.
+      tags: [Pilot Feedback]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [new, in_review, resolved, dismissed]
+        - in: query
+          name: context
+          schema:
+            type: string
+            enum: [general, onboarding, organization, establishment, catalog, analytics, moderation]
+        - in: query
+          name: organization_id
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: establishment_id
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated feedback queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PilotFeedbackPage'
+        '401':
+          description: Authentication required
+        '403':
+          description: Administrator or Root role required
+        '422':
+          description: Invalid query parameters
+
+  /api/v1/admin/pilot-feedback/{id}:
+    patch:
+      operationId: reviewPilotFeedback
+      summary: Update the administrative triage state of pilot feedback
+      tags: [Pilot Feedback]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPilotFeedbackRequest'
+      responses:
+        '200':
+          description: Feedback reviewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PilotFeedback'
+        '401':
+          description: Authentication required
+        '403':
+          description: Administrator or Root role required
+        '404':
+          description: Feedback not found in the active tenant
+        '422':
+          description: Validation failed
   /api/v1/analytics/events:
     post:
       operationId: ingestDiscoveryAnalyticsEvents

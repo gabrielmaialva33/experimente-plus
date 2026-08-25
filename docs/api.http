@@ -33,6 +33,7 @@
 @revisionId = 1
 @moderatorToken = replace-with-platform-moderator-access-token
 @adminToken = replace-with-platform-admin-access-token
+@pilotFeedbackId = 1
 
 ###############################################################################
 ### HEALTH ENDPOINTS
@@ -782,6 +783,62 @@ Accept: text/html
 GET {{baseUrl}}/go/{{catalogCitySlug}}/{{catalogEstablishmentSlug}}/website
 Host: {{publicHost}}
 Accept: text/html
+
+# ============================================================================
+# PILOT FEEDBACK · EP-08
+# ============================================================================
+
+### Submit General Pilot Feedback
+POST {{baseUrl}}/api/v1/pilot-feedback
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "context": "onboarding",
+  "rating": 4,
+  "message": "O checklist deixou claro o que ainda falta para publicar a unidade.",
+  "organization_id": {{organizationId}}
+}
+
+### Submit Establishment Feedback
+POST {{baseUrl}}/api/v1/pilot-feedback
+Authorization: Bearer {{token}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "context": "establishment",
+  "rating": 5,
+  "message": "A edição de endereço, horários e categorias funcionou bem no cadastro assistido.",
+  "organization_id": {{organizationId}},
+  "establishment_id": {{establishmentId}}
+}
+
+### List Pilot Feedback as Administrator
+GET {{baseUrl}}/api/v1/admin/pilot-feedback?status=new&page=1&per_page=20
+Authorization: Bearer {{adminToken}}
+x-tenant-id: {{tenantId}}
+Accept: application/json
+
+### Review Pilot Feedback as Administrator
+PATCH {{baseUrl}}/api/v1/admin/pilot-feedback/{{pilotFeedbackId}}
+Authorization: Bearer {{adminToken}}
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "resolved",
+  "internal_notes": "Validado com o parceiro e convertido em item do backlog."
+}
+
+# Browser surfaces use the authenticated JWT cookie and render private Inertia pages:
+# GET {{baseUrl}}/portal
+# GET {{baseUrl}}/backoffice/moderation
+# GET {{baseUrl}}/backoffice/feedback
 
 # EXAMPLE RESPONSES
 ###############################################################################
