@@ -584,6 +584,21 @@ test.group('Operational portals', (group) => {
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('portal-backoffice')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+    const feedbackMessage = 'A edição das características ficou clara durante o piloto.'
+    const createdFeedback = await client
+      .post('/api/v1/pilot-feedback')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        context: 'establishment',
+        rating: 5,
+        message: feedbackMessage,
+        organization_id: scenario.organization.id,
+        establishment_id: establishmentId,
+      })
+    createdFeedback.assertStatus(201)
+
     const moderator = await createUser({
       prefix: 'portal-moderator',
       tenant: scenario.tenant,
@@ -624,5 +639,9 @@ test.group('Operational portals', (group) => {
       .loginAs(admin)
     adminFeedback.assertStatus(200)
     assert.include(adminFeedback.text(), 'backoffice/feedback/index')
+    assert.include(adminFeedback.text(), scenario.owner.full_name)
+    assert.include(adminFeedback.text(), scenario.organization.trade_name)
+    assert.include(adminFeedback.text(), 'Unidade do portal')
+    assert.include(adminFeedback.text(), feedbackMessage)
   })
 })
