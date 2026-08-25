@@ -421,28 +421,32 @@ test.group('Establishment review workflow', (group) => {
     assert.equal(copiedMedia.moderation_status, 'approved')
     assert.isTrue(copiedMedia.is_cover)
 
-    const copiedAggregateCounts = await Promise.all([
-      db
-        .from('establishment_revision_addresses')
-        .where('revision_id', revisionTwoId)
-        .count('* as total')
-        .first(),
-      db
-        .from('establishment_revision_categories')
-        .where('revision_id', revisionTwoId)
-        .count('* as total')
-        .first(),
-      db
-        .from('establishment_revision_attribute_values')
-        .where('revision_id', revisionTwoId)
-        .count('* as total')
-        .first(),
-      db
-        .from('establishment_revision_hours')
-        .where('revision_id', revisionTwoId)
-        .count('* as total')
-        .first(),
-    ])
+    const copiedAddressCount = await db
+      .from('establishment_revision_addresses')
+      .where('revision_id', revisionTwoId)
+      .count('* as total')
+      .first()
+    const copiedCategoryCount = await db
+      .from('establishment_revision_categories')
+      .where('revision_id', revisionTwoId)
+      .count('* as total')
+      .first()
+    const copiedAttributeCount = await db
+      .from('establishment_revision_attribute_values')
+      .where('revision_id', revisionTwoId)
+      .count('* as total')
+      .first()
+    const copiedHourCount = await db
+      .from('establishment_revision_hours')
+      .where('revision_id', revisionTwoId)
+      .count('* as total')
+      .first()
+    const copiedAggregateCounts = [
+      copiedAddressCount,
+      copiedCategoryCount,
+      copiedAttributeCount,
+      copiedHourCount,
+    ]
     assert.deepEqual(
       copiedAggregateCounts.map((row) => Number(row?.total ?? 0)),
       [1, 1, 2, 2]
