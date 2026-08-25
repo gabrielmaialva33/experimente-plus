@@ -21,6 +21,9 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 | [ADR-0013](0013-disponibilidade-categorias-e-atributos-de-unidade.md) | Disponibilidade, categorias e atributos de unidade | endereço, horários, herança, atributos tipados e completude |
 | [ADR-0014](0014-midia-estavel-e-composicao-versionada.md)             | Mídia estável e composição versionada por revisão  | assets, storage, capa, ordenação, moderação e visibilidade  |
 | [ADR-0015](0015-submissao-moderacao-e-publicacao-atomica.md)          | Submissão, moderação e publicação atômica          | gates, fila, issues, eventos, clonagem e ponteiro publicado |
+| [ADR-0016](0016-catalogo-publico-projecao-e-resolucao-de-operacao.md) | Catálogo público, projeção e operação              | hostname confiável, projeção reconstruível, busca e SSR     |
+| [ADR-0017](0017-analytics-de-descoberta-privacidade-e-agregacao.md)   | Analytics de descoberta                            | eventos pseudônimos, privacidade, agregação e retenção      |
+| [ADR-0018](0018-portais-operacionais-e-feedback-piloto.md)            | Portais operacionais e feedback do piloto          | parceiro, backoffice, onboarding derivado e feedback        |
 
 ## Regra de evolução
 
@@ -32,10 +35,13 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 ## Estado dos marcos
 
 ```text
-EP-00 — decisões arquiteturais iniciais       concluído
-EP-01 — geografia e taxonomia                 implementado e validado
-EP-02 — organizações e memberships            implementado e validado
-EP-03 — unidades, horários e atributos        implementado e validado
-EP-04 — mídia                                 implementado e validado
-EP-05 — submissão e moderação                 em implementação
+EP-00 — decisões arquiteturais iniciais     concluído
+EP-01 — geografia e taxonomia               implementado e validado
+EP-02 — organizações e memberships          implementado e validado
+EP-03 — unidades, horários e atributos      implementado e validado
+EP-04 — mídia                               implementado e validado
+EP-05 — submissão e moderação               implementado e validado
+EP-06 — catálogo público                    implementado e validado
+EP-07 — analytics de descoberta             implementado e validado
+EP-08 — portal mínimo e piloto              implementado e validado
 ```

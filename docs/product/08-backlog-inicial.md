@@ -13,15 +13,15 @@ EP-02 Organizações e memberships ✅
   ↓
 EP-03 Unidades, horários e atributos ✅
   ↓
-EP-04 Mídia e completude ← próximo
+EP-04 Mídia e completude ✅
   ↓
-EP-05 Submissão e moderação
+EP-05 Submissão e moderação ✅
   ↓
-EP-06 Catálogo público
+EP-06 Catálogo público ✅
   ↓
-EP-07 Analytics de descoberta
+EP-07 Analytics de descoberta ✅
   ↓
-EP-08 Portal mínimo e piloto
+EP-08 Portal mínimo e piloto ✅
 ```
 
 ## EP-00 — Decisões técnicas
@@ -278,6 +278,8 @@ Uma unidade só pode ser submetida quando possuir:
 - política de retenção inicial.
 
 ## EP-08 — Portal mínimo e piloto
+
+**Estado:** concluído em 25 de agosto de 2026.
 
 ### Entregas
 

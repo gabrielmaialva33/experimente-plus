@@ -184,6 +184,8 @@ A SOBRAL SPEC reforça os seguintes requisitos do próximo marco:
 | fotos e moderação de mídia                                       | EP-04                                 |
 | submissão, correção, aprovação, rejeição, publicação e suspensão | EP-05                                 |
 | busca, mapa e ficha pública                                      | EP-06                                 |
+| analytics de descoberta e ações externas                         | EP-07                                 |
+| portal do parceiro, backoffice e feedback do piloto              | EP-08                                 |
 | favoritos, follows, avaliações e denúncias                       | marcos posteriores                    |
 | experiências, eventos e comércio                                 | marcos posteriores                    |
 | Concierge IA                                                     | após catálogo e telemetria confiáveis |

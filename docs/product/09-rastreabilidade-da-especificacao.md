@@ -207,6 +207,19 @@ Especificação: pergunta como a IA reage, sem resposta.
 
 Planejamento: fallback por cidade escolhida e comunicação de incerteza serão avaliados na fase do Concierge.
 
+## Portal mínimo, backoffice e feedback do piloto
+
+Especificação: distingue Explorador, Parceiro, Administrador e Moderador e afirma que cada perfil possui permissões próprias.
+
+Planejamento:
+
+- Parceiro continua sendo membership de organização, não role global;
+- portal do parceiro reutiliza organizações, unidades, completude, mídia, submissão e analytics;
+- Moderador acessa a fila de conteúdo, mas não recebe automaticamente acesso ao feedback comercial;
+- Administrador e Root fazem a triagem privada do feedback do piloto;
+- o menu reflete capabilities, enquanto middleware e policies permanecem autoritativos;
+- feedback do piloto não é avaliação pública e não altera nota de estabelecimento.
+
 ## Requisitos ainda sem destino definitivo
 
 - cadastro de layout de patrocinadores;

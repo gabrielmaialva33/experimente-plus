@@ -162,7 +162,7 @@ Saída: autorização para desenhar e implementar as migrations canônicas de Ge
 
 ### Fase 1 — núcleo de oferta e publicação
 
-Estado: concluído até o primeiro catálogo público. Geografia, Taxonomia, Organizações, memberships, Unidades revisionadas, Mídia, Submissão, moderação, publicação atômica e descoberta pública com busca PostgreSQL e SSR foram concluídos até 24 de agosto de 2026. Analytics de descoberta e métricas agregadas formam o próximo corte.
+Estado: concluído até a operação do piloto. Geografia, Taxonomia, Organizações, memberships, Unidades revisionadas, Mídia, Submissão, moderação, publicação atômica, descoberta pública, Analytics e os portais operacionais foram concluídos até 25 de agosto de 2026. O próximo corte é a validação regional assistida, com gates de negócio e priorização orientada por evidência.
 
 Domínios:
 

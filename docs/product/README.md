@@ -66,11 +66,13 @@ Ações de descoberta são registradas
 - [`08-backlog-inicial.md`](08-backlog-inicial.md) — epics, dependências e Definition of Done da primeira vertical.
 - [`09-rastreabilidade-da-especificacao.md`](09-rastreabilidade-da-especificacao.md) — relação entre cada requisito do documento inicial e o roadmap.
 - [`10-revisao-da-sobral-spec.md`](10-revisao-da-sobral-spec.md) — reconciliação explícita do rascunho recebido com domínio, ADRs e marcos.
+- [`11-analytics-de-descoberta.md`](11-analytics-de-descoberta.md) — contrato de eventos, privacidade, agregação, retenção e métricas do parceiro.
+- [`12-portal-minimo-e-piloto.md`](12-portal-minimo-e-piloto.md) — operação assistida, onboarding, editor, backoffice, feedback e roteiro do piloto.
 - [`../architecture/decisions/`](../architecture/decisions/README.md) — ADRs aceitos que transformam o planejamento em contratos técnicos.
 
 ## Estado arquitetural
 
-Os marcos EP-00 a EP-05 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia e o workflow auditável de revisão possuem ADRs aceitos e implementação canônica com regressões. A etapa atual de engenharia é EP-06 — Catálogo público e descoberta regional.
+Os marcos EP-00 a EP-08 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia, catálogo, analytics e portais operacionais possuem ADRs aceitos e implementação canônica com regressões. A etapa seguinte é a validação operacional do piloto regional e a priorização do backlog com evidência de uso.
 
 ## Regra de mudança
 
