@@ -5,12 +5,12 @@ import {
   Check,
   CircleAlert,
   Clock3,
-  ImageIcon,
   Info,
   MapPin,
   Sparkles,
 } from 'lucide-react'
 
+import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { EstablishmentActions } from '~/components/catalog/establishment_actions'
 import { useEstablishmentViewAnalytics } from '~/components/catalog/use_catalog_analytics'
@@ -198,10 +198,11 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
                   className="max-h-[640px] min-h-64 w-full object-cover sm:min-h-96"
                 />
               ) : (
-                <div className="relative flex min-h-72 items-center justify-center bg-gradient-to-br from-primary/12 via-accent to-warning/15 text-muted-foreground sm:min-h-96">
-                  <div className="absolute inset-0 bg-grid-pattern opacity-25" />
-                  <ImageIcon className="relative size-10" />
-                </div>
+                <CatalogImageFallback
+                  name={detail.name}
+                  categoryName={primaryCategory?.name}
+                  className="min-h-72 w-full sm:min-h-96"
+                />
               )}
               <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 p-5 text-white sm:p-7">

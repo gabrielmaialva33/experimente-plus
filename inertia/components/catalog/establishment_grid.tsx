@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react'
 import { ArrowUpRight, ImageIcon, MapPin, Sparkles } from 'lucide-react'
 
+import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
 import { Badge } from '~/components/ui/badge'
 import {
   businessStatusLabel,
@@ -35,7 +36,7 @@ export default function EstablishmentGrid({
     return (
       <div className="rounded-2xl border border-dashed bg-card px-6 py-14 text-center">
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <ImageIcon className="size-5" />
+          <ImageIcon aria-hidden="true" className="size-5" />
         </span>
         <h2 className="mt-4 text-lg font-semibold">{emptyTitle}</h2>
         <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
@@ -66,12 +67,12 @@ export default function EstablishmentGrid({
             <Link
               href={href}
               aria-label={`Ver detalhes de ${entry.name}`}
-              className="relative block overflow-hidden"
+              className="relative block overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
               {entry.cover ? (
                 <img
                   src={entry.cover.url}
-                  alt={entry.cover.altText}
+                  alt={entry.cover.altText || `Imagem de ${entry.name}`}
                   width={entry.cover.width ?? undefined}
                   height={entry.cover.height ?? undefined}
                   loading="lazy"
@@ -79,10 +80,11 @@ export default function EstablishmentGrid({
                   className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.035]"
                 />
               ) : (
-                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-gradient-to-br from-primary/12 via-accent to-warning/15 text-muted-foreground">
-                  <div className="absolute inset-0 bg-grid-pattern opacity-25" />
-                  <ImageIcon className="relative size-8" />
-                </div>
+                <CatalogImageFallback
+                  name={entry.name}
+                  categoryName={entry.primaryCategory?.name}
+                  className="aspect-[4/3] w-full"
+                />
               )}
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
               <span
@@ -98,7 +100,7 @@ export default function EstablishmentGrid({
                   variant="primary"
                   className="absolute end-3 top-3 gap-1 rounded-full shadow-sm"
                 >
-                  <Sparkles className="size-3" /> Destaque
+                  <Sparkles aria-hidden="true" className="size-3" /> Destaque
                 </Badge>
               )}
             </Link>
@@ -123,7 +125,7 @@ export default function EstablishmentGrid({
 
               {location ? (
                 <p className="mt-2 flex min-w-0 items-start gap-1.5 text-xs text-muted-foreground">
-                  <MapPin className="mt-0.5 size-3.5 shrink-0" />
+                  <MapPin aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
                   <span className="truncate">{location}</span>
                 </p>
               ) : null}
@@ -136,9 +138,9 @@ export default function EstablishmentGrid({
 
               <Link
                 href={href}
-                className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-primary transition hover:gap-2.5"
+                className="mt-auto inline-flex items-center gap-1.5 rounded-sm pt-5 text-sm font-semibold text-primary outline-none transition hover:gap-2.5 focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Ver detalhes <ArrowUpRight className="size-4" />
+                Ver detalhes <ArrowUpRight aria-hidden="true" className="size-4" />
               </Link>
             </div>
           </article>
