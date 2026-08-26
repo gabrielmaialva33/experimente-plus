@@ -1,73 +1,97 @@
 import * as React from 'react'
 
-import { Label } from '~/components/ui/label'
 import { Input, InputWrapper } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
 import { cn } from '~/lib/utils'
 
-interface FieldProps extends React.ComponentProps<typeof Input> {
+export interface FieldProps extends React.ComponentProps<typeof Input> {
   label: string
   error?: string
   hint?: string
-  /** Icon rendered inside the input, before the text. */
   leftIcon?: React.ReactNode
-  /** Action rendered on the right side of the label row (e.g. a "Forgot password?" link). */
+  trailingAction?: React.ReactNode
   labelAction?: React.ReactNode
 }
 
-/**
- * A labelled Input wired for Inertia's `useForm` (error/hint are plain strings,
- * not react-hook-form state — so this works without the Metronic Form context).
- * Supports an optional leading icon and a label-row action for richer forms.
- */
 export const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
-  { label, error, hint, id, name, className, leftIcon, labelAction, ...props },
+  {
+    label,
+    error,
+    hint,
+    id,
+    name,
+    className,
+    leftIcon,
+    trailingAction,
+    labelAction,
+    required,
+    ...props
+  },
   ref
 ) {
-  const fieldId = id ?? name
-  const describedBy = error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined
+  const generatedId = React.useId()
+  const fieldId = id ?? name ?? generatedId
+  const hintId = hint && !error ? `${fieldId}-hint` : null
+  const errorId = error ? `${fieldId}-error` : null
+  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
+
+  const labelElement = (
+    <div className="flex min-w-0 items-center gap-1">
+      <Label htmlFor={fieldId}>{label}</Label>
+      {required ? (
+        <span aria-hidden="true" className="text-destructive">
+          *
+        </span>
+      ) : null}
+    </div>
+  )
 
   const input = (
     <Input
       id={fieldId}
       name={name}
       ref={ref}
+      required={required}
+      aria-required={required || undefined}
       aria-invalid={!!error}
       aria-describedby={describedBy}
+      aria-errormessage={errorId ?? undefined}
       className={cn(className)}
       {...props}
     />
   )
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-invalid={error ? 'true' : undefined}>
       {labelAction ? (
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor={fieldId}>{label}</Label>
+          {labelElement}
           {labelAction}
         </div>
       ) : (
-        <Label htmlFor={fieldId}>{label}</Label>
+        labelElement
       )}
 
-      {leftIcon ? (
+      {leftIcon || trailingAction ? (
         <InputWrapper aria-invalid={!!error}>
           {leftIcon}
           {input}
+          {trailingAction}
         </InputWrapper>
       ) : (
         input
       )}
 
-      {hint && !error && (
-        <p id={`${fieldId}-hint`} className="text-xs text-muted-foreground">
+      {hintId ? (
+        <p id={hintId} className="text-xs leading-5 text-muted-foreground">
           {hint}
         </p>
-      )}
-      {error && (
-        <p id={`${fieldId}-error`} className="text-xs text-destructive">
+      ) : null}
+      {errorId ? (
+        <p id={errorId} role="alert" className="text-xs leading-5 text-destructive">
           {error}
         </p>
-      )}
+      ) : null}
     </div>
   )
 })
