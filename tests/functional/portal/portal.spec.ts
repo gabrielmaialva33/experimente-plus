@@ -610,6 +610,121 @@ test.group('Operational portals', (group) => {
     )
   })
 
+  test('blocks portal submission while required attributes are missing and unlocks after saving them', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('portal-required-gate')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+    const editorPath = `/portal/establishments/${establishmentId}`
+
+    await client
+      .put(`/api/v1/establishments/${establishmentId}/categories`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ categories: [{ category_id: scenario.primaryCategory.id, is_primary: true }] })
+      .then((response) => response.assertStatus(200))
+    await client
+      .put(`/api/v1/establishments/${establishmentId}/address`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        postal_code: '86300000',
+        street: 'Rua das Flores',
+        number: '120',
+        without_number: false,
+        district: 'Centro',
+        latitude: -23.18,
+        longitude: -50.65,
+        coordinate_source: 'manual',
+      })
+      .then((response) => response.assertStatus(200))
+    await client
+      .put(`/api/v1/establishments/${establishmentId}/hours`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ hours: [{ weekday: 1, opens_at: '08:00', closes_at: '18:00' }] })
+      .then((response) => response.assertStatus(200))
+    const media = await client
+      .post(`/api/v1/establishments/${establishmentId}/media`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .field('alt_text', 'Imagem de capa para o gate de atributos obrigatórios')
+      .file('file', mediaFixture('valid.webp'))
+    media.assertStatus(201)
+
+    const blockedEditor = await client
+      .get(editorPath)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    blockedEditor.assertStatus(200)
+    const blockedProps = parseEditorProps(blockedEditor)
+    assert.isFalse(blockedProps.completeness.eligible)
+    assert.isNotEmpty(blockedProps.completeness.blocking_issues)
+    assert.isTrue(
+      blockedProps.completeness.blocking_issues.every(
+        (issue) => issue.code === 'required_attribute_missing'
+      )
+    )
+
+    const blockedSubmit = await client
+      .post(`${editorPath}/submit`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({ ...tenantHeader(scenario.tenant.id), referer: editorPath })
+      .loginAs(scenario.owner)
+      .json({})
+    assert.include([302, 303], blockedSubmit.status())
+
+    const blockedRevision = await findDraft(establishmentId)
+    assert.equal(blockedRevision.status, 'draft')
+    assert.isNull(blockedRevision.submitted_at)
+
+    const save = await client
+      .put(`${editorPath}/attributes`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({ ...tenantHeader(scenario.tenant.id), referer: editorPath })
+      .loginAs(scenario.owner)
+      .json({
+        attributes: [
+          { attribute_definition_id: scenario.inheritedBoolean.id, value: false },
+          {
+            attribute_definition_id: scenario.selectDefinition.id,
+            option_ids: [scenario.standardOption.id],
+          },
+        ],
+      })
+    assert.include([302, 303], save.status())
+
+    const readyEditor = await client
+      .get(editorPath)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    readyEditor.assertStatus(200)
+    const readyProps = parseEditorProps(readyEditor)
+    assert.isTrue(readyProps.completeness.eligible)
+    assert.equal(readyProps.completeness.score, 100)
+    assert.isFalse(
+      requireEffectiveAttribute(readyProps.effective_attributes, scenario.inheritedBoolean.id).value
+    )
+
+    const submit = await client
+      .post(`${editorPath}/submit`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({ ...tenantHeader(scenario.tenant.id), referer: editorPath })
+      .loginAs(scenario.owner)
+      .json({})
+    assert.include([302, 303], submit.status())
+
+    const submittedRevision = await EstablishmentRevision.query()
+      .where('establishment_id', establishmentId)
+      .firstOrFail()
+    assert.equal(submittedRevision.status, 'pending_review')
+    assert.isNotNull(submittedRevision.submitted_at)
+  })
+
   test('keeps organization and establishment pages hidden from outsiders', async ({ client }) => {
     const scenario = await createEstablishmentScenario('portal-outsider')
     const establishmentId = await createDraftEstablishment(client, scenario)
