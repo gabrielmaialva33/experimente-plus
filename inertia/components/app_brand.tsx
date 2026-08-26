@@ -1,0 +1,59 @@
+import { Link } from '@inertiajs/react'
+
+import { useApp } from '~/hooks/use_app'
+import { cn } from '~/lib/utils'
+
+interface AppBrandProps {
+  collapsed?: boolean
+  href?: string
+  className?: string
+  onNavigate?: () => void
+}
+
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl',
+        'bg-gradient-to-br from-primary via-primary to-warning text-primary-foreground',
+        'shadow-sm shadow-primary/25 ring-1 ring-white/20',
+        className
+      )}
+    >
+      <span className="text-[0.95rem] font-black tracking-[-0.08em]">E</span>
+      <span className="absolute end-1.5 top-1 text-[0.65rem] font-black leading-none">+</span>
+      <span className="absolute -bottom-3 -start-2 size-7 rounded-full bg-white/15" />
+    </span>
+  )
+}
+
+export function AppBrand({
+  collapsed = false,
+  href = '/dashboard',
+  className,
+  onNavigate,
+}: AppBrandProps) {
+  const application = useApp()
+
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-label={application.name}
+      className={cn('flex min-w-0 items-center gap-3', className)}
+    >
+      <BrandMark />
+      {!collapsed && (
+        <span className="min-w-0">
+          <span className="block truncate text-[1.05rem] font-bold tracking-[-0.03em]">
+            {application.name}
+          </span>
+          <span className="block truncate text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Descoberta regional
+          </span>
+        </span>
+      )}
+    </Link>
+  )
+}
