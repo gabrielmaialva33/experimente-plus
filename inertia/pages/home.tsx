@@ -1,146 +1,269 @@
-import { Head, Link } from '@inertiajs/react'
-import { ArrowRight, Compass, MapPinned, Route, Store } from 'lucide-react'
+import { Link } from '@inertiajs/react'
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  Clapperboard,
+  Coffee,
+  Compass,
+  HeartHandshake,
+  MapPinned,
+  Search,
+  Sparkles,
+  Store,
+  UtensilsCrossed,
+} from 'lucide-react'
 
+import { PublicShell } from '~/components/public'
 import { Button } from '~/components/ui/button'
-import { useApp } from '~/hooks/use_app'
 
-const highlights = [
+const categories = [
   {
-    title: 'Comer e beber',
-    description: 'Descobrir restaurantes, bares, cafés e outras experiências gastronômicas.',
+    label: 'Restaurantes',
+    description: 'Do almoço de todo dia à experiência para uma ocasião especial.',
+    icon: UtensilsCrossed,
+  },
+  {
+    label: 'Cafés e padarias',
+    description: 'Café, brunch, doces, pães e boas pausas pela cidade.',
+    icon: Coffee,
+  },
+  {
+    label: 'Cultura e cinema',
+    description: 'Programas culturais, salas, espaços e experiências para descobrir.',
+    icon: Clapperboard,
+  },
+  {
+    label: 'Serviços locais',
+    description: 'Beleza, bem-estar, tatuagem e outros negócios da região.',
     icon: Store,
   },
+] as const
+
+const discoverySteps = [
   {
-    title: 'Viver a cidade',
-    description:
-      'Encontrar cinemas, cultura, lazer, bem-estar e serviços que fazem parte da rotina.',
-    icon: Compass,
+    title: 'Escolha sua cidade',
+    description: 'Comece pelo lugar onde você está ou por uma cidade que deseja conhecer.',
+    icon: MapPinned,
   },
   {
-    title: 'Explorar a região',
-    description: 'Navegar por diferentes cidades e categorias em uma experiência única e simples.',
-    icon: Route,
+    title: 'Refine sua busca',
+    description: 'Navegue por categorias, pesquise pelo nome e veja o que está aberto agora.',
+    icon: Search,
   },
-]
+  {
+    title: 'Decida com contexto',
+    description: 'Consulte endereço, horários, características, mídia e canais de contato.',
+    icon: BadgeCheck,
+  },
+] as const
 
 export default function Home() {
-  const application = useApp()
-
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Head title="Descubra o que está perto" />
+    <PublicShell
+      title="Experimente+ — Descubra o melhor da sua região"
+      description="Encontre restaurantes, cafés, cultura, bem-estar e serviços locais em cidades do Norte do Paraná."
+    >
+      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/12 via-background to-warning/12">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.24] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+        <div className="absolute -start-32 top-20 size-80 rounded-full bg-primary/12 blur-3xl" />
+        <div className="absolute -end-24 bottom-0 size-72 rounded-full bg-warning/15 blur-3xl" />
 
-      <header className="border-b border-border/70 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
-              +
-            </span>
-            <span className="text-lg font-semibold tracking-tight">{application.name}</span>
-          </Link>
-
-          <nav className="flex items-center gap-2">
-            {application.environment !== 'production' && (
-              <a
-                href="/docs"
-                className="hidden text-sm text-muted-foreground hover:text-foreground sm:block"
-              >
-                API
-              </a>
-            )}
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Entrar
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm">Criar conta</Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main>
-        <section className="relative overflow-hidden border-b border-border/70">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.14),transparent_42%)]" />
-          <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-            <div>
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1 text-sm text-muted-foreground">
-                <MapPinned className="size-4 text-primary" />
-                Guia regional multicidade e multicategoria
-              </div>
-
-              <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
-                Descubra o melhor de cada cidade, em todas as categorias.
-              </h1>
-              <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground">
-                Restaurantes, bares e cafés são o ponto de partida. O {application.name} também
-                nasce preparado para reunir cinemas, estúdios de tatuagem, lazer e outros serviços
-                locais em cidades entre Cornélio Procópio, Londrina e municípios próximos.
-              </p>
-
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <Link href="/register">
-                  <Button size="lg" className="w-full sm:w-auto">
-                    Começar agora
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                    Já tenho uma conta
-                  </Button>
-                </Link>
-              </div>
+        <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:px-8 lg:py-28">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur">
+              <Sparkles className="size-3.5" /> Descoberta regional, sem exigir cadastro
             </div>
 
-            <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-              <p className="text-sm font-medium text-primary">EP-08 concluído</p>
-              <h2 className="mt-2 text-2xl font-semibold">Portal operacional e piloto pronto</h2>
-              <p className="mt-3 leading-7 text-muted-foreground">
-                Parceiros possuem onboarding, editor de unidade, mídia, checklist, submissão e
-                métricas. Moderadores trabalham em uma fila própria, enquanto administradores
-                acompanham o feedback estruturado do piloto. O próximo passo é validar a operação
-                regional com parceiros reais.
-              </p>
-              <div className="mt-6 h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-full rounded-full bg-primary" />
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Fundação e EP-01 a EP-08 implementados · validação regional assistida a seguir
-              </p>
+            <h1 className="mt-6 text-4xl font-bold leading-[1.04] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+              Mais perto do que você imagina.{' '}
+              <span className="text-primary">Mais interessante do que você esperava.</span>
+            </h1>
+
+            <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
+              Descubra restaurantes, cafés, cultura, bem-estar e serviços locais com informações
+              publicadas, organizadas e fáceis de usar.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button size="lg" className="h-12 px-6" asChild>
+                <Link href="/cidades">
+                  <Compass className="size-4" /> Explorar cidades
+                </Link>
+              </Button>
+              <Button variant="outline" size="lg" className="h-12 px-6" asChild>
+                <Link href="/register">
+                  <Store className="size-4" /> Cadastrar meu negócio
+                </Link>
+              </Button>
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <BadgeCheck className="size-3.5 text-primary" /> Fichas revisadas antes da
+                publicação
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MapPinned className="size-3.5 text-primary" /> Norte do Paraná como região inicial
+              </span>
             </div>
           </div>
-        </section>
 
-        <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20">
-          <div className="grid gap-5 md:grid-cols-3">
-            {highlights.map((highlight) => (
-              <article
-                key={highlight.title}
-                className="rounded-2xl border border-border bg-card p-6"
-              >
-                <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <highlight.icon className="size-5" />
+          <div className="relative mx-auto w-full max-w-xl lg:justify-self-end">
+            <div className="absolute inset-8 rounded-[2rem] bg-primary/15 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[2rem] border bg-card/92 p-5 shadow-2xl backdrop-blur sm:p-7">
+              <div className="flex items-center justify-between gap-4 border-b pb-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
+                    Comece por aqui
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold">O que combina com hoje?</h2>
+                </div>
+                <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Compass className="size-5" />
                 </span>
-                <h2 className="mt-5 text-lg font-semibold">{highlight.title}</h2>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {categories.map((category) => {
+                  const Icon = category.icon
+                  return (
+                    <div
+                      key={category.label}
+                      className="rounded-xl border bg-background p-4 transition hover:border-primary/30 hover:shadow-sm"
+                    >
+                      <Icon className="size-5 text-primary" />
+                      <h3 className="mt-3 text-sm font-semibold">{category.label}</h3>
+                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                        {category.description}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <Button variant="outline" className="mt-5 w-full" asChild>
+                <Link href="/cidades">
+                  Ver o catálogo regional <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="categories-title"
+        className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
+      >
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.17em] text-primary">
+            Mais que gastronomia
+          </p>
+          <h2
+            id="categories-title"
+            className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl"
+          >
+            Uma plataforma regional preparada para diferentes experiências
+          </h2>
+          <p className="mt-4 leading-7 text-muted-foreground">
+            Gastronomia é a primeira vertical. A mesma estrutura também acolhe cultura, beleza,
+            bem-estar e outros serviços que fazem parte da vida local.
+          </p>
+        </div>
+
+        <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {categories.map((category) => {
+            const Icon = category.icon
+            return (
+              <article key={category.label} className="rounded-2xl border bg-card p-6 shadow-sm">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Icon className="size-5" />
+                </span>
+                <h3 className="mt-5 text-lg font-semibold">{category.label}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {highlight.description}
+                  {category.description}
                 </p>
               </article>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-border/70">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>
-            © {new Date().getFullYear()} {application.name}
-          </p>
-          <p>Construído com AdonisJS, React e Inertia.</p>
+            )
+          })}
         </div>
-      </footer>
-    </div>
+      </section>
+
+      <section aria-labelledby="how-title" className="border-y bg-muted/35">
+        <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.17em] text-primary">
+              Simples para explorar
+            </p>
+            <h2 id="how-title" className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
+              Da curiosidade à decisão em poucos passos
+            </h2>
+          </div>
+
+          <ol className="mt-9 grid gap-5 lg:grid-cols-3">
+            {discoverySteps.map((step, index) => {
+              const Icon = step.icon
+              return (
+                <li
+                  key={step.title}
+                  className="relative rounded-2xl border bg-background p-6 shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                      <Icon className="size-5" />
+                    </span>
+                    <span className="text-4xl font-bold text-primary/15">0{index + 1}</span>
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="partner-title"
+        className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
+      >
+        <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary via-primary to-primary/80 px-6 py-10 text-primary-foreground shadow-xl sm:px-10 sm:py-12 lg:px-14">
+          <div className="absolute -end-20 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="max-w-2xl">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-primary-foreground/75">
+                <HeartHandshake className="size-4" /> Para negócios da região
+              </p>
+              <h2
+                id="partner-title"
+                className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl"
+              >
+                Sua presença local merece uma ficha completa e fácil de encontrar
+              </h2>
+              <p className="mt-4 max-w-xl leading-7 text-primary-foreground/80">
+                Organize unidades, horários, categorias, características, mídia e contatos em um
+                fluxo acompanhado até a publicação.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <Button size="lg" variant="secondary" className="h-12" asChild>
+                <Link href="/register">
+                  <Building2 className="size-4" /> Criar minha conta
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                className="h-12 border border-white/20 text-white hover:bg-white/10 hover:text-white"
+                asChild
+              >
+                <Link href="/login">Já tenho acesso</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </PublicShell>
   )
 }

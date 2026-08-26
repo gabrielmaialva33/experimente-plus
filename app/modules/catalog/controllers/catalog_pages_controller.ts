@@ -33,37 +33,37 @@ export default class CatalogPagesController {
 
   async index({ inertia, params, request, response }: HttpContext) {
     const payload = await request.validateUsing(catalogSearchValidator)
-    const result = await this.catalogService.search(
-      this.hostname(request),
-      String(params.citySlug),
-      {
-        q: payload.q ?? '',
-        category: payload.category,
-        open_now: payload.open_now ?? catalogDefaults.open_now,
-        page: payload.page ?? catalogDefaults.page,
-        per_page: payload.per_page ?? catalogDefaults.per_page,
-        sort: payload.sort ?? catalogDefaults.sort,
-      }
-    )
+    const hostname = this.hostname(request)
+    const citySlug = String(params.citySlug)
+    const query = {
+      q: payload.q ?? '',
+      category: payload.category,
+      open_now: payload.open_now ?? catalogDefaults.open_now,
+      page: payload.page ?? catalogDefaults.page,
+      per_page: payload.per_page ?? catalogDefaults.per_page,
+      sort: payload.sort ?? catalogDefaults.sort,
+    }
+    const [result, filterCategories] = await Promise.all([
+      this.catalogService.search(hostname, citySlug, query),
+      this.catalogService.categories(hostname, citySlug),
+    ])
 
     this.publicCache(response, 60)
     return inertia.render('catalog/establishments', {
       catalog: result,
       city_slug: params.citySlug ?? null,
+      filter_categories: filterCategories,
     })
   }
 
   async indexByCategory({ inertia, params, request, response }: HttpContext) {
-    const payload = {
-      ...(await request.validateUsing(catalogSearchValidator)),
-      category_slug: params.categorySlug,
-    }
+    const payload = await request.validateUsing(catalogSearchValidator)
     const result = await this.catalogService.search(
       this.hostname(request),
       String(params.citySlug),
       {
         q: payload.q ?? '',
-        category: payload.category,
+        category: String(params.categorySlug),
         open_now: payload.open_now ?? catalogDefaults.open_now,
         page: payload.page ?? catalogDefaults.page,
         per_page: payload.per_page ?? catalogDefaults.per_page,
