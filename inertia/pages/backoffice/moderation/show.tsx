@@ -1,79 +1,50 @@
-import { Head, Link, useForm } from '@inertiajs/react'
-import type { FormEvent } from 'react'
-import { ArrowLeft, CheckCircle2, Plus, Trash2, XCircle } from 'lucide-react'
+import { Head, Link, usePage } from '@inertiajs/react'
+import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react'
 
+import { ModerationActions } from '~/components/backoffice/moderation_actions'
 import { MainLayout } from '~/layouts/main_layout'
-
-type JsonRecord = Record<string, unknown>
+import { firstError } from '~/lib/form_errors'
+import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
+import {
+  availabilityTypeLabel,
+  formatDateTime,
+  getRevisionStatusMeta,
+  mediaModerationStatusLabel,
+  reviewIssueSeverityLabel,
+  revisionEventTypeLabel,
+  revisionStatusLabel,
+} from '~/lib/labels'
+import { cn } from '~/lib/utils'
 
 interface ModerationShowProps {
   revision: JsonRecord
+  publication_gate: unknown
+  review_issues: unknown
+  events: unknown
 }
 
-interface ReviewIssueInput {
-  code: string
-  field: string
-  message: string
-  severity: 'blocking' | 'warning'
+function statusOrFallback(status: string): string {
+  return status ? revisionStatusLabel(status) : '—'
 }
 
-function record(value: unknown): JsonRecord | null {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as JsonRecord) : null
-}
-
-function collection(value: unknown): JsonRecord[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is JsonRecord => record(item) !== null)
-    : []
-}
-
-function text(source: JsonRecord | null, key: string, fallback = ''): string {
-  const value = source?.[key]
-  return typeof value === 'string' ? value : fallback
-}
-
-function numeric(source: JsonRecord | null, key: string): number {
-  const value = source?.[key]
-  return typeof value === 'number' ? value : Number(value ?? 0)
-}
-
-export default function ModerationRevisionPage({ revision }: ModerationShowProps) {
-  const gate = record(revision.publication_gate)
+export default function ModerationRevisionPage({
+  revision,
+  publication_gate,
+  review_issues,
+  events,
+}: ModerationShowProps) {
+  const { errors: pageErrors } = usePage().props as { errors?: Record<string, unknown> }
+  const gate = record(publication_gate)
   const blockingIssues = collection(gate?.blocking_issues)
   const warnings = collection(gate?.warnings)
   const media = collection(revision.media)
-  const existingIssues = collection(revision.issues)
-  const events = collection(revision.events)
+  const existingIssues = collection(review_issues)
+  const revisionEvents = collection(events)
   const revisionId = numeric(revision, 'id')
-
-  const approveForm = useForm({ reason: '' })
-  const rejectForm = useForm({ reason: '' })
-  const changesForm = useForm<{ reason: string; issues: ReviewIssueInput[] }>({
-    reason: '',
-    issues: [
-      {
-        code: 'content_adjustment',
-        field: 'revision',
-        message: '',
-        severity: 'blocking',
-      },
-    ],
-  })
-
-  function approve(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    approveForm.post(`/backoffice/moderation/${revisionId}/approve`)
-  }
-
-  function reject(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    rejectForm.post(`/backoffice/moderation/${revisionId}/reject`)
-  }
-
-  function requestChanges(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    changesForm.post(`/backoffice/moderation/${revisionId}/request-changes`)
-  }
+  const publicName = text(revision, 'public_name', 'Unidade sem nome')
+  const statusMeta = getRevisionStatusMeta(text(revision, 'status'))
+  const submittedAt = formatDateTime(text(revision, 'submitted_at') || null)
+  const availabilityType = text(revision, 'availability_type')
 
   return (
     <MainLayout>
@@ -89,12 +60,21 @@ export default function ModerationRevisionPage({ revision }: ModerationShowProps
 
         <header>
           <p className="text-sm font-semibold text-primary">Revisão #{revisionId}</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">
-            {text(revision, 'public_name', 'Unidade sem nome')}
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            versão {numeric(revision, 'version')} · status {text(revision, 'status')}
-          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">{publicName}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+            <span>versão {numeric(revision, 'version')}</span>
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+                statusMeta.className
+              )}
+            >
+              {statusMeta.label}
+            </span>
+            <span className="text-sm">
+              {submittedAt ? `Submetida em ${submittedAt}` : 'Data de submissão indisponível'}
+            </span>
+          </div>
         </header>
 
         <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
@@ -110,7 +90,10 @@ export default function ModerationRevisionPage({ revision }: ModerationShowProps
                 ['Slug', text(revision, 'slug', '—')],
                 ['Cidade', text(record(revision.city), 'name', '—')],
                 ['Descrição curta', text(revision, 'short_description', '—')],
-                ['Disponibilidade', text(revision, 'availability_type', '—')],
+                [
+                  'Disponibilidade',
+                  availabilityType ? availabilityTypeLabel(availabilityType) : '—',
+                ],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-2xl bg-muted/60 p-4">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -126,9 +109,11 @@ export default function ModerationRevisionPage({ revision }: ModerationShowProps
                 <h3 className="text-sm font-semibold">Mídia</h3>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {media.map((item) => {
-                    const asset = record(item.asset)
-                    const file = record(asset?.file)
-                    const url = text(file, 'url') || text(asset, 'url')
+                    const url = text(item, 'url')
+                    const altText =
+                      text(item, 'alt_text') ||
+                      text(item, 'caption') ||
+                      `Imagem enviada para ${publicName}`
                     return (
                       <article
                         key={numeric(item, 'id')}
@@ -137,12 +122,18 @@ export default function ModerationRevisionPage({ revision }: ModerationShowProps
                         {url ? (
                           <img
                             src={url}
-                            alt={text(item, 'alt_text')}
-                            className="aspect-video w-full object-cover"
+                            alt={altText}
+                            loading="lazy"
+                            decoding="async"
+                            className="aspect-video w-full bg-muted object-cover"
                           />
-                        ) : null}
+                        ) : (
+                          <div className="flex aspect-video w-full items-center justify-center bg-muted text-xs text-muted-foreground">
+                            Pré-visualização indisponível
+                          </div>
+                        )}
                         <div className="flex justify-between gap-2 p-3 text-xs">
-                          <span>{text(item, 'moderation_status')}</span>
+                          <span>{mediaModerationStatusLabel(text(item, 'moderation_status'))}</span>
                           <span>{item.is_cover === true ? 'Capa' : 'Galeria'}</span>
                         </div>
                       </article>
@@ -176,7 +167,10 @@ export default function ModerationRevisionPage({ revision }: ModerationShowProps
                   className="rounded-xl bg-muted/60 p-3"
                 >
                   <p className="text-sm font-medium">{text(issue, 'message')}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{text(issue, 'field')}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {text(issue, 'field', '—')} ·{' '}
+                    {reviewIssueSeverityLabel(text(issue, 'severity', 'blocking'))}
+                  </p>
                 </div>
               ))}
               {blockingIssues.length === 0 && warnings.length === 0 ? (
@@ -186,215 +180,70 @@ export default function ModerationRevisionPage({ revision }: ModerationShowProps
           </article>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-3">
-          <form
-            onSubmit={approve}
-            className="space-y-4 rounded-3xl border border-border bg-card p-6"
-          >
-            <h2 className="text-lg font-semibold">Aprovar e publicar</h2>
-            <textarea
-              rows={4}
-              maxLength={1000}
-              value={approveForm.data.reason}
-              onChange={(event) => approveForm.setData('reason', event.target.value)}
-              placeholder="Observação opcional"
-              className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-            />
-            <button
-              disabled={approveForm.processing || blockingIssues.length > 0}
-              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-            >
-              Aprovar revisão
-            </button>
-          </form>
+        <ModerationActions
+          revisionId={revisionId}
+          blockingIssueCount={blockingIssues.length}
+          moderationError={firstError(pageErrors?.moderation)}
+        />
 
-          <form
-            onSubmit={requestChanges}
-            className="space-y-4 rounded-3xl border border-border bg-card p-6 xl:col-span-2"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold">Solicitar correções</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Pendências estruturadas permanecem no histórico após a ressubmissão.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  changesForm.setData('issues', [
-                    ...changesForm.data.issues,
-                    {
-                      code: 'content_adjustment',
-                      field: 'revision',
-                      message: '',
-                      severity: 'blocking',
-                    },
-                  ])
-                }
-                className="rounded-lg border border-border p-2"
-                aria-label="Adicionar pendência"
-              >
-                <Plus className="size-4" />
-              </button>
-            </div>
-
-            <input
-              required
-              minLength={3}
-              maxLength={1000}
-              value={changesForm.data.reason}
-              onChange={(event) => changesForm.setData('reason', event.target.value)}
-              placeholder="Resumo da decisão"
-              className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-            />
-
-            <div className="space-y-3">
-              {changesForm.data.issues.map((issue, index) => (
-                <div
-                  key={index}
-                  className="grid gap-3 rounded-2xl bg-muted/60 p-4 md:grid-cols-[0.7fr_0.8fr_1.8fr_0.7fr_auto]"
-                >
-                  <input
-                    required
-                    value={issue.code}
-                    onChange={(event) =>
-                      changesForm.setData(
-                        'issues',
-                        changesForm.data.issues.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, code: event.target.value } : item
-                        )
-                      )
-                    }
-                    placeholder="code"
-                    className="rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  <input
-                    required
-                    value={issue.field}
-                    onChange={(event) =>
-                      changesForm.setData(
-                        'issues',
-                        changesForm.data.issues.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, field: event.target.value } : item
-                        )
-                      )
-                    }
-                    placeholder="campo"
-                    className="rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  <input
-                    required
-                    minLength={3}
-                    value={issue.message}
-                    onChange={(event) =>
-                      changesForm.setData(
-                        'issues',
-                        changesForm.data.issues.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, message: event.target.value } : item
-                        )
-                      )
-                    }
-                    placeholder="Correção necessária"
-                    className="rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  <select
-                    value={issue.severity}
-                    onChange={(event) =>
-                      changesForm.setData(
-                        'issues',
-                        changesForm.data.issues.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                severity: event.target.value as ReviewIssueInput['severity'],
-                              }
-                            : item
-                        )
-                      )
-                    }
-                    className="rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="blocking">Bloqueio</option>
-                    <option value="warning">Aviso</option>
-                  </select>
-                  <button
-                    type="button"
-                    disabled={changesForm.data.issues.length === 1}
-                    onClick={() =>
-                      changesForm.setData(
-                        'issues',
-                        changesForm.data.issues.filter((_, itemIndex) => itemIndex !== index)
-                      )
-                    }
-                    className="rounded-lg p-2 text-destructive disabled:opacity-30"
-                    aria-label="Remover pendência"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <button className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">
-              Enviar correções
-            </button>
-          </form>
-        </section>
-
-        <form
-          onSubmit={reject}
-          className="space-y-4 rounded-3xl border border-destructive/30 bg-card p-6"
-        >
-          <div>
-            <h2 className="text-lg font-semibold text-destructive">Rejeitar definitivamente</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A revisão será terminal. Uma nova tentativa exigirá a clonagem de outra revisão.
-            </p>
-          </div>
-          <textarea
-            required
-            minLength={3}
-            maxLength={1000}
-            rows={3}
-            value={rejectForm.data.reason}
-            onChange={(event) => rejectForm.setData('reason', event.target.value)}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-          />
-          <button className="rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground">
-            Rejeitar revisão
-          </button>
-        </form>
-
-        {existingIssues.length > 0 || events.length > 0 ? (
+        {existingIssues.length > 0 || revisionEvents.length > 0 ? (
           <section className="grid gap-6 lg:grid-cols-2">
             <article className="rounded-3xl border border-border bg-card p-6">
               <h2 className="text-lg font-semibold">Pendências anteriores</h2>
               <div className="mt-4 space-y-3">
-                {existingIssues.map((issue) => (
-                  <div key={numeric(issue, 'id')} className="rounded-xl bg-muted/60 p-3 text-sm">
-                    <p className="font-medium">{text(issue, 'message')}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {text(issue, 'field')} · {text(issue, 'severity')}
-                    </p>
-                  </div>
-                ))}
+                {existingIssues.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma pendência registrada para esta revisão.
+                  </p>
+                ) : null}
+                {existingIssues.map((issue) => {
+                  const resolvedAt = formatDateTime(text(issue, 'resolved_at') || null)
+                  const createdAt = formatDateTime(text(issue, 'created_at') || null)
+                  return (
+                    <div key={numeric(issue, 'id')} className="rounded-xl bg-muted/60 p-3 text-sm">
+                      <p className="font-medium">{text(issue, 'message')}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {text(issue, 'field', '—')} ·{' '}
+                        {reviewIssueSeverityLabel(text(issue, 'severity'))}
+                        {createdAt ? ` · registrada em ${createdAt}` : ''}
+                        {resolvedAt ? ` · resolvida em ${resolvedAt}` : ' · em aberto'}
+                      </p>
+                    </div>
+                  )
+                })}
               </div>
             </article>
             <article className="rounded-3xl border border-border bg-card p-6">
               <h2 className="text-lg font-semibold">Histórico</h2>
               <div className="mt-4 space-y-3">
-                {events.map((event) => (
-                  <div
-                    key={numeric(event, 'id')}
-                    className="border-l-2 border-primary pl-3 text-sm"
-                  >
-                    <p className="font-medium">{text(event, 'event_type')}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {text(event, 'from_status')} → {text(event, 'to_status')}
-                    </p>
-                  </div>
-                ))}
+                {revisionEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum evento registrado para esta revisão.
+                  </p>
+                ) : null}
+                {revisionEvents.map((event) => {
+                  const createdAt = formatDateTime(text(event, 'created_at') || null)
+                  return (
+                    <div
+                      key={numeric(event, 'id')}
+                      className="border-l-2 border-primary pl-3 text-sm"
+                    >
+                      <p className="font-medium">
+                        {revisionEventTypeLabel(text(event, 'event_type', '—'))}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {statusOrFallback(text(event, 'from_status'))} →{' '}
+                        {statusOrFallback(text(event, 'to_status'))}
+                        {createdAt ? ` · ${createdAt}` : ''}
+                      </p>
+                      {text(event, 'reason') ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {text(event, 'reason')}
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                })}
               </div>
             </article>
           </section>

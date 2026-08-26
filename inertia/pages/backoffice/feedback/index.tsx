@@ -1,157 +1,165 @@
-import { Head, useForm } from '@inertiajs/react'
+import { Head, Link, router } from '@inertiajs/react'
+import { MessageSquareText } from 'lucide-react'
 import type { FormEvent } from 'react'
-import { MessageSquareText, Star } from 'lucide-react'
+import { useState } from 'react'
 
+import { FeedbackCard } from '~/components/backoffice/feedback_card'
+import { PageHeader } from '~/components/page_header'
+import { buildPageHref, PaginationNav } from '~/components/pagination'
+import {
+  EditorField,
+  editorSelectClassName,
+} from '~/components/portal/establishment_editor/editor_field'
+import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
-
-type JsonRecord = Record<string, unknown>
+import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
+import { PILOT_FEEDBACK_CONTEXT_LABELS, PILOT_FEEDBACK_STATUS_LABELS } from '~/lib/labels'
 
 interface FeedbackIndexProps {
   feedback: unknown
   filters: JsonRecord
 }
 
-function record(value: unknown): JsonRecord | null {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as JsonRecord) : null
+const FEEDBACK_PATH = '/backoffice/feedback'
+
+function numericFilter(filters: JsonRecord, key: string): string {
+  const value = filters[key]
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : ''
 }
 
-function collection(value: unknown): JsonRecord[] {
-  if (Array.isArray(value)) return value.filter((item): item is JsonRecord => record(item) !== null)
-  const source = record(value)
-  const data = source?.data
-  return Array.isArray(data) ? data.filter((item): item is JsonRecord => record(item) !== null) : []
-}
-
-function text(source: JsonRecord | null, key: string, fallback = ''): string {
-  const value = source?.[key]
-  return typeof value === 'string' ? value : fallback
-}
-
-function numeric(source: JsonRecord | null, key: string): number {
-  const value = source?.[key]
-  return typeof value === 'number' ? value : Number(value ?? 0)
-}
-
-function FeedbackCard({ item }: { item: JsonRecord }) {
-  const form = useForm({
-    status: text(item, 'status', 'new'),
-    internal_notes: text(item, 'internal_notes'),
-  })
-  const organization = record(item.organization)
-  const establishment = record(item.establishment)
-  const establishmentRevision = collection(establishment?.revisions)[0] ?? null
-  const user = record(item.author) ?? record(item.user)
-  const id = numeric(item, 'id')
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    form.patch(`/backoffice/feedback/${id}`, { preserveScroll: true })
-  }
-
-  return (
-    <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-              {text(item, 'context')}
-            </span>
-            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              {text(item, 'status')}
-            </span>
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            {text(user, 'full_name', 'Usuário do piloto')}
-            {organization ? ` · ${text(organization, 'trade_name')}` : ''}
-            {establishment
-              ? ` · ${text(
-                  establishmentRevision,
-                  'public_name',
-                  text(establishment, 'public_name', `Unidade ${numeric(establishment, 'id')}`)
-                )}`
-              : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-1 text-sm font-semibold">
-          <Star className="size-4 fill-current text-primary" /> {numeric(item, 'rating')}/5
-        </div>
-      </div>
-
-      <p className="mt-5 whitespace-pre-wrap text-sm leading-6">{text(item, 'message')}</p>
-
-      <form
-        onSubmit={submit}
-        className="mt-6 grid gap-4 border-t border-border pt-5 md:grid-cols-[0.4fr_1fr_auto] md:items-end"
-      >
-        <label className="space-y-2 text-sm">
-          <span className="font-medium">Status</span>
-          <select
-            value={form.data.status}
-            onChange={(event) => form.setData('status', event.target.value)}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2"
-          >
-            <option value="new">Novo</option>
-            <option value="in_review">Em análise</option>
-            <option value="resolved">Resolvido</option>
-            <option value="dismissed">Descartado</option>
-          </select>
-        </label>
-        <label className="space-y-2 text-sm">
-          <span className="font-medium">Nota interna</span>
-          <input
-            value={form.data.internal_notes}
-            onChange={(event) => form.setData('internal_notes', event.target.value)}
-            maxLength={4000}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2"
-          />
-        </label>
-        <button
-          disabled={form.processing}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          Atualizar
-        </button>
-      </form>
-    </article>
-  )
-}
-
-export default function PilotFeedbackBackofficePage({ feedback }: FeedbackIndexProps) {
+export default function PilotFeedbackBackofficePage({ feedback, filters }: FeedbackIndexProps) {
   const items = collection(feedback)
   const meta = record(record(feedback)?.meta)
+  const total = numeric(meta, 'total') || items.length
+  const currentPage = numeric(meta, 'current_page') || 1
+  const lastPage = numeric(meta, 'last_page') || 1
+
+  const appliedStatus = text(filters, 'status')
+  const appliedContext = text(filters, 'context')
+  const [status, setStatus] = useState(appliedStatus)
+  const [context, setContext] = useState(appliedContext)
+  const hasActiveFilters = appliedStatus !== '' || appliedContext !== ''
+
+  const preservedParams = {
+    organization_id: numericFilter(filters, 'organization_id'),
+    establishment_id: numericFilter(filters, 'establishment_id'),
+    per_page: numericFilter(filters, 'per_page'),
+  }
+
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    router.get(buildPageHref(FEEDBACK_PATH, { ...preservedParams, status, context }))
+  }
+
+  function pageHref(page: number): string {
+    return buildPageHref(FEEDBACK_PATH, {
+      ...preservedParams,
+      status: appliedStatus,
+      context: appliedContext,
+      page,
+    })
+  }
 
   return (
     <MainLayout>
       <Head title="Feedback do piloto" />
 
       <div className="space-y-7">
-        <header>
-          <p className="text-sm font-semibold text-primary">Backoffice</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Feedback do piloto</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Relatos estruturados do onboarding, editor, catálogo, analytics e moderação.
-          </p>
-        </header>
+        <PageHeader
+          eyebrow="Backoffice"
+          icon={MessageSquareText}
+          title="Feedback do piloto"
+          description="Transforme relatos de onboarding, editor, catálogo e moderação em decisões de produto rastreáveis."
+        />
 
-        <section className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5">
-          <MessageSquareText className="size-5 text-primary" />
-          <p className="font-semibold">
-            {numeric(meta, 'total') || items.length} relatos encontrados
-          </p>
+        <section className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-info/10 text-info ring-1 ring-info/10">
+            <MessageSquareText className="size-4.5" />
+          </span>
+          <div>
+            <p className="font-bold tracking-[-0.015em]">
+              {total.toLocaleString('pt-BR')}{' '}
+              {total === 1 ? 'relato encontrado' : 'relatos encontrados'}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              A fila comercial é separada da moderação de conteúdo.
+            </p>
+          </div>
         </section>
 
+        <form
+          onSubmit={applyFilters}
+          aria-label="Filtros da fila de feedback"
+          className="grid gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+        >
+          <EditorField htmlFor="filter-status" label="Status">
+            <select
+              id="filter-status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className={editorSelectClassName}
+            >
+              <option value="">Todos os status</option>
+              {Object.entries(PILOT_FEEDBACK_STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </EditorField>
+          <EditorField htmlFor="filter-context" label="Contexto">
+            <select
+              id="filter-context"
+              value={context}
+              onChange={(event) => setContext(event.target.value)}
+              className={editorSelectClassName}
+            >
+              <option value="">Todos os contextos</option>
+              {Object.entries(PILOT_FEEDBACK_CONTEXT_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </EditorField>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" variant="primary">
+              Filtrar
+            </Button>
+            {hasActiveFilters ? (
+              <Button asChild variant="outline">
+                <Link href={buildPageHref(FEEDBACK_PATH, preservedParams)}>Limpar filtros</Link>
+              </Button>
+            ) : null}
+          </div>
+        </form>
+
         {items.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <MessageSquareText className="mx-auto size-10 text-muted-foreground" />
-            <h2 className="mt-4 text-lg font-semibold">Nenhum feedback nesta fila</h2>
+          <div className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center shadow-xs">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-info/10 text-info ring-1 ring-info/10">
+              <MessageSquareText className="size-6" />
+            </span>
+            <h2 className="mt-5 text-lg font-bold">Nenhum feedback nesta fila</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              {hasActiveFilters
+                ? 'Nenhum relato corresponde aos filtros aplicados.'
+                : 'Novos relatos enviados pelos participantes do piloto aparecerão aqui.'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <section aria-label="Relatos do piloto" className="space-y-4">
             {items.map((item) => (
               <FeedbackCard key={numeric(item, 'id')} item={item} />
             ))}
-          </div>
+          </section>
         )}
+
+        <PaginationNav
+          currentPage={currentPage}
+          lastPage={lastPage}
+          buildHref={pageHref}
+          label="Paginação da fila de feedback"
+        />
       </div>
     </MainLayout>
   )
