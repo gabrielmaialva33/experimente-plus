@@ -40,7 +40,7 @@ export default class BackofficePortalController {
   }
 
   async revision({ auth, inertia, params, response, tenant }: HttpContext) {
-    const revision = await this.moderationService.show(
+    const review = await this.moderationService.show(
       tenant!.id,
       Number(params.revisionId),
       auth.getUserOrFail()
@@ -48,7 +48,9 @@ export default class BackofficePortalController {
 
     response.header('X-Robots-Tag', 'noindex, nofollow')
     response.header('Cache-Control', 'private, no-store')
-    return inertia.render('backoffice/moderation/show', { revision })
+    // Spread so the page receives revision, publication_gate, review_issues
+    // and events as first-class props (same contract as the admin API).
+    return inertia.render('backoffice/moderation/show', { ...review })
   }
 
   async approveRevision({ auth, request, response, session, params, tenant }: HttpContext) {

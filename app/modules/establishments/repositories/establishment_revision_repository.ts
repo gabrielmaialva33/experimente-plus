@@ -139,7 +139,13 @@ export default class EstablishmentRevisionRepository extends LucidRepository<
     await revision.load('categories', (categoryQuery) => categoryQuery.preload('category'))
     await revision.load('attribute_values', (valueQuery) => valueQuery.preload('definition'))
     await this.loadSelectedAttributeOptions(tenantId, revision, client)
-    await revision.load('media')
+    await revision.load('media', (mediaQuery) =>
+      mediaQuery
+        .preload('asset', (assetQuery) => assetQuery.preload('file'))
+        .orderBy('is_cover', 'desc')
+        .orderBy('sort_order', 'asc')
+        .orderBy('id', 'asc')
+    )
 
     return revision
   }

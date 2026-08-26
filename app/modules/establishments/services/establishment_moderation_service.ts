@@ -49,6 +49,7 @@ export default class EstablishmentModerationService {
         submitted_at: revision.submitted_at?.toISO() ?? null,
         public_name: revision.public_name,
         city_id: revision.city_id,
+        city_name: revision.city?.name ?? null,
         organization_id: revision.establishment.organization_id,
         organization_name:
           revision.establishment.organization.trade_name ||
@@ -83,7 +84,22 @@ export default class EstablishmentModerationService {
     )
 
     return {
-      revision: this.projectRevision(revision),
+      // Extends the workflow projection with content the moderator needs to
+      // evaluate — all of it already loaded by `findAggregate`.
+      revision: {
+        ...this.projectRevision(revision),
+        short_description: revision.short_description,
+        availability_type: revision.availability_type,
+        city: revision.city ? { id: revision.city.id, name: revision.city.name } : null,
+        media: revision.media.map((item) => ({
+          id: item.id,
+          alt_text: item.alt_text,
+          caption: item.caption,
+          is_cover: item.is_cover,
+          moderation_status: item.moderation_status,
+          url: item.asset?.file?.url ?? null,
+        })),
+      },
       publication_gate: gate,
       review_issues: issues.map((issue) => ({
         id: issue.id,
