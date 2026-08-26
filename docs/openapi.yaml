@@ -5,7 +5,7 @@ info:
   description: |
     ## Experimente+ API
 
-    API da plataforma regional Experimente+, construída com AdonisJS 7, React e Inertia. Neste estágio inicial, o contrato documenta a fundação compartilhada de identidade, autorização, workspaces, arquivos e saúde da aplicação. Os domínios específicos do produto serão adicionados após o planejamento funcional.
+    API da plataforma regional Experimente+, construída com AdonisJS 7, React e Inertia. O contrato cobre a fundação compartilhada e os domínios operacionais já implementados: identidade, autorização, workspaces, geografia, taxonomia, organizações, unidades revisionadas, mídia, moderação, catálogo público, analytics e feedback privado do piloto.
 
     ### Foundation capabilities
 
@@ -16,6 +16,9 @@ info:
     - **File Management**: Tenant-scoped upload, listing, and owner-aware deletion across multiple storage drivers
     - **Account Lifecycle**: Email verification, single-use password reset, and anonymized self-deletion
     - **Health Monitoring**: Public readiness and dependency checks
+    - **Organization Workflows**: Tenant-safe memberships, invitations, claims and administrative review
+    - **Revisioned Establishments**: Typed effective attributes, media composition, moderation and atomic publication
+    - **Public Discovery**: Host-resolved city/category catalog, search and privacy-preserving analytics
 
     ## Authentication
 
@@ -1552,6 +1555,8 @@ components:
         city_id:
           type: [integer, 'null']
           minimum: 1
+        city_name:
+          type: [string, 'null']
         organization_id:
           type: integer
           minimum: 1
@@ -1807,6 +1812,625 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CatalogHour'
+    Organization:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - legal_name
+        - trade_name
+        - slug
+        - tax_id
+        - email
+        - phone
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        legal_name:
+          type: string
+          minLength: 2
+          maxLength: 180
+        trade_name:
+          type: string
+          minLength: 2
+          maxLength: 160
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        tax_id:
+          type: string
+          pattern: '^\\d{14}$'
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^\\d{10,15}$'
+        website:
+          type: [string, 'null']
+          format: uri
+        status:
+          type: string
+          enum: [draft, pending_review, changes_requested, active, rejected, suspended, archived]
+        created_by:
+          type: [integer, 'null']
+          minimum: 1
+        submitted_at:
+          type: [string, 'null']
+          format: date-time
+        reviewed_by:
+          type: [integer, 'null']
+          minimum: 1
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        review_notes:
+          type: [string, 'null']
+        suspended_at:
+          type: [string, 'null']
+          format: date-time
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationMember'
+
+    OrganizationCreateInput:
+      type: object
+      additionalProperties: false
+      required: [legal_name, trade_name, tax_id, email, phone]
+      properties:
+        legal_name:
+          type: string
+          minLength: 2
+          maxLength: 180
+        trade_name:
+          type: string
+          minLength: 2
+          maxLength: 160
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 180
+        tax_id:
+          type: string
+          minLength: 14
+          maxLength: 18
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        website:
+          type: [string, 'null']
+          format: uri
+          maxLength: 2048
+
+    OrganizationUpdateInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        legal_name:
+          type: string
+          minLength: 2
+          maxLength: 180
+        trade_name:
+          type: string
+          minLength: 2
+          maxLength: 160
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 180
+        tax_id:
+          type: string
+          minLength: 14
+          maxLength: 18
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+        website:
+          type: [string, 'null']
+          format: uri
+          maxLength: 2048
+
+    OrganizationMember:
+      type: object
+      required: [id, tenant_id, organization_id, user_id, role, status, joined_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        organization_id:
+          type: integer
+          minimum: 1
+        user_id:
+          type: integer
+          minimum: 1
+        role:
+          type: string
+          enum: [owner, admin, editor, analyst]
+        status:
+          type: string
+          enum: [active, suspended, removed]
+        invited_by:
+          type: [integer, 'null']
+          minimum: 1
+        joined_at:
+          type: string
+          format: date-time
+        suspended_at:
+          type: [string, 'null']
+          format: date-time
+        removed_at:
+          type: [string, 'null']
+          format: date-time
+        user:
+          type: object
+          additionalProperties: true
+
+    OrganizationMemberUpdateInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        role:
+          type: string
+          enum: [owner, admin, editor, analyst]
+        status:
+          type: string
+          enum: [active, suspended]
+
+    OrganizationInvitation:
+      type: object
+      required: [id, tenant_id, organization_id, email, role, invited_by, expires_at, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        organization_id:
+          type: integer
+          minimum: 1
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, admin, editor, analyst]
+        invited_by:
+          type: integer
+          minimum: 1
+        expires_at:
+          type: string
+          format: date-time
+        accepted_by:
+          type: [integer, 'null']
+          minimum: 1
+        accepted_at:
+          type: [string, 'null']
+          format: date-time
+        revoked_by:
+          type: [integer, 'null']
+          minimum: 1
+        revoked_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    OrganizationInvitationInput:
+      type: object
+      additionalProperties: false
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        role:
+          type: string
+          enum: [owner, admin, editor, analyst]
+
+    OrganizationInvitationResult:
+      type: object
+      required: [invitation, email_sent]
+      properties:
+        invitation:
+          $ref: '#/components/schemas/OrganizationInvitation'
+        email_sent:
+          type: boolean
+
+    OrganizationInvitationAcceptInput:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 256
+
+    OrganizationClaimEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+          maxLength: 2000
+        document_file_ids:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+
+    OrganizationClaimInput:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: [string, 'null']
+          maxLength: 2000
+        evidence:
+          oneOf:
+            - $ref: '#/components/schemas/OrganizationClaimEvidence'
+            - type: 'null'
+
+    OrganizationClaim:
+      type: object
+      required: [id, tenant_id, organization_id, claimant_id, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        tenant_id:
+          type: integer
+          minimum: 1
+        organization_id:
+          type: integer
+          minimum: 1
+        claimant_id:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+        message:
+          type: [string, 'null']
+        evidence:
+          oneOf:
+            - $ref: '#/components/schemas/OrganizationClaimEvidence'
+            - type: 'null'
+        reviewed_by:
+          type: [integer, 'null']
+          minimum: 1
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        review_notes:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        organization:
+          $ref: '#/components/schemas/Organization'
+        claimant:
+          type: object
+          additionalProperties: true
+        reviewer:
+          type: [object, 'null']
+          additionalProperties: true
+
+    OrganizationReviewDecisionInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 4000
+
+    CatalogCityProjection:
+      type: object
+      required:
+        [slug, name, state_code, country_code, timezone, coordinates, region, establishments_count]
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+        state_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        country_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        timezone:
+          type: string
+        coordinates:
+          type: object
+          required: [latitude, longitude]
+          properties:
+            latitude:
+              type: [number, 'null']
+            longitude:
+              type: [number, 'null']
+        region:
+          type: object
+          required: [slug, name]
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+        establishments_count:
+          type: integer
+          minimum: 0
+
+    CatalogCategoryProjection:
+      type: object
+      required: [slug, name, description, icon, parent_slug, family, establishments_count]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+        parent_slug:
+          type: [string, 'null']
+        family:
+          type: object
+          required: [slug, name, icon]
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+            icon:
+              type: [string, 'null']
+        establishments_count:
+          type: integer
+          minimum: 0
+
+    CatalogCityCategoriesResponse:
+      type: object
+      required: [city, categories]
+      properties:
+        city:
+          type: object
+          required: [slug, name, state_code, timezone]
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+            state_code:
+              type: string
+            timezone:
+              type: string
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogCategoryProjection'
+
+    CatalogSearchItem:
+      type: object
+      required:
+        - slug
+        - name
+        - short_description
+        - city
+        - address
+        - business_status
+        - is_open_now
+        - primary_category
+        - categories
+        - cover
+        - is_sponsored
+        - published_at
+        - updated_at
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        short_description:
+          type: [string, 'null']
+        city:
+          type: object
+          additionalProperties: true
+        address:
+          type: object
+          additionalProperties: true
+        business_status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+        is_open_now:
+          type: boolean
+        primary_category:
+          type: [object, 'null']
+          additionalProperties: true
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        cover:
+          type: object
+          additionalProperties: true
+        is_sponsored:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CatalogSearchResult:
+      type: object
+      required: [meta, query, sponsored_results, organic_results]
+      properties:
+        meta:
+          type: object
+          additionalProperties: true
+        query:
+          type: object
+          additionalProperties: true
+        sponsored_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogSearchItem'
+        organic_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogSearchItem'
+
+    CatalogEstablishmentDetailProjection:
+      type: object
+      required:
+        - slug
+        - name
+        - short_description
+        - description
+        - city
+        - address
+        - contacts
+        - business_status
+        - availability_type
+        - is_open_now
+        - categories
+        - attributes
+        - opening_hours
+        - media
+        - cover
+        - is_sponsored
+        - published_at
+        - updated_at
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        short_description:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        city:
+          type: object
+          additionalProperties: true
+        address:
+          type: object
+          additionalProperties: true
+        contacts:
+          type: object
+          additionalProperties: true
+        business_status:
+          type: string
+          enum: [open, temporarily_closed]
+        availability_type:
+          type: string
+          enum: [regular_hours, appointment_only, always_open]
+        is_open_now:
+          type: boolean
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        attributes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        opening_hours:
+          type: object
+          additionalProperties: true
+        media:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        cover:
+          type: object
+          additionalProperties: true
+        is_sponsored:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CatalogHistoricalProjection:
+      type: object
+      required: [slug, name, city, business_status, historical, message, published_at, updated_at]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        city:
+          type: object
+          additionalProperties: true
+        business_status:
+          type: string
+          const: permanently_closed
+        historical:
+          type: boolean
+          const: true
+        message:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     AnalyticsEventInput:
       type: object
       required: [event_id, event_type, city_slug]
@@ -2260,6 +2884,8 @@ tags:
     description: Current user profile operations
   - name: Permissions
     description: Permission management operations (admin only)
+  - name: Organizations
+    description: Tenant-scoped companies, memberships, invitations, claims and administrative workflow.
   - name: Establishments
     description: Stable units, revisioned public content, schedules, attributes, and completeness
 
@@ -3451,6 +4077,122 @@ paths:
                 $ref: '#/components/schemas/City'
         '404':
           description: City or public operation not found
+
+  /api/v1/catalog/cities/{citySlug}/categories:
+    get:
+      operationId: listCatalogCategoriesForCity
+      summary: List public categories that currently have discoverable establishments in a city
+      description: Resolves the public operation from the trusted hostname and returns category counts from the published catalog projection.
+      tags: [Catalog]
+      security: []
+      parameters:
+        - name: citySlug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+      responses:
+        '200':
+          description: City identity and discoverable category projections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogCityCategoriesResponse'
+        '404':
+          description: Public operation or active city not found
+
+  /api/v1/catalog/cities/{citySlug}/establishments:
+    get:
+      operationId: searchCatalogEstablishments
+      summary: Search discoverable establishments inside a city
+      description: Searches the rebuildable PostgreSQL catalog projection with privacy-safe filters, sponsored separation and deterministic pagination.
+      tags: [Catalog]
+      security: []
+      parameters:
+        - name: citySlug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: category
+          in: query
+          schema:
+            type: string
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        - name: open_now
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [relevance, name, recent]
+            default: relevance
+      responses:
+        '200':
+          description: Sponsored and organic catalog results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogSearchResult'
+        '404':
+          description: Public operation or active city not found
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/catalog/cities/{citySlug}/establishments/{establishmentSlug}:
+    get:
+      operationId: getCatalogEstablishment
+      summary: Get a published establishment detail projection
+      description: Returns only the current approved published revision. Permanently closed establishments are represented by a restricted historical projection.
+      tags: [Catalog]
+      security: []
+      parameters:
+        - name: citySlug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        - name: establishmentSlug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+      responses:
+        '200':
+          description: Public detail or historical projection
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/CatalogEstablishmentDetailProjection'
+                  - $ref: '#/components/schemas/CatalogHistoricalProjection'
+        '404':
+          description: Public operation, city or published establishment not found
 
   /api/v1/catalog/categories:
     get:
@@ -5130,6 +5872,732 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/organizations:
+    parameters:
+      - $ref: '#/components/parameters/tenantHeader'
+    get:
+      operationId: listOrganizations
+      summary: List organizations visible to the current actor
+      description: Platform staff see the active tenant; regular users see only organizations with an active membership.
+      tags: [Organizations]
+      responses:
+        '200':
+          description: Visible organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      operationId: createOrganization
+      summary: Create an organization and its first owner membership atomically
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationCreateInput'
+      responses:
+        '201':
+          description: Organization created in draft state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Invalid CNPJ, slug, phone, website or duplicate organization identity
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/organizations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/pathId'
+      - $ref: '#/components/parameters/tenantHeader'
+    get:
+      operationId: getOrganization
+      summary: Get an organization with its private member projection
+      tags: [Organizations]
+      responses:
+        '200':
+          description: Organization aggregate visible to the actor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      operationId: updateOrganization
+      summary: Update mutable organization fields
+      description: Legal identity fields become immutable after approval; domain policy still controls who may edit.
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUpdateInput'
+      responses:
+        '200':
+          description: Updated organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Empty payload, immutable field or state transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/organizations/{id}/submit:
+    post:
+      operationId: submitOrganization
+      summary: Submit a draft or corrected organization for administrative review
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Organization moved to pending review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Current organization state cannot be submitted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/organizations/{id}/archive:
+    post:
+      operationId: archiveOwnOrganization
+      summary: Archive an organization through its domain workflow
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Archived organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Archive transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/organizations/{id}/members:
+    get:
+      operationId: listOrganizationMembers
+      summary: List organization members visible to an authorized member
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Organization members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationMember'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/organizations/{id}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/tenantHeader'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    patch:
+      operationId: updateOrganizationMember
+      summary: Update an organization member role or mutable status
+      description: Last-owner and privilege-escalation protections are enforced by the domain service.
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationMemberUpdateInput'
+      responses:
+        '200':
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationMember'
+        '400':
+          description: Membership invariant rejected the mutation
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      operationId: removeOrganizationMember
+      summary: Remove an organization membership
+      tags: [Organizations]
+      responses:
+        '204':
+          description: Member removed
+        '400':
+          description: Last owner or membership invariant prevents removal
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/organizations/{id}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/pathId'
+      - $ref: '#/components/parameters/tenantHeader'
+    get:
+      operationId: listOrganizationInvitations
+      summary: List invitations for an organization
+      tags: [Organizations]
+      responses:
+        '200':
+          description: Organization invitations without token hashes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationInvitation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    post:
+      operationId: createOrganizationInvitation
+      summary: Revoke prior open invitations for the email and create a new secure invitation
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationInvitationInput'
+      responses:
+        '201':
+          description: Invitation created and delivery attempted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationInvitationResult'
+        '400':
+          description: Organization state, active membership or role policy rejected the invitation
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/organizations/{id}/invitations/{invitationId}/resend:
+    post:
+      operationId: resendOrganizationInvitation
+      summary: Rotate the invitation token and attempt delivery again
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Rotated invitation and delivery result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationInvitationResult'
+        '400':
+          description: Invitation is no longer open or organization state rejected the operation
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/organizations/{id}/invitations/{invitationId}:
+    delete:
+      operationId: revokeOrganizationInvitation
+      summary: Revoke an open organization invitation
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Invitation revoked
+        '400':
+          description: Invitation is no longer open
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/organizations/{id}/claims:
+    post:
+      operationId: createOrganizationClaim
+      summary: Create a tenant-safe claim for an existing organization
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationClaimInput'
+      responses:
+        '201':
+          description: Claim created in pending state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationClaim'
+        '400':
+          description: Duplicate claim, invalid evidence or organization state rejected the claim
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/organization-invitations/accept:
+    post:
+      operationId: acceptOrganizationInvitation
+      summary: Accept a single-use organization invitation
+      description: The token resolves its tenant internally; no active tenant header is accepted as authority.
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationInvitationAcceptInput'
+      responses:
+        '200':
+          description: Accepted invitation and resulting membership
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Token is invalid, expired, revoked, used or belongs to another account
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations:
+    get:
+      operationId: listOrganizationsForReview
+      summary: List organizations in the active tenant for administrative review
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending_review, changes_requested, active, rejected, suspended, archived]
+      responses:
+        '200':
+          description: Tenant-scoped review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations/{id}/approve:
+    post:
+      operationId: approveOrganization
+      summary: Approve an organization
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Approved organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Workflow transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations/{id}/request-changes:
+    post:
+      operationId: requestOrganizationChanges
+      summary: Request structured organization corrections
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Organization returned for correction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Workflow transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations/{id}/reject:
+    post:
+      operationId: rejectOrganization
+      summary: Reject an organization with an auditable reason
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Rejected organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Workflow transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations/{id}/suspend:
+    post:
+      operationId: suspendOrganization
+      summary: Suspend an active organization
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Suspended organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Workflow transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations/{id}/restore:
+    post:
+      operationId: restoreOrganization
+      summary: Restore a suspended organization
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Restored organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Workflow transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organizations/{id}/archive:
+    post:
+      operationId: archiveOrganization
+      summary: Archive an organization administratively
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Archived organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Workflow transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organization-claims:
+    get:
+      operationId: listOrganizationClaimsForReview
+      summary: List tenant-scoped organization claims for administrative review
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, cancelled]
+      responses:
+        '200':
+          description: Organization claim queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationClaim'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organization-claims/{id}/approve:
+    post:
+      operationId: approveOrganizationClaim
+      summary: Approve a claim and grant the canonical owner membership
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Approved claim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationClaim'
+        '400':
+          description: Claim transition or membership invariant rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/admin/organization-claims/{id}/reject:
+    post:
+      operationId: rejectOrganizationClaim
+      summary: Reject an organization claim with an auditable reason
+      tags: [Organizations]
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationReviewDecisionInput'
+      responses:
+        '200':
+          description: Rejected claim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationClaim'
+        '400':
+          description: Claim transition rejected
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /api/v1/organizations/{organizationId}/establishments:
     parameters:
