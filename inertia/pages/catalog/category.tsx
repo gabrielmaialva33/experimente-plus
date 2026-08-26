@@ -49,7 +49,7 @@ export default function CatalogCategory({
         path={pagePath}
         query={query}
         total={result.meta.total}
-        clearHref={pagePath}
+        perPage={result.meta.perPage}
         categoryLabel={categoryName}
         includeCategoryParam={false}
       />

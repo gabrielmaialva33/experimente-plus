@@ -3,18 +3,21 @@ import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
 import EstablishmentGrid from '~/components/catalog/establishment_grid'
 import { useCatalogSearchAnalytics } from '~/components/catalog/use_catalog_analytics'
-import { catalogSearch, slugLabel } from '~/lib/catalog'
+import { catalogCategories, catalogSearch, slugLabel } from '~/lib/catalog'
 
 interface CatalogEstablishmentsProps {
   catalog: unknown
   city_slug: string | null
+  filter_categories: unknown
 }
 
 export default function CatalogEstablishments({
   catalog,
   city_slug: citySlug,
+  filter_categories: filterCategories,
 }: CatalogEstablishmentsProps) {
   const result = catalogSearch(catalog)
+  const categories = catalogCategories(filterCategories).categories
   const firstItem = result.sponsored[0] ?? result.organic[0]
   const resolvedCitySlug = citySlug ?? firstItem?.citySlug ?? ''
   const cityName = firstItem?.cityName || slugLabel(resolvedCitySlug)
@@ -34,7 +37,8 @@ export default function CatalogEstablishments({
         path={pagePath}
         query={result.query}
         total={result.meta.total}
-        clearHref={pagePath}
+        perPage={result.meta.perPage}
+        categories={categories}
       />
 
       {result.sponsored.length > 0 ? (

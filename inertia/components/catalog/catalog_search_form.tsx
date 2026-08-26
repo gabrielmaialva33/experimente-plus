@@ -10,6 +10,7 @@ interface CatalogSearchFormProps {
   path: string
   query: CatalogSearchQuery
   total: number
+  perPage: number
   categories?: CatalogCategory[]
   categoryLabel?: string | null
   includeCategoryParam?: boolean
@@ -19,11 +20,12 @@ export function CatalogSearchForm({
   path,
   query,
   total,
+  perPage,
   categories = [],
   categoryLabel = null,
   includeCategoryParam = true,
 }: CatalogSearchFormProps) {
-  const showCategorySelect = includeCategoryParam && categories.length > 0
+  const showCategoryFilter = includeCategoryParam && categories.length > 0
   const selectedCategory = categories.find((category) => category.slug === query.category)
   const effectiveCategoryLabel = categoryLabel ?? selectedCategory?.name ?? null
   const hasActiveFilters = Boolean(
@@ -57,9 +59,9 @@ export function CatalogSearchForm({
         method="get"
         className={cn(
           'grid gap-3',
-          showCategorySelect
-            ? 'lg:grid-cols-[minmax(0,1fr)_14rem_12rem_auto_auto]'
-            : 'lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto]'
+          showCategoryFilter
+            ? 'lg:grid-cols-[minmax(0,1fr)_minmax(10rem,14rem)_11rem_auto_auto]'
+            : 'lg:grid-cols-[minmax(0,1fr)_11rem_auto_auto]'
         )}
       >
         <label className="relative block">
@@ -79,9 +81,9 @@ export function CatalogSearchForm({
           />
         </label>
 
-        {showCategorySelect ? (
+        {showCategoryFilter ? (
           <label className="block">
-            <span className="sr-only">Categoria</span>
+            <span className="sr-only">Filtrar por categoria</span>
             <select
               name="category"
               defaultValue={query.category ?? ''}
@@ -90,7 +92,7 @@ export function CatalogSearchForm({
               <option value="">Todas as categorias</option>
               {categories.map((category) => (
                 <option key={category.slug} value={category.slug}>
-                  {category.name}
+                  {category.name} ({category.establishmentsCount})
                 </option>
               ))}
             </select>
@@ -123,7 +125,7 @@ export function CatalogSearchForm({
           Aberto agora
         </label>
 
-        <input type="hidden" name="per_page" value={query.perPage} />
+        <input type="hidden" name="per_page" value={perPage} />
 
         <Button type="submit" size="lg" className="h-11">
           <Search aria-hidden="true" className="size-4" /> Buscar

@@ -16,62 +16,93 @@ function visiblePages(current: number, last: number): number[] {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 }
 
+const directionClassName =
+  'inline-flex min-h-11 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+const pageClassName =
+  'inline-flex size-11 items-center justify-center rounded-lg border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+
 export function CatalogPagination({ path, query, meta }: CatalogPaginationProps) {
   if (meta.lastPage <= 1) return null
 
   const pages = visiblePages(meta.page, meta.lastPage)
+  const previousAvailable = meta.page > 1
+  const nextAvailable = meta.page < meta.lastPage
 
   return (
     <nav
       aria-label="Paginação dos resultados"
       className="mt-10 flex flex-wrap items-center justify-center gap-2"
     >
-      <Link
-        href={pageHref(path, query, Math.max(1, meta.page - 1), meta.perPage)}
-        preserveScroll
-        aria-disabled={meta.page <= 1}
-        className={cn(
-          'inline-flex h-10 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium transition-colors',
-          meta.page <= 1
-            ? 'pointer-events-none opacity-45'
-            : 'hover:border-primary/40 hover:text-primary'
-        )}
-      >
-        <ChevronLeft className="size-4" /> Anterior
-      </Link>
-
-      {pages[0] > 1 ? <span className="px-1 text-muted-foreground">…</span> : null}
-      {pages.map((page) => (
+      {previousAvailable ? (
         <Link
-          key={page}
-          href={pageHref(path, query, page, meta.perPage)}
+          href={pageHref(path, query, meta.page - 1, meta.perPage)}
           preserveScroll
-          aria-current={page === meta.page ? 'page' : undefined}
-          className={cn(
-            'inline-flex size-10 items-center justify-center rounded-lg border text-sm font-semibold transition-colors',
-            page === meta.page
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'bg-card hover:border-primary/40 hover:text-primary'
-          )}
+          aria-label="Página anterior"
+          className={cn(directionClassName, 'hover:border-primary/40 hover:text-primary')}
         >
-          {page}
+          <ChevronLeft aria-hidden="true" className="size-4" /> Anterior
         </Link>
-      ))}
-      {pages.at(-1)! < meta.lastPage ? <span className="px-1 text-muted-foreground">…</span> : null}
+      ) : (
+        <span
+          aria-disabled="true"
+          className={cn(directionClassName, 'cursor-not-allowed opacity-45')}
+        >
+          <ChevronLeft aria-hidden="true" className="size-4" /> Anterior
+        </span>
+      )}
 
-      <Link
-        href={pageHref(path, query, Math.min(meta.lastPage, meta.page + 1), meta.perPage)}
-        preserveScroll
-        aria-disabled={meta.page >= meta.lastPage}
-        className={cn(
-          'inline-flex h-10 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium transition-colors',
-          meta.page >= meta.lastPage
-            ? 'pointer-events-none opacity-45'
-            : 'hover:border-primary/40 hover:text-primary'
-        )}
-      >
-        Próxima <ChevronRight className="size-4" />
-      </Link>
+      {pages[0] > 1 ? (
+        <span aria-hidden="true" className="px-1 text-muted-foreground">
+          …
+        </span>
+      ) : null}
+
+      {pages.map((page) =>
+        page === meta.page ? (
+          <span
+            key={page}
+            aria-current="page"
+            aria-label={`Página ${page}, página atual`}
+            className={cn(pageClassName, 'border-primary bg-primary text-primary-foreground')}
+          >
+            {page}
+          </span>
+        ) : (
+          <Link
+            key={page}
+            href={pageHref(path, query, page, meta.perPage)}
+            preserveScroll
+            aria-label={`Ir para a página ${page}`}
+            className={cn(pageClassName, 'bg-card hover:border-primary/40 hover:text-primary')}
+          >
+            {page}
+          </Link>
+        )
+      )}
+
+      {pages.at(-1)! < meta.lastPage ? (
+        <span aria-hidden="true" className="px-1 text-muted-foreground">
+          …
+        </span>
+      ) : null}
+
+      {nextAvailable ? (
+        <Link
+          href={pageHref(path, query, meta.page + 1, meta.perPage)}
+          preserveScroll
+          aria-label="Próxima página"
+          className={cn(directionClassName, 'hover:border-primary/40 hover:text-primary')}
+        >
+          Próxima <ChevronRight aria-hidden="true" className="size-4" />
+        </Link>
+      ) : (
+        <span
+          aria-disabled="true"
+          className={cn(directionClassName, 'cursor-not-allowed opacity-45')}
+        >
+          Próxima <ChevronRight aria-hidden="true" className="size-4" />
+        </span>
+      )}
     </nav>
   )
 }
