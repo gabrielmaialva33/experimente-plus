@@ -42,10 +42,10 @@ describe('LoginForm', () => {
   it('renders the login form with all fields', () => {
     render(<LoginForm />)
 
-    expect(screen.getByLabelText(/Email or Username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Password/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Sign in/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Forgot password/i })).toHaveAttribute(
+    expect(screen.getByLabelText('E-mail ou usuário')).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Esqueceu a senha/i })).toHaveAttribute(
       'href',
       '/forgot-password'
     )
@@ -54,8 +54,8 @@ describe('LoginForm', () => {
   it('allows entering credentials', async () => {
     const { user } = render(<LoginForm />)
 
-    const emailInput = screen.getByLabelText(/Email or Username/i)
-    const passwordInput = screen.getByLabelText(/Password/i)
+    const emailInput = screen.getByLabelText('E-mail ou usuário')
+    const passwordInput = screen.getByLabelText('Senha')
 
     await user.type(emailInput, 'test@example.com')
     await user.type(passwordInput, 'password123')
@@ -64,13 +64,39 @@ describe('LoginForm', () => {
     expect(passwordInput).toHaveValue('password123')
   })
 
+  it('reveals and hides the password accessibly', async () => {
+    const { user } = render(<LoginForm />)
+    const password = screen.getByLabelText('Senha')
+
+    expect(password).toHaveAttribute('type', 'password')
+    await user.click(screen.getByRole('button', { name: 'Mostrar senha' }))
+    expect(password).toHaveAttribute('type', 'text')
+    await user.click(screen.getByRole('button', { name: 'Ocultar senha' }))
+    expect(password).toHaveAttribute('type', 'password')
+  })
+
   it('submits the form when the sign in button is clicked', async () => {
     const { user } = render(<LoginForm />)
 
-    await user.type(screen.getByLabelText(/Email or Username/i), 'test@example.com')
-    await user.type(screen.getByLabelText(/Password/i), 'password123')
-    await user.click(screen.getByRole('button', { name: /Sign in/i }))
+    await user.type(screen.getByLabelText('E-mail ou usuário'), 'test@example.com')
+    await user.type(screen.getByLabelText('Senha'), 'password123')
+    await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
     expect(mockPost).toHaveBeenCalledWith('/login')
+  })
+
+  it('announces the general server error in an accessible alert', () => {
+    render(
+      <LoginForm errors={{ general: 'Não foi possível entrar. Verifique suas credenciais.' }} />
+    )
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Não foi possível entrar. Verifique suas credenciais.')
+  })
+
+  it('does not render an alert when there is no general error', () => {
+    render(<LoginForm errors={{ uid: 'campo obrigatório' }} />)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

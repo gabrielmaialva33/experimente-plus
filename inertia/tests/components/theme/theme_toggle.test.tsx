@@ -1,70 +1,41 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { render } from '~/tests/test_utils'
 
-// Mock the useTheme hook
-vi.mock('~/hooks/use_theme', () => ({
-  useTheme: vi.fn(() => ({
-    theme: 'light',
-    setTheme: vi.fn(),
-    systemTheme: 'light',
-    themes: ['light', 'dark', 'system'],
-    isDark: false,
-    isLight: true,
-    toggle: vi.fn(),
-  })),
+const themeMock = vi.hoisted(() => ({
+  setTheme: vi.fn(),
 }))
 
-// Mock the radix-ui dropdown menu
-vi.mock('@radix-ui/react-dropdown-menu', () => ({
-  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dropdown-menu">{children}</div>
-  ),
-  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dropdown-trigger">{children}</div>
-  ),
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dropdown-content">{children}</div>
-  ),
-  DropdownMenuItem: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode
-    onClick?: () => void
-  }) => (
-    <button data-testid="dropdown-item" onClick={onClick}>
-      {children}
-    </button>
-  ),
+vi.mock('next-themes', () => ({
+  useTheme: () => ({
+    theme: 'light',
+    setTheme: themeMock.setTheme,
+  }),
 }))
 
 describe('ThemeToggle', () => {
   beforeEach(() => {
-    // Clear all mocks before each test
     vi.clearAllMocks()
   })
 
-  it('renders the theme toggle button', () => {
+  it('renders an accessible theme toggle button', () => {
     render(<ThemeToggle />)
 
-    // Check if the button is rendered
-    expect(screen.getByTestId('dropdown-trigger')).toBeInTheDocument()
-    expect(screen.getByText('Toggle theme')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Alterar tema' })).toBeInTheDocument()
   })
 
-  it('renders the theme options when clicked', async () => {
+  it('shows the localized options and changes the selected theme', async () => {
     const { user } = render(<ThemeToggle />)
 
-    // Click the theme toggle button
-    await user.click(screen.getByTestId('dropdown-trigger'))
+    await user.click(screen.getByRole('button', { name: 'Alterar tema' }))
 
-    // Check if the dropdown content is rendered with theme options
-    expect(screen.getByTestId('dropdown-content')).toBeInTheDocument()
-    expect(screen.getAllByTestId('dropdown-item')).toHaveLength(3)
-    expect(screen.getByText('Light')).toBeInTheDocument()
-    expect(screen.getByText('Dark')).toBeInTheDocument()
-    expect(screen.getByText('System')).toBeInTheDocument()
+    expect(await screen.findByText('Claro')).toBeInTheDocument()
+    expect(screen.getByText('Escuro')).toBeInTheDocument()
+    expect(screen.getByText('Sistema')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Escuro'))
+    expect(themeMock.setTheme).toHaveBeenCalledWith('dark')
   })
 })

@@ -38,14 +38,14 @@ describe('Password reset forms', () => {
   it('submits a privacy-preserving password reset request', async () => {
     mocks.pageProps = {
       flash: {
-        success: 'If an account exists for that email, a password reset link has been sent.',
+        success: 'Se existir uma conta com este e-mail, enviamos um link para redefinir a senha.',
       },
     }
     const { user } = render(<ForgotPasswordForm />)
 
-    expect(screen.getByText(/If an account exists/i)).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Email'), 'user@example.com')
-    await user.click(screen.getByRole('button', { name: 'Send reset link' }))
+    expect(screen.getByText(/Se existir uma conta/i)).toBeInTheDocument()
+    await user.type(screen.getByLabelText('E-mail'), 'user@example.com')
+    await user.click(screen.getByRole('button', { name: 'Enviar link de redefinição' }))
 
     expect(mocks.post).toHaveBeenCalledWith('/forgot-password', { preserveScroll: true })
   })
@@ -53,16 +53,16 @@ describe('Password reset forms', () => {
   it('rejects a reset page without a token before submission', () => {
     render(<ResetPasswordForm token="" />)
 
-    expect(screen.getByText(/missing its token/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Reset password' })).not.toBeInTheDocument()
+    expect(screen.getByText(/link de redefinição está incompleto/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Redefinir senha' })).not.toBeInTheDocument()
   })
 
   it('submits a new password with the reset token', async () => {
     const { user } = render(<ResetPasswordForm token="opaque-reset-token-value-123456789" />)
 
-    await user.type(screen.getByLabelText('New password'), 'new-password123')
-    await user.type(screen.getByLabelText('Confirm new password'), 'new-password123')
-    await user.click(screen.getByRole('button', { name: 'Reset password' }))
+    await user.type(screen.getByLabelText('Nova senha'), 'new-password123')
+    await user.type(screen.getByLabelText('Confirmar nova senha'), 'new-password123')
+    await user.click(screen.getByRole('button', { name: 'Redefinir senha' }))
 
     expect(mocks.post).toHaveBeenCalledWith('/reset-password')
   })

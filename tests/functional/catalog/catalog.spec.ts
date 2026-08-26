@@ -350,6 +350,10 @@ test.group('Public catalog', (group) => {
     assert.equal(categoryInertia.component, 'catalog/category')
     assert.equal(categoryInertia.props.city_slug, published.city_slug)
     assert.equal(categoryInertia.props.category_slug, published.category_slug)
+    assert.equal(
+      (categoryInertia.props.catalog as { query?: { category?: string } }).query?.category,
+      published.category_slug
+    )
     assert.include(JSON.stringify(categoryInertia.props.catalog), published.public_name)
 
     const detailPage = await client

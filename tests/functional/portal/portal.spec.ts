@@ -5,9 +5,11 @@ import app from '@adonisjs/core/services/app'
 import testUtils from '@adonisjs/core/services/test_utils'
 import type { ApiClient } from '@japa/api-client'
 import { test } from '@japa/runner'
+import { DateTime } from 'luxon'
 
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRevisionAttributeValue from '#modules/establishments/models/establishment_revision_attribute_value'
+import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
 import IRoles from '#modules/roles/interfaces/role_interface'
 import Category from '#modules/taxonomy/models/category'
 import CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
@@ -40,6 +42,12 @@ interface EffectiveAttributeProp {
 
 interface EditorProps {
   effective_attributes: EffectiveAttributeProp[]
+  review_issues: Array<{
+    code: string
+    field: string
+    message: string
+    severity: string
+  }>
   completeness: {
     eligible: boolean
     score: number
@@ -78,6 +86,20 @@ function parseEditorProps(response: { text(): string }): EditorProps {
   }
 
   return page.props as unknown as EditorProps
+}
+
+interface BackofficeListProps {
+  meta: Record<string, number>
+  data: Array<Record<string, unknown>>
+}
+
+function parseComponentProps<T>(response: { text(): string }, component: string): T {
+  const page = parseInertiaPage(response)
+  if (page.component !== component) {
+    throw new Error(`Unexpected Inertia component: ${page.component}`)
+  }
+
+  return page.props as unknown as T
 }
 
 function requireEffectiveAttribute(
@@ -279,6 +301,49 @@ test.group('Operational portals', (group) => {
     assert.include(establishment.text(), 'portal/establishments/edit')
     assert.equal(establishment.header('cache-control'), 'private, no-store')
     assert.equal(establishment.header('x-robots-tag'), 'noindex, nofollow')
+  })
+
+  test('projects open moderation corrections back into the partner editor', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('portal-review-corrections')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+    const revision = await findDraft(establishmentId)
+    revision.status = 'changes_requested'
+    revision.submitted_at = DateTime.now()
+    revision.reviewed_by = scenario.owner.id
+    revision.reviewed_at = DateTime.now()
+    revision.review_notes = 'Ajustes editoriais solicitados para o teste do Portal.'
+    await revision.save()
+
+    await EstablishmentRevisionReviewIssue.create({
+      tenant_id: scenario.tenant.id,
+      establishment_id: establishmentId,
+      revision_id: revision.id,
+      code: 'public_name_needs_context',
+      field: 'public_name',
+      message: 'Explique no nome público qual é a unidade atendida.',
+      severity: 'blocking',
+      created_by: scenario.owner.id,
+      resolved_by: null,
+      resolved_at: null,
+    })
+
+    const response = await client
+      .get(`/portal/establishments/${establishmentId}`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+
+    response.assertStatus(200)
+    const props = parseEditorProps(response)
+    assert.lengthOf(props.review_issues, 1)
+    assert.deepInclude(props.review_issues[0], {
+      code: 'public_name_needs_context',
+      field: 'public_name',
+      message: 'Explique no nome público qual é a unidade atendida.',
+      severity: 'blocking',
+    })
   })
 
   test('projects and persists every effective attribute type through the partner editor', async ({
@@ -643,5 +708,179 @@ test.group('Operational portals', (group) => {
     assert.include(adminFeedback.text(), scenario.organization.trade_name)
     assert.include(adminFeedback.text(), 'Unidade do portal')
     assert.include(adminFeedback.text(), feedbackMessage)
+  })
+
+  test('paginates and filters the moderation queue through the validated query contract', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('portal-mod-queue')
+    const firstEstablishmentId = await createDraftEstablishment(client, scenario)
+    const secondEstablishmentId = await createDraftEstablishment(client, scenario)
+
+    const firstRevision = await findDraft(firstEstablishmentId)
+    firstRevision.status = 'pending_review'
+    firstRevision.submitted_at = DateTime.now().minus({ minutes: 10 })
+    await firstRevision.save()
+
+    const secondRevision = await findDraft(secondEstablishmentId)
+    secondRevision.status = 'pending_review'
+    secondRevision.submitted_at = DateTime.now()
+    await secondRevision.save()
+
+    const moderator = await createUser({
+      prefix: 'portal-mod-queue-moderator',
+      tenant: scenario.tenant,
+      tenantRole: 'member',
+      globalRole: IRoles.Slugs.MODERATOR,
+    })
+
+    const secondPage = await client
+      .get('/backoffice/moderation?page=2&per_page=1')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+    secondPage.assertStatus(200)
+
+    const secondPageProps = parseComponentProps<{
+      revisions: BackofficeListProps
+      filters: Record<string, unknown>
+    }>(secondPage, 'backoffice/moderation/index')
+    assert.equal(secondPageProps.revisions.meta.total, 2)
+    assert.equal(secondPageProps.revisions.meta.current_page, 2)
+    assert.equal(secondPageProps.revisions.meta.per_page, 1)
+    assert.lengthOf(secondPageProps.revisions.data, 1)
+    assert.equal(secondPageProps.filters.page, 2)
+    assert.equal(secondPageProps.filters.per_page, 1)
+    // The queue is ordered by oldest submission, so page 2 holds the newest.
+    assert.equal(secondPageProps.revisions.data[0].id, secondRevision.id)
+    assert.equal(secondPageProps.revisions.data[0].city_name, scenario.city.name)
+
+    const filteredByCity = await client
+      .get(`/backoffice/moderation?city_id=${scenario.city.id}`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+    filteredByCity.assertStatus(200)
+    const cityProps = parseComponentProps<{
+      revisions: BackofficeListProps
+      filters: Record<string, unknown>
+    }>(filteredByCity, 'backoffice/moderation/index')
+    assert.equal(cityProps.revisions.meta.total, 2)
+    assert.equal(cityProps.filters.city_id, scenario.city.id)
+
+    const filteredOut = await client
+      .get('/backoffice/moderation?organization_id=999999')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+    filteredOut.assertStatus(200)
+    const filteredOutProps = parseComponentProps<{
+      revisions: BackofficeListProps
+    }>(filteredOut, 'backoffice/moderation/index')
+    assert.equal(filteredOutProps.revisions.meta.total, 0)
+  })
+
+  test('flashes the PublicationGate failure as errors.moderation when approval is blocked', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('portal-mod-gate')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+    const revision = await findDraft(establishmentId)
+    revision.status = 'pending_review'
+    revision.submitted_at = DateTime.now()
+    await revision.save()
+
+    const moderator = await createUser({
+      prefix: 'portal-mod-gate-moderator',
+      tenant: scenario.tenant,
+      tenantRole: 'member',
+      globalRole: IRoles.Slugs.MODERATOR,
+    })
+
+    // The draft is intentionally incomplete (no address/categories/media), so
+    // the PublicationGate must block the approval and flash the reason back.
+    const approval = await client
+      .post(`/backoffice/moderation/${revision.id}/approve`)
+      .withCsrfToken()
+      .headers({
+        ...tenantHeader(scenario.tenant.id),
+        referer: `/backoffice/moderation/${revision.id}`,
+      })
+      .loginAs(moderator)
+      .json({})
+    approval.assertStatus(200)
+
+    const props = parseComponentProps<{
+      revision: Record<string, unknown>
+      errors?: Record<string, unknown>
+    }>(approval, 'backoffice/moderation/show')
+    assert.isString(props.errors?.moderation)
+    assert.isNotEmpty(props.errors?.moderation)
+    assert.equal(props.revision.status, 'pending_review')
+  })
+
+  test('paginates and filters the pilot feedback queue preserving the query contract', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('portal-feedback-queue')
+
+    const contexts = ['catalog', 'onboarding'] as const
+    for (const context of contexts) {
+      const created = await client
+        .post('/api/v1/pilot-feedback')
+        .headers(tenantHeader(scenario.tenant.id))
+        .loginAs(scenario.owner)
+        .json({
+          context,
+          rating: 4,
+          message: `Relato de ${context} para validar a fila do backoffice.`,
+          organization_id: scenario.organization.id,
+        })
+      created.assertStatus(201)
+    }
+
+    const admin = await createUser({
+      prefix: 'portal-feedback-queue-admin',
+      tenant: scenario.tenant,
+      tenantRole: 'admin',
+      globalRole: IRoles.Slugs.ADMIN,
+    })
+
+    const filteredByContext = await client
+      .get('/backoffice/feedback?context=catalog&status=new')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(admin)
+    filteredByContext.assertStatus(200)
+    const contextProps = parseComponentProps<{
+      feedback: BackofficeListProps
+      filters: Record<string, unknown>
+    }>(filteredByContext, 'backoffice/feedback/index')
+    assert.equal(contextProps.feedback.meta.total, 1)
+    assert.equal(contextProps.feedback.data[0].context, 'catalog')
+    assert.equal(contextProps.filters.context, 'catalog')
+    assert.equal(contextProps.filters.status, 'new')
+
+    const secondPage = await client
+      .get('/backoffice/feedback?per_page=1&page=2')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(admin)
+    secondPage.assertStatus(200)
+    const pageProps = parseComponentProps<{
+      feedback: BackofficeListProps
+      filters: Record<string, unknown>
+    }>(secondPage, 'backoffice/feedback/index')
+    assert.equal(pageProps.feedback.meta.total, 2)
+    assert.equal(pageProps.feedback.meta.current_page, 2)
+    assert.lengthOf(pageProps.feedback.data, 1)
+
+    const resolvedOnly = await client
+      .get('/backoffice/feedback?status=resolved')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(admin)
+    resolvedOnly.assertStatus(200)
+    const resolvedProps = parseComponentProps<{
+      feedback: BackofficeListProps
+    }>(resolvedOnly, 'backoffice/feedback/index')
+    assert.equal(resolvedProps.feedback.meta.total, 0)
   })
 })
