@@ -1,8 +1,23 @@
 import { Head, Link } from '@inertiajs/react'
-import { ArrowRight, Building2, CheckCircle2, CircleDashed, MapPin, Plus } from 'lucide-react'
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  CheckCircle2,
+  CircleDashed,
+  Clock3,
+  MapPin,
+  Plus,
+  Store,
+} from 'lucide-react'
 
+import { MetricCard } from '~/components/metric_card'
+import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
+import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
+import { organizationRoleLabel, organizationStatusLabel } from '~/lib/labels'
+import { cn } from '~/lib/utils'
 
 interface Completeness {
   score: number
@@ -69,85 +84,120 @@ interface PortalIndexProps {
   }
 }
 
-function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    draft: 'Rascunho',
-    pending_review: 'Em análise',
-    changes_requested: 'Correções solicitadas',
-    active: 'Ativa',
-    suspended: 'Suspensa',
-    rejected: 'Rejeitada',
-    archived: 'Arquivada',
+function statusClassName(status: string): string {
+  const styles: Record<string, string> = {
+    draft: 'bg-muted text-muted-foreground',
+    pending_review: 'bg-warning/15 text-warning-foreground ring-warning/20',
+    changes_requested: 'bg-warning/15 text-warning-foreground ring-warning/20',
+    active: 'bg-success/10 text-success ring-success/15',
+    suspended: 'bg-destructive/10 text-destructive ring-destructive/15',
+    rejected: 'bg-destructive/10 text-destructive ring-destructive/15',
+    archived: 'bg-muted text-muted-foreground',
   }
 
-  return labels[status] ?? status
+  return styles[status] ?? 'bg-muted text-muted-foreground'
 }
 
 export default function PartnerPortalIndex({ overview, feedback_targets }: PortalIndexProps) {
   const stats = [
-    ['Organizações', overview.totals.organizations],
-    ['Unidades', overview.totals.establishments],
-    ['Publicadas', overview.totals.published],
-    ['Em análise', overview.totals.pending_review],
-  ] as const
+    {
+      label: 'Organizações',
+      value: overview.totals.organizations,
+      icon: Building2,
+      tone: 'primary' as const,
+    },
+    {
+      label: 'Unidades',
+      value: overview.totals.establishments,
+      icon: Store,
+      tone: 'info' as const,
+      helper: `${overview.totals.complete} prontas para submissão`,
+    },
+    {
+      label: 'Publicadas',
+      value: overview.totals.published,
+      icon: BadgeCheck,
+      tone: 'success' as const,
+    },
+    {
+      label: 'Em análise',
+      value: overview.totals.pending_review,
+      icon: Clock3,
+      tone: 'warning' as const,
+    },
+  ]
 
   return (
     <MainLayout>
       <Head title="Portal do parceiro" />
 
-      <div className="space-y-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-primary">Operação do parceiro</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">Portal do parceiro</h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Organize empresas e unidades, acompanhe a completude das fichas e envie conteúdo para
-              moderação.
-            </p>
-          </div>
-          <Link
-            href="/portal/organizations/new"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Nova organização
-          </Link>
-        </header>
+      <div className="space-y-7">
+        <PageHeader
+          eyebrow="Operação do parceiro"
+          icon={Store}
+          title="Portal do parceiro"
+          description="Organize empresas e unidades, acompanhe a qualidade das fichas e envie conteúdo para moderação."
+          actions={
+            <Button asChild variant="primary">
+              <Link href="/portal/organizations/new">
+                <Plus className="size-4" />
+                Nova organização
+              </Link>
+            </Button>
+          }
+        />
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map(([label, value]) => (
-            <article key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="mt-2 text-3xl font-bold tabular-nums">{value}</p>
-            </article>
+        <section
+          aria-label="Indicadores do portal"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          {stats.map((stat) => (
+            <MetricCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value.toLocaleString('pt-BR')}
+              icon={stat.icon}
+              tone={stat.tone}
+              helper={stat.helper}
+            />
           ))}
         </section>
 
         {overview.organizations.length === 0 ? (
-          <section className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <Building2 className="mx-auto size-10 text-muted-foreground" />
-            <h2 className="mt-4 text-xl font-semibold">Comece pela organização</h2>
-            <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
+          <section className="relative overflow-hidden rounded-3xl border border-dashed border-primary/25 bg-card px-6 py-14 text-center shadow-xs">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
+              <Building2 className="size-6" />
+            </span>
+            <h2 className="mt-5 text-xl font-bold tracking-[-0.025em]">Comece pela organização</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
               Cadastre a identidade legal da empresa. Depois você poderá criar uma ou várias
               unidades em cidades diferentes.
             </p>
-            <Link
-              href="/portal/organizations/new"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-            >
-              Criar organização <ArrowRight className="size-4" />
-            </Link>
+            <Button asChild variant="primary" className="mt-6">
+              <Link href="/portal/organizations/new">
+                Criar organização
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <span className="pointer-events-none absolute -end-16 -top-20 size-52 rounded-full bg-primary/[0.045]" />
           </section>
         ) : (
-          <section className="space-y-5">
-            <div>
-              <h2 className="text-xl font-semibold">Suas organizações</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                O acesso é determinado pela sua membership em cada organização.
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold tracking-[-0.02em]">Suas organizações</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  O acesso é definido pela sua participação ativa em cada organização.
+                </p>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground">
+                {overview.organizations.length} no espaço ativo
               </p>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-2">
+            <div
+              className={cn('grid gap-5', overview.organizations.length > 1 && 'xl:grid-cols-2')}
+            >
               {overview.organizations.map((organization) => {
                 const completedSteps = organization.onboarding.filter(
                   (step) => step.completed
@@ -159,93 +209,134 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                 return (
                   <article
                     key={organization.id}
-                    className="rounded-3xl border border-border bg-card p-6 shadow-sm"
+                    className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-shadow hover:shadow-md"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-semibold">{organization.trade_name}</h3>
-                          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                            {statusLabel(organization.status)}
+                    <div className="p-5 sm:p-6">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-lg font-bold tracking-[-0.025em]">
+                              {organization.trade_name}
+                            </h3>
+                            <span
+                              className={cn(
+                                'rounded-full px-2.5 py-1 text-[0.68rem] font-semibold ring-1 ring-inset',
+                                statusClassName(organization.status)
+                              )}
+                            >
+                              {organizationStatusLabel(organization.status)}
+                            </span>
+                          </div>
+                          <p className="mt-1 truncate text-sm text-muted-foreground">
+                            {organization.legal_name}
+                          </p>
+                          <p className="mt-1 text-xs font-medium text-primary">
+                            {organizationRoleLabel(organization.role)}
+                          </p>
+                        </div>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/portal/organizations/${organization.id}`}>
+                            Abrir
+                            <ArrowRight className="size-3.5" />
+                          </Link>
+                        </Button>
+                      </div>
+
+                      <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-xl border border-border/70 bg-muted/35 text-center">
+                        <div className="p-3">
+                          <p className="text-xl font-bold tabular-nums">
+                            {organization.totals.establishments}
+                          </p>
+                          <p className="mt-0.5 text-[0.68rem] text-muted-foreground">unidades</p>
+                        </div>
+                        <div className="border-x border-border/70 p-3">
+                          <p className="text-xl font-bold tabular-nums">
+                            {organization.totals.complete}
+                          </p>
+                          <p className="mt-0.5 text-[0.68rem] text-muted-foreground">completas</p>
+                        </div>
+                        <div className="p-3">
+                          <p className="text-xl font-bold tabular-nums">
+                            {organization.totals.published}
+                          </p>
+                          <p className="mt-0.5 text-[0.68rem] text-muted-foreground">publicadas</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-semibold">Progresso do onboarding</span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            {progress}%
                           </span>
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {organization.legal_name} · papel {organization.role}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/portal/organizations/${organization.id}`}
-                        className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
-                      >
-                        Abrir <ArrowRight className="size-4" />
-                      </Link>
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                      <div className="rounded-2xl bg-muted/60 p-3">
-                        <p className="text-xl font-bold">{organization.totals.establishments}</p>
-                        <p className="text-xs text-muted-foreground">unidades</p>
-                      </div>
-                      <div className="rounded-2xl bg-muted/60 p-3">
-                        <p className="text-xl font-bold">{organization.totals.complete}</p>
-                        <p className="text-xs text-muted-foreground">completas</p>
-                      </div>
-                      <div className="rounded-2xl bg-muted/60 p-3">
-                        <p className="text-xl font-bold">{organization.totals.published}</p>
-                        <p className="text-xs text-muted-foreground">publicadas</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-6">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Onboarding</span>
-                        <span className="text-muted-foreground">{progress}%</span>
-                      </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {organization.onboarding.map((step) => (
-                          <Link
-                            key={step.key}
-                            href={step.href}
-                            className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition hover:bg-muted"
-                          >
-                            {step.completed ? (
-                              <CheckCircle2 className="size-4 text-primary" />
-                            ) : (
-                              <CircleDashed className="size-4 text-muted-foreground" />
-                            )}
-                            {step.label}
-                          </Link>
-                        ))}
+                          className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+                          role="progressbar"
+                          aria-label={`Progresso do onboarding de ${organization.trade_name}`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={progress}
+                        >
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-primary to-warning transition-[width] duration-500"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {completedSteps} de {organization.onboarding.length} etapas concluídas
+                        </p>
+
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          {organization.onboarding.map((step) => (
+                            <Link
+                              key={step.key}
+                              href={step.href}
+                              className={cn(
+                                'flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
+                                step.completed
+                                  ? 'border-success/15 bg-success/[0.06] text-foreground hover:bg-success/10'
+                                  : 'border-border/70 hover:border-primary/25 hover:bg-accent/50'
+                              )}
+                            >
+                              {step.completed ? (
+                                <CheckCircle2 className="size-4 shrink-0 text-success" />
+                              ) : (
+                                <CircleDashed className="size-4 shrink-0 text-muted-foreground" />
+                              )}
+                              <span>{step.label}</span>
+                            </Link>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {organization.establishments.length > 0 ? (
-                      <div className="mt-6 space-y-2 border-t border-border pt-5">
-                        {organization.establishments.slice(0, 3).map((establishment) => (
-                          <Link
-                            key={establishment.id}
-                            href={`/portal/establishments/${establishment.id}`}
-                            className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 transition hover:bg-muted"
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                              <span className="truncate text-sm font-medium">
-                                {establishment.public_name}
+                    {organization.establishments.length > 0 && (
+                      <div className="border-t border-border/70 bg-muted/20 px-5 py-4 sm:px-6">
+                        <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          Unidades recentes
+                        </p>
+                        <div className="space-y-1">
+                          {organization.establishments.slice(0, 3).map((establishment) => (
+                            <Link
+                              key={establishment.id}
+                              href={`/portal/establishments/${establishment.id}`}
+                              className="group flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition hover:bg-background"
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <MapPin className="size-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                                <span className="truncate text-sm font-medium">
+                                  {establishment.public_name || `Unidade ${establishment.id}`}
+                                </span>
                               </span>
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {establishment.completeness?.score ?? 0}%
-                            </span>
-                          </Link>
-                        ))}
+                              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                {establishment.completeness?.score ?? 0}%
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                    ) : null}
+                    )}
                   </article>
                 )
               })}

@@ -1,9 +1,17 @@
 import { Head, Link, router, useForm } from '@inertiajs/react'
-import type { FormEvent } from 'react'
-import { ArrowLeft, ArrowRight, Building2, MapPin, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, Loader2, MapPin, Plus, Save, Send } from 'lucide-react'
+import { useRef, useState, type FormEvent } from 'react'
 
+import { ConfirmDialog } from '~/components/confirm_dialog'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
+import { EditorField } from '~/components/portal/establishment_editor/editor_field'
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
+import { firstError } from '~/lib/form_errors'
+import { organizationRoleLabel, organizationStatusLabel, revisionStatusLabel } from '~/lib/labels'
 
 interface EstablishmentSummary {
   id: number
@@ -51,6 +59,7 @@ interface OrganizationPageProps {
     organizations: FeedbackTarget[]
     establishments: FeedbackTarget[]
   }
+  errors?: Record<string, unknown>
 }
 
 interface OrganizationFormData {
@@ -63,12 +72,28 @@ interface OrganizationFormData {
   website: string
 }
 
+type OrganizationOperation = 'save' | 'submit'
+
 const editableStatuses = new Set(['draft', 'changes_requested'])
+
+function establishmentRevisionStatus(establishment: EstablishmentSummary): string {
+  if (establishment.published_revision) return 'Publicada'
+
+  const status = establishment.revision?.status
+  return typeof status === 'string' ? revisionStatusLabel(status) : 'Ainda não publicada'
+}
 
 export default function PortalOrganizationPage({
   organization,
   feedback_targets,
+  errors: pageErrors = {},
 }: OrganizationPageProps) {
+  const saveButtonRef = useRef<HTMLButtonElement>(null)
+  const operationRef = useRef<OrganizationOperation | null>(null)
+  const [operation, setOperation] = useState<OrganizationOperation | null>(null)
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [localStatus, setLocalStatus] = useState<string | null>(null)
   const form = useForm<OrganizationFormData>({
     legal_name: organization.legal_name,
     trade_name: organization.trade_name,
@@ -79,14 +104,98 @@ export default function PortalOrganizationPage({
     website: organization.website ?? '',
   })
   const editable = editableStatuses.has(organization.status)
+  const formErrors = form.errors as Record<string, unknown>
+  const busy = operation !== null || form.processing
+  const guard = useUnsavedChangesGuard({
+    enabled: () => editable && form.isDirty && operationRef.current === null,
+  })
+
+  const generalFormError = firstError(
+    formErrors.general ?? formErrors.organization ?? pageErrors.general
+  )
+  const pageSubmissionError = firstError(
+    pageErrors.submission ?? pageErrors.organization_review ?? pageErrors.review
+  )
+  const visibleSubmissionError = submissionError ?? pageSubmissionError
+
+  function fieldError(field: keyof OrganizationFormData) {
+    return firstError(formErrors[field] ?? pageErrors[field])
+  }
+
+  function beginOperation(next: OrganizationOperation) {
+    if (operationRef.current) return false
+
+    operationRef.current = next
+    setOperation(next)
+    return true
+  }
+
+  function finishOperation() {
+    operationRef.current = null
+    setOperation(null)
+  }
 
   function update(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    form.put(`/portal/organizations/${organization.id}`, { preserveScroll: true })
+    if (!beginOperation('save')) return
+
+    setLocalStatus(null)
+    setSubmissionError(null)
+    guard.allowNextVisit()
+    form.put(`/portal/organizations/${organization.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        form.setDefaults()
+        setLocalStatus('Dados da organização salvos com sucesso.')
+      },
+      onFinish: finishOperation,
+    })
+  }
+
+  function discardChanges() {
+    if (!form.isDirty || guard.confirmDiscard()) {
+      form.reset()
+      form.clearErrors()
+      setLocalStatus(null)
+      setSubmissionError(null)
+    }
+  }
+
+  function openSubmissionDialog() {
+    if (form.isDirty) {
+      saveButtonRef.current?.focus()
+      return
+    }
+
+    setSubmissionError(null)
+    setSubmitDialogOpen(true)
   }
 
   function submitForReview() {
-    router.post(`/portal/organizations/${organization.id}/submit`, {}, { preserveScroll: true })
+    if (form.isDirty || !beginOperation('submit')) return
+
+    setSubmissionError(null)
+    setLocalStatus(null)
+    guard.allowNextVisit()
+    router.post(
+      `/portal/organizations/${organization.id}/submit`,
+      {},
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setLocalStatus('Organização enviada para análise.')
+        },
+        onError: (visitErrors) => {
+          setSubmissionError(
+            firstError(visitErrors) ?? 'Não foi possível enviar a organização para análise.'
+          )
+        },
+        onFinish: () => {
+          finishOperation()
+          setSubmitDialogOpen(false)
+        },
+      }
+    )
   }
 
   return (
@@ -94,30 +203,35 @@ export default function PortalOrganizationPage({
       <Head title={organization.trade_name} />
 
       <div className="space-y-8">
-        <Link
-          href="/portal"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Voltar ao portal
-        </Link>
+        <Button asChild variant="ghost" size="sm" className="-ms-3">
+          <Link href="/portal">
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            Voltar ao portal
+          </Link>
+        </Button>
 
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-primary">Organização · {organization.role}</p>
+            <p className="text-sm font-semibold text-primary">
+              Organização · {organizationRoleLabel(organization.role)}
+            </p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight">{organization.trade_name}</h1>
             <p className="mt-2 text-muted-foreground">
-              {organization.legal_name} · status {organization.status}
+              {organization.legal_name} · {organizationStatusLabel(organization.status)}
             </p>
           </div>
-          <Link
-            href={`/portal/organizations/${organization.id}/establishments/new`}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="size-4" /> Nova unidade
-          </Link>
+          <Button asChild>
+            <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
+              <Plus aria-hidden="true" className="size-4" />
+              Nova unidade
+            </Link>
+          </Button>
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section
+          aria-label="Indicadores da organização"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
           {[
             ['Unidades', organization.totals.establishments],
             ['Completas', organization.totals.complete],
@@ -131,70 +245,232 @@ export default function PortalOrganizationPage({
           ))}
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <section
+          className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
+          aria-labelledby="organization-data-title"
+        >
           <form
             onSubmit={update}
             className="space-y-5 rounded-3xl border border-border bg-card p-6"
+            aria-busy={busy}
           >
             <div>
-              <h2 className="text-xl font-semibold">Dados da organização</h2>
+              <h2 id="organization-data-title" className="text-xl font-semibold">
+                Dados da organização
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Dados legais ficam privados e são revisados pela equipe da plataforma.
               </p>
             </div>
 
+            {generalFormError ? (
+              <Alert variant="destructive" role="alert">
+                <AlertTitle>Não foi possível salvar os dados</AlertTitle>
+                <AlertDescription>{generalFormError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {visibleSubmissionError ? (
+              <Alert variant="destructive" role="alert">
+                <AlertTitle>Não foi possível enviar para análise</AlertTitle>
+                <AlertDescription>{visibleSubmissionError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {localStatus ? (
+              <Alert role="status" aria-live="polite">
+                <AlertTitle>Operação concluída</AlertTitle>
+                <AlertDescription>{localStatus}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {editable && form.isDirty ? (
+              <Alert role="status">
+                <AlertTitle>Existem alterações não salvas</AlertTitle>
+                <AlertDescription className="space-y-3">
+                  <p>Salve ou descarte os dados antes de enviar a organização para análise.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => saveButtonRef.current?.focus()}
+                  >
+                    Ir para salvar
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <div className="grid gap-4 sm:grid-cols-2">
-              {(
-                [
-                  ['legal_name', 'Razão social'],
-                  ['trade_name', 'Nome fantasia'],
-                  ['slug', 'Slug'],
-                  ['tax_id', 'CNPJ'],
-                  ['email', 'E-mail'],
-                  ['phone', 'Telefone'],
-                ] as const
-              ).map(([name, label]) => (
-                <label key={name} className="space-y-2 text-sm">
-                  <span className="font-medium">{label}</span>
-                  <input
-                    disabled={!editable}
-                    value={form.data[name]}
-                    onChange={(event) => form.setData(name, event.target.value)}
-                    className="w-full rounded-xl border border-input bg-background px-3 py-2 disabled:opacity-60"
-                  />
-                  {form.errors[name] ? (
-                    <span className="text-xs text-destructive">{form.errors[name]}</span>
-                  ) : null}
-                </label>
-              ))}
+              <EditorField
+                htmlFor="organization-legal-name"
+                label="Razão social"
+                required
+                error={fieldError('legal_name')}
+              >
+                <Input
+                  id="organization-legal-name"
+                  name="legal_name"
+                  required
+                  maxLength={180}
+                  autoComplete="organization"
+                  disabled={!editable || busy}
+                  value={form.data.legal_name}
+                  onChange={(event) => form.setData('legal_name', event.target.value)}
+                />
+              </EditorField>
+
+              <EditorField
+                htmlFor="organization-trade-name"
+                label="Nome fantasia"
+                required
+                error={fieldError('trade_name')}
+              >
+                <Input
+                  id="organization-trade-name"
+                  name="trade_name"
+                  required
+                  maxLength={160}
+                  autoComplete="organization"
+                  disabled={!editable || busy}
+                  value={form.data.trade_name}
+                  onChange={(event) => form.setData('trade_name', event.target.value)}
+                />
+              </EditorField>
+
+              <EditorField
+                htmlFor="organization-slug"
+                label="Slug público"
+                error={fieldError('slug')}
+              >
+                <Input
+                  id="organization-slug"
+                  name="slug"
+                  maxLength={180}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={!editable || busy}
+                  value={form.data.slug}
+                  onChange={(event) => form.setData('slug', event.target.value)}
+                />
+              </EditorField>
+
+              <EditorField
+                htmlFor="organization-tax-id"
+                label="CNPJ"
+                hint="A validação e a normalização finais permanecem no servidor."
+                required
+                error={fieldError('tax_id')}
+              >
+                <Input
+                  id="organization-tax-id"
+                  name="tax_id"
+                  required
+                  maxLength={18}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  disabled={!editable || busy}
+                  value={form.data.tax_id}
+                  onChange={(event) => form.setData('tax_id', event.target.value)}
+                />
+              </EditorField>
+
+              <EditorField
+                htmlFor="organization-email"
+                label="E-mail"
+                required
+                error={fieldError('email')}
+              >
+                <Input
+                  id="organization-email"
+                  name="email"
+                  type="email"
+                  required
+                  maxLength={254}
+                  autoComplete="email"
+                  disabled={!editable || busy}
+                  value={form.data.email}
+                  onChange={(event) => form.setData('email', event.target.value)}
+                />
+              </EditorField>
+
+              <EditorField
+                htmlFor="organization-phone"
+                label="Telefone"
+                required
+                error={fieldError('phone')}
+              >
+                <Input
+                  id="organization-phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  minLength={10}
+                  maxLength={20}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  disabled={!editable || busy}
+                  value={form.data.phone}
+                  onChange={(event) => form.setData('phone', event.target.value)}
+                />
+              </EditorField>
             </div>
 
-            <label className="block space-y-2 text-sm">
-              <span className="font-medium">Website</span>
-              <input
-                disabled={!editable}
+            <EditorField
+              htmlFor="organization-website"
+              label="Website"
+              hint="Opcional. Informe a URL completa, incluindo https://."
+              error={fieldError('website')}
+            >
+              <Input
+                id="organization-website"
+                name="website"
+                type="url"
+                maxLength={2048}
+                autoComplete="url"
+                placeholder="https://exemplo.com.br"
+                disabled={!editable || busy}
                 value={form.data.website}
                 onChange={(event) => form.setData('website', event.target.value)}
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 disabled:opacity-60"
               />
-            </label>
+            </EditorField>
 
             {editable ? (
               <div className="flex flex-wrap justify-end gap-3">
-                <button
-                  type="submit"
-                  disabled={form.processing}
-                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
-                >
-                  Salvar dados
-                </button>
-                <button
+                <Button
                   type="button"
-                  onClick={submitForReview}
-                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                  variant="ghost"
+                  disabled={busy || !form.isDirty}
+                  onClick={discardChanges}
                 >
-                  Enviar organização para análise
-                </button>
+                  Descartar alterações
+                </Button>
+                <Button
+                  ref={saveButtonRef}
+                  type="submit"
+                  variant="outline"
+                  disabled={busy || !form.isDirty}
+                >
+                  {operation === 'save' || form.processing ? (
+                    <>
+                      <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                      Salvando…
+                    </>
+                  ) : (
+                    <>
+                      <Save aria-hidden="true" className="size-4" />
+                      Salvar dados
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={busy || form.isDirty}
+                  onClick={openSubmissionDialog}
+                >
+                  <Send aria-hidden="true" className="size-4" />
+                  Enviar para análise
+                </Button>
               </div>
             ) : null}
           </form>
@@ -206,10 +482,12 @@ export default function PortalOrganizationPage({
           />
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4" aria-labelledby="organization-establishments-title">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold">Unidades</h2>
+              <h2 id="organization-establishments-title" className="text-xl font-semibold">
+                Unidades
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Cada endereço público possui ficha, mídia e publicação próprias.
               </p>
@@ -218,48 +496,73 @@ export default function PortalOrganizationPage({
 
           {organization.establishments.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-9 text-center">
-              <Building2 className="mx-auto size-9 text-muted-foreground" />
+              <Building2 aria-hidden="true" className="mx-auto size-9 text-muted-foreground" />
               <p className="mt-3 font-semibold">Nenhuma unidade cadastrada</p>
-              <Link
-                href={`/portal/organizations/${organization.id}/establishments/new`}
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary"
-              >
-                Criar primeira unidade <ArrowRight className="size-4" />
-              </Link>
+              <Button asChild variant="outline" className="mt-4">
+                <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
+                  Criar primeira unidade
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              </Button>
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {organization.establishments.map((establishment) => (
-                <Link
-                  key={establishment.id}
-                  href={`/portal/establishments/${establishment.id}`}
-                  className="rounded-2xl border border-border bg-card p-5 transition hover:border-primary/50"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="flex items-center gap-2 font-semibold">
-                        <MapPin className="size-4 text-primary" /> {establishment.public_name}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {establishment.published_revision ? 'Publicada' : 'Ainda não publicada'}
-                      </p>
+              {organization.establishments.map((establishment) => {
+                const score = Math.min(100, Math.max(0, establishment.completeness.score))
+
+                return (
+                  <Link
+                    key={establishment.id}
+                    href={`/portal/establishments/${establishment.id}`}
+                    className="rounded-2xl border border-border bg-card p-5 outline-none transition hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="flex items-center gap-2 font-semibold">
+                          <MapPin aria-hidden="true" className="size-4 text-primary" />
+                          {establishment.public_name}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {establishmentRevisionStatus(establishment)}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                        {score}%
+                      </span>
                     </div>
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                      {establishment.completeness.score}%
-                    </span>
-                  </div>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${establishment.completeness.score}%` }}
-                    />
-                  </div>
-                </Link>
-              ))}
+                      className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
+                      role="progressbar"
+                      aria-label={`Completude da ficha de ${establishment.public_name}`}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={score}
+                    >
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={submitDialogOpen}
+        onOpenChange={(open) => {
+          if (!busy) setSubmitDialogOpen(open)
+        }}
+        title="Enviar organização para análise?"
+        description="Os dados atualmente salvos serão encaminhados para a equipe da plataforma. Durante a análise, a edição poderá ficar temporariamente indisponível."
+        confirmLabel="Enviar para análise"
+        processing={operation === 'submit'}
+        disabled={busy && operation !== 'submit'}
+        onConfirm={submitForReview}
+      />
     </MainLayout>
   )
 }
