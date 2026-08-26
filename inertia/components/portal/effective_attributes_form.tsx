@@ -1,5 +1,23 @@
 import { useForm } from '@inertiajs/react'
+import { SlidersHorizontal } from 'lucide-react'
 import type { FormEvent } from 'react'
+import { useEffect, useMemo } from 'react'
+
+import {
+  EditorSaveBar,
+  EditorSection,
+  type EditorDisplayIssue,
+} from '~/components/portal/editor_section'
+import { Badge } from '~/components/ui/badge'
+import { Input } from '~/components/ui/input'
+import { Progress } from '~/components/ui/progress'
+import { Textarea } from '~/components/ui/textarea'
+import { EditorDependencyNotice } from '~/components/portal/establishment_editor/dependency_notice'
+import { editorSelectClassName } from '~/components/portal/establishment_editor/editor_field'
+import type { EditorFormStateChange } from '~/components/portal/establishment_editor/types'
+import { hasAttributeInputValue } from '~/lib/establishment_editor'
+import { firstError } from '~/lib/form_errors'
+import { cn } from '~/lib/utils'
 
 export type EffectiveAttributeDataType =
   | 'text'
@@ -46,15 +64,26 @@ interface EffectiveAttributesFormProps {
   establishmentId: number
   attributes: EffectiveAttribute[]
   editable: boolean
+  busy?: boolean
+  categoriesDirty?: boolean
+  issues?: EditorDisplayIssue[]
+  onStateChange?: EditorFormStateChange
+  onBeforeSubmit?: () => boolean
+  onSubmitFinish?: () => void
+  onReviewCategories?: () => void
 }
-
-const fieldClassName =
-  'w-full rounded-xl border border-input bg-background px-3 py-2 disabled:opacity-60'
 
 export default function EffectiveAttributesForm({
   establishmentId,
   attributes,
   editable,
+  busy = false,
+  categoriesDirty = false,
+  issues = [],
+  onStateChange,
+  onBeforeSubmit,
+  onSubmitFinish,
+  onReviewCategories,
 }: EffectiveAttributesFormProps) {
   const form = useForm<AttributeFormData>({
     attributes: attributes.map((attribute) => ({
@@ -63,6 +92,10 @@ export default function EffectiveAttributesForm({
       option_ids: attribute.option_ids,
     })),
   })
+
+  useEffect(() => {
+    onStateChange?.({ dirty: form.isDirty, processing: form.processing })
+  }, [form.isDirty, form.processing, onStateChange])
 
   function updateValue(index: number, value: AttributeFormItem['value']) {
     form.setData(
@@ -94,198 +127,320 @@ export default function EffectiveAttributesForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (categoriesDirty) {
+      onReviewCategories?.()
+      return
+    }
+    if (busy && !form.processing) return
+    if (onBeforeSubmit && !onBeforeSubmit()) return
+
     form.put(`/portal/establishments/${establishmentId}/attributes`, {
       preserveScroll: true,
+      onSuccess: () => form.setDefaults(),
+      onFinish: onSubmitFinish,
     })
   }
 
+  const controlsDisabled = !editable || busy || categoriesDirty
+  const formItemsById = useMemo(
+    () =>
+      new Map(form.data.attributes.map((item) => [item.attribute_definition_id, item] as const)),
+    [form.data.attributes]
+  )
+  const requiredAttributes = attributes.filter((attribute) => attribute.is_required)
+  const completedRequired = requiredAttributes.filter((attribute) => {
+    const item = formItemsById.get(attribute.id)
+    return item ? hasAttributeInputValue(item.value, item.option_ids) : false
+  }).length
+  const requiredProgress =
+    requiredAttributes.length === 0
+      ? 100
+      : Math.round((completedRequired / requiredAttributes.length) * 100)
+  const error = firstError(form.errors)
+
   return (
-    <form
-      onSubmit={submit}
-      className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm"
+    <EditorSection
+      id="attributes"
+      icon={SlidersHorizontal}
+      title="Características da categoria"
+      description="Os campos são resolvidos pelo servidor a partir da categoria principal, incluindo herança, tipo, opções e obrigatoriedade."
+      issues={issues}
+      toolbar={
+        attributes.length > 0 ? (
+          <Badge variant="secondary" appearance="light" size="sm">
+            {attributes.length} {attributes.length === 1 ? 'campo' : 'campos'}
+          </Badge>
+        ) : null
+      }
     >
-      <div>
-        <h2 className="text-xl font-semibold">Características da categoria</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Os campos são definidos pela categoria principal. Regras de tipo, herança e
-          obrigatoriedade são validadas pelo servidor.
-        </p>
-      </div>
+      <form onSubmit={submit} aria-busy={form.processing}>
+        <div className="space-y-6 p-5 sm:p-6">
+          {categoriesDirty ? (
+            <EditorDependencyNotice
+              title="Salve as categorias para recalcular as características"
+              description="Os campos abaixo ainda representam a categoria principal salva no servidor. Salve a seleção atual antes de continuar."
+              actionLabel="Ir para categorias"
+              onAction={() => onReviewCategories?.()}
+            />
+          ) : null}
 
-      {attributes.length === 0 ? (
-        <div className="rounded-2xl bg-muted/50 p-4 text-sm text-muted-foreground">
-          Selecione e salve uma categoria principal. Quando ela possuir características específicas,
-          os campos aparecerão aqui.
-        </div>
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
-          {attributes.map((attribute, index) => {
-            const item = form.data.attributes[index]
-            const label = (
-              <span className="flex flex-wrap items-center gap-2 font-medium">
-                {attribute.name}
-                {attribute.is_required ? (
-                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-                    Obrigatório
-                  </span>
-                ) : null}
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                  {attribute.inherited ? 'Herdado' : 'Categoria principal'}
-                </span>
-              </span>
-            )
+          {requiredAttributes.length > 0 ? (
+            <div className="rounded-xl border border-border/70 bg-muted/25 p-4">
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <div>
+                  <p className="font-medium">Campos obrigatórios</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {completedRequired} de {requiredAttributes.length} preenchidos
+                  </p>
+                </div>
+                <span className="font-semibold tabular-nums text-primary">{requiredProgress}%</span>
+              </div>
+              <Progress value={requiredProgress} className="mt-3" />
+            </div>
+          ) : null}
 
-            return (
-              <div
-                key={attribute.id}
-                className={
+          {attributes.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 px-5 py-8 text-center">
+              <p className="text-sm font-medium">Nenhuma característica configurada</p>
+              <p className="mx-auto mt-1 max-w-lg text-sm leading-6 text-muted-foreground">
+                Selecione e salve uma categoria principal. Quando ela possuir características
+                específicas, os campos aparecerão aqui automaticamente.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-2">
+              {attributes.map((attribute, index) => {
+                const item = form.data.attributes[index]
+                const wide =
                   attribute.data_type === 'long_text' || attribute.data_type === 'multi_select'
-                    ? 'space-y-2 text-sm lg:col-span-2'
-                    : 'space-y-2 text-sm'
+                const descriptionId = attribute.description
+                  ? `attribute-${attribute.id}-description`
+                  : undefined
+                const attributeErrors = form.errors as Record<string, unknown>
+                const fieldError =
+                  firstError(attributeErrors[`attributes.${index}.value`]) ??
+                  firstError(attributeErrors[`attributes.${index}.option_ids`]) ??
+                  firstError(attributeErrors[`attributes.${index}.attribute_definition_id`])
+                const errorId = fieldError ? `attribute-${attribute.id}-error` : undefined
+                const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined
+                const inputAccessibility = {
+                  'aria-describedby': describedBy,
+                  'aria-invalid': fieldError ? (true as const) : undefined,
+                  'aria-required': attribute.is_required || undefined,
                 }
-              >
-                {attribute.data_type === 'boolean' ? (
-                  <label className="block space-y-2">
-                    {label}
-                    <select
-                      disabled={!editable}
-                      value={
-                        item.value === null || typeof item.value !== 'boolean'
-                          ? ''
-                          : item.value
-                            ? 'true'
-                            : 'false'
-                      }
-                      onChange={(event) =>
-                        updateValue(
-                          index,
-                          event.target.value === '' ? null : event.target.value === 'true'
-                        )
-                      }
-                      className={fieldClassName}
-                    >
-                      <option value="">Não informado</option>
-                      <option value="true">Sim</option>
-                      <option value="false">Não</option>
-                    </select>
-                  </label>
-                ) : null}
 
-                {attribute.data_type === 'text' || attribute.data_type === 'url' ? (
-                  <label className="block space-y-2">
-                    {label}
-                    <input
-                      type={attribute.data_type === 'url' ? 'url' : 'text'}
-                      disabled={!editable}
-                      value={typeof item.value === 'string' ? item.value : ''}
-                      onChange={(event) => updateValue(index, event.target.value)}
-                      className={fieldClassName}
-                    />
-                  </label>
-                ) : null}
+                return (
+                  <div
+                    key={attribute.id}
+                    className={cn(
+                      'space-y-2 rounded-xl border border-border/70 bg-background p-4',
+                      wide && 'lg:col-span-2'
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        htmlFor={`attribute-${attribute.id}`}
+                        className="text-sm font-semibold"
+                      >
+                        {attribute.name}
+                      </label>
+                      {attribute.is_required ? (
+                        <Badge variant="destructive" appearance="light" size="xs">
+                          Obrigatório
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" appearance="light" size="xs">
+                          Opcional
+                        </Badge>
+                      )}
+                      <Badge variant="outline" size="xs">
+                        {attribute.inherited ? 'Herdado' : 'Categoria principal'}
+                      </Badge>
+                    </div>
 
-                {attribute.data_type === 'long_text' ? (
-                  <label className="block space-y-2">
-                    {label}
-                    <textarea
-                      rows={4}
-                      disabled={!editable}
-                      value={typeof item.value === 'string' ? item.value : ''}
-                      onChange={(event) => updateValue(index, event.target.value)}
-                      className={`${fieldClassName} resize-y`}
-                    />
-                  </label>
-                ) : null}
+                    {attribute.description ? (
+                      <p id={descriptionId} className="text-xs leading-5 text-muted-foreground">
+                        {attribute.description}
+                      </p>
+                    ) : null}
 
-                {attribute.data_type === 'integer' || attribute.data_type === 'decimal' ? (
-                  <label className="block space-y-2">
-                    {label}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        step={attribute.data_type === 'integer' ? '1' : 'any'}
-                        disabled={!editable}
-                        value={typeof item.value === 'number' ? item.value : ''}
+                    {attribute.data_type === 'boolean' ? (
+                      <select
+                        id={`attribute-${attribute.id}`}
+                        disabled={controlsDisabled}
+                        value={
+                          item.value === null || typeof item.value !== 'boolean'
+                            ? ''
+                            : item.value
+                              ? 'true'
+                              : 'false'
+                        }
                         onChange={(event) =>
                           updateValue(
                             index,
-                            event.target.value === '' ? null : Number(event.target.value)
+                            event.target.value === '' ? null : event.target.value === 'true'
                           )
                         }
-                        className={fieldClassName}
+                        className={editorSelectClassName}
+                        {...inputAccessibility}
+                      >
+                        <option value="">Não informado</option>
+                        <option value="true">Sim</option>
+                        <option value="false">Não</option>
+                      </select>
+                    ) : null}
+
+                    {attribute.data_type === 'text' || attribute.data_type === 'url' ? (
+                      <Input
+                        id={`attribute-${attribute.id}`}
+                        variant="lg"
+                        type={attribute.data_type === 'url' ? 'url' : 'text'}
+                        disabled={controlsDisabled}
+                        value={typeof item.value === 'string' ? item.value : ''}
+                        onChange={(event) => updateValue(index, event.target.value)}
+                        placeholder={
+                          attribute.data_type === 'url'
+                            ? 'https://exemplo.com.br'
+                            : `Informe ${attribute.name.toLocaleLowerCase('pt-BR')}`
+                        }
+                        {...inputAccessibility}
                       />
-                      {attribute.unit ? (
-                        <span className="shrink-0 text-muted-foreground">{attribute.unit}</span>
-                      ) : null}
-                    </div>
-                  </label>
-                ) : null}
+                    ) : null}
 
-                {attribute.data_type === 'single_select' ? (
-                  <label className="block space-y-2">
-                    {label}
-                    <select
-                      disabled={!editable}
-                      value={item.option_ids[0] ?? ''}
-                      onChange={(event) =>
-                        updateOptions(index, event.target.value ? [Number(event.target.value)] : [])
-                      }
-                      className={fieldClassName}
-                    >
-                      <option value="">Selecione</option>
-                      {attribute.options.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
+                    {attribute.data_type === 'long_text' ? (
+                      <Textarea
+                        id={`attribute-${attribute.id}`}
+                        variant="lg"
+                        rows={4}
+                        disabled={controlsDisabled}
+                        value={typeof item.value === 'string' ? item.value : ''}
+                        onChange={(event) => updateValue(index, event.target.value)}
+                        className="resize-y"
+                        {...inputAccessibility}
+                      />
+                    ) : null}
 
-                {attribute.data_type === 'multi_select' ? (
-                  <fieldset className="space-y-3">
-                    <legend>{label}</legend>
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {attribute.options.map((option) => (
-                        <label
-                          key={option.id}
-                          className="flex items-center gap-2 rounded-xl border border-border p-3"
-                        >
-                          <input
-                            type="checkbox"
-                            disabled={!editable}
-                            checked={item.option_ids.includes(option.id)}
-                            onChange={() => toggleOption(index, option.id)}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                ) : null}
+                    {attribute.data_type === 'integer' || attribute.data_type === 'decimal' ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`attribute-${attribute.id}`}
+                          variant="lg"
+                          type="number"
+                          step={attribute.data_type === 'integer' ? '1' : 'any'}
+                          disabled={controlsDisabled}
+                          value={typeof item.value === 'number' ? item.value : ''}
+                          onChange={(event) =>
+                            updateValue(
+                              index,
+                              event.target.value === '' ? null : Number(event.target.value)
+                            )
+                          }
+                          {...inputAccessibility}
+                        />
+                        {attribute.unit ? (
+                          <span className="shrink-0 rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium text-muted-foreground">
+                            {attribute.unit}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
 
-                {attribute.description ? (
-                  <p className="text-xs text-muted-foreground">{attribute.description}</p>
-                ) : null}
-              </div>
-            )
-          })}
+                    {attribute.data_type === 'single_select' ? (
+                      <select
+                        id={`attribute-${attribute.id}`}
+                        disabled={controlsDisabled}
+                        value={item.option_ids[0] ?? ''}
+                        onChange={(event) =>
+                          updateOptions(
+                            index,
+                            event.target.value ? [Number(event.target.value)] : []
+                          )
+                        }
+                        className={editorSelectClassName}
+                        {...inputAccessibility}
+                      >
+                        <option value="">Selecione uma opção</option>
+                        {attribute.options.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+
+                    {attribute.data_type === 'multi_select' ? (
+                      <fieldset
+                        className="space-y-3"
+                        aria-describedby={describedBy}
+                        aria-invalid={fieldError ? true : undefined}
+                        aria-required={attribute.is_required || undefined}
+                      >
+                        <legend className="sr-only">{attribute.name}</legend>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {attribute.options.map((option) => {
+                            const checked = item.option_ids.includes(option.id)
+                            return (
+                              <label
+                                key={option.id}
+                                className={cn(
+                                  'flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm transition-colors',
+                                  checked
+                                    ? 'border-primary/30 bg-primary/5 text-foreground'
+                                    : 'border-border hover:bg-muted/50',
+                                  controlsDisabled && 'cursor-not-allowed opacity-60'
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  disabled={controlsDisabled}
+                                  checked={checked}
+                                  onChange={() => toggleOption(index, option.id)}
+                                  className="size-4 rounded border-input accent-primary"
+                                  aria-describedby={describedBy}
+                                />
+                                <span>{option.label}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </fieldset>
+                    ) : null}
+
+                    {fieldError ? (
+                      <p id={errorId} role="alert" className="text-xs text-destructive">
+                        {fieldError}
+                      </p>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {error}
+            </p>
+          ) : null}
         </div>
-      )}
 
-      {form.errors.attributes ? (
-        <p className="text-sm text-destructive">{form.errors.attributes}</p>
-      ) : null}
-
-      {editable && attributes.length > 0 ? (
-        <button
-          type="submit"
-          disabled={form.processing}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          {form.processing ? 'Salvando…' : 'Salvar características'}
-        </button>
-      ) : null}
-    </form>
+        {editable && attributes.length > 0 ? (
+          <EditorSaveBar
+            processing={form.processing}
+            recentlySuccessful={form.recentlySuccessful}
+            dirty={form.isDirty}
+            disabled={categoriesDirty || (busy && !form.processing)}
+            label="Salvar características"
+            onDiscard={() => {
+              form.reset()
+              form.clearErrors()
+            }}
+          />
+        ) : null}
+      </form>
+    </EditorSection>
   )
 }
