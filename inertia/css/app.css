@@ -2,100 +2,100 @@
 
 @layer base {
   :root {
-    /* Metronic-inspired color system using oklch */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    color-scheme: light;
+
+    /* Warm, regional identity: neutral surfaces with a food-and-culture accent. */
+    --background: 30 33% 98%;
+    --foreground: 224 28% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 224 28% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 224 28% 13%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 14 80% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 27 30% 94%;
+    --secondary-foreground: 224 24% 18%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 28 24% 95%;
+    --muted-foreground: 220 10% 43%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 18 68% 95%;
+    --accent-foreground: 14 72% 36%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 24 18% 88%;
+    --input: 24 18% 85%;
+    --ring: 14 80% 45%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Additional Metronic-like variables */
-    --success: 142.1 76.2% 36.3%;
-    --success-foreground: 355.7 100% 97.3%;
+    --success: 146 65% 34%;
+    --success-foreground: 0 0% 100%;
 
-    --warning: 45.4 93.3% 47.5%;
-    --warning-foreground: 26 83.3% 14.1%;
+    --warning: 38 92% 48%;
+    --warning-foreground: 28 90% 14%;
 
-    --info: 199.7 89% 48.4%;
-    --info-foreground: 210 40% 98%;
+    --info: 199 78% 42%;
+    --info-foreground: 0 0% 100%;
 
-    /* Chart colors */
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --chart-1: 14 80% 45%;
+    --chart-2: 158 58% 39%;
+    --chart-3: 38 88% 50%;
+    --chart-4: 264 60% 57%;
+    --chart-5: 335 68% 52%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    color-scheme: dark;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --background: 224 28% 9%;
+    --foreground: 30 20% 96%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --card: 224 24% 12%;
+    --card-foreground: 30 20% 96%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --popover: 224 24% 12%;
+    --popover-foreground: 30 20% 96%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --primary: 16 90% 60%;
+    --primary-foreground: 224 30% 10%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --secondary: 224 18% 18%;
+    --secondary-foreground: 30 20% 96%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 224 16% 17%;
+    --muted-foreground: 220 11% 65%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --accent: 15 24% 18%;
+    --accent-foreground: 16 86% 72%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --destructive: 0 68% 54%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Additional dark mode variables */
-    --success: 142.1 70.6% 45.3%;
-    --success-foreground: 144.9 80.4% 10%;
+    --border: 224 15% 21%;
+    --input: 224 15% 24%;
+    --ring: 16 90% 60%;
 
-    --warning: 32.1 94.6% 43.8%;
-    --warning-foreground: 21.7 77.8% 3.1%;
+    --success: 145 62% 48%;
+    --success-foreground: 224 28% 9%;
 
-    --info: 213.1 93.9% 67.8%;
-    --info-foreground: 216.9 91.4% 12.9%;
+    --warning: 38 90% 56%;
+    --warning-foreground: 28 90% 12%;
 
-    /* Chart colors for dark mode */
-    --chart-1: 220 70% 60%;
-    --chart-2: 160 60% 55%;
-    --chart-3: 30 80% 65%;
-    --chart-4: 280 65% 70%;
-    --chart-5: 340 75% 65%;
+    --info: 199 84% 62%;
+    --info-foreground: 224 28% 9%;
+
+    --chart-1: 16 90% 60%;
+    --chart-2: 158 58% 52%;
+    --chart-3: 38 90% 58%;
+    --chart-4: 264 70% 68%;
+    --chart-5: 335 74% 65%;
   }
 }
 
@@ -104,12 +104,31 @@
     border-color: hsl(var(--border));
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
+    min-height: 100%;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif;
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.22);
+    color: hsl(var(--foreground));
   }
 
   /* Custom scrollbar styling */
@@ -129,6 +148,27 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /*
+   * Global reduced-motion protection. Durations stay at 0.01ms (not 0) so
+   * animationend/transitionend still fire — Radix and the editor rely on them
+   * for unmount timing. The editor's scrollIntoView already checks
+   * prefers-reduced-motion in JS and keeps working unchanged.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -311,13 +351,8 @@
   }
 }
 
-* {
-  margin: 0;
-  padding: 0;
-}
-
 html,
 body {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
 }

@@ -2,15 +2,19 @@
 
 import '../css/app.css'
 import { hydrateRoot } from 'react-dom/client'
-import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react'
+import { createInertiaApp, router, type ResolvedComponent } from '@inertiajs/react'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
+import { NetworkNotice } from '~/components/network_notice'
+import { bindInertiaFailureNotice } from '~/lib/network_notice'
 import { ThemeProvider } from '~/providers/theme_provider'
 import { QueryProvider } from '~/providers/query_provider'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Experimente+'
 
+bindInertiaFailureNotice(router)
+
 createInertiaApp({
-  progress: { color: '#5468FF' },
+  progress: { color: '#cf4217' },
 
   title: (title) => `${title} - ${appName}`,
 
@@ -33,6 +37,7 @@ createInertiaApp({
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryProvider>
           <App {...props} />
+          <NetworkNotice />
         </QueryProvider>
       </ThemeProvider>
     )
