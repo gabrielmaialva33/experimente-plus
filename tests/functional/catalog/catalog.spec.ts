@@ -332,6 +332,19 @@ test.group('Public catalog', (group) => {
     assert.equal(cityInertia.component, 'catalog/establishments')
     assert.equal(cityInertia.props.city_slug, published.city_slug)
     assert.include(JSON.stringify(cityInertia.props.catalog), published.public_name)
+    assert.include(JSON.stringify(cityInertia.props.filter_categories), published.category_name)
+
+    const filteredCityPage = await client
+      .get(`/cidades/${published.city_slug}?category=${published.category_slug}`)
+      .headers(publicHeaders(scenario))
+    filteredCityPage.assertStatus(200)
+    const filteredCityInertia = parseInertiaPage(filteredCityPage)
+    assert.equal(filteredCityInertia.component, 'catalog/establishments')
+    assert.equal(
+      (filteredCityInertia.props.catalog as { query?: { category?: string } }).query?.category,
+      published.category_slug
+    )
+    assert.include(JSON.stringify(filteredCityInertia.props.catalog), published.public_name)
 
     const categoriesPage = await client
       .get(`/cidades/${published.city_slug}/categorias`)
