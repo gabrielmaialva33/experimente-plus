@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 
+import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentCompletenessService from '#modules/establishments/services/establishment_completeness_service'
 import EstablishmentService from '#modules/establishments/services/establishment_service'
@@ -95,10 +96,21 @@ export default class PartnerPortalService {
       .where('is_active', true)
       .orderBy('sort_order', 'asc')
       .orderBy('name', 'asc')
-    const effectiveAttributes = await this.effectiveAttributes(
-      tenantId,
-      establishment as Record<string, unknown>
-    )
+    const establishmentRecord = establishment as Record<string, unknown>
+    const revision = this.recordValue(establishmentRecord.revision)
+    const effectiveAttributes = await this.effectiveAttributes(tenantId, establishmentRecord)
+    const revisionId = this.numberValue(revision, 'id')
+    const revisionStatus = this.stringValue(revision, 'status')
+    const reviewIssues =
+      revisionId && revisionStatus === 'changes_requested'
+        ? await EstablishmentRevisionReviewIssue.query()
+            .where('tenant_id', tenantId)
+            .where('establishment_id', establishmentId)
+            .where('revision_id', revisionId)
+            .whereNull('resolved_at')
+            .orderBy('severity', 'asc')
+            .orderBy('id', 'asc')
+        : []
 
     return {
       establishment,
@@ -106,6 +118,7 @@ export default class PartnerPortalService {
       cities: cities.map((city) => city.serialize()),
       categories: categories.map((category) => category.serialize()),
       effective_attributes: effectiveAttributes,
+      review_issues: reviewIssues.map((issue) => issue.serialize()),
     }
   }
 
