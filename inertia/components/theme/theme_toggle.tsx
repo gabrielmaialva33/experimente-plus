@@ -27,6 +27,7 @@ export function ThemeToggle() {
           mode="icon"
           shape="circle"
           className="relative"
+          id="theme-toggle-trigger"
           aria-label="Alterar tema"
           title="Alterar tema"
         >
