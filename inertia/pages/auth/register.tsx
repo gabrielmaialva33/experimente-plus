@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react'
-import { Layers, Lock, Rocket } from 'lucide-react'
+import { Compass, Store, Users } from 'lucide-react'
 
 import { RegisterForm } from '~/components/auth'
 import { useApp } from '~/hooks/use_app'
@@ -14,34 +14,38 @@ export default function RegisterPage({ errors }: RegisterPageProps) {
 
   return (
     <>
-      <Head title="Register" />
+      <Head title="Criar conta">
+        <meta name="robots" content="noindex,nofollow" />
+      </Head>
       <AuthSplitLayout
-        title="Create account"
-        subtitle="Enter your information to create your account"
-        panelTitle={`Join ${application.name}`}
-        panelDescription="Create an account with secure authentication, workspace onboarding, file management and recovery flows already wired."
+        title="Criar conta"
+        subtitle="Crie seu acesso pessoal. A organização e as unidades serão configuradas depois."
+        formEyebrow="Comece pelo seu acesso"
+        contentWidth="wide"
+        panelTitle={`Faça parte do ${application.name}`}
+        panelDescription="Divulgue seus estabelecimentos, receba retorno da moderação e acompanhe o interesse do público da sua região."
         features={[
           {
-            title: 'Secure by default',
-            description: 'Argon2 hashing and JWT sessions',
-            icon: Lock,
+            title: 'Cadastro simples',
+            description: 'Crie a organização e as unidades no seu ritmo',
+            icon: Store,
           },
           {
-            title: 'Batteries included',
-            description: 'Files, audits and rate limiting',
-            icon: Layers,
+            title: 'Feito para a região',
+            description: 'Descoberta por cidade e categoria, sem intermediários',
+            icon: Compass,
           },
           {
-            title: 'Ship faster',
-            description: 'Skip the boilerplate, build features',
-            icon: Rocket,
+            title: 'Você no controle',
+            description: 'Convide sua equipe e defina quem edita cada ficha',
+            icon: Users,
           },
         ]}
         footer={
           <>
-            <span className="text-muted-foreground">Already have an account? </span>
+            <span className="text-muted-foreground">Já tem uma conta? </span>
             <Link href="/login" className="font-medium text-primary hover:underline">
-              Sign in
+              Entrar
             </Link>
           </>
         }

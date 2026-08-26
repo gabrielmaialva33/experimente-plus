@@ -33,7 +33,15 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
         environment,
         demoPagesEnabled: env.get('DEMO_PAGES_ENABLED', environment === 'development'),
       },
-      errors: this.getValidationErrors(ctx),
+      // Validation errors (inputErrorsBag) merged with the errors controllers
+      // flash manually via `session.flash('errors', {...})` — e.g. `general`
+      // on sign-in, `submission` on portal submit and `moderation` when the
+      // PublicationGate blocks an approval. The base middleware only reads
+      // the validation bag, so manual flashes would never reach the client.
+      errors: {
+        ...this.getValidationErrors(ctx),
+        ...(ctx.session?.flashMessages.get('errors') ?? {}),
+      },
       flash: {
         success: ctx.session?.flashMessages.get('success') ?? null,
         error: ctx.session?.flashMessages.get('error') ?? null,

@@ -1,61 +1,76 @@
-import { FormEvent } from 'react'
 import { Link, useForm } from '@inertiajs/react'
-import { Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2, Mail } from 'lucide-react'
+import type { FormEvent } from 'react'
 
-import { Button } from '~/components/ui/button'
+import { PasswordField } from '~/components/auth/password_field'
 import { Field } from '~/components/forms/field'
+import { Alert, AlertContent, AlertDescription } from '~/components/ui/alert'
+import { Button } from '~/components/ui/button'
 
-export function LoginForm() {
+interface LoginFormProps {
+  errors?: Record<string, string>
+}
+
+export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
   const { data, setData, post, processing, errors } = useForm({
     uid: '',
     password: '',
   })
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const generalError = serverErrors?.general
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault()
     post('/login')
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {generalError ? (
+        <Alert variant="destructive" appearance="light">
+          <AlertContent>
+            <AlertDescription>{generalError}</AlertDescription>
+          </AlertContent>
+        </Alert>
+      ) : null}
+
       <Field
-        label="Email or Username"
+        label="E-mail ou usuário"
         id="uid"
         type="text"
         name="uid"
         value={data.uid}
-        onChange={(e) => setData('uid', e.target.value)}
+        onChange={(event) => setData('uid', event.target.value)}
         error={errors.uid}
-        placeholder="john@example.com"
+        placeholder="voce@exemplo.com"
         required
+        autoFocus
         autoComplete="username"
         leftIcon={<Mail className="size-4" />}
       />
 
-      <Field
-        label="Password"
+      <PasswordField
+        label="Senha"
         id="password"
-        type="password"
         name="password"
         value={data.password}
-        onChange={(e) => setData('password', e.target.value)}
+        onChange={(event) => setData('password', event.target.value)}
         error={errors.password}
         labelAction={
           <Link
             href="/forgot-password"
             className="text-xs font-medium text-primary hover:underline"
           >
-            Forgot password?
+            Esqueceu a senha?
           </Link>
         }
         required
         autoComplete="current-password"
-        leftIcon={<Lock className="size-4" />}
       />
 
       <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
-        {processing && <Loader2 className="size-4 animate-spin" />}
-        Sign in
+        {processing ? <Loader2 className="size-4 animate-spin" /> : null}
+        {processing ? 'Entrando...' : 'Entrar'}
       </Button>
     </form>
   )

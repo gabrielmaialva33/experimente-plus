@@ -1,6 +1,6 @@
-import { FormEvent } from 'react'
 import { useForm, usePage } from '@inertiajs/react'
 import { Loader2, Mail } from 'lucide-react'
+import type { FormEvent } from 'react'
 
 import { Field } from '~/components/forms/field'
 import { Alert, AlertContent, AlertDescription } from '~/components/ui/alert'
@@ -21,31 +21,32 @@ export default function ForgotPasswordForm() {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {flash?.success && (
+      {flash?.success ? (
         <Alert variant="success" appearance="light">
           <AlertContent>
             <AlertDescription>{flash.success}</AlertDescription>
           </AlertContent>
         </Alert>
-      )}
+      ) : null}
 
       <Field
-        label="Email"
+        label="E-mail"
         id="email"
         type="email"
         name="email"
         value={data.email}
         onChange={(event) => setData('email', event.target.value)}
         error={errors.email}
-        placeholder="john@example.com"
+        placeholder="voce@exemplo.com"
         required
+        autoFocus
         autoComplete="email"
         leftIcon={<Mail className="size-4" />}
       />
 
       <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
-        {processing && <Loader2 className="size-4 animate-spin" />}
-        Send reset link
+        {processing ? <Loader2 className="size-4 animate-spin" /> : null}
+        {processing ? 'Enviando...' : 'Enviar link de redefinição'}
       </Button>
     </form>
   )

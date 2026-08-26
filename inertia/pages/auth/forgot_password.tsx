@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react'
-import { KeyRound, MailCheck, ShieldCheck } from 'lucide-react'
+import { KeyRound, LockKeyhole, ShieldCheck } from 'lucide-react'
 
 import { ForgotPasswordForm } from '~/components/auth'
 import { useApp } from '~/hooks/use_app'
@@ -10,32 +10,35 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <Head title="Forgot password" />
+      <Head title="Recuperar senha">
+        <meta name="robots" content="noindex,nofollow" />
+      </Head>
       <AuthSplitLayout
-        title="Forgot your password?"
-        subtitle="Enter your email and we will send a secure reset link if the account exists."
-        panelTitle={`Recover access to ${application.name}`}
-        panelDescription="Password reset links are short-lived, single-use, and invalidate active refresh tokens after a successful change."
+        title="Esqueceu sua senha?"
+        subtitle="Informe o e-mail da conta. A resposta preserva sua privacidade mesmo quando o cadastro não existe."
+        formEyebrow="Recuperação de acesso"
+        panelTitle={`Recupere o acesso ao ${application.name}`}
+        panelDescription="O link de redefinição é temporário e de uso único. Sua conta permanece protegida durante todo o processo."
         features={[
           {
-            title: 'Privacy preserving',
-            description: 'The response never reveals whether an email is registered',
+            title: 'Privacidade preservada',
+            description: 'A resposta não revela se o e-mail está cadastrado',
             icon: ShieldCheck,
           },
           {
-            title: 'Single-use links',
-            description: 'Each new request invalidates previous reset links',
+            title: 'Link de uso único',
+            description: 'Cada nova solicitação invalida os links anteriores',
             icon: KeyRound,
           },
           {
-            title: 'Email delivery',
-            description: 'Local development uses the bundled Mailpit inbox',
-            icon: MailCheck,
+            title: 'Sessões protegidas',
+            description: 'Após redefinir a senha, os acessos antigos são revogados',
+            icon: LockKeyhole,
           },
         ]}
         footer={
           <Link href="/login" className="font-medium text-primary hover:underline">
-            Back to sign in
+            Voltar para o login
           </Link>
         }
       >

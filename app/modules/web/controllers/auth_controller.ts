@@ -33,7 +33,7 @@ export default class InertiaAuthController {
 
     session.flash(
       'success',
-      'If an account exists for that email, a password reset link has been sent.'
+      'Se existir uma conta com este e-mail, enviamos um link para redefinir a senha.'
     )
     return response.redirect().back()
   }
@@ -50,11 +50,12 @@ export default class InertiaAuthController {
       const service = await app.container.make(ResetPasswordService)
       await service.run(token, password)
 
-      session.flash('success', 'Password reset successfully. You can now sign in.')
+      session.flash('success', 'Senha redefinida com sucesso. Você já pode entrar.')
       return response.redirect().toPath('/login')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to reset password'
-      session.flash('errors', { general: message })
+    } catch {
+      session.flash('errors', {
+        general: 'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.',
+      })
       return response.redirect().back()
     }
   }
@@ -72,9 +73,10 @@ export default class InertiaAuthController {
         .generate(result.user, result.activeTenantId ? { tenantId: result.activeTenantId } : {})
 
       return response.redirect('/dashboard')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Invalid credentials'
-      session.flash('errors', { general: message })
+    } catch {
+      session.flash('errors', {
+        general: 'Não foi possível entrar. Verifique suas credenciais e tente novamente.',
+      })
       return response.redirect().back()
     }
   }
@@ -93,7 +95,7 @@ export default class InertiaAuthController {
       if (!emailVerificationSent) {
         session.flash(
           'error',
-          'Your account was created, but the verification email could not be delivered. Try resending it later.'
+          'Sua conta foi criada, mas o e-mail de verificação não pôde ser enviado. Tente reenviá-lo mais tarde.'
         )
       }
 
@@ -107,8 +109,9 @@ export default class InertiaAuthController {
       if (error && typeof error === 'object' && 'messages' in error) {
         session.flash('errors', error.messages as Record<string, unknown>)
       } else {
-        const message = error instanceof Error ? error.message : 'Registration failed'
-        session.flash('errors', { general: message })
+        session.flash('errors', {
+          general: 'Não foi possível concluir o cadastro. Tente novamente em instantes.',
+        })
       }
       return response.redirect().back()
     }

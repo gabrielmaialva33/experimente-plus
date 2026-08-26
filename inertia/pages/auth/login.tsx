@@ -1,44 +1,55 @@
 import { Head, Link } from '@inertiajs/react'
-import { ShieldCheck, Users, Zap } from 'lucide-react'
+import { ClipboardCheck, MapPin, Store } from 'lucide-react'
 
 import { LoginForm } from '~/components/auth'
 import { useApp } from '~/hooks/use_app'
 import { AuthSplitLayout } from '~/layouts/auth/auth_split_layout'
 
-export default function LoginPage() {
+interface LoginPageProps {
+  errors?: Record<string, string>
+}
+
+export default function LoginPage({ errors }: LoginPageProps) {
   const application = useApp()
 
   return (
     <>
-      <Head title="Login" />
+      <Head title="Entrar">
+        <meta name="robots" content="noindex,nofollow" />
+      </Head>
       <AuthSplitLayout
-        title="Sign in"
-        subtitle="Enter your email and password to access your account"
-        panelTitle={`Welcome back to ${application.name}`}
-        panelDescription="Secure account access, global RBAC, active-workspace context and a typed full-stack foundation."
+        title="Entrar"
+        subtitle="Acesse o Portal para gerenciar organizações, unidades e publicações."
+        formEyebrow="Portal do parceiro"
+        panelTitle={`Bem-vindo de volta ao ${application.name}`}
+        panelDescription="Gerencie suas organizações e unidades, acompanhe a moderação e mantenha sua presença no catálogo sempre atualizada."
         features={[
           {
-            title: 'Role-based access',
-            description: 'Global roles and contextual permissions',
-            icon: ShieldCheck,
+            title: 'Portal do parceiro',
+            description: 'Organize empresas e unidades em um só lugar',
+            icon: Store,
           },
-          { title: 'Multi-tenant', description: 'Switch workspaces in one click', icon: Users },
           {
-            title: 'Account lifecycle',
-            description: 'JWT auth, verification and password recovery',
-            icon: Zap,
+            title: 'Fichas com qualidade',
+            description: 'Acompanhe a completude e envie para moderação',
+            icon: ClipboardCheck,
+          },
+          {
+            title: 'Presença regional',
+            description: 'Apareça para quem explora a sua cidade',
+            icon: MapPin,
           },
         ]}
         footer={
           <>
-            <span className="text-muted-foreground">Don&apos;t have an account? </span>
+            <span className="text-muted-foreground">Ainda não tem conta? </span>
             <Link href="/register" className="font-medium text-primary hover:underline">
-              Sign up
+              Criar conta
             </Link>
           </>
         }
       >
-        <LoginForm />
+        <LoginForm errors={errors} />
       </AuthSplitLayout>
     </>
   )

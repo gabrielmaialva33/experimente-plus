@@ -1,9 +1,12 @@
 import { Link } from '@inertiajs/react'
-import { CheckCircle2, type LucideIcon } from 'lucide-react'
+import { CheckCircle2, Compass, ShieldCheck, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { AppBrand } from '~/components/app_brand'
+import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { useApp } from '~/hooks/use_app'
+import { cn } from '~/lib/utils'
 
 interface Feature {
   title: string
@@ -16,102 +19,137 @@ interface AuthSplitLayoutProps {
   subtitle: string
   panelTitle: string
   panelDescription: string
+  formEyebrow?: string
   features?: Feature[]
   children: ReactNode
   footer?: ReactNode
+  contentWidth?: 'default' | 'wide'
 }
 
-/**
- * Centered auth layout with a branded gradient panel on the right (desktop).
- * Shared by the login and register pages so they stay visually consistent.
- */
 export function AuthSplitLayout({
   title,
   subtitle,
   panelTitle,
   panelDescription,
+  formEyebrow = 'Acesso seguro',
   features = [],
   children,
   footer,
+  contentWidth = 'default',
 }: AuthSplitLayoutProps) {
   const application = useApp()
-  const brandMark = application.name.trim().charAt(0).toUpperCase() || 'A'
 
   return (
-    <div className="flex min-h-screen">
-      {/* Form side */}
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between p-6 lg:p-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">{brandMark}</span>
+    <>
+      <SkipLink />
+      <div className="flex min-h-screen overflow-x-clip bg-background">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center justify-between gap-3 border-b px-4 py-4 sm:px-6 lg:border-0 lg:px-8 lg:py-6">
+            <AppBrand href="/" />
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/cidades"
+                className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline-flex"
+              >
+                <Compass className="size-4" /> Explorar catálogo
+              </Link>
+              <ThemeToggle />
             </div>
-            <span className="text-xl font-bold">{application.name}</span>
-          </Link>
-          <ThemeToggle />
-        </header>
+          </header>
 
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="w-full max-w-[400px]">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-              <p className="mt-2 text-muted-foreground">{subtitle}</p>
-            </div>
-
-            {children}
-
-            {footer && <div className="mt-6 text-center text-sm">{footer}</div>}
-          </div>
-        </div>
-
-        <footer className="p-6 text-sm text-muted-foreground lg:p-8">
-          &copy; {new Date().getFullYear()} {application.name}. All rights reserved.
-        </footer>
-      </div>
-
-      {/* Brand panel */}
-      <div className="relative hidden overflow-hidden bg-primary lg:block lg:w-[45%] xl:w-[50%]">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/70" />
-        <svg className="absolute inset-0 size-full opacity-20" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern
-              id="auth-grid"
-              x="0"
-              y="0"
-              width="32"
-              height="32"
-              patternUnits="userSpaceOnUse"
+          <main
+            id={MAIN_CONTENT_ID}
+            tabIndex={-1}
+            className="flex flex-1 items-center justify-center px-4 py-9 sm:px-6 sm:py-12 lg:px-8"
+          >
+            <div
+              className={cn('w-full', contentWidth === 'wide' ? 'max-w-[480px]' : 'max-w-[420px]')}
             >
-              <circle cx="16" cy="16" r="1.5" fill="currentColor" className="text-white" />
-            </pattern>
-          </defs>
-          <rect x="0" y="0" width="100%" height="100%" fill="url(#auth-grid)" />
-        </svg>
+              <div className="mb-7">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                  <ShieldCheck className="size-3.5" /> {formEyebrow}
+                </p>
+                <h1 className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl">{title}</h1>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
+                  {subtitle}
+                </p>
+              </div>
 
-        <div className="relative flex h-full flex-col justify-center p-12 text-primary-foreground xl:p-16">
-          <h2 className="max-w-md text-4xl font-bold leading-tight">{panelTitle}</h2>
-          <p className="mt-4 max-w-md text-lg text-primary-foreground/80">{panelDescription}</p>
+              <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">{children}</div>
 
-          {features.length > 0 && (
-            <ul className="mt-10 space-y-4">
-              {features.map((feature) => {
-                const Icon = feature.icon ?? CheckCircle2
-                return (
-                  <li key={feature.title} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
-                      <Icon className="size-4.5" />
-                    </span>
-                    <div>
-                      <p className="font-semibold">{feature.title}</p>
-                      <p className="text-sm text-primary-foreground/75">{feature.description}</p>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+              {footer ? <div className="mt-6 text-center text-sm">{footer}</div> : null}
+
+              <Link
+                href="/cidades"
+                className="mx-auto mt-5 flex w-fit items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:hidden"
+              >
+                <Compass className="size-3.5" /> Explorar o catálogo sem entrar
+              </Link>
+            </div>
+          </main>
+
+          <footer className="px-6 py-5 text-center text-xs text-muted-foreground lg:px-8 lg:text-start">
+            &copy; {new Date().getFullYear()} {application.name}. Todos os direitos reservados.
+          </footer>
         </div>
+
+        <aside
+          aria-labelledby="auth-benefits-title"
+          className="relative hidden overflow-hidden bg-primary lg:block lg:w-[44%] xl:w-[48%]"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/75" />
+          <div className="absolute -end-32 -top-24 size-96 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-28 -start-24 size-80 rounded-full bg-warning/20 blur-3xl" />
+          <div className="absolute inset-0 bg-grid-pattern opacity-[0.16]" />
+
+          <div className="relative flex h-full flex-col justify-between p-10 text-primary-foreground xl:p-14">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur">
+              <ShieldCheck className="size-3.5" /> Portal do parceiro
+            </div>
+
+            <div className="my-auto py-12">
+              <h2
+                id="auth-benefits-title"
+                className="max-w-lg text-4xl font-bold leading-[1.08] tracking-[-0.035em] xl:text-5xl"
+              >
+                {panelTitle}
+              </h2>
+              <p className="mt-5 max-w-lg text-base leading-7 text-primary-foreground/78 xl:text-lg">
+                {panelDescription}
+              </p>
+
+              {features.length > 0 ? (
+                <ul className="mt-10 grid max-w-lg gap-4">
+                  {features.map((feature) => {
+                    const Icon = feature.icon ?? CheckCircle2
+                    return (
+                      <li
+                        key={feature.title}
+                        className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur-sm"
+                      >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/12">
+                          <Icon className="size-4.5" />
+                        </span>
+                        <div>
+                          <p className="font-semibold">{feature.title}</p>
+                          <p className="mt-1 text-sm leading-6 text-primary-foreground/72">
+                            {feature.description}
+                          </p>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : null}
+            </div>
+
+            <p className="text-xs leading-5 text-primary-foreground/65">
+              A descoberta pública permanece disponível sem login. O acesso é necessário apenas para
+              gerenciar organizações, unidades e operações.
+            </p>
+          </div>
+        </aside>
       </div>
-    </div>
+    </>
   )
 }
