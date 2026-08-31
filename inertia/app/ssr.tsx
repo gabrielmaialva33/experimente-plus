@@ -2,6 +2,7 @@ import { renderToString } from 'react-dom/server'
 import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react'
 import type { RenderInertiaSsrApp } from '@adonisjs/inertia/types'
 
+import { NetworkNotice } from '~/components/network_notice'
 import { ThemeProvider } from '~/providers/theme_provider'
 import { QueryProvider } from '~/providers/query_provider'
 
@@ -29,10 +30,18 @@ const render: RenderInertiaSsrApp = (page) => {
 
       return paginas[`../pages/${name}.tsx`].default
     },
+    /**
+     * This tree must match `inertia/app/app.tsx` node for node. React derives
+     * `useId` values from the position of each node, so an element that exists
+     * on only one side shifts every id after it and makes hydration fail across
+     * the whole page — `NetworkNotice` renders null here, but it still has to
+     * occupy the same slot it occupies on the client.
+     */
     setup: ({ App, props }) => (
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryProvider>
           <App {...props} />
+          <NetworkNotice />
         </QueryProvider>
       </ThemeProvider>
     ),
