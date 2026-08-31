@@ -128,6 +128,26 @@ export const DEFAULT_PERMISSION_ACTIONS: Partial<
     IPermission.Actions.RESTORE,
     IPermission.Actions.ARCHIVE,
   ],
+  [IPermission.Resources.BENEFIT_EDITIONS]: [
+    IPermission.Actions.CREATE,
+    IPermission.Actions.READ,
+    IPermission.Actions.UPDATE,
+    IPermission.Actions.LIST,
+    IPermission.Actions.ARCHIVE,
+  ],
+  [IPermission.Resources.BENEFIT_OFFERS]: [
+    IPermission.Actions.CREATE,
+    IPermission.Actions.READ,
+    IPermission.Actions.UPDATE,
+    IPermission.Actions.LIST,
+    IPermission.Actions.ARCHIVE,
+  ],
+  [IPermission.Resources.BENEFIT_ACCESSES]: [
+    IPermission.Actions.CREATE,
+    IPermission.Actions.READ,
+    IPermission.Actions.LIST,
+    IPermission.Actions.REVOKE,
+  ],
   [IPermission.Resources.MEDIA]: [
     IPermission.Actions.CREATE,
     IPermission.Actions.READ,

@@ -1,11 +1,9 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 
-import City from '#modules/geography/models/city'
-import Region from '#modules/geography/models/region'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
-import Category from '#modules/taxonomy/models/category'
-import CategoryFamily from '#modules/taxonomy/models/category_family'
+import { seedDevelopmentBenefits } from '#database/support/development_benefits'
+import { seedDevelopmentCatalog } from '#database/support/development_catalog'
 import { seedDevelopmentEstablishments } from '#database/support/development_establishments'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
@@ -28,6 +26,28 @@ export default class extends BaseSeeder {
     const rootRole = await Role.findByOrFail('slug', IRole.Slugs.ROOT)
     await user.related('roles').sync([rootRole.id])
 
+    const partner = await User.updateOrCreate(
+      { email: env.get('DEV_PARTNER_EMAIL', 'partner@experimente.local') },
+      {
+        full_name: env.get('DEV_PARTNER_NAME', 'Parceiro Experimente+'),
+        username: env.get('DEV_PARTNER_USERNAME', 'partner'),
+        password: env.get('DEV_PARTNER_PASSWORD', 'experimente123'),
+        is_deleted: false,
+      }
+    )
+    const holder = await User.updateOrCreate(
+      { email: env.get('DEV_CUSTOMER_EMAIL', 'cliente@experimente.local') },
+      {
+        full_name: env.get('DEV_CUSTOMER_NAME', 'Cliente Experimente+'),
+        username: env.get('DEV_CUSTOMER_USERNAME', 'cliente'),
+        password: env.get('DEV_CUSTOMER_PASSWORD', 'experimente123'),
+        is_deleted: false,
+      }
+    )
+    const userRole = await Role.findByOrFail('slug', IRole.Slugs.USER)
+    await partner.related('roles').sync([userRole.id])
+    await holder.related('roles').sync([userRole.id])
+
     const tenant = await Tenant.updateOrCreate(
       { slug: 'development' },
       {
@@ -40,111 +60,11 @@ export default class extends BaseSeeder {
     await user.related('tenants').sync({
       [tenant.id]: { role: 'owner' },
     })
+    await partner.related('tenants').sync({ [tenant.id]: { role: 'member' } })
+    await holder.related('tenants').sync({ [tenant.id]: { role: 'member' } })
 
-    const region = await Region.updateOrCreate(
-      { tenant_id: tenant.id, slug: 'norte-do-parana' },
-      {
-        tenant_id: tenant.id,
-        name: 'Norte do Paraná',
-        slug: 'norte-do-parana',
-        description: 'Região demonstrativa para desenvolvimento local.',
-        sort_order: 0,
-        is_active: true,
-      }
-    )
-
-    await City.updateOrCreate(
-      { tenant_id: tenant.id, slug: 'cornelio-procopio' },
-      {
-        tenant_id: tenant.id,
-        region_id: region.id,
-        name: 'Cornélio Procópio',
-        slug: 'cornelio-procopio',
-        state_code: 'PR',
-        country_code: 'BR',
-        ibge_code: null,
-        timezone: 'America/Sao_Paulo',
-        latitude: null,
-        longitude: null,
-        sort_order: 0,
-        is_active: true,
-      }
-    )
-
-    await City.updateOrCreate(
-      { tenant_id: tenant.id, slug: 'londrina' },
-      {
-        tenant_id: tenant.id,
-        region_id: region.id,
-        name: 'Londrina',
-        slug: 'londrina',
-        state_code: 'PR',
-        country_code: 'BR',
-        ibge_code: null,
-        timezone: 'America/Sao_Paulo',
-        latitude: null,
-        longitude: null,
-        sort_order: 10,
-        is_active: true,
-      }
-    )
-
-    await City.updateOrCreate(
-      { tenant_id: tenant.id, slug: 'bandeirantes' },
-      {
-        tenant_id: tenant.id,
-        region_id: region.id,
-        name: 'Bandeirantes',
-        slug: 'bandeirantes',
-        state_code: 'PR',
-        country_code: 'BR',
-        ibge_code: null,
-        timezone: 'America/Sao_Paulo',
-        latitude: null,
-        longitude: null,
-        sort_order: 20,
-        is_active: true,
-      }
-    )
-
-    const foodFamily = await CategoryFamily.updateOrCreate(
-      { tenant_id: tenant.id, slug: 'comer-e-beber' },
-      {
-        tenant_id: tenant.id,
-        name: 'Comer & Beber',
-        slug: 'comer-e-beber',
-        description: 'Gastronomia e experiências para comer e beber.',
-        icon: 'utensils',
-        sort_order: 0,
-        is_active: true,
-      }
-    )
-
-    const categories = [
-      ['Restaurantes', 'restaurantes', 'utensils'],
-      ['Bares', 'bares', 'glass-water'],
-      ['Cafés', 'cafes', 'coffee'],
-      ['Padarias', 'padarias', 'croissant'],
-      ['Docerias', 'docerias', 'cake-slice'],
-    ] as const
-
-    for (const [name, slug, icon] of categories) {
-      await Category.updateOrCreate(
-        { tenant_id: tenant.id, slug },
-        {
-          tenant_id: tenant.id,
-          family_id: foodFamily.id,
-          parent_id: null,
-          name,
-          slug,
-          description: null,
-          icon,
-          sort_order: categories.findIndex((category) => category[1] === slug) * 10,
-          is_active: true,
-        }
-      )
-    }
-
+    await seedDevelopmentCatalog(tenant)
     await seedDevelopmentEstablishments(tenant, user)
+    await seedDevelopmentBenefits(tenant, user, partner, holder)
   }
 }
