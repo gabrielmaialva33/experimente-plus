@@ -1,0 +1,114 @@
+import { test } from '@japa/runner'
+import type { BrowserContext, Page } from 'playwright'
+
+import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
+
+type PresentationPagePayload = {
+  props: {
+    presentation: {
+      token: string
+      validation_url: string
+    }
+  }
+}
+
+async function signIn(page: Page, email: string, password: string) {
+  await page.goto('/login')
+  await page.fill('input[name="uid"]', email)
+  await page.fill('input[name="password"]', password)
+  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.waitForURL('**/dashboard', { timeout: 30_000 })
+}
+
+async function resetSession(browserContext: BrowserContext) {
+  await browserContext.clearCookies()
+  for (const page of browserContext.pages()) {
+    await page.close()
+  }
+}
+
+test.group('Benefit redemption browser flow', () => {
+  test('lets a holder present a benefit, a partner redeem it, and both see the receipt', async ({
+    assert,
+    browserContext,
+  }) => {
+    const scenario = await createBenefitFlowScenario({ suffix: 'browser-redemption' })
+    const password = scenario.credentials.password
+
+    await browserContext.grantPermissions(['clipboard-read', 'clipboard-write'])
+    const holderPage = await browserContext.newPage()
+    await signIn(holderPage, scenario.users.holder.email, password)
+    await holderPage.goto('/carteira')
+
+    await holderPage.getByRole('heading', { name: 'Minha carteira' }).waitFor()
+    await holderPage.getByText('Disponível agora', { exact: true }).waitFor()
+    await holderPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
+
+    const presentationResponsePromise = holderPage.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        response
+          .url()
+          .includes(`/wallet/accesses/${scenario.access.id}/offers/${scenario.offer.id}/use`)
+    )
+    await holderPage.getByRole('link', { name: 'Usar benefício' }).click()
+    const presentationResponse = await presentationResponsePromise
+    const payload = (await presentationResponse.json()) as PresentationPagePayload
+
+    await holderPage.getByText('Apresentação segura', { exact: true }).waitFor()
+    await holderPage
+      .getByRole('img', { name: 'QR Code temporário para validar o benefício' })
+      .waitFor()
+    assert.isTrue(payload.props.presentation.token.length > 40)
+    await holderPage.getByRole('button', { name: 'Copiar link de validação' }).click()
+    await holderPage.getByRole('button', { name: 'Link copiado' }).waitFor()
+    assert.equal(
+      await holderPage.evaluate(() =>
+        (
+          navigator as unknown as { clipboard: { readText(): Promise<string> } }
+        ).clipboard.readText()
+      ),
+      payload.props.presentation.validation_url
+    )
+
+    await resetSession(browserContext)
+
+    const partnerPage = await browserContext.newPage()
+    await signIn(partnerPage, scenario.users.partner.email, password)
+    await partnerPage.goto(payload.props.presentation.validation_url)
+
+    await partnerPage.getByRole('heading', { name: 'Validar benefício' }).waitFor()
+    await partnerPage.getByText('Apresentação válida', { exact: true }).waitFor()
+    await partnerPage.getByText(scenario.users.holder.full_name, { exact: false }).waitFor()
+    await partnerPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
+
+    partnerPage.once('dialog', (dialog) => dialog.accept())
+    await partnerPage.getByRole('button', { name: 'Confirmar utilização' }).click()
+    await partnerPage.waitForURL(/\/portal\/redemptions\/EXP-[A-F0-9]+$/, {
+      timeout: 30_000,
+    })
+    await partnerPage.getByText('Utilização confirmada', { exact: true }).waitFor()
+    await partnerPage.getByText(scenario.offer.terms!, { exact: true }).waitFor()
+
+    const receiptCode = new URL(partnerPage.url()).pathname.split('/').at(-1)
+    assert.exists(receiptCode)
+    await partnerPage.getByText(receiptCode!, { exact: true }).waitFor()
+
+    await resetSession(browserContext)
+
+    const holderHistoryPage = await browserContext.newPage()
+    await signIn(holderHistoryPage, scenario.users.holder.email, password)
+    await holderHistoryPage.goto('/wallet/history')
+
+    await holderHistoryPage.getByRole('heading', { name: 'Benefícios utilizados' }).waitFor()
+    await holderHistoryPage.getByText('1 resgate', { exact: true }).waitFor()
+    await holderHistoryPage.getByText(receiptCode!, { exact: true }).waitFor()
+    await holderHistoryPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
+    await holderHistoryPage.getByRole('link', { name: 'Ver comprovante' }).click()
+    await holderHistoryPage.waitForURL(`**/wallet/redemptions/${receiptCode}`)
+    await holderHistoryPage
+      .getByText('Regras vigentes no momento da utilização', { exact: true })
+      .waitFor()
+    await holderHistoryPage.getByText(scenario.offer.terms!, { exact: true }).waitFor()
+  })
+})
