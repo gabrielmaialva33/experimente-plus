@@ -102,16 +102,18 @@ pnpm dev
 
 As portas podem ser alteradas no `.env`.
 
-### Conta de desenvolvimento
+### Contas de desenvolvimento
 
-O seeder cria uma conta determinística:
+O seeder cria três contas determinísticas para percorrer o piloto completo:
 
 ```text
-E-mail: admin@experimente.local
-Senha:  experimente123
+Admin:    admin@experimente.local
+Parceiro: partner@experimente.local
+Cliente:  cliente@experimente.local
+Senha:    experimente123
 ```
 
-As credenciais são configuráveis pelas variáveis `DEV_ADMIN_*` e nunca devem ser reutilizadas fora do ambiente local.
+As credenciais são configuráveis pelas variáveis `DEV_ADMIN_*`, `DEV_PARTNER_*` e `DEV_CUSTOMER_*` e nunca devem ser reutilizadas fora do ambiente local. Os dados regionais, estabelecimentos, ofertas e acessos criados pelo seeder são fictícios.
 
 ## Comandos
 

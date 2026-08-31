@@ -24,6 +24,9 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 | [ADR-0016](0016-catalogo-publico-projecao-e-resolucao-de-operacao.md) | Catálogo público, projeção e operação              | hostname confiável, projeção reconstruível, busca e SSR     |
 | [ADR-0017](0017-analytics-de-descoberta-privacidade-e-agregacao.md)   | Analytics de descoberta                            | eventos pseudônimos, privacidade, agregação e retenção      |
 | [ADR-0018](0018-portais-operacionais-e-feedback-piloto.md)            | Portais operacionais e feedback do piloto          | parceiro, backoffice, onboarding derivado e feedback        |
+| [ADR-0019](0019-edicoes-e-ofertas-de-beneficio.md)                    | Edições e ofertas de benefício                     | campanhas sazonais, regras comerciais e autorização         |
+| [ADR-0020](0020-acesso-a-edicao-e-carteira-derivada.md)               | Acesso à edição e carteira derivada                | entitlement, carteira, histórico e privacidade              |
+| [ADR-0021](0021-resgate-transacional-com-apresentacao-temporaria.md)  | Resgate transacional e apresentação temporária     | QR assinado, replay, comprovante e histórico                |
 
 ## Regra de evolução
 
@@ -44,4 +47,7 @@ EP-05 — submissão e moderação               implementado e validado
 EP-06 — catálogo público                    implementado e validado
 EP-07 — analytics de descoberta             implementado e validado
 EP-08 — portal mínimo e piloto              implementado e validado
+EP-09 — benefícios controlados              implementado e validado
+EP-10 — acesso e carteira                    implementado e validado
+EP-11 — apresentação e resgate               implementado e validado
 ```

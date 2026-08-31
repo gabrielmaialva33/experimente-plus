@@ -68,11 +68,15 @@ Ações de descoberta são registradas
 - [`10-revisao-da-sobral-spec.md`](10-revisao-da-sobral-spec.md) — reconciliação explícita do rascunho recebido com domínio, ADRs e marcos.
 - [`11-analytics-de-descoberta.md`](11-analytics-de-descoberta.md) — contrato de eventos, privacidade, agregação, retenção e métricas do parceiro.
 - [`12-portal-minimo-e-piloto.md`](12-portal-minimo-e-piloto.md) — operação assistida, onboarding, editor, backoffice, feedback e roteiro do piloto.
+- [`13-beneficios-controlados.md`](13-beneficios-controlados.md) — primeiro corte comercial de edições e ofertas, antes de acesso, pagamento e resgate.
+- [`14-acesso-e-carteira.md`](14-acesso-e-carteira.md) — concessão de acesso e carteira com benefícios derivados.
+- [`15-apresentacao-e-resgate.md`](15-apresentacao-e-resgate.md) — QR temporário, validação do parceiro, resgate transacional, comprovante e históricos.
+- [`16-piloto-operacional.md`](16-piloto-operacional.md) — ambiente reproduzível, roteiro assistido, evidências e backlog para validação em campo.
 - [`../architecture/decisions/`](../architecture/decisions/README.md) — ADRs aceitos que transformam o planejamento em contratos técnicos.
 
 ## Estado arquitetural
 
-Os marcos EP-00 a EP-08 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia, catálogo, analytics e portais operacionais possuem ADRs aceitos e implementação canônica com regressões. A etapa seguinte é a validação operacional do piloto regional e a priorização do backlog com evidência de uso.
+Os marcos EP-00 a EP-11 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia, catálogo, analytics, portais operacionais, edições, ofertas, acesso, carteira derivada, apresentação e resgate possuem ADRs aceitos e implementação canônica com regressões. Checkout, cobrança e conciliação financeira permanecem cortes posteriores.
 
 ## Regra de mudança
 
