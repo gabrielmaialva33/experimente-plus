@@ -27,6 +27,7 @@ yarn-error.log
 # Local coding agents
 .claude
 .winx
+.playwright-cli
 
 # AdonisJS specific
 storage/uploads/*
