@@ -39,11 +39,23 @@ declare module '@adonisjs/inertia/types' {
     'portal/organizations/show': Record<string, any>
     'portal/establishments/new': Record<string, any>
     'portal/establishments/edit': Record<string, any>
+    'portal/establishments/benefits': Record<string, any>
+    'portal/redemptions/index': Record<string, any>
+    'portal/redemptions/validate': Record<string, any>
+    'portal/redemptions/receipt': Record<string, any>
 
     // Backoffice
     'backoffice/moderation/index': Record<string, any>
     'backoffice/moderation/show': Record<string, any>
     'backoffice/feedback/index': Record<string, any>
+    'backoffice/benefits/index': Record<string, any>
+    'backoffice/benefits/accesses': Record<string, any>
+
+    // Consumer
+    'wallet/index': Record<string, any>
+    'wallet/redemptions': Record<string, any>
+    'wallet/receipt': Record<string, any>
+    'wallet/present': Record<string, any>
 
     // Catalog
     'catalog/cities': { catalog: any }

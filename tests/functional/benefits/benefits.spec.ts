@@ -1,0 +1,394 @@
+import { test } from '@japa/runner'
+import testUtils from '@adonisjs/core/services/test_utils'
+import { DateTime } from 'luxon'
+
+import BenefitEdition from '#modules/benefits/models/benefit_edition'
+import BenefitOffer from '#modules/benefits/models/benefit_offer'
+import Establishment from '#modules/establishments/models/establishment'
+import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import City from '#modules/geography/models/city'
+import IRole from '#modules/roles/interfaces/role_interface'
+import { createEstablishmentScenario } from '#tests/functional/establishments/helpers'
+import { createUser } from '#tests/functional/organizations/helpers'
+
+async function createPublishedEstablishment(options: {
+  tenantId: number
+  organizationId: number
+  cityId: number
+  ownerId: number
+  reviewerId: number
+  suffix: string
+}) {
+  const establishment = await Establishment.create({
+    tenant_id: options.tenantId,
+    organization_id: options.organizationId,
+    lifecycle_status: 'active',
+    business_status: 'open',
+    published_revision_id: null,
+    created_by: options.ownerId,
+  })
+  const reviewedAt = DateTime.utc()
+  const revision = await EstablishmentRevision.create({
+    tenant_id: options.tenantId,
+    establishment_id: establishment.id,
+    version: 1,
+    status: 'approved',
+    city_id: options.cityId,
+    public_name: `Café participante ${options.suffix}`,
+    slug: `cafe-participante-${options.suffix}`,
+    short_description: 'Uma unidade publicada para o piloto de benefícios.',
+    description: null,
+    public_phone: null,
+    whatsapp: null,
+    public_email: null,
+    website: null,
+    instagram: null,
+    booking_url: null,
+    availability_type: 'regular_hours',
+    based_on_revision_id: null,
+    created_by: options.ownerId,
+    submitted_at: reviewedAt,
+    reviewed_by: options.reviewerId,
+    reviewed_at: reviewedAt,
+    review_notes: 'Publicação preparada pelo cenário funcional.',
+    rules_version: 2,
+  })
+
+  establishment.published_revision_id = revision.id
+  await establishment.save()
+  return establishment
+}
+
+function editionPayload(cityId: number) {
+  return {
+    city_id: cityId,
+    name: 'Experimente a cidade 2026/2027',
+    description: 'Edição regional para validar benefícios dos parceiros.',
+    price_cents: 14990,
+    currency: 'BRL',
+    sales_starts_at: '2026-09-01T09:00:00-03:00',
+    sales_ends_at: '2026-12-20T23:59:00-03:00',
+    usage_starts_at: '2026-09-15T00:00:00-03:00',
+    usage_ends_at: '2027-06-30T23:59:00-03:00',
+  }
+}
+
+test.group('Benefits', (group) => {
+  group.each.setup(() => testUtils.db().withGlobalTransaction())
+
+  test('allows only operation administrators to create editions', async ({ client, assert }) => {
+    const scenario = await createEstablishmentScenario('benefit-edition')
+    const admin = await createUser({
+      prefix: 'benefit-admin',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.ADMIN,
+      tenantRole: 'admin',
+    })
+
+    const forbidden = await client
+      .post('/api/v1/admin/benefit-editions')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json(editionPayload(scenario.city.id))
+    forbidden.assertStatus(403)
+
+    const created = await client
+      .post('/api/v1/admin/benefit-editions')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+      .json(editionPayload(scenario.city.id))
+    created.assertStatus(201)
+    assert.equal(created.body().status, 'draft')
+    assert.equal(created.body().slug, 'experimente-a-cidade-2026-2027')
+    assert.equal(created.body().city.id, scenario.city.id)
+
+    const available = await client
+      .get('/api/v1/benefit-editions')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    available.assertStatus(200)
+    assert.deepEqual(
+      available.body().map((edition: { id: number }) => edition.id),
+      [created.body().id]
+    )
+  })
+
+  test('completes edition and offer workflow with explicit state transitions', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('benefit-workflow')
+    const admin = await createUser({
+      prefix: 'workflow-admin',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.ADMIN,
+      tenantRole: 'admin',
+    })
+    const establishment = await createPublishedEstablishment({
+      tenantId: scenario.tenant.id,
+      organizationId: scenario.organization.id,
+      cityId: scenario.city.id,
+      ownerId: scenario.owner.id,
+      reviewerId: admin.id,
+      suffix: 'workflow',
+    })
+
+    const editionResponse = await client
+      .post('/api/v1/admin/benefit-editions')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+      .json(editionPayload(scenario.city.id))
+    editionResponse.assertStatus(201)
+    const editionId = Number(editionResponse.body().id)
+
+    const emptyPublish = await client
+      .post(`/api/v1/admin/benefit-editions/${editionId}/publish`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+    emptyPublish.assertStatus(400)
+
+    const offerResponse = await client
+      .post(`/api/v1/establishments/${establishment.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        edition_id: editionId,
+        title: 'Peça um café especial e ganhe outro',
+        description: 'O segundo café deve ter valor igual ou menor ao primeiro.',
+        benefit_type: 'buy_one_get_one',
+        terms: 'Válido de terça a sexta, exceto feriados.',
+        available_weekdays_mask: 60,
+        daily_start_time: '14:00',
+        daily_end_time: '18:00',
+        reservation_required: false,
+        on_premise_only: true,
+        minimum_party_size: 2,
+      })
+    offerResponse.assertStatus(201)
+    assert.equal(offerResponse.body().status, 'draft')
+
+    const duplicate = await client
+      .post(`/api/v1/establishments/${establishment.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        edition_id: editionId,
+        title: 'Oferta duplicada',
+        description: 'Esta oferta deve ser recusada pelo domínio.',
+        benefit_type: 'custom',
+      })
+    duplicate.assertStatus(400)
+
+    const offerId = Number(offerResponse.body().id)
+    const activate = await client
+      .post(`/api/v1/benefit-offers/${offerId}/activate`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    activate.assertStatus(200)
+    assert.equal(activate.body().status, 'active')
+
+    const activeEdit = await client
+      .put(`/api/v1/benefit-offers/${offerId}`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ title: 'Mudança silenciosa' })
+    activeEdit.assertStatus(400)
+
+    const publish = await client
+      .post(`/api/v1/admin/benefit-editions/${editionId}/publish`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+    publish.assertStatus(200)
+    assert.equal(publish.body().status, 'published')
+
+    const pauseOffer = await client
+      .post(`/api/v1/benefit-offers/${offerId}/pause`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    pauseOffer.assertStatus(200)
+
+    const update = await client
+      .put(`/api/v1/benefit-offers/${offerId}`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        title: '25% de desconto no café especial',
+        benefit_type: 'percentage',
+        discount_percentage: 25,
+        discount_amount_cents: null,
+      })
+    update.assertStatus(200)
+    assert.equal(update.body().benefit_type, 'percentage')
+    assert.equal(update.body().discount_percentage, 25)
+
+    const reactivate = await client
+      .post(`/api/v1/benefit-offers/${offerId}/activate`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    reactivate.assertStatus(200)
+
+    const edition = await BenefitEdition.findOrFail(editionId)
+    const offer = await BenefitOffer.findOrFail(offerId)
+    assert.equal(edition.status, 'published')
+    assert.equal(offer.status, 'active')
+  })
+
+  test('rejects unpublished units, city mismatches and organization IDOR', async ({ client }) => {
+    const scenario = await createEstablishmentScenario('benefit-integrity')
+    const admin = await createUser({
+      prefix: 'integrity-admin',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.ADMIN,
+      tenantRole: 'admin',
+    })
+    const outsider = await createUser({ prefix: 'integrity-outsider', tenant: scenario.tenant })
+    const edition = await client
+      .post('/api/v1/admin/benefit-editions')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+      .json(editionPayload(scenario.city.id))
+    edition.assertStatus(201)
+
+    const unpublished = await Establishment.create({
+      tenant_id: scenario.tenant.id,
+      organization_id: scenario.organization.id,
+      lifecycle_status: 'active',
+      business_status: 'open',
+      published_revision_id: null,
+      created_by: scenario.owner.id,
+    })
+    const unpublishedOffer = await client
+      .post(`/api/v1/establishments/${unpublished.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        edition_id: edition.body().id,
+        title: 'Oferta prematura',
+        description: 'Não deve existir antes da publicação da unidade.',
+        benefit_type: 'custom',
+      })
+    unpublishedOffer.assertStatus(400)
+
+    const otherCity = await City.create({
+      tenant_id: scenario.tenant.id,
+      region_id: scenario.region.id,
+      name: 'Outra cidade',
+      slug: 'outra-cidade-benefit-integrity',
+      state_code: 'PR',
+      country_code: 'BR',
+      ibge_code: null,
+      timezone: 'America/Sao_Paulo',
+      latitude: -23.3,
+      longitude: -51.1,
+      sort_order: 1,
+      is_active: true,
+    })
+    const establishment = await createPublishedEstablishment({
+      tenantId: scenario.tenant.id,
+      organizationId: scenario.organization.id,
+      cityId: otherCity.id,
+      ownerId: scenario.owner.id,
+      reviewerId: admin.id,
+      suffix: 'other-city',
+    })
+
+    const mismatch = await client
+      .post(`/api/v1/establishments/${establishment.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        edition_id: edition.body().id,
+        title: 'Oferta em cidade incompatível',
+        description: 'A cidade publicada não coincide com a edição.',
+        benefit_type: 'custom',
+      })
+    mismatch.assertStatus(400)
+
+    const hidden = await client
+      .get(`/api/v1/establishments/${establishment.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(outsider)
+    hidden.assertStatus(404)
+  })
+
+  test('validates typed benefit values before persistence', async ({ client }) => {
+    const scenario = await createEstablishmentScenario('benefit-values')
+    const admin = await createUser({
+      prefix: 'values-admin',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.ADMIN,
+      tenantRole: 'admin',
+    })
+    const establishment = await createPublishedEstablishment({
+      tenantId: scenario.tenant.id,
+      organizationId: scenario.organization.id,
+      cityId: scenario.city.id,
+      ownerId: scenario.owner.id,
+      reviewerId: admin.id,
+      suffix: 'values',
+    })
+    const edition = await client
+      .post('/api/v1/admin/benefit-editions')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+      .json(editionPayload(scenario.city.id))
+    edition.assertStatus(201)
+
+    const invalidPercentage = await client
+      .post(`/api/v1/establishments/${establishment.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        edition_id: edition.body().id,
+        title: 'Percentual incompleto',
+        description: 'Percentual sem valor precisa ser recusado.',
+        benefit_type: 'percentage',
+      })
+    invalidPercentage.assertStatus(400)
+
+    const invalidCustom = await client
+      .post(`/api/v1/establishments/${establishment.id}/benefit-offers`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        edition_id: edition.body().id,
+        title: 'Custom com percentual',
+        description: 'Modalidade custom não aceita percentual estruturado.',
+        benefit_type: 'custom',
+        discount_percentage: 10,
+      })
+    invalidCustom.assertStatus(400)
+  })
+  test('renders responsive operation and partner benefit surfaces', async ({ client, assert }) => {
+    const scenario = await createEstablishmentScenario('benefit-pages')
+    const admin = await createUser({
+      prefix: 'pages-admin',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.ADMIN,
+      tenantRole: 'admin',
+    })
+    const establishment = await createPublishedEstablishment({
+      tenantId: scenario.tenant.id,
+      organizationId: scenario.organization.id,
+      cityId: scenario.city.id,
+      ownerId: scenario.owner.id,
+      reviewerId: admin.id,
+      suffix: 'pages',
+    })
+
+    const backoffice = await client
+      .get('/backoffice/benefits')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+    backoffice.assertStatus(200)
+    assert.include(backoffice.text(), 'backoffice/benefits/index')
+
+    const partner = await client
+      .get(`/portal/establishments/${establishment.id}/benefits`)
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    partner.assertStatus(200)
+    assert.include(partner.text(), 'portal/establishments/benefits')
+    assert.include(partner.text(), 'Café participante pages')
+  })
+})
