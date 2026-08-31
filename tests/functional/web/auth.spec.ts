@@ -92,11 +92,14 @@ test.group('Web authentication', (group) => {
     assert.equal(clearedCookie!.value, '')
     assert.equal(clearedCookie!.path, '/')
 
+    // A browser hitting a protected page without a session belongs on the login
+    // screen, not on a bare 401 — the API keeps the JSON 401 instead.
     const dashboard = await client
       .get('/dashboard')
       .cookie(JWT_COOKIE_NAME, clearedCookie!.value)
       .redirects(0)
 
-    dashboard.assertStatus(401)
+    dashboard.assertStatus(302)
+    assert.equal(dashboard.header('location'), '/login')
   })
 })

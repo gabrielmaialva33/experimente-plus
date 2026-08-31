@@ -82,6 +82,28 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       })
     }
 
+    /**
+     * Handle authentication failures
+     *
+     * A browser navigating to a protected page should land on the login screen,
+     * not on a bare 401. API clients keep the JSON body they parse.
+     */
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'E_UNAUTHORIZED_ACCESS'
+    ) {
+      const isApiRequest = ctx.request.url().startsWith('/api/')
+      const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
+
+      if (!isApiRequest && !acceptsJson) {
+        const authError = error as any
+        ctx.session.flash('error', authError.message || 'Faça login para continuar.')
+        return ctx.response.redirect().toPath('/login')
+      }
+    }
+
     return super.handle(error, ctx)
   }
 
