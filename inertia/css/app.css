@@ -4,98 +4,118 @@
   :root {
     color-scheme: light;
 
-    /* Warm, regional identity: neutral surfaces with a food-and-culture accent. */
-    --background: 30 33% 98%;
-    --foreground: 224 28% 13%;
+    /*
+     * Regional identity in two brand colors: a deep institutional blue carries
+     * structure (navigation, headers, eyebrows, links) and a warm orange is
+     * reserved for action — primary CTA, benefit badges, prices. Blue covers
+     * area; orange stays scarce so it keeps its pull.
+     */
+    --background: 210 30% 98%;
+    --foreground: 215 30% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 28% 13%;
+    --card-foreground: 215 30% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 28% 13%;
+    --popover-foreground: 215 30% 13%;
 
-    --primary: 14 80% 45%;
+    --primary: 211 74% 28%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 27 30% 94%;
-    --secondary-foreground: 224 24% 18%;
+    --secondary: 212 26% 94%;
+    --secondary-foreground: 214 32% 20%;
 
-    --muted: 28 24% 95%;
-    --muted-foreground: 220 10% 43%;
+    --muted: 212 22% 95%;
+    --muted-foreground: 215 14% 42%;
 
-    --accent: 18 68% 95%;
-    --accent-foreground: 14 72% 36%;
+    --accent: 211 58% 94%;
+    --accent-foreground: 211 74% 28%;
 
-    --destructive: 0 72% 48%;
+    /* Action color. `cta` is the solid fill; `soft`/`accent` are the tinted pair. */
+    --cta: 20 92% 42%;
+    --cta-foreground: 0 0% 100%;
+    --cta-soft: 24 92% 95%;
+    --cta-accent: 18 88% 33%;
+
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 24 18% 88%;
-    --input: 24 18% 85%;
-    --ring: 14 80% 45%;
+    --border: 213 22% 88%;
+    --input: 213 22% 84%;
+    --ring: 211 74% 38%;
 
     --radius: 0.75rem;
 
-    --success: 146 65% 34%;
+    --success: 146 65% 32%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 48%;
+    --warning: 38 92% 45%;
     --warning-foreground: 28 90% 14%;
 
-    --info: 199 78% 42%;
+    --info: 196 82% 38%;
     --info-foreground: 0 0% 100%;
 
-    --chart-1: 14 80% 45%;
-    --chart-2: 158 58% 39%;
-    --chart-3: 38 88% 50%;
-    --chart-4: 264 60% 57%;
-    --chart-5: 335 68% 52%;
+    --chart-1: 211 74% 38%;
+    --chart-2: 20 92% 48%;
+    --chart-3: 196 80% 40%;
+    --chart-4: 158 55% 38%;
+    --chart-5: 264 55% 55%;
   }
 
   .dark {
     color-scheme: dark;
 
-    --background: 224 28% 9%;
-    --foreground: 30 20% 96%;
+    /*
+     * Dark keeps the same roles, lifted for contrast: the deep blue would read
+     * as background here, so `primary` brightens and takes dark navy text.
+     */
+    --background: 214 34% 9%;
+    --foreground: 210 28% 96%;
 
-    --card: 224 24% 12%;
-    --card-foreground: 30 20% 96%;
+    --card: 214 30% 12%;
+    --card-foreground: 210 28% 96%;
 
-    --popover: 224 24% 12%;
-    --popover-foreground: 30 20% 96%;
+    --popover: 214 30% 12%;
+    --popover-foreground: 210 28% 96%;
 
-    --primary: 16 90% 60%;
-    --primary-foreground: 224 30% 10%;
+    --primary: 211 80% 62%;
+    --primary-foreground: 214 45% 10%;
 
-    --secondary: 224 18% 18%;
-    --secondary-foreground: 30 20% 96%;
+    --secondary: 214 22% 18%;
+    --secondary-foreground: 210 28% 96%;
 
-    --muted: 224 16% 17%;
-    --muted-foreground: 220 11% 65%;
+    --muted: 214 20% 17%;
+    --muted-foreground: 214 14% 66%;
 
-    --accent: 15 24% 18%;
-    --accent-foreground: 16 86% 72%;
+    --accent: 212 34% 20%;
+    --accent-foreground: 211 82% 76%;
+
+    --cta: 22 94% 56%;
+    --cta-foreground: 22 62% 10%;
+    --cta-soft: 20 42% 18%;
+    --cta-accent: 24 94% 68%;
 
     --destructive: 0 68% 54%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 224 15% 21%;
-    --input: 224 15% 24%;
-    --ring: 16 90% 60%;
+    --border: 214 18% 22%;
+    --input: 214 18% 25%;
+    --ring: 211 80% 62%;
 
     --success: 145 62% 48%;
-    --success-foreground: 224 28% 9%;
+    --success-foreground: 214 34% 9%;
 
     --warning: 38 90% 56%;
     --warning-foreground: 28 90% 12%;
 
-    --info: 199 84% 62%;
-    --info-foreground: 224 28% 9%;
+    --info: 196 84% 60%;
+    --info-foreground: 214 34% 9%;
 
-    --chart-1: 16 90% 60%;
-    --chart-2: 158 58% 52%;
-    --chart-3: 38 90% 58%;
-    --chart-4: 264 70% 68%;
-    --chart-5: 335 74% 65%;
+    --chart-1: 211 80% 62%;
+    --chart-2: 22 94% 60%;
+    --chart-3: 196 84% 58%;
+    --chart-4: 158 58% 52%;
+    --chart-5: 264 70% 68%;
   }
 }
 
@@ -205,7 +225,7 @@
   }
 
   .icon-gradient-blue {
-    background: linear-gradient(to bottom right, #2563eb, #60a5fa);
+    background: linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--info)));
   }
 
   .icon-gradient-cyan {
@@ -225,7 +245,7 @@
   }
 
   .icon-gradient-orange {
-    background: linear-gradient(to bottom right, #fb923c, #ea580c);
+    background: linear-gradient(to bottom right, hsl(var(--cta) / 0.85), hsl(var(--cta)));
   }
 
   .icon-gradient-teal {
@@ -333,9 +353,9 @@
     );
   }
 
-  /* Gradient text utility */
+  /* Gradient text utility — brand blue running into the action orange. */
   .text-gradient {
-    background: linear-gradient(to right, hsl(var(--primary)), #60a5fa, #a855f7);
+    background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--info)), hsl(var(--cta)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

@@ -23,6 +23,8 @@ const badgeVariants = cva(
     variants: {
       variant: {
         primary: 'bg-primary text-primary-foreground',
+        // Benefit/offer highlights — the badge counterpart of the `cta` button.
+        cta: 'bg-cta text-cta-foreground',
         secondary: 'bg-secondary text-secondary-foreground',
         success:
           'bg-[var(--color-success-accent,var(--color-green-500))] text-[var(--color-success-foreground,var(--color-white))]',
@@ -61,6 +63,11 @@ const badgeVariants = cva(
           'text-[var(--color-primary-accent,var(--color-blue-700))] bg-[var(--color-primary-soft,var(--color-blue-50))] dark:bg-[var(--color-primary-soft,var(--color-blue-950))] dark:text-[var(--color-primary-soft,var(--color-blue-600))]',
       },
       {
+        variant: 'cta',
+        appearance: 'light',
+        className: 'bg-cta-soft text-cta-accent',
+      },
+      {
         variant: 'secondary',
         appearance: 'light',
         className: 'bg-secondary dark:bg-secondary/50 text-secondary-foreground',
@@ -97,6 +104,11 @@ const badgeVariants = cva(
           'text-[var(--color-primary-accent,var(--color-blue-700))] border-[var(--color-primary-soft,var(--color-blue-100))] bg-[var(--color-primary-soft,var(--color-blue-50))] dark:bg-[var(--color-primary-soft,var(--color-blue-950))] dark:border-[var(--color-primary-soft,var(--color-blue-900))] dark:text-[var(--color-primary-soft,var(--color-blue-600))]',
       },
       {
+        variant: 'cta',
+        appearance: 'outline',
+        className: 'bg-cta-soft text-cta-accent border-cta/25',
+      },
+      {
         variant: 'success',
         appearance: 'outline',
         className:
@@ -125,6 +137,11 @@ const badgeVariants = cva(
         variant: 'primary',
         appearance: 'ghost',
         className: 'text-primary',
+      },
+      {
+        variant: 'cta',
+        appearance: 'ghost',
+        className: 'text-cta',
       },
       {
         variant: 'secondary',
