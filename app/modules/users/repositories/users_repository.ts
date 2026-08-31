@@ -51,19 +51,26 @@ export default class UsersRepository
    * resolution path.
    */
   async findByIdWithActivePermissions(userId: number): Promise<User | null> {
-    return this.model
-      .query()
-      .where('id', userId)
-      .preload('permissions', (query) => {
-        query.where('granted', true)
-        query.where((subQuery) => {
-          subQuery.whereNull('expires_at').orWhere('expires_at', '>', new Date())
-        })
+    const user = await this.model.query().where('id', userId).first()
+    if (!user) {
+      return null
+    }
+
+    // Load the relations sequentially. Lucid may execute sibling preloads in
+    // parallel, which is unsafe when tests pin every query to one transaction
+    // client and is deprecated by pg 8.23+.
+    await user.load('permissions', (query) => {
+      query.where('granted', true)
+      query.where((subQuery) => {
+        subQuery.whereNull('expires_at').orWhere('expires_at', '>', new Date())
       })
-      .preload('roles', (query) => {
-        query.preload('permissions')
-      })
-      .first()
+    })
+    await user.load('roles')
+    for (const role of user.roles) {
+      await role.load('permissions')
+    }
+
+    return user
   }
 
   /**
