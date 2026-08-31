@@ -518,6 +518,12 @@ export default function EstablishmentEditorPage({
           actions={
             <>
               <Button asChild variant="outline" size="lg">
+                <Link href={`/portal/establishments/${establishment.id}/benefits`}>
+                  <Store />
+                  Benefícios
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
                 <Link
                   href={`/portal/organizations/${organizationId}`}
                   aria-disabled={editorBusy || submitting || undefined}

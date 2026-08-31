@@ -1,6 +1,15 @@
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ChevronsUpDown, LogOut, Menu, Settings, User } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronsUpDown,
+  LogOut,
+  Menu,
+  Settings,
+  TicketPercent,
+  User,
+} from 'lucide-react'
 
 import { AppBrand } from '~/components/app_brand'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
@@ -25,6 +34,12 @@ interface RouteContext {
 }
 
 const routeContexts: Array<RouteContext & { prefix: string }> = [
+  {
+    prefix: '/portal/redemptions/',
+    area: 'Portal do parceiro',
+    page: 'Validar benefício',
+  },
+  { prefix: '/portal/redemptions', area: 'Portal do parceiro', page: 'Validações' },
   { prefix: '/portal/establishments/', area: 'Portal do parceiro', page: 'Editor da unidade' },
   { prefix: '/portal/organizations/new', area: 'Portal do parceiro', page: 'Nova organização' },
   { prefix: '/portal/organizations/', area: 'Portal do parceiro', page: 'Organização' },
@@ -32,6 +47,7 @@ const routeContexts: Array<RouteContext & { prefix: string }> = [
   { prefix: '/backoffice/moderation/', area: 'Operação', page: 'Revisão de conteúdo' },
   { prefix: '/backoffice/moderation', area: 'Operação', page: 'Fila de moderação' },
   { prefix: '/backoffice/feedback', area: 'Operação', page: 'Feedback do piloto' },
+  { prefix: '/backoffice/benefits', area: 'Operação', page: 'Edições e acessos' },
   { prefix: '/users', area: 'Administração', page: 'Usuários' },
   { prefix: '/roles', area: 'Administração', page: 'Papéis' },
   { prefix: '/permissions', area: 'Administração', page: 'Permissões' },
@@ -168,6 +184,12 @@ function UserMenu() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/carteira">
+            <TicketPercent className="size-4" />
+            Minha carteira
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings">
             <User className="size-4" />

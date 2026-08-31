@@ -8,6 +8,8 @@ import {
   MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
+  ScanLine,
+  TicketPercent,
   Settings,
   ShieldCheck,
   Upload,
@@ -41,11 +43,18 @@ const navigationSections: NavigationSection[] = [
     label: 'Trabalho',
     items: [
       { title: 'Visão geral', href: '/dashboard', icon: Home, permission: 'dashboard.read' },
+      { title: 'Minha carteira', href: '/carteira', icon: TicketPercent },
       {
         title: 'Portal do parceiro',
         href: '/portal',
         icon: Building2,
         permission: 'organizations.list',
+      },
+      {
+        title: 'Validar benefícios',
+        href: '/portal/redemptions',
+        icon: ScanLine,
+        permission: 'benefit_offers.update',
       },
     ],
   },
@@ -57,6 +66,12 @@ const navigationSections: NavigationSection[] = [
         href: '/backoffice/moderation',
         icon: ClipboardCheck,
         permission: 'establishments.approve',
+      },
+      {
+        title: 'Benefícios',
+        href: '/backoffice/benefits',
+        icon: TicketPercent,
+        permission: 'benefit_editions.create',
       },
       {
         title: 'Feedback do piloto',
