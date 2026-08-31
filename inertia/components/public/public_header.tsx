@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react'
-import { Compass, LogIn, Menu, Store } from 'lucide-react'
+import { Compass, LayoutDashboard, LogIn, Menu, Store, TicketPercent } from 'lucide-react'
 import { useState } from 'react'
 
 import { AppBrand } from '~/components/app_brand'
@@ -16,11 +16,7 @@ import {
   SheetTrigger,
 } from '~/components/ui/sheet'
 import { cn } from '~/lib/utils'
-
-const navigation = [
-  { label: 'Explorar', href: '/cidades', icon: Compass },
-  { label: 'Para parceiros', href: '/register', icon: Store },
-] as const
+import type { AuthSharedProps } from '~/types'
 
 function isActivePath(currentUrl: string, href: string): boolean {
   if (href === '/') return currentUrl === '/'
@@ -29,7 +25,18 @@ function isActivePath(currentUrl: string, href: string): boolean {
 
 export function PublicHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { url } = usePage()
+  const { url, props } = usePage()
+  const auth = props.auth as AuthSharedProps | undefined
+  const authenticated = Boolean(auth?.user)
+  const navigation = authenticated
+    ? [
+        { label: 'Explorar', href: '/cidades', icon: Compass },
+        { label: 'Minha carteira', href: '/carteira', icon: TicketPercent },
+      ]
+    : [
+        { label: 'Explorar', href: '/cidades', icon: Compass },
+        { label: 'Para parceiros', href: '/register', icon: Store },
+      ]
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
@@ -60,12 +67,31 @@ export function PublicHeader() {
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
 
-          <Button variant="ghost" className="hidden sm:inline-flex" asChild>
-            <Link href="/login">Entrar</Link>
-          </Button>
-          <Button className="hidden md:inline-flex" asChild>
-            <Link href="/register">Cadastrar negócio</Link>
-          </Button>
+          {authenticated ? (
+            <>
+              <Button variant="ghost" className="hidden sm:inline-flex" asChild>
+                <Link href="/carteira">
+                  <TicketPercent />
+                  Carteira
+                </Link>
+              </Button>
+              <Button className="hidden md:inline-flex" asChild>
+                <Link href="/portal">
+                  <LayoutDashboard />
+                  Portal
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" className="hidden sm:inline-flex" asChild>
+                <Link href="/login">Entrar</Link>
+              </Button>
+              <Button className="hidden md:inline-flex" asChild>
+                <Link href="/register">Criar conta</Link>
+              </Button>
+            </>
+          )}
 
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
@@ -81,9 +107,13 @@ export function PublicHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[min(88vw,22rem)] p-0">
               <SheetHeader className="border-b px-6 py-5 text-start">
-                <SheetTitle>Explorar o Experimente+</SheetTitle>
+                <SheetTitle>
+                  {authenticated ? 'Sua experiência' : 'Explorar o Experimente+'}
+                </SheetTitle>
                 <SheetDescription>
-                  Descubra lugares e serviços ou gerencie a presença do seu negócio.
+                  {authenticated
+                    ? 'Descubra lugares, consulte seus benefícios e gerencie sua conta.'
+                    : 'Descubra lugares e serviços ou gerencie a presença do seu negócio.'}
                 </SheetDescription>
               </SheetHeader>
               <SheetBody className="flex flex-1 flex-col gap-2 px-4 py-5">
@@ -112,22 +142,45 @@ export function PublicHeader() {
                 })}
 
                 <div className="mt-auto grid gap-2 border-t pt-5">
-                  <SheetClose asChild>
-                    <Button variant="outline" size="lg" asChild>
-                      <Link href="/login">
-                        <LogIn className="size-4" />
-                        Entrar
-                      </Link>
-                    </Button>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Button size="lg" asChild>
-                      <Link href="/register">
-                        <Store className="size-4" />
-                        Cadastrar negócio
-                      </Link>
-                    </Button>
-                  </SheetClose>
+                  {authenticated ? (
+                    <>
+                      <SheetClose asChild>
+                        <Button variant="outline" size="lg" asChild>
+                          <Link href="/carteira">
+                            <TicketPercent className="size-4" />
+                            Abrir carteira
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button size="lg" asChild>
+                          <Link href="/portal">
+                            <Store className="size-4" />
+                            Portal do parceiro
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                    </>
+                  ) : (
+                    <>
+                      <SheetClose asChild>
+                        <Button variant="outline" size="lg" asChild>
+                          <Link href="/login">
+                            <LogIn className="size-4" />
+                            Entrar
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button size="lg" asChild>
+                          <Link href="/register">
+                            <Store className="size-4" />
+                            Criar conta
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                    </>
+                  )}
                 </div>
               </SheetBody>
             </SheetContent>
