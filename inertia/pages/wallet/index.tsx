@@ -230,7 +230,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
 
                             <div className="mt-auto pt-5">
                               {state === 'available' && offerId > 0 && accessId > 0 ? (
-                                <Button asChild size="lg" className="min-h-11 w-full">
+                                <Button asChild variant="cta" size="lg" className="min-h-11 w-full">
                                   <Link href={`/wallet/accesses/${accessId}/offers/${offerId}/use`}>
                                     <TicketCheck />
                                     Usar benefício
