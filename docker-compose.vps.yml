@@ -1,0 +1,30 @@
+# Production stack for this VPS. Database and cache are the shared
+# `streamix-*` containers on `shared_network`, so this file defines the app
+# alone and never publishes anything beyond the loopback.
+name: experimente-plus
+
+services:
+  app:
+    build:
+      context: .
+      target: production
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - '127.0.0.1:${PORT:-3400}:3333'
+    environment:
+      PORT: 3333
+      HOST: 0.0.0.0
+    volumes:
+      - storage:/app/storage
+      - uploads:/app/public/uploads
+    networks:
+      - shared_network
+
+volumes:
+  storage:
+  uploads:
+
+networks:
+  shared_network:
+    external: true

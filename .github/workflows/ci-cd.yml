@@ -86,3 +86,32 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    # Only master, only real pushes: a PR from a fork must never reach the host.
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Never let two deploys interleave on the same host.
+    concurrency:
+      group: deploy-vps
+      cancel-in-progress: false
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # The deploy key carries a forced command (/opt/experimente-plus/deploy.sh)
+      # in authorized_keys, so the argument below is ignored by design and this
+      # key cannot run anything else on the host. deploy.sh pulls master,
+      # rebuilds, restarts, waits for HTTP 200, and rolls the code back on failure.
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" deploy
