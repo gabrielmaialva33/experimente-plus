@@ -80,7 +80,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
 
       <div className="mt-5 grid gap-2.5">
         {detail.contacts.whatsapp ? (
-          <Button size="lg" className="h-11 justify-start" asChild>
+          <Button variant="cta" size="lg" className="h-11 justify-start" asChild>
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'whatsapp')}
               target="_blank"

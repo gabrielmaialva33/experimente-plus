@@ -127,7 +127,7 @@ export function CatalogSearchForm({
 
         <input type="hidden" name="per_page" value={perPage} />
 
-        <Button type="submit" size="lg" className="h-11">
+        <Button type="submit" variant="cta" size="lg" className="h-11">
           <Search aria-hidden="true" className="size-4" /> Buscar
         </Button>
       </form>

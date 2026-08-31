@@ -87,7 +87,7 @@ export function PublicHeader() {
               <Button variant="ghost" className="hidden sm:inline-flex" asChild>
                 <Link href="/login">Entrar</Link>
               </Button>
-              <Button className="hidden md:inline-flex" asChild>
+              <Button variant="cta" className="hidden md:inline-flex" asChild>
                 <Link href="/register">Criar conta</Link>
               </Button>
             </>
@@ -172,7 +172,7 @@ export function PublicHeader() {
                         </Button>
                       </SheetClose>
                       <SheetClose asChild>
-                        <Button size="lg" asChild>
+                        <Button variant="cta" size="lg" asChild>
                           <Link href="/register">
                             <Store className="size-4" />
                             Criar conta

@@ -42,7 +42,7 @@ export function CatalogShell({
 
   return (
     <PublicShell title={title} description={description} image={image}>
-      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/10 via-background to-warning/10">
+      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/10 via-background to-cta/10">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.22] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
           {breadcrumbs.length > 0 ? (

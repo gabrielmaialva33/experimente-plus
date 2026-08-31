@@ -208,7 +208,7 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
               <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 p-5 text-white sm:p-7">
                 <div className="min-w-0">
                   {detail.isSponsored ? (
-                    <Badge variant="primary" className="mb-3 gap-1 rounded-full shadow-sm">
+                    <Badge variant="cta" className="mb-3 gap-1 rounded-full shadow-sm">
                       <Sparkles className="size-3" /> Destaque
                     </Badge>
                   ) : null}

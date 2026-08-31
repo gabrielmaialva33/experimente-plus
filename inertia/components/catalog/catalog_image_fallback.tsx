@@ -16,7 +16,7 @@ export function CatalogImageFallback({ name, categoryName, className }: CatalogI
       role="img"
       aria-label={`Imagem ilustrativa de ${name}`}
       className={cn(
-        'relative isolate flex overflow-hidden bg-gradient-to-br from-primary/20 via-accent to-warning/25 text-foreground',
+        'relative isolate flex overflow-hidden bg-gradient-to-br from-primary/25 via-accent to-cta/12 text-foreground',
         className
       )}
     >
@@ -30,7 +30,7 @@ export function CatalogImageFallback({ name, categoryName, className }: CatalogI
       />
       <div
         aria-hidden="true"
-        className="absolute -end-12 bottom-0 size-48 rounded-full bg-warning/35 blur-3xl"
+        className="absolute -end-12 bottom-0 size-48 rounded-full bg-cta/20 blur-3xl"
       />
 
       <div className="relative m-auto flex max-w-[80%] flex-col items-center gap-3 text-center">

@@ -64,10 +64,10 @@ export default function Home() {
       title="Experimente+ — Descubra o melhor da sua região"
       description="Encontre restaurantes, cafés, cultura, bem-estar e serviços locais em cidades do Norte do Paraná."
     >
-      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/12 via-background to-warning/12">
+      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/12 via-background to-cta/12">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.24] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         <div className="absolute -start-32 top-20 size-80 rounded-full bg-primary/12 blur-3xl" />
-        <div className="absolute -end-24 bottom-0 size-72 rounded-full bg-warning/15 blur-3xl" />
+        <div className="absolute -end-24 bottom-0 size-72 rounded-full bg-cta/15 blur-3xl" />
 
         <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:px-8 lg:py-28">
           <div className="max-w-3xl">
@@ -86,7 +86,7 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="h-12 px-6" asChild>
+              <Button variant="cta" size="lg" className="h-12 px-6" asChild>
                 <Link href="/cidades">
                   <Compass className="size-4" /> Explorar cidades
                 </Link>
@@ -247,7 +247,7 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Button size="lg" variant="secondary" className="h-12" asChild>
+              <Button size="lg" variant="cta" className="h-12" asChild>
                 <Link href="/register">
                   <Building2 className="size-4" /> Criar minha conta
                 </Link>
