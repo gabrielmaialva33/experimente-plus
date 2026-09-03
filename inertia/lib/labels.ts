@@ -42,6 +42,105 @@ export function operationRoleLabel(role: string | null | undefined): string {
   return role ? (OPERATION_ROLE_LABELS[role] ?? role) : 'Membro da operação'
 }
 
+export const GLOBAL_ROLE_LABELS: Record<string, string> = {
+  root: 'Responsável técnico',
+  admin: 'Administrador',
+  moderator: 'Moderador',
+  editor: 'Editor legado',
+  user: 'Explorador',
+  guest: 'Visitante',
+}
+
+export const GLOBAL_ROLE_DESCRIPTIONS: Record<string, string> = {
+  root: 'Acesso técnico integral à plataforma.',
+  admin: 'Opera cadastros, conteúdo e recursos administrativos.',
+  moderator: 'Analisa e decide sobre conteúdo submetido.',
+  editor: 'Papel global legado mantido pela fundação.',
+  user: 'Usa a descoberta e recursos pessoais; o Portal depende de vínculo com uma organização.',
+  guest: 'Papel base sem acesso privado por padrão.',
+}
+
+export function globalRoleLabel(slug: string, fallback?: string): string {
+  return GLOBAL_ROLE_LABELS[slug] ?? fallback ?? slug
+}
+
+export function globalRoleDescription(slug: string): string {
+  return GLOBAL_ROLE_DESCRIPTIONS[slug] ?? 'Papel global configurado na plataforma.'
+}
+
+export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
+  users: 'Usuários',
+  roles: 'Papéis',
+  permissions: 'Permissões',
+  files: 'Arquivos',
+  media: 'Mídia',
+  tenants: 'Operações',
+  regions: 'Regiões',
+  cities: 'Cidades',
+  category_families: 'Famílias de categoria',
+  categories: 'Categorias',
+  category_attributes: 'Atributos de categoria',
+  organizations: 'Organizações',
+  organization_members: 'Membros de organização',
+  organization_invitations: 'Convites de organização',
+  organization_claims: 'Solicitações de organização',
+  establishments: 'Unidades',
+  benefit_editions: 'Edições de benefício',
+  benefit_offers: 'Ofertas de benefício',
+  benefit_accesses: 'Acessos a edições',
+  analytics: 'Analytics',
+  pilot_feedback: 'Feedback do piloto',
+  settings: 'Configurações',
+  reports: 'Relatórios',
+  audit: 'Auditoria',
+  dashboard: 'Painel operacional',
+}
+
+export const PERMISSION_ACTION_LABELS: Record<string, string> = {
+  create: 'Criar',
+  read: 'Consultar',
+  update: 'Atualizar',
+  delete: 'Excluir',
+  list: 'Listar',
+  export: 'Exportar',
+  import: 'Importar',
+  assign: 'Atribuir',
+  revoke: 'Revogar',
+  submit: 'Enviar para análise',
+  approve: 'Aprovar',
+  reject: 'Rejeitar',
+  request_changes: 'Solicitar correções',
+  suspend: 'Suspender',
+  restore: 'Restaurar',
+  resend: 'Reenviar',
+  accept: 'Aceitar',
+  archive: 'Arquivar',
+}
+
+export const PERMISSION_CONTEXT_LABELS: Record<string, string> = {
+  any: 'Todos',
+  own: 'Próprios',
+  team: 'Equipe',
+  department: 'Departamento',
+}
+
+function humanizeIdentifier(value: string): string {
+  const spaced = value.replaceAll('_', ' ').trim()
+  return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : value
+}
+
+export function permissionResourceLabel(resource: string): string {
+  return PERMISSION_RESOURCE_LABELS[resource] ?? humanizeIdentifier(resource)
+}
+
+export function permissionActionLabel(action: string): string {
+  return PERMISSION_ACTION_LABELS[action] ?? humanizeIdentifier(action)
+}
+
+export function permissionContextLabel(context: string): string {
+  return PERMISSION_CONTEXT_LABELS[context] ?? humanizeIdentifier(context)
+}
+
 export const PILOT_FEEDBACK_CONTEXT_LABELS: Record<string, string> = {
   general: 'Geral',
   onboarding: 'Onboarding',

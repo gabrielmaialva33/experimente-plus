@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   AVAILABILITY_TYPE_LABELS,
+  GLOBAL_ROLE_LABELS,
   MEDIA_MODERATION_STATUS_LABELS,
+  OPERATION_ROLE_LABELS,
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_STATUS_LABELS,
   PILOT_FEEDBACK_CONTEXT_LABELS,
@@ -12,9 +14,15 @@ import {
   availabilityTypeLabel,
   formatDate,
   formatDateTime,
+  globalRoleDescription,
+  globalRoleLabel,
   mediaModerationStatusLabel,
   organizationRoleLabel,
   organizationStatusLabel,
+  operationRoleLabel,
+  permissionActionLabel,
+  permissionContextLabel,
+  permissionResourceLabel,
   pilotFeedbackContextLabel,
   pilotFeedbackStatusLabel,
   reviewIssueSeverityLabel,
@@ -92,6 +100,26 @@ describe('labels', () => {
     expect(organizationRoleLabel(null)).toBe('Membro')
     expect(organizationRoleLabel(undefined)).toBe('Membro')
     expect(organizationRoleLabel('member')).toBe('Membro')
+  })
+
+  it('keeps operation memberships separate from global roles', () => {
+    expect(OPERATION_ROLE_LABELS).toMatchObject({
+      owner: 'Responsável pela operação',
+      member: 'Membro da operação',
+    })
+    expect(operationRoleLabel('owner')).toBe('Responsável pela operação')
+    expect(operationRoleLabel(null)).toBe('Membro da operação')
+
+    expect(GLOBAL_ROLE_LABELS.user).toBe('Explorador')
+    expect(globalRoleLabel('moderator')).toBe('Moderador')
+    expect(globalRoleDescription('user')).toContain('vínculo com uma organização')
+  })
+
+  it('presents permission identifiers as readable pt-BR labels', () => {
+    expect(permissionResourceLabel('benefit_accesses')).toBe('Acessos a edições')
+    expect(permissionActionLabel('request_changes')).toBe('Solicitar correções')
+    expect(permissionContextLabel('own')).toBe('Próprios')
+    expect(permissionResourceLabel('custom_resource')).toBe('Custom resource')
   })
 
   it('covers every pilot feedback context, including general and organization', () => {
