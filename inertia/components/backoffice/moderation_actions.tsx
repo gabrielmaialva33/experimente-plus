@@ -28,7 +28,7 @@ interface IssueDraft {
 interface ModerationActionsProps {
   revisionId: number
   blockingIssueCount: number
-  /** PublicationGate (or other) failure flashed by the controller as `errors.moderation`. */
+  /** Publication failure flashed by the controller as `errors.moderation`. */
   moderationError: string | null
 }
 
@@ -164,49 +164,50 @@ export function ModerationActions({
               aria-busy={activeOperation === 'approve'}
               className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6"
             >
-          <div>
-            <h2 className="text-lg font-semibold">Aprovar e publicar</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A publicação fica disponível somente quando todas as pendências estiverem resolvidas.
-            </p>
-          </div>
-          <EditorField
-            htmlFor="approve-reason"
-            label="Observação"
-            hint="Opcional"
-            error={approveForm.errors.reason ?? null}
-          >
-            <Textarea
-              id="approve-reason"
-              rows={4}
-              maxLength={1000}
-              disabled={busy}
-              value={approveForm.data.reason}
-              onChange={(event) => approveForm.setData('reason', event.target.value)}
-              placeholder="Contexto da aprovação para o histórico"
-              className="resize-y"
-            />
-          </EditorField>
-          <Button
-            type="submit"
-            variant="primary"
-            className="w-full"
-            disabled={busy || blockingIssueCount > 0}
-            title={
-              blockingIssueCount > 0
-                ? 'Resolva as pendências que bloqueiam a publicação antes de aprovar.'
-                : busyReason
-            }
-          >
-            {activeOperation === 'approve' ? (
-              <>
-                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-                Aprovando…
-              </>
-            ) : (
-              'Aprovar revisão'
-            )}
-          </Button>
+              <div>
+                <h2 className="text-lg font-semibold">Aprovar e publicar</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  A publicação fica disponível somente quando todas as pendências estiverem
+                  resolvidas.
+                </p>
+              </div>
+              <EditorField
+                htmlFor="approve-reason"
+                label="Observação"
+                hint="Opcional"
+                error={approveForm.errors.reason ?? null}
+              >
+                <Textarea
+                  id="approve-reason"
+                  rows={4}
+                  maxLength={1000}
+                  disabled={busy}
+                  value={approveForm.data.reason}
+                  onChange={(event) => approveForm.setData('reason', event.target.value)}
+                  placeholder="Contexto da aprovação para o histórico"
+                  className="resize-y"
+                />
+              </EditorField>
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                disabled={busy || blockingIssueCount > 0}
+                title={
+                  blockingIssueCount > 0
+                    ? 'Resolva as pendências que bloqueiam a publicação antes de aprovar.'
+                    : busyReason
+                }
+              >
+                {activeOperation === 'approve' ? (
+                  <>
+                    <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                    Aprovando…
+                  </>
+                ) : (
+                  'Aprovar revisão'
+                )}
+              </Button>
             </form>
           ) : null}
 
@@ -216,165 +217,169 @@ export function ModerationActions({
               aria-busy={activeOperation === 'request_changes'}
               className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6 xl:col-span-2"
             >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">Solicitar correções</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                A revisão volta ao parceiro e as pendências estruturadas permanecem no histórico
-                após a ressubmissão.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() =>
-                changesForm.setData('issues', [
-                  ...changesForm.data.issues,
-                  createIssueDraft(`issue-${issueKeyCounter.current++}`),
-                ])
-              }
-            >
-              <Plus aria-hidden="true" className="size-4" />
-              Adicionar pendência
-            </Button>
-          </div>
-
-          <EditorField
-            htmlFor="changes-reason"
-            label="Resumo da decisão"
-            required
-            error={changesErrors.reason ?? null}
-          >
-            <Input
-              id="changes-reason"
-              required
-              minLength={3}
-              maxLength={1000}
-              disabled={busy}
-              value={changesForm.data.reason}
-              onChange={(event) => changesForm.setData('reason', event.target.value)}
-              placeholder="O que precisa mudar antes da publicação"
-            />
-          </EditorField>
-
-          <div className="space-y-3">
-            {changesForm.data.issues.map((issue, index) => {
-              const fieldError = changesErrors[`issues.${index}.field`]
-              const messageError = changesErrors[`issues.${index}.message`]
-              const severityError = changesErrors[`issues.${index}.severity`]
-
-              return (
-                <div
-                  key={issue.key}
-                  className="grid gap-3 rounded-md border border-border bg-muted/40 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
-                >
-                  <EditorField
-                    htmlFor={`${issue.key}-field`}
-                    label="Onde corrigir"
-                    error={fieldError ?? null}
-                  >
-                    <select
-                      id={`${issue.key}-field`}
-                      required
-                      disabled={busy}
-                      value={issue.field}
-                      onChange={(event) => updateIssue(issue.key, { field: event.target.value })}
-                      className={editorSelectClassName}
-                    >
-                      {MODERATION_ISSUE_FIELD_GROUPS.map((group) => (
-                        <optgroup key={group.section} label={group.label}>
-                          {group.options.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </EditorField>
-                  <EditorField
-                    htmlFor={`${issue.key}-message`}
-                    label="Correção necessária"
-                    required
-                    error={messageError ?? null}
-                  >
-                    <Input
-                      id={`${issue.key}-message`}
-                      required
-                      minLength={3}
-                      maxLength={1000}
-                      disabled={busy}
-                      value={issue.message}
-                      onChange={(event) => updateIssue(issue.key, { message: event.target.value })}
-                      placeholder="Instrução clara para o parceiro"
-                    />
-                  </EditorField>
-                  <EditorField
-                    htmlFor={`${issue.key}-severity`}
-                    label="Severidade"
-                    error={severityError ?? null}
-                  >
-                    <select
-                      id={`${issue.key}-severity`}
-                      disabled={busy}
-                      value={issue.severity}
-                      onChange={(event) =>
-                        updateIssue(issue.key, {
-                          severity: event.target.value as IssueDraft['severity'],
-                        })
-                      }
-                      className={editorSelectClassName}
-                    >
-                      <option value="blocking">Bloqueio</option>
-                      <option value="warning">Aviso</option>
-                    </select>
-                  </EditorField>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive md:mt-7"
-                    disabled={busy || changesForm.data.issues.length === 1}
-                    onClick={() =>
-                      changesForm.setData(
-                        'issues',
-                        changesForm.data.issues.filter((item) => item.key !== issue.key)
-                      )
-                    }
-                    aria-label={`Remover pendência ${index + 1}`}
-                  >
-                    <Trash2 aria-hidden="true" className="size-4" />
-                  </Button>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Solicitar correções</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    A revisão volta ao parceiro e as pendências estruturadas permanecem no histórico
+                    após a ressubmissão.
+                  </p>
                 </div>
-              )
-            })}
-          </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    changesForm.setData('issues', [
+                      ...changesForm.data.issues,
+                      createIssueDraft(`issue-${issueKeyCounter.current++}`),
+                    ])
+                  }
+                >
+                  <Plus aria-hidden="true" className="size-4" />
+                  Adicionar pendência
+                </Button>
+              </div>
 
-          <Button type="submit" variant="outline" disabled={busy} title={busyReason}>
-            {activeOperation === 'request_changes' ? (
-              <>
-                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-                Enviando correções…
-              </>
-            ) : (
-              'Enviar correções'
-            )}
-          </Button>
+              <EditorField
+                htmlFor="changes-reason"
+                label="Resumo da decisão"
+                required
+                error={changesErrors.reason ?? null}
+              >
+                <Input
+                  id="changes-reason"
+                  required
+                  minLength={3}
+                  maxLength={1000}
+                  disabled={busy}
+                  value={changesForm.data.reason}
+                  onChange={(event) => changesForm.setData('reason', event.target.value)}
+                  placeholder="O que precisa mudar antes da publicação"
+                />
+              </EditorField>
 
-          <ConfirmDialog
-            open={changesDialogOpen}
-            onOpenChange={(open) => {
-              if (!open && operationRef.current) return
-              setChangesDialogOpen(open)
-            }}
-            title="Enviar correções ao parceiro?"
-            description="A revisão sai da fila e volta ao parceiro como “Correções solicitadas”. Ele será orientado pelas pendências listadas e precisará ressubmeter a ficha."
-            confirmLabel="Enviar correções"
-            processing={activeOperation === 'request_changes'}
-            onConfirm={confirmRequestChanges}
-          />
+              <div className="space-y-3">
+                {changesForm.data.issues.map((issue, index) => {
+                  const fieldError = changesErrors[`issues.${index}.field`]
+                  const messageError = changesErrors[`issues.${index}.message`]
+                  const severityError = changesErrors[`issues.${index}.severity`]
+
+                  return (
+                    <div
+                      key={issue.key}
+                      className="grid gap-3 rounded-md border border-border bg-muted/40 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
+                    >
+                      <EditorField
+                        htmlFor={`${issue.key}-field`}
+                        label="Onde corrigir"
+                        error={fieldError ?? null}
+                      >
+                        <select
+                          id={`${issue.key}-field`}
+                          required
+                          disabled={busy}
+                          value={issue.field}
+                          onChange={(event) =>
+                            updateIssue(issue.key, { field: event.target.value })
+                          }
+                          className={editorSelectClassName}
+                        >
+                          {MODERATION_ISSUE_FIELD_GROUPS.map((group) => (
+                            <optgroup key={group.section} label={group.label}>
+                              {group.options.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </EditorField>
+                      <EditorField
+                        htmlFor={`${issue.key}-message`}
+                        label="Correção necessária"
+                        required
+                        error={messageError ?? null}
+                      >
+                        <Input
+                          id={`${issue.key}-message`}
+                          required
+                          minLength={3}
+                          maxLength={1000}
+                          disabled={busy}
+                          value={issue.message}
+                          onChange={(event) =>
+                            updateIssue(issue.key, { message: event.target.value })
+                          }
+                          placeholder="Instrução clara para o parceiro"
+                        />
+                      </EditorField>
+                      <EditorField
+                        htmlFor={`${issue.key}-severity`}
+                        label="Severidade"
+                        error={severityError ?? null}
+                      >
+                        <select
+                          id={`${issue.key}-severity`}
+                          disabled={busy}
+                          value={issue.severity}
+                          onChange={(event) =>
+                            updateIssue(issue.key, {
+                              severity: event.target.value as IssueDraft['severity'],
+                            })
+                          }
+                          className={editorSelectClassName}
+                        >
+                          <option value="blocking">Bloqueio</option>
+                          <option value="warning">Aviso</option>
+                        </select>
+                      </EditorField>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive md:mt-7"
+                        disabled={busy || changesForm.data.issues.length === 1}
+                        onClick={() =>
+                          changesForm.setData(
+                            'issues',
+                            changesForm.data.issues.filter((item) => item.key !== issue.key)
+                          )
+                        }
+                        aria-label={`Remover pendência ${index + 1}`}
+                      >
+                        <Trash2 aria-hidden="true" className="size-4" />
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <Button type="submit" variant="outline" disabled={busy} title={busyReason}>
+                {activeOperation === 'request_changes' ? (
+                  <>
+                    <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                    Enviando correções…
+                  </>
+                ) : (
+                  'Enviar correções'
+                )}
+              </Button>
+
+              <ConfirmDialog
+                open={changesDialogOpen}
+                onOpenChange={(open) => {
+                  if (!open && operationRef.current) return
+                  setChangesDialogOpen(open)
+                }}
+                title="Enviar correções ao parceiro?"
+                description="A revisão sai da fila e volta ao parceiro como “Correções solicitadas”. Ele será orientado pelas pendências listadas e precisará ressubmeter a ficha."
+                confirmLabel="Enviar correções"
+                processing={activeOperation === 'request_changes'}
+                onConfirm={confirmRequestChanges}
+              />
             </form>
           ) : null}
         </section>
@@ -386,55 +391,55 @@ export function ModerationActions({
           aria-busy={activeOperation === 'reject'}
           className="space-y-4 rounded-lg border border-destructive/30 bg-card p-5 sm:p-6"
         >
-        <div>
-          <h2 className="text-lg font-semibold text-destructive">Rejeitar definitivamente</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            A revisão será terminal. Uma nova tentativa exigirá a clonagem de outra revisão.
-          </p>
-        </div>
-        <EditorField
-          htmlFor="reject-reason"
-          label="Motivo da rejeição"
-          required
-          error={rejectForm.errors.reason ?? null}
-        >
-          <Textarea
-            id="reject-reason"
+          <div>
+            <h2 className="text-lg font-semibold text-destructive">Rejeitar definitivamente</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A revisão será terminal. Uma nova tentativa exigirá a clonagem de outra revisão.
+            </p>
+          </div>
+          <EditorField
+            htmlFor="reject-reason"
+            label="Motivo da rejeição"
             required
-            minLength={3}
-            maxLength={1000}
-            rows={3}
-            disabled={busy}
-            value={rejectForm.data.reason}
-            onChange={(event) => rejectForm.setData('reason', event.target.value)}
-            placeholder="Motivo registrado no histórico e visível para a equipe"
-            className="resize-y"
-          />
-        </EditorField>
-        <Button type="submit" variant="destructive" disabled={busy} title={busyReason}>
-          {activeOperation === 'reject' ? (
-            <>
-              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-              Rejeitando…
-            </>
-          ) : (
-            'Rejeitar revisão'
-          )}
-        </Button>
+            error={rejectForm.errors.reason ?? null}
+          >
+            <Textarea
+              id="reject-reason"
+              required
+              minLength={3}
+              maxLength={1000}
+              rows={3}
+              disabled={busy}
+              value={rejectForm.data.reason}
+              onChange={(event) => rejectForm.setData('reason', event.target.value)}
+              placeholder="Motivo registrado no histórico e visível para a equipe"
+              className="resize-y"
+            />
+          </EditorField>
+          <Button type="submit" variant="destructive" disabled={busy} title={busyReason}>
+            {activeOperation === 'reject' ? (
+              <>
+                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                Rejeitando…
+              </>
+            ) : (
+              'Rejeitar revisão'
+            )}
+          </Button>
 
-        <ConfirmDialog
-          open={rejectDialogOpen}
-          onOpenChange={(open) => {
-            if (!open && operationRef.current) return
-            setRejectDialogOpen(open)
-          }}
-          title="Rejeitar definitivamente esta revisão?"
-          description="A rejeição é terminal: esta revisão não poderá ser reaberta e uma nova tentativa exigirá clonar outra revisão. O motivo fica registrado no histórico."
-          confirmLabel="Rejeitar revisão"
-          destructive
-          processing={activeOperation === 'reject'}
-          onConfirm={confirmReject}
-        />
+          <ConfirmDialog
+            open={rejectDialogOpen}
+            onOpenChange={(open) => {
+              if (!open && operationRef.current) return
+              setRejectDialogOpen(open)
+            }}
+            title="Rejeitar definitivamente esta revisão?"
+            description="A rejeição é terminal: esta revisão não poderá ser reaberta e uma nova tentativa exigirá clonar outra revisão. O motivo fica registrado no histórico."
+            confirmLabel="Rejeitar revisão"
+            destructive
+            processing={activeOperation === 'reject'}
+            onConfirm={confirmReject}
+          />
         </form>
       ) : null}
     </div>

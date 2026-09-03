@@ -11,8 +11,10 @@ import {
   UsersRound,
   X,
 } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 
+import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import {
   EditorField,
@@ -21,6 +23,7 @@ import {
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -143,10 +146,17 @@ export default function BenefitsBackofficePage({
   cities,
   errors = {},
 }: BenefitsBackofficeProps) {
+  const { can } = useAuth()
+  const canCreate = can('benefit_editions.create')
+  const canUpdate = can('benefit_editions.update')
+  const canArchive = can('benefit_editions.archive')
+  const canListAccesses = can('benefit_accesses.list')
   const [form, setForm] = useState<EditionFormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [processing, setProcessing] = useState(false)
   const [actionId, setActionId] = useState<number | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<BenefitEdition | null>(null)
+  const archiveOperationRef = useRef(false)
   const [localError, setLocalError] = useState<string | null>(null)
 
   const activeEditionCount = useMemo(
@@ -165,6 +175,7 @@ export default function BenefitsBackofficePage({
   }
 
   function beginEdit(edition: BenefitEdition) {
+    if (!canUpdate) return
     setEditingId(edition.id)
     setLocalError(null)
     setForm({
@@ -182,6 +193,7 @@ export default function BenefitsBackofficePage({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (editingId ? !canUpdate : !canCreate) return
     setLocalError(null)
 
     const priceCents = parsePriceToCents(form.price_reais)
@@ -238,11 +250,20 @@ export default function BenefitsBackofficePage({
     router.post(path, {}, options)
   }
 
-  function archive(edition: BenefitEdition) {
-    if (!window.confirm(`Arquivar a edição “${edition.name}”? O histórico será preservado.`)) {
-      return
-    }
-    runAction(`/backoffice/benefits/${edition.id}`, edition.id, 'delete')
+  function archive() {
+    if (!archiveTarget || !canArchive || archiveOperationRef.current) return
+
+    const editionId = archiveTarget.id
+    archiveOperationRef.current = true
+    setActionId(editionId)
+    router.delete(`/backoffice/benefits/${editionId}`, {
+      preserveScroll: true,
+      onSuccess: () => setArchiveTarget(null),
+      onFinish: () => {
+        archiveOperationRef.current = false
+        setActionId(null)
+      },
+    })
   }
 
   return (
@@ -267,202 +288,232 @@ export default function BenefitsBackofficePage({
           }
         />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(19rem,0.8fr)_minmax(0,1.2fr)] xl:items-start">
-          <section className="rounded-3xl border border-border/70 bg-card p-5 shadow-xs sm:p-6 xl:sticky xl:top-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                  {editingId ? 'Editar edição' : 'Nova edição'}
-                </p>
-                <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
-                  {editingId ? 'Ajuste o período e a apresentação' : 'Prepare a próxima temporada'}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Informe o valor de referência da edição. Acessos são administrados separadamente e
-                  não alteram a publicação das ofertas.
-                </p>
-              </div>
-              {editingId ? (
-                <Button type="button" variant="ghost" size="icon" onClick={resetForm}>
-                  <X />
-                  <span className="sr-only">Cancelar edição</span>
-                </Button>
-              ) : null}
-            </div>
-
-            <form onSubmit={submit} className="mt-6 grid gap-4">
-              <EditorField htmlFor="edition-city" label="Cidade" hint="Praça atendida pela edição">
-                <select
-                  id="edition-city"
-                  required
-                  value={form.city_id}
-                  onChange={(event) => updateField('city_id', event.target.value)}
-                  className={editorSelectClassName}
-                  disabled={processing || cities.length === 0}
-                >
-                  <option value="">Selecione uma cidade</option>
-                  {cities.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.name} — {city.state_code}
-                    </option>
-                  ))}
-                </select>
-              </EditorField>
-
-              <EditorField htmlFor="edition-name" label="Nome da edição">
-                <Input
-                  id="edition-name"
-                  required
-                  minLength={2}
-                  maxLength={160}
-                  value={form.name}
-                  onChange={(event) => updateField('name', event.target.value)}
-                  placeholder="Experimente Cornélio 2026/2027"
-                  disabled={processing}
-                />
-              </EditorField>
-
-              <EditorField
-                htmlFor="edition-description"
-                label="Apresentação"
-                hint="Texto interno por enquanto; a vitrine pública virá no corte de acesso."
-              >
-                <Textarea
-                  id="edition-description"
-                  rows={4}
-                  value={form.description}
-                  onChange={(event) => updateField('description', event.target.value)}
-                  placeholder="Uma seleção de benefícios para conhecer os melhores lugares da cidade."
-                  disabled={processing}
-                />
-              </EditorField>
-
-              <EditorField htmlFor="edition-price" label="Preço de referência">
-                <div className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                    R$
-                  </span>
-                  <Input
-                    id="edition-price"
-                    inputMode="decimal"
-                    value={form.price_reais}
-                    onChange={(event) => updateField('price_reais', event.target.value)}
-                    placeholder="149,90"
-                    className="pl-10"
-                    disabled={processing}
-                  />
+        <div
+          className={cn(
+            'grid gap-6 xl:items-start',
+            (canCreate || canUpdate) && 'xl:grid-cols-[minmax(19rem,0.8fr)_minmax(0,1.2fr)]'
+          )}
+        >
+          {canCreate || canUpdate ? (
+            <section className="rounded-lg border border-border bg-card p-5 sm:p-6 xl:sticky xl:top-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                    {editingId ? 'Editar edição' : 'Nova edição'}
+                  </p>
+                  <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
+                    {editingId
+                      ? 'Ajuste o período e a apresentação'
+                      : 'Prepare a próxima temporada'}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Informe o valor de referência da edição. Acessos são administrados separadamente
+                    e não alteram a publicação das ofertas.
+                  </p>
                 </div>
-              </EditorField>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <EditorField htmlFor="edition-usage-start" label="Início de uso">
-                  <Input
-                    id="edition-usage-start"
-                    type="date"
-                    required
-                    value={form.usage_starts_on}
-                    onChange={(event) => updateField('usage_starts_on', event.target.value)}
-                    disabled={processing}
-                  />
-                </EditorField>
-                <EditorField htmlFor="edition-usage-end" label="Fim de uso">
-                  <Input
-                    id="edition-usage-end"
-                    type="date"
-                    required
-                    value={form.usage_ends_on}
-                    onChange={(event) => updateField('usage_ends_on', event.target.value)}
-                    disabled={processing}
-                  />
-                </EditorField>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <EditorField
-                  htmlFor="edition-sales-start"
-                  label="Início das vendas"
-                  hint="Opcional"
-                >
-                  <Input
-                    id="edition-sales-start"
-                    type="date"
-                    value={form.sales_starts_on}
-                    onChange={(event) => updateField('sales_starts_on', event.target.value)}
-                    disabled={processing}
-                  />
-                </EditorField>
-                <EditorField htmlFor="edition-sales-end" label="Fim das vendas" hint="Opcional">
-                  <Input
-                    id="edition-sales-end"
-                    type="date"
-                    value={form.sales_ends_on}
-                    onChange={(event) => updateField('sales_ends_on', event.target.value)}
-                    disabled={processing}
-                  />
-                </EditorField>
-              </div>
-
-              {localError ? (
-                <p
-                  role="alert"
-                  className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                  {localError}
-                </p>
-              ) : null}
-              {Object.keys(errors).length > 0 ? (
-                <p
-                  role="alert"
-                  className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                  Revise os campos destacados pelo servidor e tente novamente.
-                </p>
-              ) : null}
-
-              <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                 {editingId ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="min-h-11"
-                    onClick={resetForm}
-                    disabled={processing}
-                  >
-                    Cancelar
+                  <Button type="button" variant="ghost" size="icon" onClick={resetForm}>
+                    <X />
+                    <span className="sr-only">Cancelar edição</span>
                   </Button>
                 ) : null}
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="min-h-11"
-                  disabled={processing || cities.length === 0}
-                >
-                  {processing ? (
-                    <Loader2 className="animate-spin" />
-                  ) : editingId ? (
-                    <Edit3 />
-                  ) : (
-                    <Plus />
-                  )}
-                  {processing ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Criar edição'}
-                </Button>
               </div>
-            </form>
-          </section>
+
+              <form onSubmit={submit} aria-busy={processing} className="mt-6 grid gap-4">
+                <EditorField
+                  htmlFor="edition-city"
+                  label="Cidade"
+                  hint="Praça atendida pela edição"
+                >
+                  <select
+                    id="edition-city"
+                    required
+                    value={form.city_id}
+                    onChange={(event) => updateField('city_id', event.target.value)}
+                    className={editorSelectClassName}
+                    disabled={processing || cities.length === 0}
+                  >
+                    <option value="">Selecione uma cidade</option>
+                    {cities.map((city) => (
+                      <option key={city.id} value={city.id}>
+                        {city.name} — {city.state_code}
+                      </option>
+                    ))}
+                  </select>
+                </EditorField>
+
+                <EditorField htmlFor="edition-name" label="Nome da edição">
+                  <Input
+                    id="edition-name"
+                    required
+                    minLength={2}
+                    maxLength={160}
+                    value={form.name}
+                    onChange={(event) => updateField('name', event.target.value)}
+                    placeholder="Experimente Cornélio 2026/2027"
+                    disabled={processing}
+                  />
+                </EditorField>
+
+                <EditorField
+                  htmlFor="edition-description"
+                  label="Apresentação"
+                  hint="Texto interno por enquanto; a vitrine pública virá no corte de acesso."
+                >
+                  <Textarea
+                    id="edition-description"
+                    rows={4}
+                    value={form.description}
+                    onChange={(event) => updateField('description', event.target.value)}
+                    placeholder="Uma seleção de benefícios para conhecer os melhores lugares da cidade."
+                    disabled={processing}
+                  />
+                </EditorField>
+
+                <EditorField htmlFor="edition-price" label="Preço de referência">
+                  <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                      R$
+                    </span>
+                    <Input
+                      id="edition-price"
+                      inputMode="decimal"
+                      value={form.price_reais}
+                      onChange={(event) => updateField('price_reais', event.target.value)}
+                      placeholder="149,90"
+                      className="pl-10"
+                      disabled={processing}
+                    />
+                  </div>
+                </EditorField>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <EditorField htmlFor="edition-usage-start" label="Início de uso">
+                    <Input
+                      id="edition-usage-start"
+                      type="date"
+                      required
+                      value={form.usage_starts_on}
+                      onChange={(event) => updateField('usage_starts_on', event.target.value)}
+                      disabled={processing}
+                    />
+                  </EditorField>
+                  <EditorField htmlFor="edition-usage-end" label="Fim de uso">
+                    <Input
+                      id="edition-usage-end"
+                      type="date"
+                      required
+                      value={form.usage_ends_on}
+                      onChange={(event) => updateField('usage_ends_on', event.target.value)}
+                      disabled={processing}
+                    />
+                  </EditorField>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <EditorField
+                    htmlFor="edition-sales-start"
+                    label="Início das vendas"
+                    hint="Opcional"
+                  >
+                    <Input
+                      id="edition-sales-start"
+                      type="date"
+                      value={form.sales_starts_on}
+                      onChange={(event) => updateField('sales_starts_on', event.target.value)}
+                      disabled={processing}
+                    />
+                  </EditorField>
+                  <EditorField htmlFor="edition-sales-end" label="Fim das vendas" hint="Opcional">
+                    <Input
+                      id="edition-sales-end"
+                      type="date"
+                      value={form.sales_ends_on}
+                      onChange={(event) => updateField('sales_ends_on', event.target.value)}
+                      disabled={processing}
+                    />
+                  </EditorField>
+                </div>
+
+                {localError ? (
+                  <p
+                    role="alert"
+                    className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  >
+                    {localError}
+                  </p>
+                ) : null}
+                {Object.keys(errors).length > 0 ? (
+                  <p
+                    role="alert"
+                    className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  >
+                    Revise os campos destacados pelo servidor e tente novamente.
+                  </p>
+                ) : null}
+
+                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                  {editingId ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="min-h-11"
+                      onClick={resetForm}
+                      disabled={processing}
+                    >
+                      Cancelar
+                    </Button>
+                  ) : null}
+                  {editingId ? (
+                    canUpdate ? (
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="min-h-11"
+                        disabled={processing || cities.length === 0}
+                      >
+                        {processing ? (
+                          <Loader2 aria-hidden="true" className="animate-spin" />
+                        ) : (
+                          <Edit3 aria-hidden="true" />
+                        )}
+                        {processing ? 'Salvando…' : 'Salvar alterações'}
+                      </Button>
+                    ) : null
+                  ) : canCreate ? (
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="min-h-11"
+                      disabled={processing || cities.length === 0}
+                    >
+                      {processing ? (
+                        <Loader2 aria-hidden="true" className="animate-spin" />
+                      ) : (
+                        <Plus aria-hidden="true" />
+                      )}
+                      {processing ? 'Salvando…' : 'Criar edição'}
+                    </Button>
+                  ) : null}
+                </div>
+              </form>
+            </section>
+          ) : null}
 
           <section aria-label="Edições cadastradas" className="space-y-4">
             {editions.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center shadow-xs">
-                <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <CalendarDays className="size-6" />
-                </span>
-                <h2 className="mt-5 text-lg font-bold">Nenhuma edição criada</h2>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                  Cadastre a primeira temporada. Depois, cada parceiro poderá vincular uma oferta à
-                  sua unidade publicada.
-                </p>
-              </div>
+              <EmptyState
+                icon={CalendarDays}
+                headingLevel={2}
+                title="Nenhuma edição criada"
+                description={
+                  canCreate
+                    ? 'Cadastre a primeira temporada. Depois, cada parceiro poderá vincular uma oferta à sua unidade publicada.'
+                    : 'Ainda não existem edições cadastradas nesta operação.'
+                }
+                className="rounded-lg border border-dashed border-border bg-card"
+              />
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 {editions.map((edition) => {
@@ -480,7 +531,7 @@ export default function BenefitsBackofficePage({
                     <article
                       key={edition.id}
                       className={cn(
-                        'flex min-h-full flex-col rounded-3xl border border-border/70 bg-card p-5 shadow-xs transition-shadow hover:shadow-md sm:p-6',
+                        'flex min-h-full flex-col rounded-lg border border-border bg-card p-5 sm:p-6',
                         edition.status === 'archived' && 'opacity-70'
                       )}
                     >
@@ -509,7 +560,7 @@ export default function BenefitsBackofficePage({
                         </p>
                       ) : null}
 
-                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-muted/45 p-4 text-sm">
+                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/40 p-4 text-sm">
                         <div>
                           <dt className="text-xs text-muted-foreground">Utilização</dt>
                           <dd className="mt-1 font-semibold">
@@ -536,25 +587,27 @@ export default function BenefitsBackofficePage({
                           <dd className="mt-1 font-semibold">{activeAccesses}</dd>
                         </div>
                         <div className="col-span-2">
-                          <dt className="text-xs text-muted-foreground">Identificador</dt>
-                          <dd className="mt-1 truncate font-mono text-xs">{edition.slug}</dd>
+                          <dt className="text-xs text-muted-foreground">Endereço da página</dt>
+                          <dd className="mt-1 truncate text-xs">/{edition.slug}</dd>
                         </div>
                       </dl>
 
                       <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row sm:flex-wrap">
-                        <Button
-                          asChild
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="min-h-10 flex-1"
-                        >
-                          <Link href={`/backoffice/benefits/${edition.id}/accesses`}>
-                            <UsersRound />
-                            Acessos
-                          </Link>
-                        </Button>
-                        {editable ? (
+                        {canListAccesses ? (
+                          <Button
+                            asChild
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="min-h-10 flex-1"
+                          >
+                            <Link href="/backoffice/accesses">
+                              <UsersRound aria-hidden="true" />
+                              Acessos
+                            </Link>
+                          </Button>
+                        ) : null}
+                        {editable && canUpdate ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -563,11 +616,12 @@ export default function BenefitsBackofficePage({
                             onClick={() => beginEdit(edition)}
                             disabled={busy}
                           >
-                            <Edit3 />
+                            <Edit3 aria-hidden="true" />
                             Editar
                           </Button>
                         ) : null}
-                        {edition.status === 'draft' || edition.status === 'paused' ? (
+                        {canUpdate &&
+                        (edition.status === 'draft' || edition.status === 'paused') ? (
                           <Button
                             type="button"
                             size="sm"
@@ -586,11 +640,15 @@ export default function BenefitsBackofficePage({
                                 : undefined
                             }
                           >
-                            {busy ? <Loader2 className="animate-spin" /> : <Rocket />}
+                            {busy ? (
+                              <Loader2 aria-hidden="true" className="animate-spin" />
+                            ) : (
+                              <Rocket aria-hidden="true" />
+                            )}
                             Publicar
                           </Button>
                         ) : null}
-                        {edition.status === 'published' ? (
+                        {canUpdate && edition.status === 'published' ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -605,20 +663,24 @@ export default function BenefitsBackofficePage({
                             }
                             disabled={busy}
                           >
-                            {busy ? <Loader2 className="animate-spin" /> : <CirclePause />}
+                            {busy ? (
+                              <Loader2 aria-hidden="true" className="animate-spin" />
+                            ) : (
+                              <CirclePause aria-hidden="true" />
+                            )}
                             Pausar
                           </Button>
                         ) : null}
-                        {edition.status !== 'archived' ? (
+                        {canArchive && edition.status !== 'archived' ? (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             className="min-h-10"
-                            onClick={() => archive(edition)}
+                            onClick={() => setArchiveTarget(edition)}
                             disabled={busy}
                           >
-                            <Archive />
+                            <Archive aria-hidden="true" />
                             Arquivar
                           </Button>
                         ) : null}
@@ -630,6 +692,20 @@ export default function BenefitsBackofficePage({
             )}
           </section>
         </div>
+
+        <ConfirmDialog
+          open={archiveTarget !== null}
+          onOpenChange={(open) => {
+            if (!open && archiveOperationRef.current) return
+            if (!open) setArchiveTarget(null)
+          }}
+          title="Arquivar esta edição?"
+          description={`A edição “${archiveTarget?.name ?? ''}” deixará de aceitar novas alterações. O histórico será preservado.`}
+          confirmLabel="Arquivar edição"
+          destructive
+          processing={archiveTarget !== null && actionId === archiveTarget.id}
+          onConfirm={archive}
+        />
       </div>
     </MainLayout>
   )

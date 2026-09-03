@@ -4,8 +4,9 @@ import { fireEvent, screen } from '@testing-library/react'
 import { FeedbackCard } from '~/components/backoffice/feedback_card'
 import { render } from '~/tests/test_utils'
 
-const { mockPatch, formState } = vi.hoisted(() => ({
+const { mockPatch, formState, mockPermissions } = vi.hoisted(() => ({
   mockPatch: vi.fn(),
+  mockPermissions: { current: ['pilot_feedback.update'] },
   formState: {
     current: {
       processing: false,
@@ -13,6 +14,12 @@ const { mockPatch, formState } = vi.hoisted(() => ({
       errors: {} as Record<string, string>,
     },
   },
+}))
+
+vi.mock('~/hooks/use_auth', () => ({
+  useAuth: () => ({
+    can: (permission: string) => mockPermissions.current.includes(permission),
+  }),
 }))
 
 vi.mock('@inertiajs/react', async () => {
@@ -50,6 +57,7 @@ describe('FeedbackCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     formState.current = { processing: false, recentlySuccessful: false, errors: {} }
+    mockPermissions.current = ['pilot_feedback.update']
   })
 
   it('shows the report date, translated context and translated status', () => {
@@ -112,5 +120,15 @@ describe('FeedbackCard', () => {
 
     fireEvent.submit(submitButton.closest('form') as HTMLFormElement)
     expect(mockPatch).not.toHaveBeenCalled()
+  })
+
+  it('keeps the report readable without rendering triage controls when update is not allowed', () => {
+    mockPermissions.current = []
+
+    render(<FeedbackCard item={item} />)
+
+    expect(screen.getByText(item.message)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Atualizar' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Status')).not.toBeInTheDocument()
   })
 })

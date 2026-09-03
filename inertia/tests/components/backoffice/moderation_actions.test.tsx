@@ -4,9 +4,18 @@ import { screen, within } from '@testing-library/react'
 import { ModerationActions } from '~/components/backoffice/moderation_actions'
 import { render } from '~/tests/test_utils'
 
-const { mockPost, mockErrors } = vi.hoisted(() => ({
+const { mockPost, mockErrors, mockPermissions } = vi.hoisted(() => ({
   mockPost: vi.fn(),
   mockErrors: { current: {} as Record<string, string> },
+  mockPermissions: {
+    current: ['establishments.approve', 'establishments.request_changes', 'establishments.reject'],
+  },
+}))
+
+vi.mock('~/hooks/use_auth', () => ({
+  useAuth: () => ({
+    can: (permission: string) => mockPermissions.current.includes(permission),
+  }),
 }))
 
 // Stateful useForm mock: controlled inputs update, `transform` is applied on
@@ -53,9 +62,14 @@ describe('ModerationActions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockErrors.current = {}
+    mockPermissions.current = [
+      'establishments.approve',
+      'establishments.request_changes',
+      'establishments.reject',
+    ]
   })
 
-  it('announces the PublicationGate failure in an accessible destructive alert', () => {
+  it('announces a publication failure in an accessible destructive alert', () => {
     renderActions({ moderationError: 'A cidade da revisão foi desativada.' })
 
     const alert = screen.getByRole('alert')
@@ -76,8 +90,18 @@ describe('ModerationActions', () => {
     expect(approveButton).toBeDisabled()
     expect(approveButton).toHaveAttribute(
       'title',
-      'Resolva os bloqueios do PublicationGate antes de aprovar.'
+      'Resolva as pendências que bloqueiam a publicação antes de aprovar.'
     )
+  })
+
+  it('shows only moderation actions allowed by the current capabilities', () => {
+    mockPermissions.current = ['establishments.request_changes']
+
+    renderActions()
+
+    expect(screen.getByRole('button', { name: 'Enviar correções' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprovar revisão' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Rejeitar revisão' })).not.toBeInTheDocument()
   })
 
   it('requires explicit confirmation for the terminal rejection and does nothing on cancel', async () => {

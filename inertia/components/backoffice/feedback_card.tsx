@@ -100,56 +100,56 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
           aria-busy={form.processing}
           className="grid gap-4 border-t border-border bg-muted/20 p-5 sm:p-6 md:grid-cols-[0.4fr_1fr_auto] md:items-start"
         >
-        <EditorField
-          htmlFor={`feedback-${id}-status`}
-          label="Status"
-          error={form.errors.status ?? null}
-        >
-          <select
-            id={`feedback-${id}-status`}
-            value={form.data.status}
-            disabled={form.processing}
-            onChange={(event) => form.setData('status', event.target.value)}
-            className={editorSelectClassName}
+          <EditorField
+            htmlFor={`feedback-${id}-status`}
+            label="Status"
+            error={form.errors.status ?? null}
           >
-            {Object.entries(PILOT_FEEDBACK_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </EditorField>
-        <EditorField
-          htmlFor={`feedback-${id}-notes`}
-          label="Nota interna"
-          error={form.errors.internal_notes ?? null}
-        >
-          <Textarea
-            id={`feedback-${id}-notes`}
-            rows={2}
-            maxLength={4000}
-            disabled={form.processing}
-            value={form.data.internal_notes}
-            onChange={(event) => form.setData('internal_notes', event.target.value)}
-            placeholder="Registre contexto útil para a equipe"
-            className="resize-y"
-          />
-        </EditorField>
-        <div className="flex flex-col gap-2 md:mt-7">
-          <Button type="submit" variant="primary" disabled={form.processing}>
-            {form.processing ? (
-              <>
-                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-                Salvando…
-              </>
-            ) : (
-              'Atualizar'
-            )}
-          </Button>
-          <p role="status" aria-live="polite" className="text-xs text-success">
-            {form.recentlySuccessful ? 'Triagem atualizada.' : ''}
-          </p>
-        </div>
+            <select
+              id={`feedback-${id}-status`}
+              value={form.data.status}
+              disabled={form.processing}
+              onChange={(event) => form.setData('status', event.target.value)}
+              className={editorSelectClassName}
+            >
+              {Object.entries(PILOT_FEEDBACK_STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </EditorField>
+          <EditorField
+            htmlFor={`feedback-${id}-notes`}
+            label="Nota interna"
+            error={form.errors.internal_notes ?? null}
+          >
+            <Textarea
+              id={`feedback-${id}-notes`}
+              rows={2}
+              maxLength={4000}
+              disabled={form.processing}
+              value={form.data.internal_notes}
+              onChange={(event) => form.setData('internal_notes', event.target.value)}
+              placeholder="Registre contexto útil para a equipe"
+              className="resize-y"
+            />
+          </EditorField>
+          <div className="flex flex-col gap-2 md:mt-7">
+            <Button type="submit" variant="primary" disabled={form.processing}>
+              {form.processing ? (
+                <>
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                  Salvando…
+                </>
+              ) : (
+                'Atualizar'
+              )}
+            </Button>
+            <p role="status" aria-live="polite" className="text-xs text-success">
+              {form.recentlySuccessful ? 'Triagem atualizada.' : ''}
+            </p>
+          </div>
         </form>
       ) : null}
     </article>

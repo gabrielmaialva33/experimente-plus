@@ -3,11 +3,14 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { ArrowRight, ClipboardCheck, Clock3 } from 'lucide-react'
 
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { buildPageHref, PaginationNav } from '~/components/pagination'
-import { EditorField } from '~/components/portal/establishment_editor/editor_field'
+import {
+  EditorField,
+  editorSelectClassName,
+} from '~/components/portal/establishment_editor/editor_field'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import { formatDateTime, getRevisionStatusMeta } from '~/lib/labels'
@@ -32,11 +35,30 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
   const currentPage = numeric(meta, 'current_page') || 1
   const lastPage = numeric(meta, 'last_page') || 1
   const perPage = filterValue(filters, 'per_page')
+  const appliedOrganizationId = filterValue(filters, 'organization_id')
+  const appliedCityId = filterValue(filters, 'city_id')
 
-  const [organizationId, setOrganizationId] = useState(filterValue(filters, 'organization_id'))
-  const [cityId, setCityId] = useState(filterValue(filters, 'city_id'))
-  const hasActiveFilters =
-    filterValue(filters, 'organization_id') !== '' || filterValue(filters, 'city_id') !== ''
+  const [organizationId, setOrganizationId] = useState(appliedOrganizationId)
+  const [cityId, setCityId] = useState(appliedCityId)
+  const hasActiveFilters = appliedOrganizationId !== '' || appliedCityId !== ''
+  const organizationOptions = Array.from(
+    new Map(
+      items
+        .map((item) => [numeric(item, 'organization_id'), text(item, 'organization_name')] as const)
+        .filter(([id, name]) => id > 0 && name !== '')
+    )
+  ).map(([id, name]) => ({ id, name }))
+  const cityOptions = Array.from(
+    new Map(
+      items
+        .map((item) => [numeric(item, 'city_id'), text(item, 'city_name')] as const)
+        .filter(([id, name]) => id > 0 && name !== '')
+    )
+  ).map(([id, name]) => ({ id, name }))
+  const selectedOrganizationIsListed = organizationOptions.some(
+    (option) => String(option.id) === appliedOrganizationId
+  )
+  const selectedCityIsListed = cityOptions.some((option) => String(option.id) === appliedCityId)
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -70,10 +92,10 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
           description="Analise revisões submetidas, registre correções estruturadas e publique somente conteúdo aprovado."
         />
 
-        <section className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-warning/15 text-warning-foreground ring-1 ring-warning/15">
-              <Clock3 className="size-4.5" />
+            <span className="flex size-10 items-center justify-center rounded-md border border-warning/20 bg-warning/15 text-warning-foreground">
+              <Clock3 aria-hidden="true" className="size-4.5" />
             </span>
             <div>
               <p className="font-bold tracking-[-0.015em]">
@@ -93,33 +115,45 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
         <form
           onSubmit={applyFilters}
           aria-label="Filtros da fila de moderação"
-          className="grid gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
-          <EditorField
-            htmlFor="filter-organization"
-            label="Organização (ID)"
-            hint="Filtro validado pelo servidor"
-          >
-            <Input
+          <EditorField htmlFor="filter-organization" label="Organização">
+            <select
               id="filter-organization"
-              type="number"
-              min={1}
-              inputMode="numeric"
               value={organizationId}
               onChange={(event) => setOrganizationId(event.target.value)}
-              placeholder="Todas as organizações"
-            />
+              className={editorSelectClassName}
+            >
+              <option value="">Todas as organizações</option>
+              {appliedOrganizationId && !selectedOrganizationIsListed ? (
+                <option value={appliedOrganizationId}>
+                  Organização selecionada · código {appliedOrganizationId}
+                </option>
+              ) : null}
+              {organizationOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
           </EditorField>
-          <EditorField htmlFor="filter-city" label="Cidade (ID)">
-            <Input
+          <EditorField htmlFor="filter-city" label="Cidade">
+            <select
               id="filter-city"
-              type="number"
-              min={1}
-              inputMode="numeric"
               value={cityId}
               onChange={(event) => setCityId(event.target.value)}
-              placeholder="Todas as cidades"
-            />
+              className={editorSelectClassName}
+            >
+              <option value="">Todas as cidades</option>
+              {appliedCityId && !selectedCityIsListed ? (
+                <option value={appliedCityId}>Cidade selecionada · código {appliedCityId}</option>
+              ) : null}
+              {cityOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
           </EditorField>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" variant="primary">
@@ -127,24 +161,24 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
             </Button>
             {hasActiveFilters ? (
               <Button asChild variant="outline">
-                <Link href={QUEUE_PATH}>Limpar filtros</Link>
+                <Link href={buildPageHref(QUEUE_PATH, { per_page: perPage })}>Limpar filtros</Link>
               </Button>
             ) : null}
           </div>
         </form>
 
         {items.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center shadow-xs">
-            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-success/10 text-success ring-1 ring-success/10">
-              <ClipboardCheck className="size-6" />
-            </span>
-            <h2 className="mt-5 text-lg font-bold">Fila vazia</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              {hasActiveFilters
+          <EmptyState
+            icon={ClipboardCheck}
+            headingLevel={2}
+            title="Fila vazia"
+            description={
+              hasActiveFilters
                 ? 'Nenhuma revisão pendente corresponde aos filtros aplicados.'
-                : 'Não existem revisões aguardando decisão nesta operação.'}
-            </p>
-          </div>
+                : 'Não existem revisões aguardando decisão nesta operação.'
+            }
+            className="rounded-lg border border-dashed border-border bg-card"
+          />
         ) : (
           <section aria-label="Revisões aguardando moderação" className="space-y-3">
             {items.map((item) => {
@@ -155,11 +189,11 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
               return (
                 <article
                   key={id}
-                  className="group flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex min-w-0 items-start gap-3.5">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10">
-                      <ClipboardCheck className="size-4.5" />
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary/10 text-primary">
+                      <ClipboardCheck aria-hidden="true" className="size-4.5" />
                     </span>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -193,7 +227,7 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
                   <Button asChild variant="outline" size="sm" className="shrink-0">
                     <Link href={`/backoffice/moderation/${id}`}>
                       Revisar
-                      <ArrowRight className="size-3.5" />
+                      <ArrowRight aria-hidden="true" className="size-3.5" />
                     </Link>
                   </Button>
                 </article>

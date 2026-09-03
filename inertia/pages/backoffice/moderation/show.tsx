@@ -2,7 +2,11 @@ import { Head, Link, usePage } from '@inertiajs/react'
 import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react'
 
 import { ModerationActions } from '~/components/backoffice/moderation_actions'
+import { EmptyState } from '~/components/empty_state'
+import { PageHeader } from '~/components/page_header'
+import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
+import { MODERATION_ISSUE_FIELD_GROUPS } from '~/lib/establishment_editor'
 import { firstError } from '~/lib/form_errors'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
@@ -27,6 +31,16 @@ function statusOrFallback(status: string): string {
   return status ? revisionStatusLabel(status) : '—'
 }
 
+const moderationFieldLabels = new Map(
+  MODERATION_ISSUE_FIELD_GROUPS.flatMap((group) =>
+    group.options.map((option) => [option.value, option.label] as const)
+  )
+)
+
+function moderationFieldLabel(field: string): string {
+  return moderationFieldLabels.get(field) ?? 'Conteúdo da ficha'
+}
+
 export default function ModerationRevisionPage({
   revision,
   publication_gate,
@@ -45,49 +59,55 @@ export default function ModerationRevisionPage({
   const statusMeta = getRevisionStatusMeta(text(revision, 'status'))
   const submittedAt = formatDateTime(text(revision, 'submitted_at') || null)
   const availabilityType = text(revision, 'availability_type')
+  const slug = text(revision, 'slug')
 
   return (
     <MainLayout>
       <Head title={`Moderar ${text(revision, 'public_name', 'revisão')}`} />
 
       <div className="space-y-8">
-        <Link
-          href="/backoffice/moderation"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Voltar à fila
-        </Link>
-
-        <header>
-          <p className="text-sm font-semibold text-primary">Revisão #{revisionId}</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">{publicName}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
-            <span>versão {numeric(revision, 'version')}</span>
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
-                statusMeta.className
-              )}
-            >
-              {statusMeta.label}
-            </span>
-            <span className="text-sm">
-              {submittedAt ? `Submetida em ${submittedAt}` : 'Data de submissão indisponível'}
-            </span>
-          </div>
-        </header>
+        <PageHeader
+          eyebrow="Moderação de conteúdo"
+          title={publicName}
+          description={
+            submittedAt ? `Submetida em ${submittedAt}` : 'Data de submissão indisponível'
+          }
+          meta={
+            <>
+              <span className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                versão {numeric(revision, 'version')}
+              </span>
+              <span
+                className={cn(
+                  'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold',
+                  statusMeta.className
+                )}
+              >
+                {statusMeta.label}
+              </span>
+            </>
+          }
+          actions={
+            <Button asChild variant="outline">
+              <Link href="/backoffice/moderation">
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Voltar à fila
+              </Link>
+            </Button>
+          }
+        />
 
         <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="space-y-5 rounded-3xl border border-border bg-card p-6">
+          <article className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-6">
             <div>
               <h2 className="text-xl font-semibold">Conteúdo submetido</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                A publicação trocará o ponteiro público apenas depois de todos os gates passarem.
+                O conteúdo só ficará público depois que todos os critérios forem atendidos.
               </p>
             </div>
             <dl className="grid gap-4 sm:grid-cols-2">
               {[
-                ['Slug', text(revision, 'slug', '—')],
+                ['Endereço da página', slug ? `/${slug}` : '—'],
                 ['Cidade', text(record(revision.city), 'name', '—')],
                 ['Descrição curta', text(revision, 'short_description', '—')],
                 [
@@ -95,7 +115,7 @@ export default function ModerationRevisionPage({
                   availabilityType ? availabilityTypeLabel(availabilityType) : '—',
                 ],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl bg-muted/60 p-4">
+                <div key={label} className="rounded-md border border-border bg-muted/40 p-4">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {label}
                   </dt>
@@ -117,7 +137,7 @@ export default function ModerationRevisionPage({
                     return (
                       <article
                         key={numeric(item, 'id')}
-                        className="overflow-hidden rounded-2xl border border-border"
+                        className="overflow-hidden rounded-md border border-border"
                       >
                         {url ? (
                           <img
@@ -144,19 +164,21 @@ export default function ModerationRevisionPage({
             ) : null}
           </article>
 
-          <article className="space-y-5 rounded-3xl border border-border bg-card p-6">
+          <article className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-6">
             <div className="flex items-start gap-3">
               {blockingIssues.length === 0 ? (
-                <CheckCircle2 className="mt-0.5 size-6 text-primary" />
+                <CheckCircle2 aria-hidden="true" className="mt-0.5 size-6 text-primary" />
               ) : (
-                <XCircle className="mt-0.5 size-6 text-destructive" />
+                <XCircle aria-hidden="true" className="mt-0.5 size-6 text-destructive" />
               )}
               <div>
-                <h2 className="text-xl font-semibold">PublicationGate</h2>
+                <h2 className="text-xl font-semibold">Pendências para publicação</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {blockingIssues.length === 0
                     ? 'A revisão pode ser publicada.'
-                    : `${blockingIssues.length} bloqueio(s) impedem a aprovação.`}
+                    : blockingIssues.length === 1
+                      ? '1 pendência impede a aprovação.'
+                      : `${blockingIssues.length} pendências impedem a aprovação.`}
                 </p>
               </div>
             </div>
@@ -164,17 +186,23 @@ export default function ModerationRevisionPage({
               {[...blockingIssues, ...warnings].map((issue) => (
                 <div
                   key={`${text(issue, 'code')}-${text(issue, 'field')}`}
-                  className="rounded-xl bg-muted/60 p-3"
+                  className="rounded-md border border-border bg-muted/40 p-3"
                 >
                   <p className="text-sm font-medium">{text(issue, 'message')}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {text(issue, 'field', '—')} ·{' '}
+                    {moderationFieldLabel(text(issue, 'field'))} ·{' '}
                     {reviewIssueSeverityLabel(text(issue, 'severity', 'blocking'))}
                   </p>
                 </div>
               ))}
               {blockingIssues.length === 0 && warnings.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma pendência encontrada.</p>
+                <EmptyState
+                  icon={CheckCircle2}
+                  headingLevel={3}
+                  title="Nenhuma pendência encontrada"
+                  description="O conteúdo atende aos critérios automáticos de publicação."
+                  className="py-6"
+                />
               ) : null}
             </div>
           </article>
@@ -188,7 +216,7 @@ export default function ModerationRevisionPage({
 
         {existingIssues.length > 0 || revisionEvents.length > 0 ? (
           <section className="grid gap-6 lg:grid-cols-2">
-            <article className="rounded-3xl border border-border bg-card p-6">
+            <article className="rounded-lg border border-border bg-card p-5 sm:p-6">
               <h2 className="text-lg font-semibold">Pendências anteriores</h2>
               <div className="mt-4 space-y-3">
                 {existingIssues.length === 0 ? (
@@ -200,10 +228,13 @@ export default function ModerationRevisionPage({
                   const resolvedAt = formatDateTime(text(issue, 'resolved_at') || null)
                   const createdAt = formatDateTime(text(issue, 'created_at') || null)
                   return (
-                    <div key={numeric(issue, 'id')} className="rounded-xl bg-muted/60 p-3 text-sm">
+                    <div
+                      key={numeric(issue, 'id')}
+                      className="rounded-md border border-border bg-muted/40 p-3 text-sm"
+                    >
                       <p className="font-medium">{text(issue, 'message')}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {text(issue, 'field', '—')} ·{' '}
+                        {moderationFieldLabel(text(issue, 'field'))} ·{' '}
                         {reviewIssueSeverityLabel(text(issue, 'severity'))}
                         {createdAt ? ` · registrada em ${createdAt}` : ''}
                         {resolvedAt ? ` · resolvida em ${resolvedAt}` : ' · em aberto'}
@@ -213,7 +244,7 @@ export default function ModerationRevisionPage({
                 })}
               </div>
             </article>
-            <article className="rounded-3xl border border-border bg-card p-6">
+            <article className="rounded-lg border border-border bg-card p-5 sm:p-6">
               <h2 className="text-lg font-semibold">Histórico</h2>
               <div className="mt-4 space-y-3">
                 {revisionEvents.length === 0 ? (
