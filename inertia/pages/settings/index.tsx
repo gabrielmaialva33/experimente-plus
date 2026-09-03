@@ -11,7 +11,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
@@ -252,13 +252,9 @@ function AccountTab() {
 
           <EditorField
             htmlFor="settings-delete-confirmation"
-            label={
-              <>
-                Digite <strong>DELETE</strong> para confirmar
-              </>
-            }
+            label="Confirmação de exclusão"
             required
-            hint="A palavra de confirmação evita uma exclusão acidental."
+            hint="Digite DELETE para evitar uma exclusão acidental."
             error={firstError(form.errors.confirmation)}
           >
             <Input
@@ -420,14 +416,6 @@ function OperationsTab() {
         )}
       </CardContent>
     </Card>
-  )
-}
-
-function labelWithStrong(prefix: string, value: string): ReactNode {
-  return (
-    <>
-      {prefix} <strong>{value}</strong>
-    </>
   )
 }
 
