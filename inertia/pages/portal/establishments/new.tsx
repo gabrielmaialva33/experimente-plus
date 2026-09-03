@@ -1,7 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react'
-import { ArrowLeft, Loader2, MapPinOff } from 'lucide-react'
+import { ArrowLeft, Loader2, MapPinOff, Store } from 'lucide-react'
 import { useRef, type FormEvent } from 'react'
 
+import { PageHeader } from '~/components/page_header'
 import {
   EditorField,
   editorSelectClassName,
@@ -79,21 +80,20 @@ export default function NewEstablishmentPage({
       <Head title="Nova unidade" />
 
       <div className="mx-auto max-w-3xl space-y-6">
-        <Button asChild variant="ghost" size="sm" className="-ms-3">
-          <Link href={`/portal/organizations/${organization.id}`}>
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Voltar para {organization.trade_name}
-          </Link>
-        </Button>
-
-        <header>
-          <p className="text-sm font-semibold text-primary">Nova unidade</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Crie a ficha operacional</h1>
-          <p className="mt-2 text-muted-foreground">
-            Comece pela identidade pública. Endereço, categorias, horários e mídia serão preenchidos
-            no editor.
-          </p>
-        </header>
+        <PageHeader
+          eyebrow="Nova unidade"
+          icon={Store}
+          title="Crie a ficha pública"
+          description="Comece pela identidade da unidade. Endereço, categorias, horários e mídia serão preenchidos no editor."
+          actions={
+            <Button asChild variant="outline">
+              <Link href={`/portal/organizations/${organization.id}`}>
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Voltar para {organization.trade_name}
+              </Link>
+            </Button>
+          }
+        />
 
         {!hasCities ? (
           <Alert variant="destructive" role="alert">
@@ -101,14 +101,14 @@ export default function NewEstablishmentPage({
             <AlertTitle>Nenhuma cidade está disponível</AlertTitle>
             <AlertDescription>
               O cadastro da unidade está bloqueado até que a operação habilite ao menos uma cidade
-              para este tenant. Procure a equipe da plataforma antes de continuar.
+              para esta operação. Procure a equipe da plataforma antes de continuar.
             </AlertDescription>
           </Alert>
         ) : null}
 
         <form
           onSubmit={submit}
-          className="space-y-5 rounded-3xl border border-border bg-card p-6"
+          className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-6"
           aria-busy={form.processing}
         >
           {generalError ? (
@@ -264,7 +264,11 @@ export default function NewEstablishmentPage({
           </Alert>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={form.processing || !hasCities}>
+            <Button
+              type="submit"
+              disabled={form.processing || !hasCities}
+              aria-busy={form.processing}
+            >
               {form.processing ? (
                 <>
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />
