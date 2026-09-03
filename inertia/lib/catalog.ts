@@ -237,6 +237,31 @@ export function stringValue(record: JsonRecord | null, ...keys: string[]): strin
   return null
 }
 
+function dateTimeStringValue(record: JsonRecord | null, ...keys: string[]): string | null {
+  if (!record) return null
+
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === 'string' && value.trim()) return value.trim()
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString()
+    }
+
+    if (value !== null && typeof value === 'object') {
+      const toISO = (value as { toISO?: unknown }).toISO
+
+      if (typeof toISO === 'function') {
+        const serialized = toISO.call(value)
+        if (typeof serialized === 'string' && serialized.trim()) return serialized.trim()
+      }
+    }
+  }
+
+  return null
+}
+
 export function numberValue(record: JsonRecord | null, ...keys: string[]): number | null {
   if (!record) return null
   for (const key of keys) {
@@ -607,8 +632,8 @@ export function catalogDetail(value: unknown): CatalogDetail | CatalogHistorical
       message:
         stringValue(detail, 'message') ??
         'Este estabelecimento encerrou permanentemente as atividades.',
-      publishedAt: stringValue(detail, 'published_at'),
-      updatedAt: stringValue(detail, 'updated_at'),
+      publishedAt: dateTimeStringValue(detail, 'published_at'),
+      updatedAt: dateTimeStringValue(detail, 'updated_at'),
     }
   }
 
@@ -671,8 +696,8 @@ export function catalogDetail(value: unknown): CatalogDetail | CatalogHistorical
     media,
     cover,
     isSponsored: booleanValue(detail, 'is_sponsored') ?? false,
-    publishedAt: stringValue(detail, 'published_at'),
-    updatedAt: stringValue(detail, 'updated_at'),
+    publishedAt: dateTimeStringValue(detail, 'published_at'),
+    updatedAt: dateTimeStringValue(detail, 'updated_at'),
   }
 }
 

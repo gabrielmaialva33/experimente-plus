@@ -33,12 +33,58 @@ function statusClasses(detail: CatalogDetail): string {
     : 'border-border bg-muted text-muted-foreground'
 }
 
-function formatDate(value: string | null): string | null {
+function formatDate(value: string | null, timeZone: string | null): string | null {
   if (!value) return null
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
-  const date = new Date(dateOnly ? `${value}T12:00:00` : value)
+  const date = new Date(dateOnly ? `${value}T12:00:00Z` : value)
   if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(date)
+
+  const formatInTimeZone = (resolvedTimeZone: string) =>
+    new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'long',
+      timeZone: dateOnly ? 'UTC' : resolvedTimeZone,
+    }).format(date)
+
+  try {
+    return formatInTimeZone(timeZone ?? 'UTC')
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error
+
+    // Canonical catalog payloads carry a validated IANA timezone. UTC is only
+    // a deterministic runtime guard for stale or malformed serialized props.
+    return formatInTimeZone('UTC')
+  }
+}
+
+export function CatalogPublicationMetadata({
+  publishedAt,
+  updatedAt,
+  timeZone,
+}: Pick<CatalogDetail, 'publishedAt' | 'updatedAt'> & {
+  timeZone: CatalogDetail['city']['timezone']
+}) {
+  const formattedPublishedAt = formatDate(publishedAt, timeZone)
+  const formattedUpdatedAt = formatDate(updatedAt, timeZone)
+
+  return (
+    <section aria-labelledby="publication-title" className="rounded-lg border bg-card p-5 text-sm">
+      <span className="flex size-10 items-center justify-center rounded-md border border-success/20 bg-success-soft text-success-accent">
+        <Check aria-hidden="true" className="size-4" />
+      </span>
+      <h2 id="publication-title" className="mt-4 font-semibold">
+        Conteúdo publicado
+      </h2>
+      <p className="mt-2 leading-6 text-muted-foreground">
+        Esta ficha mostra somente dados aprovados e publicados no catálogo.
+      </p>
+      {formattedPublishedAt || formattedUpdatedAt ? (
+        <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+          {formattedPublishedAt ? <p>Publicado em {formattedPublishedAt}</p> : null}
+          {formattedUpdatedAt ? <p>Atualizado em {formattedUpdatedAt}</p> : null}
+        </div>
+      ) : null}
+    </section>
+  )
 }
 
 function formatAttribute(attribute: CatalogAttribute): string {
@@ -98,8 +144,6 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
     detail.categories.find((category) => category.isPrimary) ?? detail.categories[0]
   const gallery = detail.media.filter((media) => media.url !== detail.cover?.url).slice(0, 6)
   const schedule = groupedHours(detail.weeklyHours)
-  const publishedAt = formatDate(detail.publishedAt)
-  const updatedAt = formatDate(detail.updatedAt)
   const locationLabel = [detail.city.name, detail.city.stateCode].filter(Boolean).join(' — ')
 
   const structuredData = {
@@ -373,7 +417,9 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
                         key={day.date}
                         className="flex flex-col gap-1 rounded-md border bg-background px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <span className="font-medium">{formatDate(day.date) ?? day.date}</span>
+                        <span className="font-medium">
+                          {formatDate(day.date, detail.city.timezone) ?? day.date}
+                        </span>
                         <span className="text-muted-foreground">
                           {day.status === 'closed'
                             ? 'Fechado'
@@ -436,24 +482,11 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
 
           <EstablishmentActions detail={detail} />
 
-          <section
-            aria-labelledby="publication-title"
-            className="rounded-lg border bg-card p-5 text-sm"
-          >
-            <span className="flex size-10 items-center justify-center rounded-md border border-success/20 bg-success-soft text-success-accent">
-              <Check aria-hidden="true" className="size-4" />
-            </span>
-            <h2 id="publication-title" className="mt-4 font-semibold">
-              Conteúdo publicado
-            </h2>
-            <p className="mt-2 leading-6 text-muted-foreground">
-              Esta ficha mostra somente dados aprovados e publicados no catálogo.
-            </p>
-            <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-              {publishedAt ? <p>Publicado em {publishedAt}</p> : null}
-              {updatedAt ? <p>Atualizado em {updatedAt}</p> : null}
-            </div>
-          </section>
+          <CatalogPublicationMetadata
+            publishedAt={detail.publishedAt}
+            updatedAt={detail.updatedAt}
+            timeZone={detail.city.timezone}
+          />
 
           <Link
             href={`/cidades/${encodeURIComponent(detail.city.slug)}`}
