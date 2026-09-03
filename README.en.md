@@ -71,16 +71,16 @@ Docker Compose.
 
 ## What it does
 
-| Layer             | Purpose                                                                  | Where it lives                             |
-| :---------------- | :------------------------------------------------------------------------ | :----------------------------------------- |
-| **Geography**     | Regions, cities, and the public geography catalog.                       | `app/modules/geography/`                   |
-| **Taxonomy**      | Hierarchical categories with typed attributes and effective inheritance.  | `app/modules/taxonomy/`                    |
-| **Organizations** | Memberships, invitations, and transactional claims over establishments.  | `app/modules/organizations/`               |
-| **Establishments**| Stable identity with revisioned public content and versioned completeness.| `app/modules/establishments/`              |
-| **Moderation**    | Submission, publication gates, and revision history.                     | `app/modules/establishments/` · `media/`   |
-| **Catalog**       | Public discovery by city and category, served from a projection.         | `app/modules/catalog/`                     |
-| **Benefits**      | Editions, offers, accesses, and redemptions in the consumer wallet.      | `app/modules/benefits/`                    |
-| **Analytics**     | Impressions, contact clicks, and searches without results, with retention.| `app/modules/analytics/`                   |
+| Layer              | Purpose                                                                    | Where it lives                           |
+| :----------------- | :------------------------------------------------------------------------- | :--------------------------------------- |
+| **Geography**      | Regions, cities, and the public geography catalog.                         | `app/modules/geography/`                 |
+| **Taxonomy**       | Hierarchical categories with typed attributes and effective inheritance.   | `app/modules/taxonomy/`                  |
+| **Organizations**  | Memberships, invitations, and transactional claims over establishments.    | `app/modules/organizations/`             |
+| **Establishments** | Stable identity with revisioned public content and versioned completeness. | `app/modules/establishments/`            |
+| **Moderation**     | Submission, publication gates, and revision history.                       | `app/modules/establishments/` · `media/` |
+| **Catalog**        | Public discovery by city and category, served from a projection.           | `app/modules/catalog/`                   |
+| **Benefits**       | Editions, offers, accesses, and redemptions in the consumer wallet.        | `app/modules/benefits/`                  |
+| **Analytics**      | Impressions, contact clicks, and searches without results, with retention. | `app/modules/analytics/`                 |
 
 ---
 

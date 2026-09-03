@@ -71,16 +71,16 @@ pnpm 11 e Docker Compose.
 
 ## O que faz
 
-| Camada          | Propósito                                                                    | Onde vive                                  |
-| :-------------- | :--------------------------------------------------------------------------- | :----------------------------------------- |
-| **Geografia**   | Regiões, cidades e catálogo geográfico público.                              | `app/modules/geography/`                   |
-| **Taxonomia**   | Categorias hierárquicas com atributos tipados e herança efetiva.             | `app/modules/taxonomy/`                    |
-| **Organizações**| Memberships, convites e claims transacionais sobre estabelecimentos.         | `app/modules/organizations/`               |
-| **Unidades**    | Identidade estável com conteúdo público revisionado e completude versionada. | `app/modules/establishments/`              |
-| **Moderação**   | Submissão, gates de publicação e histórico de revisões.                      | `app/modules/establishments/` · `media/`   |
-| **Catálogo**    | Descoberta pública por cidade e categoria, servida de uma projeção.          | `app/modules/catalog/`                     |
-| **Benefícios**  | Edições, ofertas, acessos e resgates da carteira do consumidor.              | `app/modules/benefits/`                    |
-| **Analytics**   | Impressões, cliques de contato e buscas sem resultado, com retenção.         | `app/modules/analytics/`                   |
+| Camada           | Propósito                                                                    | Onde vive                                |
+| :--------------- | :--------------------------------------------------------------------------- | :--------------------------------------- |
+| **Geografia**    | Regiões, cidades e catálogo geográfico público.                              | `app/modules/geography/`                 |
+| **Taxonomia**    | Categorias hierárquicas com atributos tipados e herança efetiva.             | `app/modules/taxonomy/`                  |
+| **Organizações** | Memberships, convites e claims transacionais sobre estabelecimentos.         | `app/modules/organizations/`             |
+| **Unidades**     | Identidade estável com conteúdo público revisionado e completude versionada. | `app/modules/establishments/`            |
+| **Moderação**    | Submissão, gates de publicação e histórico de revisões.                      | `app/modules/establishments/` · `media/` |
+| **Catálogo**     | Descoberta pública por cidade e categoria, servida de uma projeção.          | `app/modules/catalog/`                   |
+| **Benefícios**   | Edições, ofertas, acessos e resgates da carteira do consumidor.              | `app/modules/benefits/`                  |
+| **Analytics**    | Impressões, cliques de contato e buscas sem resultado, com retenção.         | `app/modules/analytics/`                 |
 
 ---
 
@@ -260,7 +260,7 @@ código volta ao commit anterior.
 publicando somente no loopback, atrás de um nginx que termina TLS. PostgreSQL e Redis são
 containers compartilhados alcançados por rede Docker externa.
 
-A chave usada pela CI carrega um *forced command* no `authorized_keys` do host, então ela executa
+A chave usada pela CI carrega um _forced command_ no `authorized_keys` do host, então ela executa
 `deploy.sh` e nada mais.
 
 ---
