@@ -106,6 +106,7 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
           className
         )}
         disabled={isLoading || recordCount === 0}
+        aria-label={column.getCanSort() ? `Ordenar por ${title}` : undefined}
         onClick={() => {
           const isSorted = column.getIsSorted()
           if (isSorted === 'asc') {
@@ -140,8 +141,8 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
         variant="ghost"
         className="-me-1 size-7 rounded-md"
         onClick={() => column.pin(false)}
-        aria-label={`Unpin ${title} column`}
-        title={`Unpin ${title} column`}
+        aria-label={`Desafixar coluna ${title}`}
+        title={`Desafixar coluna ${title}`}
       >
         <PinOff className="size-3.5! opacity-50!" aria-hidden="true" />
       </Button>
@@ -173,7 +174,7 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
                   disabled={!column.getCanSort()}
                 >
                   <ArrowUp className="size-3.5!" />
-                  <span className="grow">Asc</span>
+                  <span className="grow">Crescente</span>
                   {column.getIsSorted() === 'asc' && (
                     <Check className="size-4 opacity-100! text-primary" />
                   )}
@@ -189,7 +190,7 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
                   disabled={!column.getCanSort()}
                 >
                   <ArrowDown className="size-3.5!" />
-                  <span className="grow">Desc</span>
+                  <span className="grow">Decrescente</span>
                   {column.getIsSorted() === 'desc' && (
                     <Check className="size-4 opacity-100! text-primary" />
                   )}
@@ -208,7 +209,7 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
                   onClick={() => column.pin(column.getIsPinned() === 'start' ? false : 'start')}
                 >
                   <ArrowLeftToLine className="size-3.5!" aria-hidden="true" />
-                  <span className="grow">Pin to left</span>
+                  <span className="grow">Fixar à esquerda</span>
                   {column.getIsPinned() === 'start' && (
                     <Check className="size-4 opacity-100! text-primary" />
                   )}
@@ -217,7 +218,7 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
                   onClick={() => column.pin(column.getIsPinned() === 'end' ? false : 'end')}
                 >
                   <ArrowRightToLine className="size-3.5!" aria-hidden="true" />
-                  <span className="grow">Pin to right</span>
+                  <span className="grow">Fixar à direita</span>
                   {column.getIsPinned() === 'end' && (
                     <Check className="size-4 opacity-100! text-primary" />
                   )}
@@ -233,14 +234,14 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
                   disabled={!canMove('left') || column.getIsPinned() !== false}
                 >
                   <ArrowLeft className="size-3.5!" aria-hidden="true" />
-                  <span>Move to Left</span>
+                  <span>Mover para a esquerda</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => moveColumn('right')}
                   disabled={!canMove('right') || column.getIsPinned() !== false}
                 >
                   <ArrowRight className="size-3.5!" aria-hidden="true" />
-                  <span>Move to Right</span>
+                  <span>Mover para a direita</span>
                 </DropdownMenuItem>
               </>
             )}
@@ -253,7 +254,7 @@ function DataGridColumnHeader<TData extends RowData, TValue>({
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <Settings2 className="size-3.5!" />
-                  <span>Columns</span>
+                  <span>Colunas</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>

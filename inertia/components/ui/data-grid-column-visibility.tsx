@@ -20,7 +20,7 @@ function DataGridColumnVisibility<TData extends RowData>({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[150px]">
-        <DropdownMenuLabel className="font-medium">Toggle Columns</DropdownMenuLabel>
+        <DropdownMenuLabel className="font-medium">Escolher colunas</DropdownMenuLabel>
         {table
           .getAllColumns()
           .filter((column) => typeof column.accessorFn !== 'undefined' && column.getCanHide())

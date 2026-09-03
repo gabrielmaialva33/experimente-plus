@@ -155,6 +155,15 @@ function DataGridTableHeadRowCell<TData extends RowData>({
       }}
       data-pinned={pinnedSideAttr(isPinned)}
       data-last-col={isLastLeftPinned ? 'left' : isFirstRightPinned ? 'right' : undefined}
+      aria-sort={
+        column.getCanSort()
+          ? column.getIsSorted() === 'asc'
+            ? 'ascending'
+            : column.getIsSorted() === 'desc'
+              ? 'descending'
+              : 'none'
+          : undefined
+      }
       className={cn(
         'relative h-10 text-left rtl:text-right align-middle font-normal text-accent-foreground [&:has([role=checkbox])]:pe-0',
         headerCellSpacing,
@@ -385,7 +394,7 @@ function DataGridTableEmpty() {
   return (
     <tr>
       <td colSpan={totalColumns} className="text-center text-muted-foreground py-6">
-        {props.emptyMessage || 'No data available'}
+        {props.emptyMessage || 'Nenhum dado disponível'}
       </td>
     </tr>
   )
@@ -417,7 +426,7 @@ function DataGridTableLoader() {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           ></path>
         </svg>
-        {props.loadingMessage || 'Loading...'}
+        {props.loadingMessage || 'Carregando…'}
       </div>
     </div>
   )
@@ -441,7 +450,7 @@ function DataGridTableRowSelect<TData extends RowData>({
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
+          aria-label="Selecionar linha"
         size={size ?? 'sm'}
         className="align-[inherit]"
       />
@@ -459,7 +468,7 @@ function DataGridTableRowSelectAll({ size }: { size?: 'sm' | 'md' | 'lg' }) {
       }
       disabled={isLoading || recordCount === 0}
       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      aria-label="Select all"
+      aria-label="Selecionar todas as linhas"
       size={size}
       className="align-[inherit]"
     />

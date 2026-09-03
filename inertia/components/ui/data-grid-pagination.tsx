@@ -30,12 +30,12 @@ function DataGridPagination(props: DataGridPaginationProps) {
 
   const defaultProps: Partial<DataGridPaginationProps> = {
     sizes: [5, 10, 25, 50, 100],
-    sizesLabel: 'Show',
-    sizesDescription: 'per page',
+    sizesLabel: 'Mostrar',
+    sizesDescription: 'por página',
     sizesSkeleton: <Skeleton className="h-8 w-44" />,
     moreLimit: 5,
     more: false,
-    info: '{from} - {to} of {count}',
+    info: '{from} - {to} de {count}',
     infoSkeleton: <Skeleton className="h-8 w-60" />,
   }
 
@@ -45,7 +45,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
   const btnArrowClasses = btnBaseClasses + ' rtl:transform rtl:rotate-180'
   const pageIndex = table.state.pagination.pageIndex
   const pageSize = table.state.pagination.pageSize
-  const from = pageIndex * pageSize + 1
+  const from = recordCount === 0 ? 0 : pageIndex * pageSize + 1
   const to = Math.min((pageIndex + 1) * pageSize, recordCount)
   const pageCount = table.getPageCount()
 
@@ -55,7 +55,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
         .replace('{from}', from.toString())
         .replace('{to}', to.toString())
         .replace('{count}', recordCount.toString())
-    : `${from} - ${to} of ${recordCount}`
+    : `${from} - ${to} de ${recordCount}`
 
   // Pagination limit logic
   const paginationMoreLimit = mergedProps?.moreLimit || 5
@@ -74,6 +74,8 @@ function DataGridPagination(props: DataGridPaginationProps) {
           size="sm"
           mode="icon"
           variant="ghost"
+          aria-label={`Ir para a página ${i + 1}`}
+          aria-current={pageIndex === i ? 'page' : undefined}
           className={cn(btnBaseClasses, 'text-muted-foreground', {
             'bg-accent text-accent-foreground': pageIndex === i,
           })}
@@ -99,6 +101,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
           mode="icon"
           className={btnBaseClasses}
           variant="ghost"
+          aria-label="Abrir grupo anterior de páginas"
           onClick={() => table.setPageIndex(currentGroupStart - 1)}
         >
           ...
@@ -118,6 +121,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
           size="sm"
           mode="icon"
           onClick={() => table.setPageIndex(currentGroupEnd)}
+          aria-label="Abrir próximo grupo de páginas"
         >
           ...
         </Button>
@@ -139,7 +143,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
           mergedProps?.sizesSkeleton
         ) : (
           <>
-            <div className="text-sm text-muted-foreground">Rows per page</div>
+            <div className="text-sm text-muted-foreground">Linhas por página</div>
             <Select
               value={`${pageSize}`}
               indicatorPosition="right"
@@ -180,7 +184,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  <span className="sr-only">Go to previous page</span>
+                  <span className="sr-only">Ir para a página anterior</span>
                   <ChevronLeftIcon className="size-4" />
                 </Button>
 
@@ -198,7 +202,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
-                  <span className="sr-only">Go to next page</span>
+                  <span className="sr-only">Ir para a próxima página</span>
                   <ChevronRightIcon className="size-4" />
                 </Button>
               </div>
