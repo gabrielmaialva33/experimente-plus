@@ -450,7 +450,7 @@ function DataGridTableRowSelect<TData extends RowData>({
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Selecionar linha"
+        aria-label="Selecionar linha"
         size={size ?? 'sm'}
         className="align-[inherit]"
       />

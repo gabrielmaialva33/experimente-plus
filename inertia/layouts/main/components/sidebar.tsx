@@ -49,8 +49,8 @@ export function SidebarNav({
 
   const visibleItems = navigationItemsForSurface(surface, 'sidebar', { activeTenantId }).filter(
     (item) => {
-    if (item.developmentOnly && !application.demoPagesEnabled) return false
-    return !item.capability || can(item.capability)
+      if (item.developmentOnly && !application.demoPagesEnabled) return false
+      return !item.capability || can(item.capability)
     }
   )
   const visibleSections = visibleItems.reduce<NavigationSection[]>((sections, item) => {
@@ -128,7 +128,13 @@ export function SidebarNav({
   )
 }
 
-function SidebarWorkspace({ collapsed, surface }: { collapsed: boolean; surface: NavigationSurface }) {
+function SidebarWorkspace({
+  collapsed,
+  surface,
+}: {
+  collapsed: boolean
+  surface: NavigationSurface
+}) {
   const { activeTenant } = useAuth()
 
   if (surface === 'consumer') return null

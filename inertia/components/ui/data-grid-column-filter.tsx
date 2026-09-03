@@ -50,7 +50,7 @@ function DataGridColumnFilter<TData extends RowData, TValue>({
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size > 2 ? (
                   <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                    {selectedValues.size} selected
+                    {selectedValues.size} selecionados
                   </Badge>
                 ) : (
                   options
@@ -74,7 +74,7 @@ function DataGridColumnFilter<TData extends RowData, TValue>({
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value)
@@ -99,9 +99,9 @@ function DataGridColumnFilter<TData extends RowData, TValue>({
                           : 'opacity-50 [&_svg]:invisible'
                       )}
                     >
-                      <Check className={cn('h-4 w-4')} />
+                      <Check aria-hidden="true" className={cn('h-4 w-4')} />
                     </div>
-                    {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
+                    {option.icon && <option.icon className="me-2 h-4 w-4 text-muted-foreground" />}
                     <span>{option.label}</span>
                     {facets?.get(option.value) && (
                       <span className="ms-auto flex h-4 w-4 items-center justify-center font-mono text-xs">
@@ -120,7 +120,7 @@ function DataGridColumnFilter<TData extends RowData, TValue>({
                     onSelect={() => column?.setFilterValue(undefined)}
                     className="justify-center text-center"
                   >
-                    Clear filters
+                    Limpar filtros
                   </CommandItem>
                 </CommandGroup>
               </>
