@@ -81,9 +81,9 @@ export default function NewEstablishmentPage({
 
       <div className="mx-auto max-w-3xl space-y-6">
         <PageHeader
-          eyebrow="Nova unidade"
+          eyebrow="Portal do parceiro"
           icon={Store}
-          title="Crie a ficha pública"
+          title="Nova unidade"
           description="Comece pela identidade da unidade. Endereço, categorias, horários e mídia serão preenchidos no editor."
           actions={
             <Button asChild variant="outline">
@@ -100,8 +100,8 @@ export default function NewEstablishmentPage({
             <MapPinOff aria-hidden="true" className="size-4" />
             <AlertTitle>Nenhuma cidade está disponível</AlertTitle>
             <AlertDescription>
-              O cadastro da unidade está bloqueado até que a operação habilite ao menos uma cidade
-              para esta operação. Procure a equipe da plataforma antes de continuar.
+              O cadastro da unidade está bloqueado até que a operação habilite ao menos uma cidade.
+              Procure a equipe da plataforma antes de continuar.
             </AlertDescription>
           </Alert>
         ) : null}

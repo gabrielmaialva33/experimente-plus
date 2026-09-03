@@ -48,11 +48,11 @@ export function EditorSection({
       aria-describedby={[descriptionId, issuesId].filter(Boolean).join(' ')}
       className={cn('scroll-mt-36 lg:scroll-mt-24', className)}
     >
-      <Card className="overflow-hidden border-border/70 shadow-xs">
+      <Card className="overflow-hidden border-border/70">
         <CardHeader className="min-h-0 items-start px-5 py-5 sm:flex-nowrap sm:px-6">
           <div className="flex min-w-0 items-start gap-3.5">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10">
-              <Icon className="size-5" />
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Icon aria-hidden="true" className="size-5" />
             </span>
             <div className="min-w-0">
               <h2 id={titleId} className="text-lg font-semibold tracking-[-0.02em]">

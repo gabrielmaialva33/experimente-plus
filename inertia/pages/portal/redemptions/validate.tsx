@@ -71,7 +71,7 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
           eyebrow="Portal do parceiro"
           icon={ScanLine}
           title="Validar benefício"
-          description="Leia o QR Code ou cole o link apresentado pelo cliente. A utilização só é registrada após sua confirmação."
+          description="Cole o link apresentado pelo cliente, inclusive quando ele vier de um QR Code. A utilização só é registrada após sua confirmação."
           actions={
             <Button asChild variant="outline" size="lg">
               <Link href="/portal/redemptions">

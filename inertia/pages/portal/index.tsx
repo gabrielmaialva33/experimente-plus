@@ -119,7 +119,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
       value: overview.totals.establishments,
       icon: Store,
       tone: 'info' as const,
-      helper: `${overview.totals.complete} prontas para submissão`,
+      helper: `${overview.totals.complete} prontas para enviar para análise`,
     },
     {
       label: 'Publicadas',
@@ -137,13 +137,13 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
 
   return (
     <MainLayout>
-      <Head title="Portal do parceiro" />
+      <Head title="Visão geral" />
 
       <div className="space-y-7">
         <PageHeader
-          eyebrow="Operação do parceiro"
+          eyebrow="Portal do parceiro"
           icon={Store}
-          title="Portal do parceiro"
+          title="Visão geral"
           description="Organize empresas e unidades, acompanhe a qualidade das fichas e envie conteúdo para moderação."
           actions={
             canCreateOrganization && overview.organizations.length > 0 ? (
@@ -276,7 +276,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
 
                       <div className="mt-6">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="font-semibold">Progresso do onboarding</span>
+                          <span className="font-semibold">Progresso da configuração</span>
                           <span className="font-semibold tabular-nums text-primary">
                             {progress}%
                           </span>
@@ -284,7 +284,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                         <div
                           className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
                           role="progressbar"
-                          aria-label={`Progresso do onboarding de ${organization.trade_name}`}
+                          aria-label={`Progresso da configuração de ${organization.trade_name}`}
                           aria-valuemin={0}
                           aria-valuemax={100}
                           aria-valuenow={progress}

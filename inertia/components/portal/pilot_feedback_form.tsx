@@ -116,13 +116,13 @@ export default function PilotFeedbackForm({
       onSubmit={submit}
       className={cn(
         compact
-          ? 'space-y-4 rounded-2xl border border-border bg-card p-5'
-          : 'space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm'
+          ? 'space-y-4 rounded-md border border-border bg-card p-5'
+          : 'space-y-5 rounded-md border border-border bg-card p-6'
       )}
       aria-busy={busy}
     >
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <MessageSquareText aria-hidden="true" className="size-4" />
         </span>
         <div>

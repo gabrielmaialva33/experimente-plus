@@ -280,7 +280,7 @@ export default function PortalOrganizationPage({
         >
           <form
             onSubmit={update}
-            className="space-y-5 rounded-3xl border border-border bg-card p-6"
+            className="space-y-5 rounded-md border border-border bg-card p-6"
             aria-busy={busy}
           >
             <div>

@@ -344,14 +344,14 @@ export default function EstablishmentBenefitsPage({
 
   return (
     <MainLayout>
-      <Head title={`Benefícios — ${establishment.public_name}`} />
+      <Head title="Benefícios da unidade" />
 
       <div className="space-y-7">
         <PageHeader
           eyebrow="Portal do parceiro"
           icon={TicketPercent}
-          title={`Benefícios de ${establishment.public_name}`}
-          description="Defina uma oferta clara para cada edição. Termos ativos só podem ser alterados depois que a oferta for pausada."
+          title="Benefícios da unidade"
+          description={`${establishment.public_name} · defina uma oferta clara para cada edição. Termos ativos só podem ser alterados depois que a oferta for pausada.`}
           actions={
             <Button asChild variant="outline" size="lg" className="min-h-11">
               <Link href={`/portal/establishments/${establishment.id}`}>

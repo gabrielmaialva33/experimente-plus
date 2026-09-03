@@ -21,14 +21,14 @@ function formatDate(value: string): string {
 export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps) {
   return (
     <MainLayout>
-      <Head title={`Comprovante ${receipt.receipt_code}`} />
+      <Head title="Comprovante de utilização" />
 
       <div className="space-y-7">
         <PageHeader
-          eyebrow="Comprovante de utilização"
+          eyebrow="Portal do parceiro"
           icon={ReceiptText}
-          title={receipt.offer.title}
-          description={`${receipt.establishment.name} · ${receipt.edition.name}`}
+          title="Comprovante de utilização"
+          description={`${receipt.offer.title} · ${receipt.establishment.name} · ${receipt.edition.name}`}
           actions={
             <Button asChild variant="outline" size="lg">
               <Link href="/portal/redemptions">

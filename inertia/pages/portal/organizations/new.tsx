@@ -58,7 +58,7 @@ export default function NewOrganizationPage() {
         <PageHeader
           eyebrow="Portal do parceiro"
           icon={Building2}
-          title="Cadastre a organização"
+          title="Nova organização"
           description="A organização representa a empresa ou identidade legal. Cada endereço público será uma unidade separada."
           actions={
             <Button asChild variant="outline">
