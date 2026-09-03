@@ -1,6 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react'
 import { ExternalLink, File as FileIcon, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
+import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EmptyState } from '~/components/empty_state'
 import { FileUpload } from '~/components/file'
 import { PageHeader } from '~/components/page_header'
 import { Badge } from '~/components/ui/badge'
@@ -48,7 +51,7 @@ function formatFileSize(bytes: number): string {
 
 function formatDate(value: string | null): string {
   if (!value) return '—'
-  return new Date(value).toLocaleString(undefined, {
+  return new Date(value).toLocaleString('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   })
@@ -59,31 +62,49 @@ export default function FilesPage({ files }: FilesPageProps) {
   const canUpload = can('files.create')
   const canDeleteAny = can('files.delete')
   const canDeleteOwn = can('files.delete.own')
+  const [fileToDelete, setFileToDelete] = useState<FileRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  const deleteFile = (file: FileRow) => {
-    const confirmed = window.confirm(`Delete “${file.client_name}”? This cannot be undone.`)
-    if (!confirmed) return
-
-    router.delete(`/files/${file.id}`, { preserveScroll: true })
+  const deleteFile = () => {
+    if (!fileToDelete || deleting) return
+    setDeleting(true)
+    router.delete(`/files/${fileToDelete.id}`, {
+      preserveScroll: true,
+      onFinish: () => {
+        setDeleting(false)
+        setFileToDelete(null)
+      },
+    })
   }
 
   return (
     <MainLayout>
-      <Head title="Files" />
+      <Head title="Arquivos" />
+
+      <ConfirmDialog
+        open={fileToDelete !== null}
+        onOpenChange={(open) => !open && !deleting && setFileToDelete(null)}
+        title="Excluir arquivo?"
+        description={`O arquivo “${fileToDelete?.client_name ?? ''}” deixará de ficar disponível nesta operação. Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir arquivo"
+        destructive
+        processing={deleting}
+        onConfirm={deleteFile}
+      />
 
       <div className="space-y-6">
         <PageHeader
-          title="File management"
-          description="Upload and manage files in the active workspace."
+          title="Arquivos"
+          description="Envie e administre arquivos privados da operação ativa."
         />
 
         {canUpload && (
           <Card>
             <CardHeader>
               <CardHeading>
-                <CardTitle>Upload files</CardTitle>
+                <CardTitle>Enviar arquivo</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Drag and drop or browse to upload a new workspace file.
+                  Selecione um arquivo compatível de até 10 MB.
                 </p>
               </CardHeading>
             </CardHeader>
@@ -96,28 +117,24 @@ export default function FilesPage({ files }: FilesPageProps) {
         <Card>
           <CardHeader>
             <CardHeading>
-              <CardTitle>Workspace files</CardTitle>
+              <CardTitle>Arquivos da operação</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {files.meta.total.toLocaleString()} file{files.meta.total === 1 ? '' : 's'} in the
-                active workspace.
+                {files.meta.total.toLocaleString('pt-BR')}{' '}
+                {files.meta.total === 1 ? 'arquivo disponível' : 'arquivos disponíveis'}
               </p>
             </CardHeading>
           </CardHeader>
           <CardContent className="p-0">
             {files.data.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-                <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <FileIcon className="size-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">No files yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {canUpload
-                      ? 'Upload the first file for this workspace.'
-                      : 'No workspace files are available to you yet.'}
-                  </p>
-                </div>
-              </div>
+              <EmptyState
+                icon={FileIcon}
+                title="Nenhum arquivo disponível"
+                description={
+                  canUpload
+                    ? 'Envie o primeiro arquivo desta operação.'
+                    : 'Ainda não há arquivos que você possa consultar.'
+                }
+              />
             ) : (
               <div className="divide-y divide-border">
                 {files.data.map((file) => {
@@ -142,27 +159,27 @@ export default function FilesPage({ files }: FilesPageProps) {
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span>{formatFileSize(file.file_size)}</span>
                           <span>{file.file_type}</span>
-                          <span>Uploaded by {file.owner.full_name}</span>
+                          <span>Enviado por {file.owner.full_name}</span>
                           <span>{formatDate(file.created_at)}</span>
                         </div>
                       </div>
 
                       <div className="flex shrink-0 items-center gap-2">
-                        <a href={file.url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm">
+                          <a href={file.url} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="size-4" />
-                            Open
-                          </Button>
-                        </a>
+                            Abrir
+                          </a>
+                        </Button>
                         {canDelete && (
                           <Button
                             type="button"
                             variant="destructive"
                             size="sm"
-                            onClick={() => deleteFile(file)}
+                            onClick={() => setFileToDelete(file)}
                           >
                             <Trash2 className="size-4" />
-                            Delete
+                            Excluir
                           </Button>
                         )}
                       </div>
@@ -175,22 +192,22 @@ export default function FilesPage({ files }: FilesPageProps) {
             {files.meta.lastPage > 1 && (
               <div className="flex items-center justify-between border-t border-border px-5 py-4">
                 <p className="text-sm text-muted-foreground">
-                  Page {files.meta.currentPage} of {files.meta.lastPage}
+                  Página {files.meta.currentPage} de {files.meta.lastPage}
                 </p>
                 <div className="flex gap-2">
                   {files.meta.currentPage > files.meta.firstPage && (
-                    <Link href={`/files?page=${files.meta.currentPage - 1}`} preserveScroll>
-                      <Button variant="outline" size="sm">
-                        Previous
-                      </Button>
-                    </Link>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/files?page=${files.meta.currentPage - 1}`} preserveScroll>
+                        Anterior
+                      </Link>
+                    </Button>
                   )}
                   {files.meta.currentPage < files.meta.lastPage && (
-                    <Link href={`/files?page=${files.meta.currentPage + 1}`} preserveScroll>
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
-                    </Link>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/files?page=${files.meta.currentPage + 1}`} preserveScroll>
+                        Próxima
+                      </Link>
+                    </Button>
                   )}
                 </div>
               </div>

@@ -19,7 +19,7 @@ export default class InertiaFilesController {
   async destroy({ params, response, tenant, session }: HttpContext) {
     const service = await app.container.make(DeleteFileService)
     await service.run(Number(params.id), tenant!.id)
-    session.flash('success', 'File deleted successfully.')
+    session.flash('success', 'Arquivo excluído.')
 
     return response.redirect().back()
   }
