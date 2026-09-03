@@ -55,11 +55,16 @@ describe('RegisterForm', () => {
     expect(legalAcceptance).toBeRequired()
     expect(legalAcceptance).toHaveAttribute('aria-required', 'true')
     expect(container.querySelector('input[name="terms_accepted"]')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Termos de Uso' })).toHaveAttribute('href', '/termos')
-    expect(screen.getByRole('link', { name: 'Política de Privacidade' })).toHaveAttribute(
-      'href',
-      '/privacidade'
-    )
+    const terms = screen.getByRole('link', { name: /Termos de Uso.*abre em nova aba/ })
+    const privacy = screen.getByRole('link', {
+      name: /Política de Privacidade.*abre em nova aba/,
+    })
+    expect(terms).toHaveAttribute('href', '/termos')
+    expect(terms).toHaveAttribute('target', '_blank')
+    expect(terms).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(privacy).toHaveAttribute('href', '/privacidade')
+    expect(privacy).toHaveAttribute('target', '_blank')
+    expect(privacy).toHaveAttribute('rel', 'noopener noreferrer')
     expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled()
     expect(screen.getByLabelText('Nome completo')).not.toHaveAttribute('autofocus')
     expect(container.querySelector('[data-slot="card"]')).not.toBeInTheDocument()
@@ -79,9 +84,13 @@ describe('RegisterForm', () => {
     await user.click(
       screen.getByRole('checkbox', { name: 'Li e aceito os documentos obrigatórios' })
     )
-    await user.click(screen.getByRole('button', { name: 'Criar conta' }))
+    await user.dblClick(screen.getByRole('button', { name: 'Criar conta' }))
 
-    expect(mocks.post).toHaveBeenCalledWith('/register')
+    expect(mocks.post).toHaveBeenCalledTimes(1)
+    expect(mocks.post).toHaveBeenCalledWith(
+      '/register',
+      expect.objectContaining({ onFinish: expect.any(Function) })
+    )
   })
 
   it('reveals and hides both password inputs accessibly', async () => {

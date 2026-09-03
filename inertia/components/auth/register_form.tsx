@@ -1,6 +1,6 @@
 import { Link, useForm } from '@inertiajs/react'
 import { AtSign, Loader2, Mail, UserRound } from 'lucide-react'
-import type { FormEvent } from 'react'
+import { type FormEvent, useRef } from 'react'
 
 import { PasswordField } from '~/components/auth/password_field'
 import { PasswordRequirements } from '~/components/auth/password_requirements'
@@ -14,6 +14,7 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
+  const submissionStarted = useRef(false)
   const { data, setData, post, processing, errors } = useForm({
     full_name: '',
     email: '',
@@ -27,7 +28,14 @@ export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    post('/register')
+    if (submissionStarted.current || processing) return
+
+    submissionStarted.current = true
+    post('/register', {
+      onFinish: () => {
+        submissionStarted.current = false
+      },
+    })
   }
 
   return (
@@ -136,12 +144,24 @@ export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
             </label>
             <p id="terms-accepted-help" className="mt-1 text-xs leading-5 text-muted-foreground">
               Confira os{' '}
-              <Link href="/termos" className="font-medium text-primary hover:underline">
+              <Link
+                href="/termos"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
                 Termos de Uso
+                <span className="sr-only"> (abre em nova aba)</span>
               </Link>{' '}
               e a{' '}
-              <Link href="/privacidade" className="font-medium text-primary hover:underline">
+              <Link
+                href="/privacidade"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
                 Política de Privacidade
+                <span className="sr-only"> (abre em nova aba)</span>
               </Link>
               .
             </p>
