@@ -144,7 +144,7 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       base: '',
       header: '',
       headerRow: '',
-      headerSticky: 'sticky top-0 z-10 bg-background/90 backdrop-blur-xs',
+      headerSticky: 'sticky top-0 z-10 bg-background',
       body: '',
       bodyRow: '',
       footer: '',
@@ -181,15 +181,24 @@ function DataGridContainer({
   children,
   className,
   border = true,
+  ariaLabel = 'Tabela de dados',
 }: {
   children: ReactNode
   className?: string
   border?: boolean
+  ariaLabel?: string
 }) {
   return (
     <div
       data-slot="data-grid"
-      className={cn('grid w-full', border && 'border border-border rounded-lg', className)}
+      role="region"
+      aria-label={ariaLabel}
+      tabIndex={0}
+      className={cn(
+        'grid min-w-0 w-full overflow-x-auto',
+        border && 'rounded-md border border-border',
+        className
+      )}
     >
       {children}
     </div>
