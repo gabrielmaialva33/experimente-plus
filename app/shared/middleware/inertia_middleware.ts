@@ -4,6 +4,7 @@ import type { NextFn } from '@adonisjs/core/types/http'
 import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
 import PermissionService from '#modules/permissions/services/permission_service'
+import { resolveActiveTenantId } from '#shared/utils/active_tenant'
 import { findApplicationSetCookies } from '#shared/utils/public_response_cookies'
 import env from '#start/env'
 
@@ -205,10 +206,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     }))
 
     const claimedTenantId = guard.tokenPayload?.tenantId
-    const activeTenantId =
-      claimedTenantId && tenants.some((tenant) => tenant.id === claimedTenantId)
-        ? claimedTenantId
-        : (tenants[0]?.id ?? null)
+    const activeTenantId = resolveActiveTenantId(tenants, claimedTenantId)
 
     const permissionService = await app.container.make(PermissionService)
     const permissions = await permissionService.getEffectivePermissionNames(user.id)

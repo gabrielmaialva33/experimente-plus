@@ -16,21 +16,27 @@ import {
   signInValidator,
 } from '#modules/users/validators/users_validator'
 import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
+import { preventCredentialResponseCaching } from '#modules/web/utils/credential_response'
 
 export default class InertiaAuthController {
-  async showLogin({ inertia }: HttpContext) {
-    return inertia.render('auth/login', {})
+  async showLogin(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
+    return ctx.inertia.render('auth/login', {})
   }
 
-  async showRegister({ inertia }: HttpContext) {
-    return inertia.render('auth/register', {})
+  async showRegister(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
+    return ctx.inertia.render('auth/register', {})
   }
 
-  async showForgotPassword({ inertia }: HttpContext) {
-    return inertia.render('auth/forgot_password', {})
+  async showForgotPassword(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
+    return ctx.inertia.render('auth/forgot_password', {})
   }
 
-  async forgotPassword({ request, response, session }: HttpContext) {
+  async forgotPassword(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
+    const { request, response, session } = ctx
     const { email } = await request.validateUsing(requestPasswordResetValidator)
     const service = await app.container.make(RequestPasswordResetService)
     await service.run(email)
@@ -42,13 +48,16 @@ export default class InertiaAuthController {
     return response.redirect().back()
   }
 
-  async showResetPassword({ request, inertia }: HttpContext) {
-    return inertia.render('auth/reset_password', {
-      token: String(request.input('token', '')),
+  async showResetPassword(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
+    return ctx.inertia.render('auth/reset_password', {
+      token: String(ctx.request.input('token', '')),
     })
   }
 
-  async resetPassword({ request, response, session }: HttpContext) {
+  async resetPassword(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
+    const { request, response, session } = ctx
     try {
       const { token, password } = await request.validateUsing(resetPasswordValidator)
       const service = await app.container.make(ResetPasswordService)
@@ -65,6 +74,7 @@ export default class InertiaAuthController {
   }
 
   async login(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
     const { request, response, session, auth } = ctx
     const { uid, password } = await request.validateUsing(signInValidator)
 
@@ -88,6 +98,7 @@ export default class InertiaAuthController {
   }
 
   async register(ctx: HttpContext) {
+    preventCredentialResponseCaching(ctx)
     const { request, response, session, auth } = ctx
 
     try {

@@ -59,6 +59,13 @@ primeiro tenant ativo do usuário
 
 O middleware verifica membership e atividade. Operações privadas que dependem de operação devem usar `tenant({ required: true })`.
 
+Quando o JWT contém `tenantId`, essa seleção é autoritativa: se a operação estiver inativa ou não
+for mais acessível, a requisição não pode escolher silenciosamente outra membership. O fallback para
+o primeiro tenant ativo existe somente para tokens sem a claim, mantendo compatibilidade com o
+fluxo determinístico anterior. Props compartilhadas e destinos pós-autenticação seguem a mesma
+regra; uma claim obsoleta ou presente em formato inválido resulta em nenhuma operação ativa e leva
+a pessoa à descoberta pública. Rotas privadas que exigem uma operação respondem com acesso negado.
+
 ### Resolução no catálogo público
 
 O catálogo público não usa o middleware de tenant autenticado.

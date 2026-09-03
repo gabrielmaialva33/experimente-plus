@@ -1,13 +1,53 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import mail from '@adonisjs/mail/services/main'
+import jwt from 'jsonwebtoken'
 
 import { OrganizationFactory, OrganizationMemberFactory } from '#database/factories/index'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
-import { JWT_COOKIE_NAME } from '#shared/jwt/constants'
+import {
+  JWT_AUDIENCE,
+  JWT_COOKIE_NAME,
+  JWT_ISSUER,
+  WEB_ACCESS_TOKEN_EXPIRES_IN,
+} from '#shared/jwt/constants'
+import env from '#start/env'
+
+interface TestInertiaPage {
+  props: Record<string, unknown>
+}
+
+function parseInertiaPage(response: { text(): string }): TestInertiaPage {
+  const match = response
+    .text()
+    .match(/<script data-page="app" type="application\/json">([\s\S]*?)<\/script>/)
+
+  if (!match?.[1]) {
+    throw new Error('The response does not contain an Inertia page payload')
+  }
+
+  return JSON.parse(match[1]) as TestInertiaPage
+}
+
+function signedWebAccessCookie(user: User, tenantId?: unknown): string {
+  return jwt.sign(
+    {
+      sub: String(user.id),
+      userId: user.id,
+      token_use: 'access',
+      ...(tenantId === undefined ? {} : { tenantId }),
+    },
+    env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY')),
+    {
+      expiresIn: WEB_ACCESS_TOKEN_EXPIRES_IN,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    }
+  )
+}
 
 test.group('Web authentication', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
@@ -123,6 +163,7 @@ test.group('Web authentication', (group) => {
       .cookie(JWT_COOKIE_NAME, tokenCookie!.value)
       .redirects(0)
     guestOnlyLogin.assertStatus(302)
+    guestOnlyLogin.assertHeader('cache-control', 'private, no-store')
     assert.equal(guestOnlyLogin.header('location'), '/wallet')
 
     const legacyWallet = await client
@@ -340,6 +381,212 @@ test.group('Web authentication', (group) => {
 
     login.assertStatus(302)
     assert.equal(login.header('location'), '/cidades')
+  })
+
+  test('should honor an explicit tenant claim across landing and shared navigation', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.create({
+      full_name: 'Claimed Operation',
+      email: 'claimed-operation@example.com',
+      password: 'password123',
+    })
+    await attachDefaultRole(user)
+
+    const tenantA = await Tenant.create({
+      name: 'Claimed Operation A',
+      slug: 'claimed-operation-a',
+      is_active: true,
+    })
+    const tenantB = await Tenant.create({
+      name: 'Claimed Operation B',
+      slug: 'claimed-operation-b',
+      is_active: true,
+    })
+    await user.related('tenants').attach({
+      [tenantA.id]: { role: 'member' },
+      [tenantB.id]: { role: 'owner' },
+    })
+
+    const organization = await OrganizationFactory.apply('active')
+      .merge({ tenant_id: tenantB.id, created_by: user.id })
+      .create()
+    await OrganizationMemberFactory.apply('owner')
+      .merge({
+        tenant_id: tenantB.id,
+        organization_id: organization.id,
+        user_id: user.id,
+      })
+      .create()
+
+    const tenantBCookie = signedWebAccessCookie(user, tenantB.id)
+    const publicOperationHeaders = {
+      'host': `${tenantB.slug}.experimente.test`,
+      'x-forwarded-host': `${tenantB.slug}.experimente.test`,
+    }
+
+    const authenticatedHome = await client
+      .get('/')
+      .cookie(JWT_COOKIE_NAME, tenantBCookie)
+      .redirects(0)
+    authenticatedHome.assertStatus(302)
+    assert.equal(authenticatedHome.header('location'), '/portal')
+
+    const guestOnlyLogin = await client
+      .get('/login')
+      .cookie(JWT_COOKIE_NAME, tenantBCookie)
+      .redirects(0)
+    guestOnlyLogin.assertStatus(302)
+    guestOnlyLogin.assertHeader('cache-control', 'private, no-store')
+    assert.equal(guestOnlyLogin.header('location'), '/portal')
+
+    const catalog = await client
+      .get('/cidades')
+      .headers(publicOperationHeaders)
+      .cookie(JWT_COOKIE_NAME, tenantBCookie)
+    catalog.assertStatus(200)
+    const authProps = parseInertiaPage(catalog).props.auth as {
+      activeTenantId: number | null
+      tenants: Array<{ id: number }>
+    }
+    assert.equal(authProps.activeTenantId, tenantB.id)
+    assert.deepEqual(
+      authProps.tenants.map((tenant) => tenant.id),
+      [tenantA.id, tenantB.id]
+    )
+
+    await user.related('tenants').detach([tenantB.id])
+
+    const staleHome = await client.get('/').cookie(JWT_COOKIE_NAME, tenantBCookie).redirects(0)
+    staleHome.assertStatus(302)
+    assert.equal(staleHome.header('location'), '/cidades')
+
+    const staleGuestRoute = await client
+      .get('/login')
+      .cookie(JWT_COOKIE_NAME, tenantBCookie)
+      .redirects(0)
+    staleGuestRoute.assertStatus(302)
+    staleGuestRoute.assertHeader('cache-control', 'private, no-store')
+    assert.equal(staleGuestRoute.header('location'), '/cidades')
+
+    const staleCatalog = await client
+      .get('/cidades')
+      .headers(publicOperationHeaders)
+      .cookie(JWT_COOKIE_NAME, tenantBCookie)
+    staleCatalog.assertStatus(200)
+    const staleAuthProps = parseInertiaPage(staleCatalog).props.auth as {
+      activeTenantId: number | null
+      tenants: Array<{ id: number }>
+    }
+    assert.isNull(staleAuthProps.activeTenantId)
+    assert.deepEqual(
+      staleAuthProps.tenants.map((tenant) => tenant.id),
+      [tenantA.id]
+    )
+
+    const tenantScopedPage = await client
+      .get('/dashboard')
+      .cookie(JWT_COOKIE_NAME, tenantBCookie)
+      .redirects(0)
+    tenantScopedPage.assertStatus(403)
+  })
+
+  test('should fail closed when a signed tenant claim is malformed', async ({ client, assert }) => {
+    const user = await User.create({
+      full_name: 'Malformed Tenant Claim',
+      email: 'malformed-tenant-claim@example.com',
+      password: 'password123',
+    })
+    await attachRole(user, IRole.Slugs.ROOT)
+
+    const tenant = await Tenant.create({
+      name: 'Malformed Claim Operation',
+      slug: 'malformed-claim-operation',
+      is_active: true,
+    })
+    await user.related('tenants').attach({ [tenant.id]: { role: 'owner' } })
+
+    const publicOperationHeaders = {
+      'host': `${tenant.slug}.experimente.test`,
+      'x-forwarded-host': `${tenant.slug}.experimente.test`,
+    }
+
+    const missingClaimCookie = signedWebAccessCookie(user)
+    const legacyTenantScopedPage = await client
+      .get('/dashboard')
+      .cookie(JWT_COOKIE_NAME, missingClaimCookie)
+    legacyTenantScopedPage.assertStatus(200)
+
+    const malformedCookie = signedWebAccessCookie(user, null)
+    const explicitHeaderPage = await client
+      .get('/dashboard')
+      .header('x-tenant-id', String(tenant.id))
+      .cookie(JWT_COOKIE_NAME, malformedCookie)
+    explicitHeaderPage.assertStatus(200)
+
+    const invalidHeaderPage = await client
+      .get('/dashboard')
+      .header('x-tenant-id', 'invalid')
+      .cookie(JWT_COOKIE_NAME, missingClaimCookie)
+    invalidHeaderPage.assertStatus(400)
+
+    for (const invalidClaim of [null, String(tenant.id), 0, -1, 1.5]) {
+      const cookie = signedWebAccessCookie(user, invalidClaim)
+
+      const authenticatedHome = await client.get('/').cookie(JWT_COOKIE_NAME, cookie).redirects(0)
+      authenticatedHome.assertStatus(302)
+      assert.equal(authenticatedHome.header('location'), '/cidades')
+
+      const guestOnlyLogin = await client.get('/login').cookie(JWT_COOKIE_NAME, cookie).redirects(0)
+      guestOnlyLogin.assertStatus(302)
+      assert.equal(guestOnlyLogin.header('location'), '/cidades')
+
+      const catalog = await client
+        .get('/cidades')
+        .headers(publicOperationHeaders)
+        .cookie(JWT_COOKIE_NAME, cookie)
+      catalog.assertStatus(200)
+      const authProps = parseInertiaPage(catalog).props.auth as {
+        activeTenantId: number | null
+      }
+      assert.isNull(authProps.activeTenantId)
+
+      const tenantScopedPage = await client
+        .get('/dashboard')
+        .cookie(JWT_COOKIE_NAME, cookie)
+        .redirects(0)
+      tenantScopedPage.assertStatus(403)
+    }
+  })
+
+  test('should keep credential pages and their redirects out of caches', async ({
+    client,
+    assert,
+  }) => {
+    for (const path of [
+      '/login',
+      '/register',
+      '/forgot-password',
+      '/reset-password?token=opaque-reset-token',
+    ]) {
+      const response = await client.get(path).redirects(0)
+      response.assertStatus(200)
+      response.assertHeader('cache-control', 'private, no-store')
+    }
+
+    const invalidLogin = await client
+      .post('/login')
+      .withCsrfToken()
+      .redirects(0)
+      .json({ uid: 'missing@example.com', password: 'wrong-password' })
+    invalidLogin.assertStatus(302)
+    invalidLogin.assertHeader('cache-control', 'private, no-store')
+
+    const terms = await client.get('/termos')
+    const privacy = await client.get('/privacidade')
+    assert.notEqual(terms.header('cache-control'), 'private, no-store')
+    assert.notEqual(privacy.header('cache-control'), 'private, no-store')
   })
 
   test('should render the real legal documents without authentication', async ({

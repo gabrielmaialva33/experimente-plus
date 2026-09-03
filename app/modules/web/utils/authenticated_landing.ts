@@ -1,6 +1,7 @@
 import type User from '#modules/users/models/user'
 import OrganizationMember from '#modules/organizations/models/organization_member'
 import IRole from '#modules/roles/interfaces/role_interface'
+import { resolveActiveTenantId } from '#shared/utils/active_tenant'
 
 export type AuthenticatedLandingPath =
   '/dashboard' | '/backoffice/moderation' | '/portal' | '/wallet' | '/cidades'
@@ -49,10 +50,7 @@ export async function resolveAuthenticatedLandingPath(
     .where('tenants.is_active', true)
     .orderBy('tenants.id', 'asc')
 
-  const activeTenantId =
-    claimedActiveTenantId && activeTenants.some((tenant) => tenant.id === claimedActiveTenantId)
-      ? claimedActiveTenantId
-      : activeTenants[0]?.id
+  const activeTenantId = resolveActiveTenantId(activeTenants, claimedActiveTenantId)
 
   if (!activeTenantId) {
     return authenticatedLandingPath({ activeTenantId: null })

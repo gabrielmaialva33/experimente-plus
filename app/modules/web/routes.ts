@@ -62,8 +62,11 @@ router.get('/privacidade', [InertiaLegalController, 'privacy']).as('legal.privac
 router
   .get('/', async ({ auth, response, inertia }) => {
     try {
-      const user = await auth.use('jwt').authenticate()
-      return response.redirect(await resolveAuthenticatedLandingPath(user))
+      const guard = auth.use('jwt')
+      const user = await guard.authenticate()
+      return response.redirect(
+        await resolveAuthenticatedLandingPath(user, guard.tokenPayload?.tenantId)
+      )
     } catch {
       return inertia.render('home', {})
     }
