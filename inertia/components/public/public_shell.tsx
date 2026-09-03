@@ -35,7 +35,10 @@ export function PublicShell({
         {image ? <meta property="og:image" content={image} /> : null}
       </Head>
       <SkipLink />
-      <div className="flex min-h-screen flex-col overflow-x-clip bg-background pb-[calc(var(--public-mobile-navigation-reserve)+env(safe-area-inset-bottom))] text-foreground md:pb-0">
+      <div
+        data-public-shell
+        className="flex min-h-screen flex-col overflow-x-clip bg-background pb-[var(--public-mobile-navigation-space)] text-foreground md:pb-0"
+      >
         <PublicHeader />
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className={cn('flex-1', mainClassName)}>
           {children}

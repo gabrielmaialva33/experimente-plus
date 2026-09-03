@@ -150,11 +150,12 @@ describe('public discovery experience', () => {
     expect(screen.getByRole('navigation', { name: 'Navegação do rodapé' })).toBeVisible()
     expect(screen.getByRole('contentinfo').querySelector('a[href="/login"]')).toBeNull()
     expect(screen.getByRole('contentinfo').querySelector('a[href="/register"]')).toBeNull()
+    expect(screen.getByRole('main').parentElement).toHaveAttribute('data-public-shell')
     expect(screen.getByRole('main').parentElement).toHaveClass(
-      'pb-[calc(var(--public-mobile-navigation-reserve)+env(safe-area-inset-bottom))]'
+      'pb-[var(--public-mobile-navigation-space)]'
     )
     expect(screen.getByRole('navigation', { name: 'Navegação móvel' })).toHaveClass(
-      'min-h-[calc(var(--public-mobile-navigation-reserve)+env(safe-area-inset-bottom))]',
+      'min-h-[var(--public-mobile-navigation-space)]',
       'pl-[max(0.5rem,env(safe-area-inset-left))]',
       'pr-[max(0.5rem,env(safe-area-inset-right))]'
     )
@@ -242,6 +243,13 @@ describe('public discovery experience', () => {
     const appStyles = readFileSync('inertia/css/app.css', 'utf8')
     expect(brandSource).not.toMatch(/bg-gradient|shadow-|rounded-full|\babsolute\b/)
     expect(appStyles).toContain('--public-mobile-navigation-reserve: 4.5rem')
+    expect(appStyles).toContain(
+      '--public-mobile-focus-clearance: calc(var(--public-mobile-navigation-space) + 1rem)'
+    )
+    expect(appStyles).toContain('@media (max-width: 47.999rem)')
+    expect(appStyles).toContain('html:has([data-public-shell])')
+    expect(appStyles).toContain('scroll-padding-bottom: var(--public-mobile-focus-clearance)')
+    expect(appStyles).toContain('scroll-margin-bottom: var(--public-mobile-focus-clearance)')
     expect(sources).toContain('pl-[max(0.5rem,env(safe-area-inset-left))]')
     expect(sources).toContain('pr-[max(0.5rem,env(safe-area-inset-right))]')
   })

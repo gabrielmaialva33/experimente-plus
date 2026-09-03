@@ -55,6 +55,10 @@
 
     /* Shared baseline reserved by the public shell and occupied by its mobile navigation. */
     --public-mobile-navigation-reserve: 4.5rem;
+    --public-mobile-navigation-space: calc(
+      var(--public-mobile-navigation-reserve) + env(safe-area-inset-bottom)
+    );
+    --public-mobile-focus-clearance: calc(var(--public-mobile-navigation-space) + 1rem);
 
     --success: 146 65% 30%;
     --success-foreground: 0 0% 100%;
@@ -155,6 +159,24 @@
 
   html {
     scroll-behavior: smooth;
+  }
+
+  @media (max-width: 47.999rem) {
+    html:has([data-public-shell]) {
+      scroll-padding-bottom: var(--public-mobile-focus-clearance);
+    }
+
+    [data-public-shell]
+      :where(
+        a[href],
+        button:not(:disabled),
+        input:not(:disabled),
+        select:not(:disabled),
+        textarea:not(:disabled),
+        [tabindex]:not([tabindex='-1'])
+      ) {
+      scroll-margin-bottom: var(--public-mobile-focus-clearance);
+    }
   }
 
   body {

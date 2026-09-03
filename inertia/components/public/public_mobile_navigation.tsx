@@ -13,7 +13,7 @@ export function PublicMobileNavigation() {
   return (
     <nav
       aria-label="Navegação móvel"
-      className="fixed inset-x-0 bottom-0 z-50 min-h-[calc(var(--public-mobile-navigation-reserve)+env(safe-area-inset-bottom))] border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-1.5 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 min-h-[var(--public-mobile-navigation-space)] border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-1.5 md:hidden"
     >
       <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
         {items.map((item) => {
