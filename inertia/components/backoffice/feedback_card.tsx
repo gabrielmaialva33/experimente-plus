@@ -8,6 +8,7 @@ import {
 } from '~/components/portal/establishment_editor/editor_field'
 import { Button } from '~/components/ui/button'
 import { Textarea } from '~/components/ui/textarea'
+import { useAuth } from '~/hooks/use_auth'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
   PILOT_FEEDBACK_STATUS_LABELS,
@@ -29,6 +30,8 @@ function statusClassName(status: string): string {
 }
 
 export function FeedbackCard({ item }: { item: JsonRecord }) {
+  const { can } = useAuth()
+  const canUpdate = can('pilot_feedback.update')
   const form = useForm({
     status: text(item, 'status', 'new'),
     internal_notes: text(item, 'internal_notes'),
@@ -48,7 +51,7 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-shadow hover:shadow-md motion-reduce:transition-none">
+    <article className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -72,7 +75,7 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
                 ? ` · ${text(
                     establishmentRevision,
                     'public_name',
-                    text(establishment, 'public_name', `Unidade ${numeric(establishment, 'id')}`)
+                    text(establishment, 'public_name', 'Unidade sem nome')
                   )}`
                 : ''}
             </p>
@@ -81,7 +84,7 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
             </p>
           </div>
           <div className="flex items-center gap-1 rounded-full bg-warning/15 px-3 py-1.5 text-sm font-bold text-warning-foreground ring-1 ring-warning/15">
-            <Star className="size-4 fill-current" />
+            <Star aria-hidden="true" className="size-4 fill-current" />
             {numeric(item, 'rating')}/5
           </div>
         </div>
@@ -91,10 +94,12 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
         </blockquote>
       </div>
 
-      <form
-        onSubmit={submit}
-        className="grid gap-4 border-t border-border/70 bg-muted/20 p-5 sm:p-6 md:grid-cols-[0.4fr_1fr_auto] md:items-start"
-      >
+      {canUpdate ? (
+        <form
+          onSubmit={submit}
+          aria-busy={form.processing}
+          className="grid gap-4 border-t border-border bg-muted/20 p-5 sm:p-6 md:grid-cols-[0.4fr_1fr_auto] md:items-start"
+        >
         <EditorField
           htmlFor={`feedback-${id}-status`}
           label="Status"
@@ -145,7 +150,8 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
             {form.recentlySuccessful ? 'Triagem atualizada.' : ''}
           </p>
         </div>
-      </form>
+        </form>
+      ) : null}
     </article>
   )
 }

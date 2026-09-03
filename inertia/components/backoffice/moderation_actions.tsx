@@ -12,6 +12,7 @@ import { Alert, AlertContent, AlertDescription, AlertTitle } from '~/components/
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { useAuth } from '~/hooks/use_auth'
 import { MODERATION_ISSUE_FIELD_GROUPS } from '~/lib/establishment_editor'
 
 type ModerationOperation = 'approve' | 'request_changes' | 'reject'
@@ -47,6 +48,11 @@ export function ModerationActions({
   blockingIssueCount,
   moderationError,
 }: ModerationActionsProps) {
+  const { can } = useAuth()
+  const canApprove = can('establishments.approve')
+  const canRequestChanges = can('establishments.request_changes')
+  const canReject = can('establishments.reject')
+  const hasReviewActions = canApprove || canRequestChanges || canReject
   const approveForm = useForm({ reason: '' })
   const rejectForm = useForm({ reason: '' })
   const changesForm = useForm<{ reason: string; issues: IssueDraft[] }>({
@@ -150,12 +156,18 @@ export function ModerationActions({
         </Alert>
       ) : null}
 
-      <section aria-label="Ações de moderação" className="grid gap-6 xl:grid-cols-3">
-        <form onSubmit={approve} className="space-y-4 rounded-3xl border border-border bg-card p-6">
+      {hasReviewActions ? (
+        <section aria-label="Ações de moderação" className="grid gap-4 xl:grid-cols-3">
+          {canApprove ? (
+            <form
+              onSubmit={approve}
+              aria-busy={activeOperation === 'approve'}
+              className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6"
+            >
           <div>
             <h2 className="text-lg font-semibold">Aprovar e publicar</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              A publicação troca o ponteiro público somente depois de todos os gates passarem.
+              A publicação fica disponível somente quando todas as pendências estiverem resolvidas.
             </p>
           </div>
           <EditorField
@@ -182,7 +194,7 @@ export function ModerationActions({
             disabled={busy || blockingIssueCount > 0}
             title={
               blockingIssueCount > 0
-                ? 'Resolva os bloqueios do PublicationGate antes de aprovar.'
+                ? 'Resolva as pendências que bloqueiam a publicação antes de aprovar.'
                 : busyReason
             }
           >
@@ -195,12 +207,15 @@ export function ModerationActions({
               'Aprovar revisão'
             )}
           </Button>
-        </form>
+            </form>
+          ) : null}
 
-        <form
-          onSubmit={openChangesDialog}
-          className="space-y-4 rounded-3xl border border-border bg-card p-6 xl:col-span-2"
-        >
+          {canRequestChanges ? (
+            <form
+              onSubmit={openChangesDialog}
+              aria-busy={activeOperation === 'request_changes'}
+              className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6 xl:col-span-2"
+            >
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">Solicitar correções</h2>
@@ -253,7 +268,7 @@ export function ModerationActions({
               return (
                 <div
                   key={issue.key}
-                  className="grid gap-3 rounded-2xl bg-muted/60 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
+                  className="grid gap-3 rounded-md border border-border bg-muted/40 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
                 >
                   <EditorField
                     htmlFor={`${issue.key}-field`}
@@ -360,13 +375,17 @@ export function ModerationActions({
             processing={activeOperation === 'request_changes'}
             onConfirm={confirmRequestChanges}
           />
-        </form>
-      </section>
+            </form>
+          ) : null}
+        </section>
+      ) : null}
 
-      <form
-        onSubmit={openRejectDialog}
-        className="space-y-4 rounded-3xl border border-destructive/30 bg-card p-6"
-      >
+      {canReject ? (
+        <form
+          onSubmit={openRejectDialog}
+          aria-busy={activeOperation === 'reject'}
+          className="space-y-4 rounded-lg border border-destructive/30 bg-card p-5 sm:p-6"
+        >
         <div>
           <h2 className="text-lg font-semibold text-destructive">Rejeitar definitivamente</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -416,7 +435,8 @@ export function ModerationActions({
           processing={activeOperation === 'reject'}
           onConfirm={confirmReject}
         />
-      </form>
+        </form>
+      ) : null}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 import { FeedbackCard } from '~/components/backoffice/feedback_card'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { buildPageHref, PaginationNav } from '~/components/pagination'
 import {
@@ -72,9 +73,9 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
           description="Transforme relatos de onboarding, editor, catálogo e moderação em decisões de produto rastreáveis."
         />
 
-        <section className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-info/10 text-info ring-1 ring-info/10">
-            <MessageSquareText className="size-4.5" />
+        <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-5">
+          <span className="flex size-10 items-center justify-center rounded-md border border-info/20 bg-info/10 text-info">
+            <MessageSquareText aria-hidden="true" className="size-4.5" />
           </span>
           <div>
             <p className="font-bold tracking-[-0.015em]">
@@ -90,7 +91,7 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
         <form
           onSubmit={applyFilters}
           aria-label="Filtros da fila de feedback"
-          className="grid gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
           <EditorField htmlFor="filter-status" label="Status">
             <select
@@ -135,17 +136,17 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
         </form>
 
         {items.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center shadow-xs">
-            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-info/10 text-info ring-1 ring-info/10">
-              <MessageSquareText className="size-6" />
-            </span>
-            <h2 className="mt-5 text-lg font-bold">Nenhum feedback nesta fila</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              {hasActiveFilters
+          <EmptyState
+            icon={MessageSquareText}
+            headingLevel={2}
+            title="Nenhum feedback nesta fila"
+            description={
+              hasActiveFilters
                 ? 'Nenhum relato corresponde aos filtros aplicados.'
-                : 'Novos relatos enviados pelos participantes do piloto aparecerão aqui.'}
-            </p>
-          </div>
+                : 'Novos relatos enviados pelos participantes do piloto aparecerão aqui.'
+            }
+            className="rounded-lg border border-dashed border-border bg-card"
+          />
         ) : (
           <section aria-label="Relatos do piloto" className="space-y-4">
             {items.map((item) => (
