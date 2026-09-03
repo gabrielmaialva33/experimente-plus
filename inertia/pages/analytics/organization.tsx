@@ -1,8 +1,17 @@
 import { Head, Link } from '@inertiajs/react'
-import { ArrowLeft, Building2, Eye, MousePointerClick, Route, UsersRound } from 'lucide-react'
+import {
+  ArrowLeft,
+  Building2,
+  ChartNoAxesColumn,
+  Eye,
+  MousePointerClick,
+  Route,
+  UsersRound,
+} from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { MainLayout } from '~/layouts/main_layout'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -110,18 +119,19 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
       <Head title="Analytics de descoberta" />
 
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <PageHeader
-            title="Analytics de descoberta"
-            description="Alcance e ações públicas da organização, sem identificar visitantes."
-          />
-          <Button variant="outline" asChild>
-            <Link href="/dashboard" className="inline-flex items-center gap-2">
-              <ArrowLeft className="size-4" />
-              Voltar ao painel
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow="Portal do parceiro"
+          title="Analytics de descoberta"
+          description="Alcance e ações públicas da organização, sem identificar visitantes."
+          actions={
+            <Button variant="outline" asChild>
+              <Link href={`/portal/organizations/${dashboard.organization_id}`}>
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Voltar à organização
+              </Link>
+            </Button>
+          }
+        />
 
         <form className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4" method="get">
           <label className="grid gap-1 text-sm font-medium">
@@ -164,8 +174,8 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
                 </div>
-                <span className="rounded-xl bg-primary/10 p-3 text-primary">
-                  <Icon className="size-5" />
+                <span className="rounded-md bg-primary/10 p-3 text-primary">
+                  <Icon aria-hidden="true" className="size-5" />
                 </span>
               </CardContent>
             </Card>
@@ -212,8 +222,12 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="grid min-h-64 place-items-center rounded-xl border border-dashed text-center text-sm text-muted-foreground">
-                  Ainda não há eventos agregados neste período.
+                <div className="min-h-64 rounded-md border border-dashed">
+                  <EmptyState
+                    icon={ChartNoAxesColumn}
+                    title="Nenhum evento no período"
+                    description="Ajuste o intervalo ou aguarde novas interações no catálogo."
+                  />
                 </div>
               )}
             </CardContent>
@@ -235,7 +249,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                   className="flex items-center justify-between rounded-lg border px-3 py-3"
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
-                    <Route className="size-4 text-muted-foreground" />
+                    <Route aria-hidden="true" className="size-4 text-muted-foreground" />
                     {label}
                   </span>
                   <strong>{compactNumber(Number(value))}</strong>
@@ -254,15 +268,23 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
           </CardHeader>
           <CardContent>
             {dashboard.establishments.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div
+                className="overflow-x-auto"
+                role="region"
+                aria-label="Desempenho por unidade"
+                tabIndex={0}
+              >
                 <table className="w-full min-w-[720px] text-sm">
+                  <caption className="sr-only">
+                    Impressões, aberturas, ações e sessões de cada unidade no período selecionado.
+                  </caption>
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
-                      <th className="px-3 py-3 font-medium">Unidade</th>
-                      <th className="px-3 py-3 text-right font-medium">Impressões</th>
-                      <th className="px-3 py-3 text-right font-medium">Aberturas</th>
-                      <th className="px-3 py-3 text-right font-medium">Ações</th>
-                      <th className="px-3 py-3 text-right font-medium">Sessões</th>
+                      <th scope="col" className="px-3 py-3 font-medium">Unidade</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">Impressões</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">Aberturas</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">Ações</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">Sessões</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -270,7 +292,6 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                       <tr key={establishment.establishment_id} className="border-b last:border-0">
                         <td className="px-3 py-4">
                           <p className="font-medium">{establishment.public_name}</p>
-                          <p className="text-xs text-muted-foreground">{establishment.slug}</p>
                         </td>
                         <td className="px-3 py-4 text-right">
                           {compactNumber(establishment.impressions)}
@@ -290,9 +311,13 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                 </table>
               </div>
             ) : (
-              <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                Nenhuma unidade recebeu eventos no período selecionado.
-              </p>
+              <div className="rounded-md border border-dashed">
+                <EmptyState
+                  icon={Building2}
+                  title="Nenhum dado por unidade"
+                  description="Nenhuma unidade recebeu eventos no período selecionado."
+                />
+              </div>
             )}
           </CardContent>
         </Card>

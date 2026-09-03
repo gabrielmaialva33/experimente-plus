@@ -3,6 +3,7 @@ import { Building2, FileText, LayoutDashboard, ShieldCheck, Users } from 'lucide
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 
 import { MetricCard } from '~/components/metric_card'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Badge } from '~/components/ui/badge'
@@ -23,6 +24,7 @@ import {
 } from '~/components/ui/chart'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts'
+import { globalRoleLabel } from '~/lib/labels'
 
 interface DashboardStats {
   totals: { users: number; tenants: number; files: number; roles: number }
@@ -73,13 +75,13 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
 
   return (
     <MainLayout>
-      <Head title="Visão geral" />
+      <Head title="Painel operacional" />
 
       <div className="space-y-7">
         <PageHeader
-          eyebrow="Visão geral"
+          eyebrow={`Olá, ${firstNameOf(user?.full_name)}`}
           icon={LayoutDashboard}
-          title={`Olá, ${firstNameOf(user?.full_name)}`}
+          title="Painel operacional"
           description={
             activeTenant
               ? `Acompanhe a atividade e os recursos da operação ${activeTenant.name}.`
@@ -87,9 +89,9 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           }
           actions={
             can('users.create') ? (
-              <Link href="/users/create">
-                <Button variant="primary">Adicionar usuário</Button>
-              </Link>
+              <Button asChild variant="primary">
+                <Link href="/users/create">Adicionar usuário</Link>
+              </Button>
             ) : undefined
           }
         />
@@ -130,7 +132,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
         </section>
 
         <section aria-label="Atividade recente" className="grid min-w-0 gap-5 xl:grid-cols-2">
-          <Card className="min-w-0 overflow-hidden border-border/70 shadow-xs">
+          <Card className="min-w-0 overflow-hidden border-border/70">
             <CardHeader>
               <CardHeading>
                 <CardTitle>Novos usuários</CardTitle>
@@ -143,19 +145,14 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
                 className="h-[260px] min-w-0 w-full overflow-hidden aspect-auto"
               >
                 <AreaChart data={stats.signups} margin={{ left: 4, right: 4 }}>
-                  <defs>
-                    <linearGradient id="fillUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-users)" stopOpacity={0.32} />
-                      <stop offset="95%" stopColor="var(--color-users)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area
                     dataKey="users"
                     type="monotone"
-                    fill="url(#fillUsers)"
+                    fill="var(--color-users)"
+                    fillOpacity={0.12}
                     stroke="var(--color-users)"
                     strokeWidth={2.25}
                   />
@@ -164,7 +161,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
             </CardContent>
           </Card>
 
-          <Card className="min-w-0 overflow-hidden border-border/70 shadow-xs">
+          <Card className="min-w-0 overflow-hidden border-border/70">
             <CardHeader>
               <CardHeading>
                 <CardTitle>Distribuição mensal</CardTitle>
@@ -189,7 +186,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           </Card>
         </section>
 
-        <Card className="overflow-hidden border-border/70 shadow-xs">
+        <Card className="overflow-hidden border-border/70">
           <CardHeader>
             <CardHeading>
               <CardTitle>Usuários recentes</CardTitle>
@@ -199,19 +196,19 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
             </CardHeading>
             {canListUsers && (
               <CardToolbar>
-                <Link href="/users">
-                  <Button variant="outline" size="sm">
-                    Ver todos
-                  </Button>
-                </Link>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/users">Ver todos</Link>
+                </Button>
               </CardToolbar>
             )}
           </CardHeader>
           <CardContent className="p-0">
             {stats.recentUsers.length === 0 ? (
-              <p className="p-6 text-sm text-muted-foreground">
-                Ainda não há usuários nesta operação.
-              </p>
+              <EmptyState
+                icon={Users}
+                title="Nenhum usuário nesta operação"
+                description="Os usuários adicionados à operação aparecerão aqui."
+              />
             ) : (
               <ul className="divide-y divide-border/70">
                 {stats.recentUsers.map((recent) => (
@@ -232,7 +229,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
                       {recent.roles.length > 0 ? (
                         recent.roles.map((role) => (
                           <Badge key={role} variant="secondary" appearance="light" size="sm">
-                            {role}
+                            {globalRoleLabel(role)}
                           </Badge>
                         ))
                       ) : (
