@@ -29,28 +29,33 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header
-      className={cn('flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between', className)}
+      data-slot="page-header"
+      className={cn('flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between', className)}
     >
-      <div className="flex min-w-0 items-start gap-3.5">
+      <div className="flex min-w-0 items-start gap-3">
         {Icon && (
-          <span className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
-            <Icon className="size-5" />
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
+            <Icon className="size-5" aria-hidden="true" />
           </span>
         )}
         <div className="min-w-0">
           {eyebrow && (
-            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-2xl font-bold tracking-[-0.035em] sm:text-[1.8rem]">{title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           {description && (
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>
+            <p className="mt-1.5 max-w-3xl text-sm text-muted-foreground">{description}</p>
           )}
           {meta && <div className="mt-3 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div data-slot="page-header-actions" className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
+      )}
     </header>
   )
 }

@@ -8,13 +8,13 @@ import {
   Menu,
   Settings,
   TicketPercent,
-  User,
 } from 'lucide-react'
 
 import { AppBrand } from '~/components/app_brand'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Button } from '~/components/ui/button'
+import { resolveRouteMetadata, SURFACE_LABELS } from '~/config/navigation'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,47 +27,6 @@ import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet'
 import { useAuth } from '~/hooks/use_auth'
 import { organizationRoleLabel } from '~/lib/labels'
 import { SidebarNav } from './sidebar'
-
-interface RouteContext {
-  area: string
-  page: string
-}
-
-const routeContexts: Array<RouteContext & { prefix: string }> = [
-  {
-    prefix: '/portal/redemptions/',
-    area: 'Portal do parceiro',
-    page: 'Validar benefício',
-  },
-  { prefix: '/portal/redemptions', area: 'Portal do parceiro', page: 'Validações' },
-  { prefix: '/portal/establishments/', area: 'Portal do parceiro', page: 'Editor da unidade' },
-  { prefix: '/portal/organizations/new', area: 'Portal do parceiro', page: 'Nova organização' },
-  { prefix: '/portal/organizations/', area: 'Portal do parceiro', page: 'Organização' },
-  { prefix: '/portal', area: 'Portal do parceiro', page: 'Visão geral' },
-  { prefix: '/backoffice/moderation/', area: 'Operação', page: 'Revisão de conteúdo' },
-  { prefix: '/backoffice/moderation', area: 'Operação', page: 'Fila de moderação' },
-  { prefix: '/backoffice/feedback', area: 'Operação', page: 'Feedback do piloto' },
-  { prefix: '/backoffice/benefits', area: 'Operação', page: 'Edições e acessos' },
-  { prefix: '/users', area: 'Administração', page: 'Usuários' },
-  { prefix: '/roles', area: 'Administração', page: 'Papéis' },
-  { prefix: '/permissions', area: 'Administração', page: 'Permissões' },
-  { prefix: '/files', area: 'Administração', page: 'Arquivos' },
-  { prefix: '/settings', area: 'Sistema', page: 'Configurações' },
-  { prefix: '/ui-demo', area: 'Sistema', page: 'Componentes' },
-  { prefix: '/dashboard', area: 'Trabalho', page: 'Visão geral' },
-]
-
-function currentRouteContext(url: string): RouteContext {
-  const pathname = url.split('?')[0] ?? '/'
-  return (
-    routeContexts.find(
-      ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-    ) ?? {
-      area: 'Experimente+',
-      page: 'Painel',
-    }
-  )
-}
 
 function initialsOf(name: string): string {
   return name
@@ -103,7 +62,7 @@ function TenantSwitcher() {
           </Avatar>
           <span className="hidden min-w-0 text-start md:block">
             <span className="block truncate text-xs font-semibold">
-              {activeTenant?.name ?? 'Selecionar espaço'}
+              {activeTenant?.name ?? 'Selecionar operação'}
             </span>
           </span>
           <ChevronsUpDown className="size-3.5 text-muted-foreground" />
@@ -111,7 +70,7 @@ function TenantSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel>
-          <span className="block text-xs font-semibold text-foreground">Espaços de trabalho</span>
+          <span className="block text-xs font-semibold text-foreground">Operações</span>
           <span className="mt-0.5 block font-normal">Escolha a operação ativa</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -185,15 +144,9 @@ function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/carteira">
+          <Link href="/wallet">
             <TicketPercent className="size-4" />
             Minha carteira
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings">
-            <User className="size-4" />
-            Meu perfil
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -214,14 +167,17 @@ function UserMenu() {
 
 export function Header() {
   const { url } = usePage()
-  const context = currentRouteContext(url)
+  const metadata = resolveRouteMetadata(url)
+  const context = metadata
+    ? { area: SURFACE_LABELS[metadata.surface], page: metadata.title }
+    : { area: 'Experimente+', page: 'Área autenticada' }
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => setMobileOpen(false), [url])
 
   return (
     <header className="sticky top-0 z-40 flex h-[72px] w-full items-center border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
-      <div className="flex w-full items-center gap-3 px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="app-container flex items-center gap-3">
         <div className="flex items-center gap-2 lg:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -236,12 +192,11 @@ export function Header() {
               <SidebarNav onNavigate={() => setMobileOpen(false)} />
             </SheetContent>
           </Sheet>
-          <AppBrand collapsed className="sm:hidden" />
+          <AppBrand href="/" collapsed className="sm:hidden" />
         </div>
 
         <div className="hidden min-w-0 items-center gap-3 lg:flex">
           <span className="relative flex size-2.5">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/35" />
             <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
           </span>
           <div className="min-w-0">

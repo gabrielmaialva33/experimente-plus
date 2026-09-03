@@ -2,16 +2,14 @@ import * as React from 'react'
 import { cn } from '~/lib/utils'
 import { cva, type VariantProps } from 'class-variance-authority'
 
-// Define CardContext
 type CardContextType = {
   variant: 'default' | 'accent'
 }
 
 const CardContext = React.createContext<CardContextType>({
-  variant: 'default', // Default value
+  variant: 'default',
 })
 
-// Hook to use CardContext
 const useCardContext = () => {
   const context = React.useContext(CardContext)
   if (!context) {
@@ -20,12 +18,11 @@ const useCardContext = () => {
   return context
 }
 
-// Variants
-const cardVariants = cva('flex flex-col items-stretch text-card-foreground rounded-xl', {
+const cardVariants = cva('flex flex-col items-stretch rounded-lg text-card-foreground', {
   variants: {
     variant: {
-      default: 'bg-card border border-border shadow-xs black/5',
-      accent: 'bg-muted shadow-xs p-1',
+      default: 'border border-border bg-card',
+      accent: 'border border-border bg-muted/60 p-1',
     },
   },
   defaultVariants: {
@@ -33,26 +30,23 @@ const cardVariants = cva('flex flex-col items-stretch text-card-foreground round
   },
 })
 
-const cardHeaderVariants = cva(
-  'flex items-center justify-between flex-wrap px-5 min-h-14 gap-2.5',
-  {
-    variants: {
-      variant: {
-        default: 'border-b border-border',
-        accent: '',
-      },
+const cardHeaderVariants = cva('flex flex-wrap items-start justify-between gap-3 p-5', {
+  variants: {
+    variant: {
+      default: 'border-b border-border',
+      accent: '',
     },
-    defaultVariants: {
-      variant: 'default',
-    },
-  }
-)
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+})
 
 const cardContentVariants = cva('grow p-5', {
   variants: {
     variant: {
       default: '',
-      accent: 'bg-card rounded-t-xl [&:last-child]:rounded-b-xl',
+      accent: 'rounded-md bg-card [&:last-child]:rounded-md',
     },
   },
   defaultVariants: {
@@ -64,7 +58,7 @@ const cardTableVariants = cva('grid grow', {
   variants: {
     variant: {
       default: '',
-      accent: 'bg-card rounded-xl',
+      accent: 'rounded-md bg-card',
     },
   },
   defaultVariants: {
@@ -72,11 +66,11 @@ const cardTableVariants = cva('grid grow', {
   },
 })
 
-const cardFooterVariants = cva('flex items-center px-5 min-h-14', {
+const cardFooterVariants = cva('flex items-center gap-3 p-5', {
   variants: {
     variant: {
       default: 'border-t border-border',
-      accent: 'bg-card rounded-b-xl mt-[2px]',
+      accent: 'mt-px rounded-md bg-card',
     },
   },
   defaultVariants: {
@@ -84,7 +78,6 @@ const cardFooterVariants = cva('flex items-center px-5 min-h-14', {
   },
 })
 
-// Card Component
 function Card({
   className,
   variant = 'default',
@@ -97,7 +90,6 @@ function Card({
   )
 }
 
-// CardHeader Component
 function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const { variant } = useCardContext()
   return (
@@ -109,7 +101,6 @@ function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement
   )
 }
 
-// CardContent Component
 function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const { variant } = useCardContext()
   return (
@@ -121,7 +112,6 @@ function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   )
 }
 
-// CardTable Component
 function CardTable({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const { variant } = useCardContext()
   return (
@@ -133,7 +123,6 @@ function CardTable({ className, ...props }: React.HTMLAttributes<HTMLDivElement>
   )
 }
 
-// CardFooter Component
 function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const { variant } = useCardContext()
   return (
@@ -145,7 +134,6 @@ function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement
   )
 }
 
-// Other Components
 function CardHeading({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div data-slot="card-heading" className={cn('space-y-1', className)} {...props} />
 }
@@ -164,7 +152,7 @@ function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
   return (
     <h3
       data-slot="card-title"
-      className={cn('text-base font-semibold leading-none tracking-tight', className)}
+      className={cn('text-base font-semibold leading-5', className)}
       {...props}
     />
   )
@@ -180,7 +168,6 @@ function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLDivEl
   )
 }
 
-// Exports
 export {
   Card,
   CardContent,

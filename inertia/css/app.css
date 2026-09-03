@@ -21,6 +21,8 @@
 
     --primary: 211 74% 28%;
     --primary-foreground: 0 0% 100%;
+    --primary-soft: 211 58% 94%;
+    --primary-accent: 211 74% 28%;
 
     --secondary: 212 26% 94%;
     --secondary-foreground: 214 32% 20%;
@@ -32,28 +34,42 @@
     --accent-foreground: 211 74% 28%;
 
     /* Action color. `cta` is the solid fill; `soft`/`accent` are the tinted pair. */
-    --cta: 20 92% 42%;
+    --cta: 20 92% 40%;
     --cta-foreground: 0 0% 100%;
     --cta-soft: 24 92% 95%;
     --cta-accent: 18 88% 33%;
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 78% 95%;
+    --destructive-accent: 0 72% 38%;
 
     --border: 213 22% 88%;
-    --input: 213 22% 84%;
+    /* Interactive boundaries meet 3:1 without making decorative separators heavy. */
+    --input: 213 20% 58%;
     --ring: 211 74% 38%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
+    --elevation-raised: 0 1px 2px hsl(var(--foreground) / 0.08);
+    --elevation-overlay: 0 18px 48px -18px hsl(var(--foreground) / 0.28);
 
-    --success: 146 65% 32%;
+    /* Shared baseline reserved by the public shell and occupied by its mobile navigation. */
+    --public-mobile-navigation-reserve: 4.5rem;
+
+    --success: 146 65% 30%;
     --success-foreground: 0 0% 100%;
+    --success-soft: 146 45% 93%;
+    --success-accent: 146 65% 27%;
 
     --warning: 38 92% 45%;
     --warning-foreground: 28 90% 14%;
+    --warning-soft: 43 96% 90%;
+    --warning-accent: 28 88% 28%;
 
-    --info: 196 82% 38%;
+    --info: 196 82% 34%;
     --info-foreground: 0 0% 100%;
+    --info-soft: 196 65% 92%;
+    --info-accent: 196 82% 29%;
 
     --chart-1: 211 74% 38%;
     --chart-2: 20 92% 48%;
@@ -80,6 +96,8 @@
 
     --primary: 211 80% 62%;
     --primary-foreground: 214 45% 10%;
+    --primary-soft: 212 34% 20%;
+    --primary-accent: 211 82% 76%;
 
     --secondary: 214 22% 18%;
     --secondary-foreground: 210 28% 96%;
@@ -97,19 +115,30 @@
 
     --destructive: 0 68% 54%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 34% 18%;
+    --destructive-accent: 0 78% 72%;
 
     --border: 214 18% 22%;
-    --input: 214 18% 25%;
+    --input: 214 18% 45%;
     --ring: 211 80% 62%;
+
+    --elevation-raised: 0 1px 2px hsl(0 0% 0% / 0.22);
+    --elevation-overlay: 0 18px 48px -18px hsl(0 0% 0% / 0.65);
 
     --success: 145 62% 48%;
     --success-foreground: 214 34% 9%;
+    --success-soft: 145 30% 17%;
+    --success-accent: 145 62% 65%;
 
     --warning: 38 90% 56%;
     --warning-foreground: 28 90% 12%;
+    --warning-soft: 38 35% 18%;
+    --warning-accent: 40 90% 70%;
 
     --info: 196 84% 60%;
     --info-foreground: 214 34% 9%;
+    --info-soft: 196 34% 18%;
+    --info-accent: 196 84% 72%;
 
     --chart-1: 211 80% 62%;
     --chart-2: 22 94% 60%;
@@ -132,14 +161,7 @@
     min-height: 100%;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family:
-      Inter,
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      sans-serif;
+    font-family: var(--font-sans);
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
@@ -192,183 +214,9 @@
   }
 }
 
-/* Custom utilities */
-@layer utilities {
-  /* Text sizes from Metronic */
-  .text-2xs {
-    font-size: 0.6875rem; /* 11px */
-    line-height: 1rem; /* 16px */
-  }
-
-  .text-2sm {
-    font-size: 0.8125rem; /* 13px */
-    line-height: 1.25rem; /* 20px */
-  }
-
-  /* Height utilities */
-  .h-7 {
-    height: 1.75rem; /* 28px */
-  }
-
-  .h-8-5 {
-    height: 2.125rem; /* 34px */
-  }
-
-  /* Shadow utilities */
-  .shadow-xs {
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  }
-
-  /* Icon gradient backgrounds */
-  .icon-gradient-primary {
-    background: linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--primary) / 0.7));
-  }
-
-  .icon-gradient-blue {
-    background: linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--info)));
-  }
-
-  .icon-gradient-cyan {
-    background: linear-gradient(to bottom right, #0891b2, #67e8f9);
-  }
-
-  .icon-gradient-yellow {
-    background: linear-gradient(to bottom right, #facc15, #ca8a04);
-  }
-
-  .icon-gradient-indigo {
-    background: linear-gradient(to bottom right, #6366f1, #4f46e5);
-  }
-
-  .icon-gradient-green {
-    background: linear-gradient(to bottom right, #4ade80, #16a34a);
-  }
-
-  .icon-gradient-orange {
-    background: linear-gradient(to bottom right, hsl(var(--cta) / 0.85), hsl(var(--cta)));
-  }
-
-  .icon-gradient-teal {
-    background: linear-gradient(to bottom right, #2dd4bf, #14b8a6);
-  }
-
-  /* Tech stack card gradients with better visibility */
-  .tech-gradient-primary {
-    background: linear-gradient(
-      to bottom right,
-      hsl(var(--primary) / 0.15),
-      hsl(var(--primary) / 0.35)
-    );
-  }
-
-  .tech-gradient-blue {
-    background: linear-gradient(
-      to bottom right,
-      rgba(59, 130, 246, 0.15),
-      rgba(59, 130, 246, 0.35)
-    );
-  }
-
-  .tech-gradient-teal {
-    background: linear-gradient(
-      to bottom right,
-      rgba(20, 184, 166, 0.15),
-      rgba(20, 184, 166, 0.35)
-    );
-  }
-
-  .tech-gradient-cyan {
-    background: linear-gradient(to bottom right, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.35));
-  }
-
-  /* Dark mode tech gradients with higher opacity */
-  .dark .tech-gradient-primary {
-    background: linear-gradient(
-      to bottom right,
-      hsl(var(--primary) / 0.25),
-      hsl(var(--primary) / 0.45)
-    );
-  }
-
-  .dark .tech-gradient-blue {
-    background: linear-gradient(
-      to bottom right,
-      rgba(59, 130, 246, 0.25),
-      rgba(59, 130, 246, 0.45)
-    );
-  }
-
-  .dark .tech-gradient-teal {
-    background: linear-gradient(
-      to bottom right,
-      rgba(20, 184, 166, 0.25),
-      rgba(20, 184, 166, 0.45)
-    );
-  }
-
-  .dark .tech-gradient-cyan {
-    background: linear-gradient(to bottom right, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.45));
-  }
-
-  /* Home page specific styles */
-  .bg-grid-white {
-    background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 30px 30px;
-  }
-
-  .bg-grid-pattern {
-    background-image:
-      linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
-    background-size: 30px 30px;
-  }
-
-  /* Animated gradient backgrounds for floating cards */
-  .floating-card-1 {
-    background: linear-gradient(
-      135deg,
-      rgba(34, 197, 94, 0.1) 0%,
-      rgba(34, 197, 94, 0.05) 50%,
-      transparent 100%
-    );
-  }
-
-  .floating-card-2 {
-    background: linear-gradient(
-      135deg,
-      rgba(168, 85, 247, 0.1) 0%,
-      rgba(168, 85, 247, 0.05) 50%,
-      transparent 100%
-    );
-  }
-
-  .floating-card-3 {
-    background: linear-gradient(
-      135deg,
-      rgba(59, 130, 246, 0.1) 0%,
-      rgba(59, 130, 246, 0.05) 50%,
-      transparent 100%
-    );
-  }
-
-  /* Gradient text utility — brand blue running into the action orange. */
-  .text-gradient {
-    background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--info)), hsl(var(--cta)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Backdrop blur variations */
-  .backdrop-blur-xl {
-    backdrop-filter: blur(24px);
-  }
-
-  .backdrop-blur-2xl {
-    backdrop-filter: blur(40px);
-  }
+/* Shared shell gutter and readable product width. Full-bleed sections wrap this utility. */
+@utility app-container {
+  @apply mx-auto w-full max-w-app px-4 sm:px-6 lg:px-8;
 }
 
 html,

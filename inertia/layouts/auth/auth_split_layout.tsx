@@ -100,8 +100,6 @@ export function AuthSplitLayout({
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/75" />
           <div className="absolute -end-32 -top-24 size-96 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-28 -start-24 size-80 rounded-full bg-warning/20 blur-3xl" />
-          <div className="absolute inset-0 bg-grid-pattern opacity-[0.16]" />
-
           <div className="relative flex h-full flex-col justify-between p-10 text-primary-foreground xl:p-14">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur">
               <ShieldCheck className="size-3.5" /> Portal do parceiro

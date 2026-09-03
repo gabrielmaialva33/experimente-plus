@@ -82,7 +82,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Header />
 
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none" role="main">
-          <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
+          <div className="app-container py-6 sm:py-8">
             {messages.map(({ key, message, icon: Icon, className }) =>
               message ? (
                 <div
@@ -103,8 +103,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </main>
 
-        <footer className="border-t border-border/60 bg-background/50 px-4 py-4 text-xs text-muted-foreground sm:px-6 lg:px-8 xl:px-10">
-          <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <footer className="border-t border-border/60 bg-background/50 py-4 text-xs text-muted-foreground">
+          <div className="app-container flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span>© {new Date().getFullYear()} Experimente+</span>
             <span>Descoberta local com contexto, confiança e identidade regional.</span>
           </div>

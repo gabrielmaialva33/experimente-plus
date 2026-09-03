@@ -15,15 +15,11 @@ export function BrandMark({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        'relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl',
-        'bg-gradient-to-br from-primary via-primary to-warning text-primary-foreground',
-        'shadow-sm shadow-primary/25 ring-1 ring-white/20',
+        'flex size-9 shrink-0 items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground',
         className
       )}
     >
-      <span className="text-[0.95rem] font-black tracking-[-0.08em]">E</span>
-      <span className="absolute end-1.5 top-1 text-[0.65rem] font-black leading-none">+</span>
-      <span className="absolute -bottom-3 -start-2 size-7 rounded-full bg-white/15" />
+      <span className="text-sm font-black tracking-[-0.08em]">E+</span>
     </span>
   )
 }

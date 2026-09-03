@@ -1,108 +1,18 @@
 import { Link, usePage } from '@inertiajs/react'
-import {
-  Building2,
-  ClipboardCheck,
-  FlaskConical,
-  Home,
-  KeyRound,
-  MessageSquareText,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ScanLine,
-  TicketPercent,
-  Settings,
-  ShieldCheck,
-  Upload,
-  UserCog,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react'
 
 import { AppBrand } from '~/components/app_brand'
 import { Button } from '~/components/ui/button'
+import { isNavigationItemActive, NAVIGATION_ITEMS, type NavigationItem } from '~/config/navigation'
 import { useApp } from '~/hooks/use_app'
 import { useAuth } from '~/hooks/use_auth'
 import { organizationRoleLabel } from '~/lib/labels'
 import { cn } from '~/lib/utils'
 
-interface NavigationItem {
-  title: string
-  href: string
-  icon: LucideIcon
-  permission?: string
-  developmentOnly?: boolean
-}
-
 interface NavigationSection {
   label: string
   items: NavigationItem[]
 }
-
-const navigationSections: NavigationSection[] = [
-  {
-    label: 'Trabalho',
-    items: [
-      { title: 'Visão geral', href: '/dashboard', icon: Home, permission: 'dashboard.read' },
-      { title: 'Minha carteira', href: '/carteira', icon: TicketPercent },
-      {
-        title: 'Portal do parceiro',
-        href: '/portal',
-        icon: Building2,
-        permission: 'organizations.list',
-      },
-      {
-        title: 'Validar benefícios',
-        href: '/portal/redemptions',
-        icon: ScanLine,
-        permission: 'benefit_offers.update',
-      },
-    ],
-  },
-  {
-    label: 'Operação',
-    items: [
-      {
-        title: 'Fila de moderação',
-        href: '/backoffice/moderation',
-        icon: ClipboardCheck,
-        permission: 'establishments.approve',
-      },
-      {
-        title: 'Benefícios',
-        href: '/backoffice/benefits',
-        icon: TicketPercent,
-        permission: 'benefit_editions.create',
-      },
-      {
-        title: 'Feedback do piloto',
-        href: '/backoffice/feedback',
-        icon: MessageSquareText,
-        permission: 'pilot_feedback.list',
-      },
-    ],
-  },
-  {
-    label: 'Administração',
-    items: [
-      { title: 'Usuários', href: '/users', icon: Users, permission: 'users.list' },
-      { title: 'Papéis', href: '/roles', icon: UserCog, permission: 'roles.list' },
-      {
-        title: 'Permissões',
-        href: '/permissions',
-        icon: KeyRound,
-        permission: 'permissions.list',
-      },
-      { title: 'Arquivos', href: '/files', icon: Upload, permission: 'files.list' },
-    ],
-  },
-  {
-    label: 'Sistema',
-    items: [
-      { title: 'Configurações', href: '/settings', icon: Settings },
-      { title: 'Componentes', href: '/ui-demo', icon: FlaskConical, developmentOnly: true },
-    ],
-  },
-]
 
 function initialsOf(value: string): string {
   return value
@@ -118,10 +28,6 @@ function useCurrentUrl(): string {
   return usePage().url.split('?')[0] ?? '/'
 }
 
-function isActive(url: string, href: string): boolean {
-  return url === href || (href !== '/' && url.startsWith(`${href}/`))
-}
-
 export function SidebarNav({
   collapsed = false,
   onNavigate,
@@ -133,15 +39,17 @@ export function SidebarNav({
   const application = useApp()
   const { can } = useAuth()
 
-  const visibleSections = navigationSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => {
-        if (item.developmentOnly && !application.demoPagesEnabled) return false
-        return !item.permission || can(item.permission)
-      }),
-    }))
-    .filter((section) => section.items.length > 0)
+  const visibleItems = NAVIGATION_ITEMS.filter((item) => {
+    if (!item.placements.includes('sidebar')) return false
+    if (item.developmentOnly && !application.demoPagesEnabled) return false
+    return !item.capability || can(item.capability)
+  })
+  const visibleSections = visibleItems.reduce<NavigationSection[]>((sections, item) => {
+    const section = sections.find((candidate) => candidate.label === item.section)
+    if (section) section.items.push(item)
+    else sections.push({ label: item.section, items: [item] })
+    return sections
+  }, [])
 
   return (
     <nav aria-label="Navegação principal" className="flex-1 overflow-y-auto px-3 py-4">
@@ -165,7 +73,7 @@ export function SidebarNav({
 
             <div className="space-y-1">
               {section.items.map((item) => {
-                const active = isActive(url, item.href)
+                const active = isNavigationItemActive(url, item, visibleItems)
                 const Icon = item.icon
 
                 return (
@@ -173,7 +81,7 @@ export function SidebarNav({
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    title={collapsed ? item.title : undefined}
+                    title={collapsed ? item.label : undefined}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
                       'group relative flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all duration-150',
@@ -196,7 +104,7 @@ export function SidebarNav({
                     >
                       <Icon className="size-[1.05rem]" />
                     </span>
-                    {!collapsed && <span className="truncate">{item.title}</span>}
+                    {!collapsed && <span className="truncate">{item.label}</span>}
                   </Link>
                 )
               })}
@@ -219,10 +127,10 @@ function SidebarWorkspace({ collapsed }: { collapsed: boolean }) {
             'flex items-center gap-3 rounded-xl bg-muted/70 p-3 text-muted-foreground',
             collapsed && 'size-10 justify-center p-0'
           )}
-          title={collapsed ? 'Nenhum espaço ativo' : undefined}
+          title={collapsed ? 'Nenhuma operação ativa' : undefined}
         >
           <ShieldCheck className="size-4 shrink-0" />
-          {!collapsed && <span className="text-xs font-medium">Nenhum espaço ativo</span>}
+          {!collapsed && <span className="text-xs font-medium">Nenhuma operação ativa</span>}
         </div>
       </div>
     )
@@ -272,7 +180,7 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
           isCollapsed && 'justify-center px-0'
         )}
       >
-        <AppBrand collapsed={isCollapsed} />
+        <AppBrand href="/" collapsed={isCollapsed} />
         <Button
           type="button"
           variant="outline"
