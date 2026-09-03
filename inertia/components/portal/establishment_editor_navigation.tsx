@@ -25,6 +25,7 @@ interface EstablishmentEditorNavigationProps {
   score: number
   eligible: boolean
   editable: boolean
+  submitAllowed: boolean
   submitting: boolean
   busy: boolean
   unsavedSectionCount: number
@@ -98,7 +99,7 @@ export function EstablishmentEditorNavigation({
   onNavigate,
   score,
   eligible,
-  editable,
+  submitAllowed,
   submitting,
   busy,
   unsavedSectionCount,
@@ -129,7 +130,7 @@ export function EstablishmentEditorNavigation({
 
   if (variant === 'mobile') {
     return (
-      <div className="sticky top-[72px] z-30 -mx-4 border-y border-border/70 bg-background/90 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:hidden">
+      <div className="sticky top-[72px] z-30 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:hidden">
         <nav
           ref={mobileNavigationRef}
           aria-label="Etapas do editor"
@@ -156,7 +157,7 @@ export function EstablishmentEditorNavigation({
       ? 'Aguarde…'
       : hasUnsavedChanges
         ? 'Salve antes de enviar'
-        : editable
+        : submitAllowed
           ? submitLabel
           : lockedLabel
   const helperText = hasUnsavedChanges
@@ -168,7 +169,7 @@ export function EstablishmentEditorNavigation({
   return (
     <aside className="hidden lg:block">
       <div className="sticky top-24 space-y-4">
-        <Card className="overflow-hidden border-border/70 shadow-xs">
+        <Card className="overflow-hidden border-border">
           <CardContent className="space-y-5 p-5">
             <div className="flex items-center gap-4">
               <ProgressCircle
@@ -199,7 +200,7 @@ export function EstablishmentEditorNavigation({
             ) : eligible ? (
               <Badge variant="success" appearance="light" className="w-full justify-start">
                 <CheckCircle2 />
-                {editable ? 'Pronta para moderação' : 'Checklist concluído'}
+                {submitAllowed ? 'Pronta para moderação' : 'Checklist concluído'}
               </Badge>
             ) : (
               <Badge variant="warning" appearance="light" className="w-full justify-start">
@@ -226,7 +227,7 @@ export function EstablishmentEditorNavigation({
                 type="button"
                 size="lg"
                 className="w-full"
-                disabled={!editable || !eligible || operationBusy || hasUnsavedChanges}
+                disabled={!submitAllowed || !eligible || operationBusy || hasUnsavedChanges}
                 aria-describedby={helperText ? 'editor-submit-help' : undefined}
                 onClick={onSubmit}
               >
@@ -234,7 +235,7 @@ export function EstablishmentEditorNavigation({
                   <LoaderCircle className="animate-spin" />
                 ) : hasUnsavedChanges ? (
                   <Save />
-                ) : editable ? (
+                ) : submitAllowed ? (
                   <Send />
                 ) : (
                   <LockKeyhole />

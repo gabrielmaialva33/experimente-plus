@@ -1,8 +1,20 @@
 import { Head, Link, router, useForm } from '@inertiajs/react'
-import { ArrowLeft, ArrowRight, Building2, Loader2, MapPin, Plus, Save, Send } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  BarChart3,
+  Building2,
+  Loader2,
+  MapPin,
+  Plus,
+  Save,
+  Send,
+} from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EmptyState } from '~/components/empty_state'
+import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { EditorField } from '~/components/portal/establishment_editor/editor_field'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
@@ -10,6 +22,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
+import { useAuth } from '~/hooks/use_auth'
 import { firstError } from '~/lib/form_errors'
 import { organizationRoleLabel, organizationStatusLabel, revisionStatusLabel } from '~/lib/labels'
 
@@ -88,6 +101,7 @@ export default function PortalOrganizationPage({
   feedback_targets,
   errors: pageErrors = {},
 }: OrganizationPageProps) {
+  const { can } = useAuth()
   const saveButtonRef = useRef<HTMLButtonElement>(null)
   const operationRef = useRef<OrganizationOperation | null>(null)
   const [operation, setOperation] = useState<OrganizationOperation | null>(null)
@@ -103,7 +117,12 @@ export default function PortalOrganizationPage({
     phone: organization.phone,
     website: organization.website ?? '',
   })
-  const editable = editableStatuses.has(organization.status)
+  const statusEditable = editableStatuses.has(organization.status)
+  const editable = statusEditable && can('organizations.update')
+  const canSubmit = statusEditable && can('organizations.submit')
+  const canCreateEstablishment = can('establishments.create')
+  const canReadAnalytics = can('analytics.read')
+  const canCreateFeedback = can('pilot_feedback.create')
   const formErrors = form.errors as Record<string, unknown>
   const busy = operation !== null || form.processing
   const guard = useUnsavedChangesGuard({
@@ -162,6 +181,7 @@ export default function PortalOrganizationPage({
   }
 
   function openSubmissionDialog() {
+    if (!canSubmit) return
     if (form.isDirty) {
       saveButtonRef.current?.focus()
       return
@@ -172,7 +192,7 @@ export default function PortalOrganizationPage({
   }
 
   function submitForReview() {
-    if (form.isDirty || !beginOperation('submit')) return
+    if (!canSubmit || form.isDirty || !beginOperation('submit')) return
 
     setSubmissionError(null)
     setLocalStatus(null)
@@ -210,23 +230,32 @@ export default function PortalOrganizationPage({
           </Link>
         </Button>
 
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-primary">
-              Organização · {organizationRoleLabel(organization.role)}
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">{organization.trade_name}</h1>
-            <p className="mt-2 text-muted-foreground">
-              {organization.legal_name} · {organizationStatusLabel(organization.status)}
-            </p>
-          </div>
-          <Button asChild>
-            <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
-              <Plus aria-hidden="true" className="size-4" />
-              Nova unidade
-            </Link>
-          </Button>
-        </header>
+        <PageHeader
+          eyebrow={`Organização · ${organizationRoleLabel(organization.role)}`}
+          icon={Building2}
+          title={organization.trade_name}
+          description={`${organization.legal_name} · ${organizationStatusLabel(organization.status)}`}
+          actions={
+            <>
+              {canReadAnalytics ? (
+                <Button asChild variant="outline">
+                  <Link href={`/organizations/${organization.id}/analytics`}>
+                    <BarChart3 aria-hidden="true" className="size-4" />
+                    Ver analytics
+                  </Link>
+                </Button>
+              ) : null}
+              {canCreateEstablishment ? (
+                <Button asChild>
+                  <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
+                    <Plus aria-hidden="true" className="size-4" />
+                    Nova unidade
+                  </Link>
+                </Button>
+              ) : null}
+            </>
+          }
+        />
 
         <section
           aria-label="Indicadores da organização"
@@ -340,7 +369,8 @@ export default function PortalOrganizationPage({
 
               <EditorField
                 htmlFor="organization-slug"
-                label="Slug público"
+                label="Endereço da página"
+                hint="Identificador curto usado no endereço público da organização."
                 error={fieldError('slug')}
               >
                 <Input
@@ -463,23 +493,27 @@ export default function PortalOrganizationPage({
                     </>
                   )}
                 </Button>
-                <Button
-                  type="button"
-                  disabled={busy || form.isDirty}
-                  onClick={openSubmissionDialog}
-                >
-                  <Send aria-hidden="true" className="size-4" />
-                  Enviar para análise
-                </Button>
+                {canSubmit ? (
+                  <Button
+                    type="button"
+                    disabled={busy || form.isDirty}
+                    onClick={openSubmissionDialog}
+                  >
+                    <Send aria-hidden="true" className="size-4" />
+                    Enviar para análise
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </form>
 
-          <PilotFeedbackForm
-            targets={feedback_targets}
-            context="organization"
-            organizationId={organization.id}
-          />
+          {canCreateFeedback ? (
+            <PilotFeedbackForm
+              targets={feedback_targets}
+              context="organization"
+              organizationId={organization.id}
+            />
+          ) : null}
         </section>
 
         <section className="space-y-4" aria-labelledby="organization-establishments-title">
@@ -495,15 +529,21 @@ export default function PortalOrganizationPage({
           </div>
 
           {organization.establishments.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border bg-card p-9 text-center">
-              <Building2 aria-hidden="true" className="mx-auto size-9 text-muted-foreground" />
-              <p className="mt-3 font-semibold">Nenhuma unidade cadastrada</p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
-                  Criar primeira unidade
-                  <ArrowRight aria-hidden="true" className="size-4" />
-                </Link>
-              </Button>
+            <div className="rounded-md border border-dashed border-border bg-card">
+              <EmptyState
+                icon={Building2}
+                title="Nenhuma unidade cadastrada"
+                description="Crie uma unidade quando houver um endereço público vinculado a esta organização."
+              >
+                {canCreateEstablishment ? (
+                  <Button asChild variant="outline">
+                    <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
+                      Criar primeira unidade
+                      <ArrowRight aria-hidden="true" className="size-4" />
+                    </Link>
+                  </Button>
+                ) : null}
+              </EmptyState>
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">

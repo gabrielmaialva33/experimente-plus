@@ -1,7 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Building2, Loader2 } from 'lucide-react'
 import { useRef, type FormEvent } from 'react'
 
+import { PageHeader } from '~/components/page_header'
 import { EditorField } from '~/components/portal/establishment_editor/editor_field'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
@@ -54,25 +55,24 @@ export default function NewOrganizationPage() {
       <Head title="Nova organização" />
 
       <div className="mx-auto max-w-3xl space-y-6">
-        <Button asChild variant="ghost" size="sm" className="-ms-3">
-          <Link href="/portal">
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Voltar ao portal
-          </Link>
-        </Button>
-
-        <header>
-          <p className="text-sm font-semibold text-primary">Onboarding</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Cadastre a organização</h1>
-          <p className="mt-2 text-muted-foreground">
-            A organização representa a empresa ou identidade legal. Cada endereço público será uma
-            unidade separada.
-          </p>
-        </header>
+        <PageHeader
+          eyebrow="Portal do parceiro"
+          icon={Building2}
+          title="Cadastre a organização"
+          description="A organização representa a empresa ou identidade legal. Cada endereço público será uma unidade separada."
+          actions={
+            <Button asChild variant="outline">
+              <Link href="/portal">
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Voltar ao portal
+              </Link>
+            </Button>
+          }
+        />
 
         <form
           onSubmit={submit}
-          className="space-y-6 rounded-3xl border border-border bg-card p-6"
+          className="space-y-6 rounded-lg border border-border bg-card p-5 sm:p-6"
           aria-busy={form.processing}
         >
           {generalError ? (
@@ -121,8 +121,8 @@ export default function NewOrganizationPage() {
 
             <EditorField
               htmlFor="organization-slug"
-              label="Slug público"
-              hint="Opcional. Quando vazio, a plataforma cria um identificador a partir do nome."
+              label="Endereço da página"
+              hint="Opcional. Quando vazio, a plataforma cria o endereço a partir do nome fantasia."
               error={fieldError('slug')}
             >
               <Input
@@ -131,6 +131,7 @@ export default function NewOrganizationPage() {
                 maxLength={180}
                 autoComplete="off"
                 spellCheck={false}
+                placeholder="nome-da-organizacao"
                 disabled={form.processing}
                 value={form.data.slug}
                 onChange={(event) => form.setData('slug', event.target.value)}
@@ -226,7 +227,7 @@ export default function NewOrganizationPage() {
           </Alert>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={form.processing}>
+            <Button type="submit" disabled={form.processing} aria-busy={form.processing}>
               {form.processing ? (
                 <>
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />

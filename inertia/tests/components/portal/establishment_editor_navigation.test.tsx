@@ -17,6 +17,7 @@ const baseProps = {
   score: 80,
   eligible: true,
   editable: true,
+  submitAllowed: true,
   submitting: false,
   busy: false,
   unsavedSectionCount: 0,

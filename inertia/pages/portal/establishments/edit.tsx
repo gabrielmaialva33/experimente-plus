@@ -62,6 +62,7 @@ import {
   type JsonRecord,
 } from '~/lib/establishment_editor'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
+import { useAuth } from '~/hooks/use_auth'
 import { firstError } from '~/lib/form_errors'
 import { cn } from '~/lib/utils'
 
@@ -133,13 +134,18 @@ export default function EstablishmentEditorPage({
   const { errors: pageErrors } = usePage().props as {
     errors?: Record<string, unknown>
   }
+  const { can } = useAuth()
   const revision = asRecord(establishment.revision)
   const address = asRecord(revision?.address)
   const establishmentId = Number(establishment.id)
   const organizationId = Number(establishment.organization_id)
   const revisionStatus = stringValue(revision, 'status', 'draft')
   const revisionVersion = numberValue(revision, 'version') ?? 1
-  const editable = ['draft', 'changes_requested'].includes(revisionStatus)
+  const contentStateEditable = ['draft', 'changes_requested'].includes(revisionStatus)
+  const editable = contentStateEditable && can('establishments.update')
+  const submitAllowed = contentStateEditable && can('establishments.submit')
+  const canManageBenefits = can('benefit_offers.list')
+  const canSendFeedback = can('pilot_feedback.create')
   const statusMeta = getRevisionStatusMeta(revisionStatus)
   const submitLabel =
     revisionStatus === 'changes_requested' ? 'Reenviar para moderação' : 'Enviar para moderação'
@@ -307,8 +313,8 @@ export default function EstablishmentEditorPage({
     [completeness.blocking_issues, review_issues]
   )
 
-  const navigationItems = useMemo<EditorNavigationItem[]>(
-    () => [
+  const navigationItems = useMemo<EditorNavigationItem[]>(() => {
+    const items: EditorNavigationItem[] = [
       {
         id: 'identity',
         label: 'Identidade',
@@ -352,9 +358,10 @@ export default function EstablishmentEditorPage({
         issueCount: 0,
         optional: true,
       },
-    ],
-    [issuesBySection]
-  )
+    ]
+
+    return items.filter((item) => item.id !== 'feedback' || canSendFeedback)
+  }, [canSendFeedback, issuesBySection])
 
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined') return
@@ -436,7 +443,7 @@ export default function EstablishmentEditorPage({
   }
 
   function submitForReview() {
-    if (editorBusy || submitting) return
+    if (!submitAllowed || editorBusy || submitting) return
     if (firstDirtySection) {
       navigateTo(firstDirtySection.id)
       return
@@ -469,8 +476,10 @@ export default function EstablishmentEditorPage({
     EDITOR_SECTION_IDS.find((section) =>
       issuesBySection[section].some((issue) => issue.source === 'moderation')
     ) ?? 'identity'
-  const submitDisabledReason = !editable
-    ? statusMeta.description
+  const submitDisabledReason = !submitAllowed
+    ? contentStateEditable
+      ? 'Sua conta não possui permissão para enviar esta ficha.'
+      : statusMeta.description
     : hasUnsavedChanges
       ? 'Salve todas as etapas antes de enviar para moderação.'
       : editorBusy
@@ -484,7 +493,7 @@ export default function EstablishmentEditorPage({
       ? 'Aguarde…'
       : hasUnsavedChanges
         ? 'Salve antes de enviar'
-        : editable
+        : submitAllowed
           ? submitLabel
           : statusMeta.label
   const pageTitle = stringValue(revision, 'public_name', 'Editar unidade')
@@ -517,12 +526,14 @@ export default function EstablishmentEditorPage({
           }
           actions={
             <>
-              <Button asChild variant="outline" size="lg">
-                <Link href={`/portal/establishments/${establishment.id}/benefits`}>
-                  <Store />
-                  Benefícios
-                </Link>
-              </Button>
+              {canManageBenefits ? (
+                <Button asChild variant="outline" size="lg">
+                  <Link href={`/portal/establishments/${establishment.id}/benefits`}>
+                    <Store />
+                    Benefícios
+                  </Link>
+                </Button>
+              ) : null}
               <Button asChild variant="outline" size="lg">
                 <Link
                   href={`/portal/organizations/${organizationId}`}
@@ -540,7 +551,7 @@ export default function EstablishmentEditorPage({
                 type="button"
                 size="lg"
                 disabled={
-                  !editable ||
+                  !submitAllowed ||
                   !completeness.eligible ||
                   submitting ||
                   editorBusy ||
@@ -553,7 +564,7 @@ export default function EstablishmentEditorPage({
                   <LoaderCircle className="animate-spin" />
                 ) : hasUnsavedChanges ? (
                   <Save />
-                ) : editable ? (
+                ) : submitAllowed ? (
                   <Send />
                 ) : (
                   <LockKeyhole />
@@ -636,6 +647,7 @@ export default function EstablishmentEditorPage({
           score={completeness.score}
           eligible={completeness.eligible}
           editable={editable}
+          submitAllowed={submitAllowed}
           submitting={submitting}
           busy={editorBusy}
           unsavedSectionCount={dirtySections.length}
@@ -652,8 +664,9 @@ export default function EstablishmentEditorPage({
             activeSection={activeSection}
             onNavigate={navigateTo}
             score={completeness.score}
-            eligible={completeness.eligible}
-            editable={editable}
+          eligible={completeness.eligible}
+          editable={editable}
+          submitAllowed={submitAllowed}
             submitting={submitting}
             busy={editorBusy}
             unsavedSectionCount={dirtySections.length}
@@ -726,11 +739,13 @@ export default function EstablishmentEditorPage({
               editor={mediaEditor}
             />
 
-            <FeedbackSection
-              targets={feedback_targets}
-              organizationId={organizationId}
-              establishmentId={establishmentId}
-            />
+            {canSendFeedback ? (
+              <FeedbackSection
+                targets={feedback_targets}
+                organizationId={organizationId}
+                establishmentId={establishmentId}
+              />
+            ) : null}
           </div>
         </div>
       </div>

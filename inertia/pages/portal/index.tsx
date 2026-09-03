@@ -12,9 +12,11 @@ import {
 } from 'lucide-react'
 
 import { MetricCard } from '~/components/metric_card'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { Button } from '~/components/ui/button'
+import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { organizationRoleLabel, organizationStatusLabel } from '~/lib/labels'
 import { cn } from '~/lib/utils'
@@ -86,19 +88,24 @@ interface PortalIndexProps {
 
 function statusClassName(status: string): string {
   const styles: Record<string, string> = {
-    draft: 'bg-muted text-muted-foreground',
-    pending_review: 'bg-warning/15 text-warning-foreground ring-warning/20',
-    changes_requested: 'bg-warning/15 text-warning-foreground ring-warning/20',
-    active: 'bg-success/10 text-success ring-success/15',
-    suspended: 'bg-destructive/10 text-destructive ring-destructive/15',
-    rejected: 'bg-destructive/10 text-destructive ring-destructive/15',
-    archived: 'bg-muted text-muted-foreground',
+    draft: 'border-border bg-muted text-muted-foreground',
+    pending_review: 'border-warning/25 bg-warning/15 text-warning-foreground',
+    changes_requested: 'border-warning/25 bg-warning/15 text-warning-foreground',
+    active: 'border-success/25 bg-success/10 text-success',
+    suspended: 'border-destructive/25 bg-destructive/10 text-destructive',
+    rejected: 'border-destructive/25 bg-destructive/10 text-destructive',
+    archived: 'border-border bg-muted text-muted-foreground',
   }
 
-  return styles[status] ?? 'bg-muted text-muted-foreground'
+  return styles[status] ?? 'border-border bg-muted text-muted-foreground'
 }
 
 export default function PartnerPortalIndex({ overview, feedback_targets }: PortalIndexProps) {
+  const { can } = useAuth()
+  const canCreateOrganization = can('organizations.create')
+  const canReadOrganizations = can('organizations.read')
+  const canReadEstablishments = can('establishments.read')
+  const canCreateFeedback = can('pilot_feedback.create')
   const stats = [
     {
       label: 'Organizações',
@@ -138,12 +145,14 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
           title="Portal do parceiro"
           description="Organize empresas e unidades, acompanhe a qualidade das fichas e envie conteúdo para moderação."
           actions={
+            canCreateOrganization && overview.organizations.length > 0 ? (
             <Button asChild variant="primary">
               <Link href="/portal/organizations/new">
                 <Plus className="size-4" />
                 Nova organização
               </Link>
             </Button>
+            ) : null
           }
         />
 
@@ -164,23 +173,22 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
         </section>
 
         {overview.organizations.length === 0 ? (
-          <section className="relative overflow-hidden rounded-3xl border border-dashed border-primary/25 bg-card px-6 py-14 text-center shadow-xs">
-            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
-              <Building2 className="size-6" />
-            </span>
-            <h2 className="mt-5 text-xl font-bold tracking-[-0.025em]">Comece pela organização</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-              Cadastre a identidade legal da empresa. Depois você poderá criar uma ou várias
-              unidades em cidades diferentes.
-            </p>
-            <Button asChild variant="primary" className="mt-6">
-              <Link href="/portal/organizations/new">
-                Criar organização
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <span className="pointer-events-none absolute -end-16 -top-20 size-52 rounded-full bg-primary/[0.045]" />
-          </section>
+          <EmptyState
+            className="rounded-lg border border-dashed border-border bg-card"
+            headingLevel={2}
+            icon={Building2}
+            title="Comece pela organização"
+            description="Cadastre a identidade legal da empresa. Depois você poderá criar uma ou várias unidades em cidades diferentes."
+          >
+            {canCreateOrganization ? (
+              <Button asChild variant="primary">
+                <Link href="/portal/organizations/new">
+                  Criar organização
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            ) : null}
+          </EmptyState>
         ) : (
           <section className="space-y-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -209,7 +217,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                 return (
                   <article
                     key={organization.id}
-                    className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-shadow hover:shadow-md"
+                    className="overflow-hidden rounded-lg border border-border bg-card"
                   >
                     <div className="p-5 sm:p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -220,7 +228,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                             </h3>
                             <span
                               className={cn(
-                                'rounded-full px-2.5 py-1 text-[0.68rem] font-semibold ring-1 ring-inset',
+                                'rounded-md border px-2.5 py-1 text-[0.68rem] font-semibold',
                                 statusClassName(organization.status)
                               )}
                             >
@@ -234,15 +242,17 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                             {organizationRoleLabel(organization.role)}
                           </p>
                         </div>
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/portal/organizations/${organization.id}`}>
-                            Abrir
-                            <ArrowRight className="size-3.5" />
-                          </Link>
-                        </Button>
+                        {canReadOrganizations ? (
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/portal/organizations/${organization.id}`}>
+                              Abrir
+                              <ArrowRight className="size-3.5" />
+                            </Link>
+                          </Button>
+                        ) : null}
                       </div>
 
-                      <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-xl border border-border/70 bg-muted/35 text-center">
+                      <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-md border border-border bg-muted/35 text-center">
                         <div className="p-3">
                           <p className="text-xl font-bold tabular-nums">
                             {organization.totals.establishments}
@@ -279,7 +289,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                           aria-valuenow={progress}
                         >
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-primary to-warning transition-[width] duration-500"
+                            className="h-full rounded-full bg-primary"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -293,10 +303,10 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                               key={step.key}
                               href={step.href}
                               className={cn(
-                                'flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
+                                'flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 step.completed
-                                  ? 'border-success/15 bg-success/[0.06] text-foreground hover:bg-success/10'
-                                  : 'border-border/70 hover:border-primary/25 hover:bg-accent/50'
+                                  ? 'border-success/20 bg-success/[0.06] text-foreground hover:bg-success/10'
+                                  : 'border-border hover:border-primary/25 hover:bg-accent/50'
                               )}
                             >
                               {step.completed ? (
@@ -311,7 +321,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                       </div>
                     </div>
 
-                    {organization.establishments.length > 0 && (
+                    {canReadEstablishments && organization.establishments.length > 0 && (
                       <div className="border-t border-border/70 bg-muted/20 px-5 py-4 sm:px-6">
                         <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                           Unidades recentes
@@ -321,10 +331,10 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                             <Link
                               key={establishment.id}
                               href={`/portal/establishments/${establishment.id}`}
-                              className="group flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition hover:bg-background"
+                              className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                               <span className="flex min-w-0 items-center gap-2">
-                                <MapPin className="size-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                                <MapPin className="size-4 shrink-0 text-muted-foreground" />
                                 <span className="truncate text-sm font-medium">
                                   {establishment.public_name || `Unidade ${establishment.id}`}
                                 </span>
@@ -344,7 +354,9 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
           </section>
         )}
 
-        <PilotFeedbackForm targets={feedback_targets} context="onboarding" />
+        {canCreateFeedback ? (
+          <PilotFeedbackForm targets={feedback_targets} context="onboarding" />
+        ) : null}
       </div>
     </MainLayout>
   )
