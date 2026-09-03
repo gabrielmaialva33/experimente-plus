@@ -19,14 +19,14 @@ function formatDate(value: string): string {
 
 export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
   return (
-    <ConsumerShell active="wallet">
+    <ConsumerShell>
       <Head title={`Comprovante ${receipt.receipt_code}`} />
 
-      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
+      <div className="mx-auto w-full max-w-3xl">
         <Button asChild variant="ghost" className="-ml-3 min-h-11">
           <Link href="/wallet/history">
             <ArrowLeft />
-            Voltar ao histórico
+            Voltar às utilizações
           </Link>
         </Button>
 
@@ -94,7 +94,7 @@ export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
             </Button>
           </div>
         </section>
-      </main>
+      </div>
     </ConsumerShell>
   )
 }

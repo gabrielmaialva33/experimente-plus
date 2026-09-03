@@ -48,10 +48,10 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
   }
 
   return (
-    <ConsumerShell active="wallet">
+    <ConsumerShell>
       <Head title={`Usar ${benefit.offer_title}`} />
 
-      <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
+      <div className="mx-auto w-full max-w-5xl">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <Button asChild variant="ghost" className="-ml-3 min-h-11">
             <Link href="/wallet">
@@ -62,7 +62,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
           <Button asChild variant="outline" className="min-h-11">
             <Link href="/wallet/history">
               <TicketCheck />
-              Histórico
+              Utilizações
             </Link>
           </Button>
         </div>
@@ -158,7 +158,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
             </div>
           </div>
         </section>
-      </main>
+      </div>
     </ConsumerShell>
   )
 }

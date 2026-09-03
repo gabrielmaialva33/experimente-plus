@@ -41,7 +41,7 @@ export interface PilotFeedbackFormProps {
 
 interface FeedbackFormData {
   context: NonNullable<PilotFeedbackFormProps['context']>
-  rating: number
+  rating: number | ''
   message: string
   organization_id: number | null
   establishment_id: number | null
@@ -60,7 +60,7 @@ export default function PilotFeedbackForm({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const form = useForm<FeedbackFormData>({
     context,
-    rating: 5,
+    rating: '',
     message: '',
     organization_id: organizationId,
     establishment_id: establishmentId,
@@ -164,9 +164,12 @@ export default function PilotFeedbackForm({
             required
             disabled={busy}
             value={form.data.rating}
-            onChange={(event) => form.setData('rating', Number(event.target.value))}
+            onChange={(event) =>
+              form.setData('rating', event.target.value ? Number(event.target.value) : '')
+            }
             className={editorSelectClassName}
           >
+            <option value="">Selecione uma nota</option>
             {[5, 4, 3, 2, 1].map((rating) => (
               <option key={rating} value={rating}>
                 {rating} de 5

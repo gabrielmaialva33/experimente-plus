@@ -2,6 +2,7 @@ import type { AnchorHTMLAttributes } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { LoginForm } from '~/components/auth/login_form'
+import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
 import { render } from '~/tests/test_utils'
 
 const { mockPost } = vi.hoisted(() => ({ mockPost: vi.fn() }))
@@ -49,6 +50,23 @@ describe('LoginForm', () => {
       'href',
       '/forgot-password'
     )
+  })
+
+  it('keeps the skip link as the first keyboard target', async () => {
+    const { user } = render(
+      <>
+        <SkipLink />
+        <main id={MAIN_CONTENT_ID}>
+          <LoginForm />
+        </main>
+      </>
+    )
+
+    expect(screen.getByLabelText('E-mail ou usuário')).not.toHaveAttribute('autofocus')
+
+    await user.tab()
+
+    expect(screen.getByRole('link', { name: 'Pular para o conteúdo principal' })).toHaveFocus()
   })
 
   it('allows entering credentials', async () => {

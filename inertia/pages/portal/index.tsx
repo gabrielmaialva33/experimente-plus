@@ -191,7 +191,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                 </p>
               </div>
               <p className="text-xs font-medium text-muted-foreground">
-                {overview.organizations.length} no espaço ativo
+                {overview.organizations.length} na operação ativa
               </p>
             </div>
 

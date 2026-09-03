@@ -66,7 +66,7 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
             <Button asChild variant="outline" size="lg">
               <Link href="/portal/redemptions">
                 <ArrowLeft />
-                Histórico
+                Utilizações validadas
               </Link>
             </Button>
           }
@@ -150,11 +150,13 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
               <CheckCircle2 className="size-8 text-success" />
               <h2 className="mt-4 text-lg font-bold">Apresentação válida</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Confira os dados ao lado antes de consumir um dos usos disponíveis.
+                Confira os dados ao lado antes de confirmar uma das utilizações disponíveis.
               </p>
               <p className="mt-4 text-sm font-semibold">
                 {preview.benefit.remaining_redemptions}{' '}
-                {preview.benefit.remaining_redemptions === 1 ? 'uso restante' : 'usos restantes'}
+                {preview.benefit.remaining_redemptions === 1
+                  ? 'utilização restante'
+                  : 'utilizações restantes'}
               </p>
               <Button
                 type="button"

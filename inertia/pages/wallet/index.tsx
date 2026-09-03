@@ -101,7 +101,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
         <Button asChild variant="outline">
           <Link href="/wallet/history">
             <History />
-            Benefícios utilizados
+            Utilizações
           </Link>
         </Button>
       }
@@ -134,8 +134,8 @@ export default function WalletPage({ wallet }: WalletPageProps) {
           </span>
           <h2 className="mt-5 text-lg font-bold">Sua carteira ainda está vazia</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Assim que uma edição for comprada ou liberada para sua conta, os benefícios aparecerão
-            aqui automaticamente.
+            Quando um acesso a uma edição for concedido à sua conta, os benefícios aparecerão aqui
+            automaticamente.
           </p>
         </section>
       ) : (
@@ -239,12 +239,13 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                               ) : (
                                 <div className="rounded-xl bg-muted/55 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
                                   {state === 'redeemed'
-                                    ? 'Todos os usos foram concluídos.'
+                                    ? 'Todas as utilizações foram concluídas.'
                                     : 'Este benefício não pode ser apresentado agora.'}
                                 </div>
                               )}
                               <p className="mt-2 text-center text-[0.68rem] text-muted-foreground">
-                                {remaining} {remaining === 1 ? 'uso restante' : 'usos restantes'}
+                                {remaining}{' '}
+                                {remaining === 1 ? 'utilização restante' : 'utilizações restantes'}
                               </p>
                             </div>
                           </article>

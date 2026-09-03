@@ -5,6 +5,7 @@ import { PublicFooter } from '~/components/public/public_footer'
 import { PublicHeader } from '~/components/public/public_header'
 import { PublicMobileNavigation } from '~/components/public/public_mobile_navigation'
 import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
+import { cn } from '~/lib/utils'
 
 interface PublicShellProps {
   title: string
@@ -34,9 +35,9 @@ export function PublicShell({
         {image ? <meta property="og:image" content={image} /> : null}
       </Head>
       <SkipLink />
-      <div className="flex min-h-screen flex-col overflow-x-clip bg-background pb-20 text-foreground md:pb-0">
+      <div className="flex min-h-screen flex-col overflow-x-clip bg-background pb-[calc(var(--public-mobile-navigation-reserve)+env(safe-area-inset-bottom))] text-foreground md:pb-0">
         <PublicHeader />
-        <main id={MAIN_CONTENT_ID} tabIndex={-1} className={mainClassName}>
+        <main id={MAIN_CONTENT_ID} tabIndex={-1} className={cn('flex-1', mainClassName)}>
           {children}
         </main>
         <PublicFooter />

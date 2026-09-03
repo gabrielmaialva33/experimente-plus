@@ -83,7 +83,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           description={
             activeTenant
               ? `Acompanhe a atividade e os recursos da operação ${activeTenant.name}.`
-              : 'Escolha um espaço de trabalho ativo para visualizar os dados da operação.'
+              : 'Escolha uma operação ativa para visualizar os dados.'
           }
           actions={
             can('users.create') ? (
@@ -99,14 +99,14 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         >
           <MetricCard
-            label="Usuários no espaço"
+            label="Usuários na operação"
             value={stats.totals.users.toLocaleString('pt-BR')}
             icon={Users}
             href={canListUsers ? '/users' : undefined}
             linkLabel="Ver usuários"
           />
           <MetricCard
-            label="Meus espaços"
+            label="Minhas operações"
             value={stats.totals.tenants.toLocaleString('pt-BR')}
             icon={Building2}
             tone="info"
@@ -169,7 +169,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
               <CardHeading>
                 <CardTitle>Distribuição mensal</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Entradas registradas no espaço de trabalho ativo
+                  Entradas registradas na operação ativa
                 </p>
               </CardHeading>
             </CardHeader>
@@ -210,7 +210,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           <CardContent className="p-0">
             {stats.recentUsers.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
-                Ainda não há usuários neste espaço de trabalho.
+                Ainda não há usuários nesta operação.
               </p>
             ) : (
               <ul className="divide-y divide-border/70">

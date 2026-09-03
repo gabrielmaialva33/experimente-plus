@@ -1,268 +1,204 @@
 import { Link } from '@inertiajs/react'
 import {
-  ArrowRight,
   BadgeCheck,
-  Building2,
   Clapperboard,
   Coffee,
   Compass,
-  HeartHandshake,
   MapPinned,
-  Search,
-  Sparkles,
   Store,
   UtensilsCrossed,
 } from 'lucide-react'
 
 import { PublicShell } from '~/components/public'
 import { Button } from '~/components/ui/button'
+import { Card, CardContent } from '~/components/ui/card'
 
 const categories = [
   {
     label: 'Restaurantes',
-    description: 'Do almoço de todo dia à experiência para uma ocasião especial.',
+    description: 'Almoço, jantar e experiências gastronômicas.',
     icon: UtensilsCrossed,
   },
   {
     label: 'Cafés e padarias',
-    description: 'Café, brunch, doces, pães e boas pausas pela cidade.',
+    description: 'Café, brunch, doces, pães e pausas pela cidade.',
     icon: Coffee,
   },
   {
-    label: 'Cultura e cinema',
-    description: 'Programas culturais, salas, espaços e experiências para descobrir.',
+    label: 'Cultura e lazer',
+    description: 'Cinema, programação cultural e espaços para conhecer.',
     icon: Clapperboard,
   },
   {
     label: 'Serviços locais',
-    description: 'Beleza, bem-estar, tatuagem e outros negócios da região.',
+    description: 'Beleza, bem-estar, tatuagem e outros serviços.',
     icon: Store,
   },
 ] as const
 
+const establishmentDetails = [
+  'Endereço e horários de atendimento',
+  'Categorias e características do lugar',
+  'Fotos e canais de contato disponíveis',
+] as const
+
 const discoverySteps = [
   {
-    title: 'Escolha sua cidade',
-    description: 'Comece pelo lugar onde você está ou por uma cidade que deseja conhecer.',
-    icon: MapPinned,
+    title: 'Escolha uma cidade',
+    description: 'Veja os estabelecimentos e serviços publicados naquela região.',
   },
   {
-    title: 'Refine sua busca',
-    description: 'Navegue por categorias, pesquise pelo nome e veja o que está aberto agora.',
-    icon: Search,
+    title: 'Filtre ou pesquise',
+    description: 'Use categorias, nome e informações de atendimento para comparar opções.',
   },
   {
-    title: 'Decida com contexto',
-    description: 'Consulte endereço, horários, características, mídia e canais de contato.',
-    icon: BadgeCheck,
+    title: 'Abra a ficha',
+    description: 'Confira os detalhes e siga para o canal de contato do estabelecimento.',
   },
 ] as const
 
 export default function Home() {
   return (
     <PublicShell
-      title="Experimente+ — Descubra o melhor da sua região"
+      title="Experimente+ — Lugares e serviços da sua região"
       description="Encontre restaurantes, cafés, cultura, bem-estar e serviços locais em cidades do Norte do Paraná."
     >
-      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/12 via-background to-cta/12">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.24] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-        <div className="absolute -start-32 top-20 size-80 rounded-full bg-primary/12 blur-3xl" />
-        <div className="absolute -end-24 bottom-0 size-72 rounded-full bg-cta/15 blur-3xl" />
-
-        <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:px-8 lg:py-28">
+      <section className="border-b bg-primary-soft/35">
+        <div className="app-container grid gap-10 py-12 sm:py-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:items-center lg:py-20">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur">
-              <Sparkles className="size-3.5" /> Descoberta regional, sem exigir cadastro
-            </div>
-
-            <h1 className="mt-6 text-4xl font-bold leading-[1.04] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
-              Mais perto do que você imagina.{' '}
-              <span className="text-primary">Mais interessante do que você esperava.</span>
+            <p className="text-sm font-semibold text-primary-accent">
+              Descoberta regional no Norte do Paraná
+            </p>
+            <h1 className="mt-4 text-4xl font-bold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-6xl">
+              Encontre lugares e serviços na sua cidade.
             </h1>
-
-            <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
-              Descubra restaurantes, cafés, cultura, bem-estar e serviços locais com informações
-              publicadas, organizadas e fáceis de usar.
+            <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+              Escolha uma cidade para explorar restaurantes, cafés, cultura, bem-estar e outros
+              negócios locais com informações organizadas em um só lugar.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button variant="cta" size="lg" className="h-12 px-6" asChild>
+            <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <Button variant="cta" size="lg" asChild>
                 <Link href="/cidades">
-                  <Compass className="size-4" /> Explorar cidades
+                  <Compass /> Escolher uma cidade
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" className="h-12 px-6" asChild>
-                <Link href="/register">
-                  <Store className="size-4" /> Cadastrar meu negócio
-                </Link>
-              </Button>
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <BadgeCheck className="size-3.5 text-primary" /> Fichas revisadas antes da
-                publicação
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPinned className="size-3.5 text-primary" /> Norte do Paraná como região inicial
-              </span>
+              <p className="text-sm text-muted-foreground">Explore sem precisar criar uma conta.</p>
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-xl lg:justify-self-end">
-            <div className="absolute inset-8 rounded-[2rem] bg-primary/15 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border bg-card/92 p-5 shadow-2xl backdrop-blur sm:p-7">
-              <div className="flex items-center justify-between gap-4 border-b pb-5">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-                    Comece por aqui
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold">O que combina com hoje?</h2>
-                </div>
-                <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <Compass className="size-5" />
+          <Card className="w-full max-w-2xl bg-card lg:max-w-lg lg:justify-self-end">
+            <CardContent className="p-0">
+              <div className="border-b p-5 sm:p-6">
+                <span className="flex size-10 items-center justify-center rounded-md bg-primary-soft text-primary-accent">
+                  <MapPinned className="size-5" />
                 </span>
+                <h2 className="mt-4 text-xl font-semibold">Informação para decidir</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Cada ficha reúne o contexto público disponível sobre o estabelecimento.
+                </p>
               </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {categories.map((category) => {
-                  const Icon = category.icon
-                  return (
-                    <div
-                      key={category.label}
-                      className="rounded-xl border bg-background p-4 transition hover:border-primary/30 hover:shadow-sm"
-                    >
-                      <Icon className="size-5 text-primary" />
-                      <h3 className="mt-3 text-sm font-semibold">{category.label}</h3>
-                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                        {category.description}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <Button variant="outline" className="mt-5 w-full" asChild>
-                <Link href="/cidades">
-                  Ver o catálogo regional <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
+              <ul className="divide-y" aria-label="Informações disponíveis nas fichas">
+                {establishmentDetails.map((detail) => (
+                  <li key={detail} className="flex items-start gap-3 px-5 py-4 text-sm sm:px-6">
+                    <BadgeCheck className="mt-0.5 size-4 shrink-0 text-primary-accent" />
+                    <span>{detail}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="border-t bg-muted/50 px-5 py-4 text-xs leading-5 text-muted-foreground sm:px-6">
+                O conteúdo público passa por revisão antes de aparecer no catálogo.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
-      <section
-        aria-labelledby="categories-title"
-        className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
-      >
+      <section aria-labelledby="categories-title" className="app-container py-12 sm:py-16 lg:py-20">
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.17em] text-primary">
-            Mais que gastronomia
-          </p>
-          <h2
-            id="categories-title"
-            className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl"
-          >
-            Uma plataforma regional preparada para diferentes experiências
+          <p className="text-sm font-semibold text-primary-accent">Categorias</p>
+          <h2 id="categories-title" className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            O que você pode encontrar
           </h2>
-          <p className="mt-4 leading-7 text-muted-foreground">
-            Gastronomia é a primeira vertical. A mesma estrutura também acolhe cultura, beleza,
-            bem-estar e outros serviços que fazem parte da vida local.
+          <p className="mt-3 leading-7 text-muted-foreground">
+            A disponibilidade varia por cidade. Estas são algumas das categorias previstas no
+            catálogo regional.
           </p>
         </div>
 
-        <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((category) => {
+        <ul className="mt-8 grid border-y sm:grid-cols-2 lg:grid-cols-4">
+          {categories.map((category, index) => {
             const Icon = category.icon
             return (
-              <article key={category.label} className="rounded-2xl border bg-card p-6 shadow-sm">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <Icon className="size-5" />
-                </span>
-                <h3 className="mt-5 text-lg font-semibold">{category.label}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <li
+                key={category.label}
+                className={`py-5 sm:p-5 ${index > 0 ? 'border-t' : ''} ${
+                  index === 1 ? 'sm:border-t-0' : ''
+                } ${index % 2 === 1 ? 'sm:border-l' : ''} ${index > 1 ? 'lg:border-t-0' : ''} ${
+                  index > 0 ? 'lg:border-l' : ''
+                }`}
+              >
+                <Icon className="size-5 text-primary-accent" />
+                <h3 className="mt-3 font-semibold">{category.label}</h3>
+                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
                   {category.description}
                 </p>
-              </article>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </section>
 
-      <section aria-labelledby="how-title" className="border-y bg-muted/35">
-        <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <section aria-labelledby="how-title" className="border-y bg-primary text-primary-foreground">
+        <div className="app-container py-12 sm:py-14">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.17em] text-primary">
-              Simples para explorar
-            </p>
-            <h2 id="how-title" className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
-              Da curiosidade à decisão em poucos passos
+            <p className="text-sm font-semibold text-primary-foreground/85">Como funciona</p>
+            <h2 id="how-title" className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+              Da cidade até o contato
             </h2>
           </div>
 
-          <ol className="mt-9 grid gap-5 lg:grid-cols-3">
-            {discoverySteps.map((step, index) => {
-              const Icon = step.icon
-              return (
-                <li
-                  key={step.title}
-                  className="relative rounded-2xl border bg-background p-6 shadow-sm"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                      <Icon className="size-5" />
-                    </span>
-                    <span className="text-4xl font-bold text-primary/15">0{index + 1}</span>
-                  </div>
-                  <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
-                </li>
-              )
-            })}
+          <ol className="mt-8 grid border-y border-primary-foreground/25 lg:grid-cols-3">
+            {discoverySteps.map((step, index) => (
+              <li
+                key={step.title}
+                className={`py-5 lg:p-6 ${
+                  index > 0 ? 'border-t border-primary-foreground/25 lg:border-l lg:border-t-0' : ''
+                }`}
+              >
+                <span className="text-sm font-bold text-primary-foreground/85">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <h3 className="mt-3 font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-primary-foreground/85">
+                  {step.description}
+                </p>
+              </li>
+            ))}
           </ol>
         </div>
       </section>
 
-      <section
-        aria-labelledby="partner-title"
-        className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
-      >
-        <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary via-primary to-primary/80 px-6 py-10 text-primary-foreground shadow-xl sm:px-10 sm:py-12 lg:px-14">
-          <div className="absolute -end-20 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+      <section aria-labelledby="partner-title" className="app-container py-12 sm:py-16 lg:py-20">
+        <Card>
+          <CardContent className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="max-w-2xl">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-primary-foreground/75">
-                <HeartHandshake className="size-4" /> Para negócios da região
-              </p>
-              <h2
-                id="partner-title"
-                className="mt-3 text-3xl font-bold tracking-[-0.035em] sm:text-4xl"
-              >
-                Sua presença local merece uma ficha completa e fácil de encontrar
+              <p className="text-sm font-semibold text-primary-accent">Para negócios da região</p>
+              <h2 id="partner-title" className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                Seu negócio atende em uma das cidades da plataforma?
               </h2>
-              <p className="mt-4 max-w-xl leading-7 text-primary-foreground/80">
-                Organize unidades, horários, categorias, características, mídia e contatos em um
-                fluxo acompanhado até a publicação.
+              <p className="mt-3 leading-7 text-muted-foreground">
+                Crie uma conta para cadastrar sua organização e preparar as fichas das unidades. A
+                publicação depende de revisão.
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Button size="lg" variant="cta" className="h-12" asChild>
-                <Link href="/register">
-                  <Building2 className="size-4" /> Criar minha conta
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="ghost"
-                className="h-12 border border-white/20 text-white hover:bg-white/10 hover:text-white"
-                asChild
-              >
-                <Link href="/login">Já tenho acesso</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
+            <Button variant="cta" size="lg" className="w-full sm:w-auto" asChild>
+              <Link href="/register">
+                <Store /> Cadastrar negócio
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </section>
     </PublicShell>
   )

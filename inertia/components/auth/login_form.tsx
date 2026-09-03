@@ -44,7 +44,6 @@ export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
         error={errors.uid}
         placeholder="voce@exemplo.com"
         required
-        autoFocus
         autoComplete="username"
         leftIcon={<Mail className="size-4" />}
       />

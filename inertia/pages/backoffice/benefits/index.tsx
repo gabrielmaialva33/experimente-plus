@@ -278,8 +278,8 @@ export default function BenefitsBackofficePage({
                   {editingId ? 'Ajuste o período e a apresentação' : 'Prepare a próxima temporada'}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  O preço ainda é informativo. Checkout e liberação de acesso entram no próximo
-                  marco.
+                  Informe o valor de referência da edição. Acessos são administrados separadamente e
+                  não alteram a publicação das ofertas.
                 </p>
               </div>
               {editingId ? (

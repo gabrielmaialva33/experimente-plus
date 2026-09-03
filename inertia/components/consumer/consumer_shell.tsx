@@ -1,27 +1,23 @@
-import { Link } from '@inertiajs/react'
-import { Compass, Home, UserRound, WalletCards } from 'lucide-react'
+import { Link, usePage } from '@inertiajs/react'
+import { Compass } from 'lucide-react'
 import type { PropsWithChildren } from 'react'
 
+import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
+import { isNavigationItemActive, navigationItemsForSurface } from '~/config/navigation'
 import { cn } from '~/lib/utils'
 
-interface ConsumerShellProps extends PropsWithChildren {
-  active: 'home' | 'explore' | 'wallet' | 'profile'
-}
+const navigation = navigationItemsForSurface('consumer', 'consumer-shell')
 
-const navigation = [
-  { key: 'home', label: 'Início', href: '/', icon: Home },
-  { key: 'explore', label: 'Explorar', href: '/estabelecimentos', icon: Compass },
-  { key: 'wallet', label: 'Carteira', href: '/wallet', icon: WalletCards },
-  { key: 'profile', label: 'Perfil', href: '/settings', icon: UserRound },
-] as const
+export function ConsumerShell({ children }: PropsWithChildren) {
+  const { url } = usePage()
 
-export function ConsumerShell({ active, children }: ConsumerShellProps) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
+      <SkipLink />
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/92 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="app-container flex min-h-16 items-center justify-between gap-4">
           <Link
-            href="/"
+            href="/cidades"
             className="group flex items-center gap-3"
             aria-label="Experimente+ — início"
           >
@@ -39,10 +35,10 @@ export function ConsumerShell({ active, children }: ConsumerShellProps) {
           <nav className="hidden items-center gap-1 md:flex" aria-label="Navegação do consumidor">
             {navigation.map((item) => {
               const Icon = item.icon
-              const selected = active === item.key
+              const selected = isNavigationItemActive(url, item, navigation)
               return (
                 <Link
-                  key={item.key}
+                  key={item.id}
                   href={item.href}
                   aria-current={selected ? 'page' : undefined}
                   className={cn(
@@ -61,7 +57,11 @@ export function ConsumerShell({ active, children }: ConsumerShellProps) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 md:pb-10 md:pt-8 lg:px-8">
+      <main
+        id={MAIN_CONTENT_ID}
+        tabIndex={-1}
+        className="app-container pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-6 outline-none md:pb-10 md:pt-8"
+      >
         {children}
       </main>
 
@@ -69,13 +69,13 @@ export function ConsumerShell({ active, children }: ConsumerShellProps) {
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
         aria-label="Navegação principal"
       >
-        <div className="mx-auto grid max-w-lg grid-cols-4">
+        <div className="mx-auto grid max-w-lg grid-cols-2">
           {navigation.map((item) => {
             const Icon = item.icon
-            const selected = active === item.key
+            const selected = isNavigationItemActive(url, item, navigation)
             return (
               <Link
-                key={item.key}
+                key={item.id}
                 href={item.href}
                 aria-current={selected ? 'page' : undefined}
                 className={cn(

@@ -26,11 +26,16 @@ test.group('Benefits API contract', (group) => {
     const presented = await client
       .post('/api/v1/me/benefits/presentations')
       .header('x-tenant-id', tenantHeader)
+      .header('x-forwarded-host', 'benefits.experimente.test')
+      .header('x-forwarded-proto', 'https')
       .loginAs(scenario.users.holder)
       .json({ access_id: scenario.access.id, offer_id: scenario.offer.id })
     presented.assertStatus(201)
     assert.isAbove(presented.body().token.length, 40)
-    assert.match(presented.body().validation_url, /\/portal\/redemptions\/validate\?token=/)
+    assert.match(
+      presented.body().validation_url,
+      /^https:\/\/benefits\.experimente\.test\/portal\/redemptions\/validate\?token=/
+    )
     assert.match(presented.body().qr_data_url, /^data:image\/png;base64,/)
     assert.equal(presented.body().expires_in_seconds, 300)
     assert.equal(presented.body().benefit.remaining_redemptions, 1)

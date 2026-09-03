@@ -59,6 +59,13 @@ describe('PilotFeedbackForm', () => {
     formState.current = { processing: false, errors: {} }
   })
 
+  it('starts without a preselected rating', () => {
+    render(<PilotFeedbackForm targets={targets} context="general" />)
+
+    expect(screen.getByLabelText(/Nota/)).toHaveValue('')
+    expect(screen.getByRole('option', { name: 'Selecione uma nota' })).toBeInTheDocument()
+  })
+
   it('renders server errors and associates the message error with the textarea', () => {
     formState.current.errors = {
       general: 'Não foi possível registrar o feedback.',
@@ -80,6 +87,7 @@ describe('PilotFeedbackForm', () => {
     render(<PilotFeedbackForm targets={targets} context="general" />)
 
     const message = screen.getByLabelText(/Mensagem/)
+    fireEvent.change(screen.getByLabelText(/Nota/), { target: { value: '4' } })
     fireEvent.change(message, {
       target: { value: 'O cadastro ficou claro, mas preciso de mais orientação sobre horários.' },
     })

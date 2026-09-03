@@ -366,9 +366,7 @@ export default function EstablishmentBenefitsPage({
             <Link href="/portal/redemptions/validate">Validar benefício</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="min-h-11">
-            <Link href={`/portal/establishments/${establishment.id}/redemptions`}>
-              Histórico de resgates
-            </Link>
+            <Link href="/portal/redemptions">Utilizações validadas</Link>
           </Button>
         </div>
 
@@ -417,7 +415,7 @@ export default function EstablishmentBenefitsPage({
                 {!establishment.published
                   ? 'O formulário será liberado após a publicação da unidade.'
                   : editions.length === 0
-                    ? 'Ainda não há edição disponível para esta cidade. A operação precisa criar uma campanha primeiro.'
+                    ? 'Ainda não há edição disponível para esta cidade. A operação precisa criar uma edição primeiro.'
                     : 'Esta unidade já possui uma oferta em todas as edições disponíveis.'}
               </div>
             ) : (

@@ -33,7 +33,7 @@ export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps)
             <Button asChild variant="outline" size="lg">
               <Link href="/portal/redemptions">
                 <ArrowLeft />
-                Voltar ao histórico
+                Voltar às utilizações validadas
               </Link>
             </Button>
           }

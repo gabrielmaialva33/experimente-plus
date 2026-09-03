@@ -19,10 +19,10 @@ function formatDate(value: string): string {
 
 export default function WalletRedemptionsPage({ history }: WalletRedemptionsPageProps) {
   return (
-    <ConsumerShell active="wallet">
-      <Head title="Benefícios utilizados" />
+    <ConsumerShell>
+      <Head title="Utilizações" />
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
+      <div className="mx-auto w-full max-w-6xl">
         <Button asChild variant="ghost" className="-ml-3 min-h-11">
           <Link href="/wallet">
             <ArrowLeft />
@@ -33,16 +33,14 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-primary">Minha atividade</p>
-            <h1 className="mt-1 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-              Benefícios utilizados
-            </h1>
+            <h1 className="mt-1 text-3xl font-black tracking-[-0.04em] sm:text-4xl">Utilizações</h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
               Cada utilização possui um comprovante permanente, mesmo depois do encerramento da
               edição.
             </p>
           </div>
           <span className="w-fit rounded-full border border-border bg-card px-3 py-1.5 text-sm font-semibold">
-            {history.total} {history.total === 1 ? 'resgate' : 'resgates'}
+            {history.total} {history.total === 1 ? 'utilização' : 'utilizações'}
           </span>
         </div>
 
@@ -93,7 +91,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
             ))}
           </section>
         )}
-      </main>
+      </div>
     </ConsumerShell>
   )
 }

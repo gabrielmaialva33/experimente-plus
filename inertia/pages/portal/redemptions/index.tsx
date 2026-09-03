@@ -21,13 +21,13 @@ function formatDateTime(value: string): string {
 export default function PartnerRedemptionsPage({ history }: PartnerRedemptionsPageProps) {
   return (
     <MainLayout>
-      <Head title="Validações de benefícios" />
+      <Head title="Utilizações validadas" />
 
       <div className="space-y-7">
         <PageHeader
           eyebrow="Portal do parceiro"
           icon={ReceiptText}
-          title="Validações de benefícios"
+          title="Utilizações validadas"
           description="Consulte os comprovantes emitidos pelas unidades que você administra."
           actions={
             <Button asChild size="lg">
@@ -39,7 +39,7 @@ export default function PartnerRedemptionsPage({ history }: PartnerRedemptionsPa
           }
           meta={
             <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
-              {history.total} {history.total === 1 ? 'resgate' : 'resgates'}
+              {history.total} {history.total === 1 ? 'utilização' : 'utilizações'}
             </span>
           }
         />

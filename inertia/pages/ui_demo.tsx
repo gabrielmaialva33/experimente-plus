@@ -5,6 +5,7 @@ import { MainLayout } from '~/layouts'
 import { AnimatedPage } from '~/components/animated_page'
 import { ThemeCustomizer } from '~/components/theme_customizer'
 import { ThemeStatus } from '~/components/theme/theme_status'
+import { EmptyState } from '~/components/empty_state'
 import { Button } from '~/components/ui/core/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/core/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/core/tabs'
@@ -27,7 +28,6 @@ import {
   TimelineTime,
   TimelineDescription,
 } from '~/components/ui/core/timeline'
-import { EmptyState } from '~/components/ui/core/empty_state'
 import { StatsCard, StatsGrid } from '~/components/ui/core/stats_card'
 import { DataTable } from '~/components/ui/core/data_table'
 import { AreaChart, BarChart, PieChart } from '~/components/charts'
@@ -267,15 +267,12 @@ export default function UiDemoPage() {
                     icon={FileText}
                     title="No documents found"
                     description="Get started by creating your first document"
-                    action={{
-                      label: 'Create Document',
-                      onClick: () => undefined,
-                    }}
-                    secondaryAction={{
-                      label: 'Learn more',
-                      onClick: () => undefined,
-                    }}
-                  />
+                  >
+                    <Button size="sm">Create Document</Button>
+                    <Button variant="ghost" size="sm">
+                      Learn more
+                    </Button>
+                  </EmptyState>
                 </CardContent>
               </Card>
             </TabsContent>

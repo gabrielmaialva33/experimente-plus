@@ -100,8 +100,8 @@ test.group('Benefit redemption browser flow', () => {
     await signIn(holderHistoryPage, scenario.users.holder.email, password)
     await holderHistoryPage.goto('/wallet/history')
 
-    await holderHistoryPage.getByRole('heading', { name: 'Benefícios utilizados' }).waitFor()
-    await holderHistoryPage.getByText('1 resgate', { exact: true }).waitFor()
+    await holderHistoryPage.getByRole('heading', { name: 'Utilizações' }).waitFor()
+    await holderHistoryPage.getByText('1 utilização', { exact: true }).waitFor()
     await holderHistoryPage.getByText(receiptCode!, { exact: true }).waitFor()
     await holderHistoryPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
     await holderHistoryPage.getByRole('link', { name: 'Ver comprovante' }).click()
