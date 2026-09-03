@@ -23,7 +23,7 @@ export default class InertiaTenantController {
     await auth.use('jwt').generate(user, { tenantId: tenant.id })
     session.flash('success', 'Workspace created successfully.')
 
-    return response.redirect().toPath('/settings?tab=workspaces')
+    return response.redirect().toPath('/settings?tab=operations')
   }
 
   async switch({ auth, request, response }: HttpContext) {

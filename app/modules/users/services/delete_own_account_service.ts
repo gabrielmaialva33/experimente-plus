@@ -25,7 +25,7 @@ export default class DeleteOwnAccountService {
 
   async run(userId: number, payload: DeleteOwnAccountPayload): Promise<void> {
     if (payload.confirmation.trim().toUpperCase() !== 'DELETE') {
-      throw new BadRequestException('Type DELETE to confirm account deletion')
+      throw new BadRequestException('Digite DELETE para confirmar a exclusão da conta')
     }
 
     try {
@@ -39,7 +39,7 @@ export default class DeleteOwnAccountService {
         throw new Error('Credential mismatch')
       }
     } catch {
-      throw new BadRequestException('The current password is incorrect')
+      throw new BadRequestException('A senha atual está incorreta')
     }
 
     await db.transaction(async (client) => {

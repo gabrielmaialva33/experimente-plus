@@ -31,7 +31,7 @@ export default class InertiaSettingsController {
     const updateProfile = await app.container.make(UpdateProfileService)
     await updateProfile.run(user.id, payload)
 
-    session.flash('success', 'Profile updated successfully.')
+    session.flash('success', 'Dados pessoais atualizados.')
 
     return response.redirect().toPath('/settings')
   }
@@ -56,7 +56,7 @@ export default class InertiaSettingsController {
       }
 
       session.flash('errors', {
-        general: error instanceof Error ? error.message : 'Unable to delete account',
+        general: error instanceof Error ? error.message : 'Não foi possível excluir a conta.',
       })
       return response.redirect().back()
     }
