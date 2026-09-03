@@ -30,12 +30,12 @@ const query: CatalogSearchQuery = {
   sort: 'recent',
 }
 
-function meta(page: number): CatalogSearchMeta {
+function meta(page: number, lastPage = 3): CatalogSearchMeta {
   return {
     total: 57,
     page,
     perPage: 24,
-    lastPage: 3,
+    lastPage,
   }
 }
 
@@ -68,5 +68,46 @@ describe('CatalogPagination', () => {
     expect(screen.queryByRole('link', { name: 'Próxima página' })).not.toBeInTheDocument()
     expect(screen.getByText('Próxima').closest('[aria-disabled="true"]')).toBeInTheDocument()
     expect(screen.getByLabelText('Página 3, página atual')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('does not render pagination when there is only one canonical page', () => {
+    const { container } = render(
+      <CatalogPagination path="/cidades/londrina" query={query} meta={meta(9, 1)} />
+    )
+
+    expect(container).toBeEmptyDOMElement()
+    expect(screen.queryByRole('navigation', { name: 'Paginação dos resultados' })).toBeNull()
+  })
+
+  it('clamps invalid out-of-range metadata to the canonical last page', () => {
+    render(<CatalogPagination path="/cidades/londrina" query={query} meta={meta(99)} />)
+
+    expect(screen.getByText('Página', { exact: false })).toHaveTextContent('Página 3 de 3')
+    expect(screen.getByLabelText('Página 3, página atual')).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('link', { name: 'Próxima página' })).toBeNull()
+
+    const previousHref = screen.getByRole('link', { name: 'Página anterior' }).getAttribute('href')
+    expect(new URL(previousHref!, 'https://experimente.test').searchParams.get('page')).toBe('2')
+  })
+
+  it('keeps category-route filters encoded without duplicating category in the query string', () => {
+    render(
+      <CatalogPagination
+        path="/cidades/cornelio-procopio/categorias/cafes"
+        query={{ q: 'café & chá', category: null, openNow: true, sort: 'recent' }}
+        meta={meta(1)}
+      />
+    )
+
+    const nextHref = screen.getByRole('link', { name: 'Próxima página' }).getAttribute('href')
+    const url = new URL(nextHref!, 'https://experimente.test')
+
+    expect(url.pathname).toBe('/cidades/cornelio-procopio/categorias/cafes')
+    expect(url.searchParams.get('q')).toBe('café & chá')
+    expect(url.searchParams.has('category')).toBe(false)
+    expect(url.searchParams.get('open_now')).toBe('true')
+    expect(url.searchParams.get('sort')).toBe('recent')
+    expect(url.searchParams.get('per_page')).toBe('24')
+    expect(url.searchParams.get('page')).toBe('2')
   })
 })

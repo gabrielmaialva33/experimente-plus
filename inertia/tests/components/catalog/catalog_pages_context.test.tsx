@@ -8,6 +8,15 @@ import CatalogCities from '~/pages/catalog/cities'
 import CatalogEstablishments from '~/pages/catalog/establishments'
 import { render } from '~/tests/test_utils'
 
+const catalogPaginationSpy = vi.hoisted(() => vi.fn())
+
+vi.mock('~/components/catalog/catalog_pagination', () => ({
+  CatalogPagination: (props: unknown) => {
+    catalogPaginationSpy(props)
+    return null
+  },
+}))
+
 vi.mock('~/components/catalog/catalog_shell', () => ({
   default: ({ title, children }: { title: string; children: ReactNode }) => (
     <main>
@@ -115,6 +124,51 @@ describe('catalog page canonical context', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'O que conhecer em Cornélio Procópio' })
     ).toBeVisible()
+  })
+
+  it('keeps category pagination filters without repeating the category from the path', () => {
+    catalogPaginationSpy.mockClear()
+
+    render(
+      <CatalogCategory
+        city_slug="cidade-da-url"
+        category_slug="categoria-da-url"
+        catalog={{
+          ...emptySearch,
+          context: {
+            ...emptySearch.context,
+            category: {
+              slug: 'cafes',
+              name: 'Cafés',
+              description: null,
+              icon: null,
+              parent_slug: null,
+              family: { slug: 'gastronomia', name: 'Gastronomia', icon: null },
+            },
+          },
+          meta: { total: 27, page: 2, per_page: 12, last_page: 3 },
+          query: {
+            q: 'café & chá',
+            category: 'cafes',
+            open_now: true,
+            sort: 'recent',
+          },
+        }}
+      />
+    )
+
+    expect(catalogPaginationSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        path: '/cidades/cornelio-procopio/categorias/cafes',
+        query: {
+          q: 'café & chá',
+          category: null,
+          openNow: true,
+          sort: 'recent',
+        },
+        meta: { total: 27, page: 2, perPage: 12, lastPage: 3 },
+      })
+    )
   })
 
   it('separates sponsored cards from an empty paginated catalog', () => {

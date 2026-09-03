@@ -28,6 +28,7 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
   const pagePath = `/cidades/${encodeURIComponent(resolvedCitySlug)}/categorias/${encodeURIComponent(resolvedCategorySlug)}`
   const cityPath = `/cidades/${encodeURIComponent(resolvedCitySlug)}`
   const query = { ...result.query, category: resolvedCategorySlug }
+  const paginationQuery = { ...query, category: null }
 
   useCatalogSearchAnalytics(resolvedCitySlug, { ...result, query })
 
@@ -100,7 +101,7 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
         />
       </section>
 
-      <CatalogPagination path={pagePath} query={query} meta={result.meta} />
+      <CatalogPagination path={pagePath} query={paginationQuery} meta={result.meta} />
     </CatalogShell>
   )
 }
