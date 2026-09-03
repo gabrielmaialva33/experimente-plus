@@ -57,11 +57,12 @@ function getPinningStyles<TData extends RowData>(
 }
 
 function DataGridTableBase({ children }: { children: ReactNode }) {
-  const { props } = useDataGrid()
+  const { isLoading, props } = useDataGrid()
 
   return (
     <table
       data-slot="data-grid-table"
+      aria-busy={isLoading}
       className={cn(
         'w-full align-middle caption-bottom text-left rtl:text-right text-foreground font-normal text-sm',
         !props.tableLayout?.columnsDraggable && 'border-separate border-spacing-0',
@@ -171,7 +172,7 @@ function DataGridTableHeadRowCell<TData extends RowData>({
         props.tableLayout?.columnsResizable && column.getCanResize() && 'truncate',
         props.tableLayout?.columnsPinnable &&
           column.getCanPin() &&
-          '[&:not([data-pinned]):has(+[data-pinned])_div.cursor-col-resize:last-child]:opacity-0 [&[data-last-col=left]_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right]:last-child_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=right][data-last-col=right]]:border-s! [&[data-pinned][data-last-col]]:border-border data-pinned:bg-muted/90 data-pinned:backdrop-blur-xs',
+          '[&:not([data-pinned]):has(+[data-pinned])_div.cursor-col-resize:last-child]:opacity-0 [&[data-last-col=left]_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right]:last-child_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=right][data-last-col=right]]:border-s! [&[data-pinned][data-last-col]]:border-border data-pinned:bg-muted',
         header.column.columnDef.meta?.headerClassName,
         column.getIndex() === 0 ||
           column.getIndex() === (header.headerGroup?.headers.length ?? 0) - 1
@@ -269,7 +270,7 @@ function DataGridTableBodyRowSkeletonCell<TData extends RowData>({
         column.columnDef.meta?.cellClassName,
         props.tableLayout?.columnsPinnable &&
           column.getCanPin() &&
-          '[&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right][data-last-col=right]]:border-s! [&[data-pinned][data-last-col]]:border-border data-pinned:bg-background/90 data-pinned:backdrop-blur-xs"',
+          '[&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right][data-last-col=right]]:border-s! [&[data-pinned][data-last-col]]:border-border data-pinned:bg-background',
         column.getIndex() === 0 || column.getIndex() === table.getVisibleFlatColumns().length - 1
           ? props.tableClassNames?.edgeCell
           : ''
@@ -376,7 +377,7 @@ function DataGridTableBodyRowCell<TData extends RowData>({
         cell.column.columnDef.meta?.cellClassName,
         props.tableLayout?.columnsPinnable &&
           column.getCanPin() &&
-          '[&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right][data-last-col=right]]:border-s! [&[data-pinned][data-last-col]]:border-border data-pinned:bg-background/90 data-pinned:backdrop-blur-xs"',
+          '[&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right][data-last-col=right]]:border-s! [&[data-pinned][data-last-col]]:border-border data-pinned:bg-background',
         column.getIndex() === 0 || column.getIndex() === row.getVisibleCells().length - 1
           ? props.tableClassNames?.edgeCell
           : ''
@@ -404,9 +405,14 @@ function DataGridTableLoader() {
   const { props } = useDataGrid()
 
   return (
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+    <div
+      role="status"
+      aria-live="polite"
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+    >
       <div className="text-muted-foreground bg-card  flex items-center gap-2 px-4 py-2 font-medium leading-none text-sm border shadow-xs rounded-md">
         <svg
+          aria-hidden="true"
           className="animate-spin -ml-1 h-5 w-5 text-muted-foreground"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
