@@ -113,7 +113,8 @@ function RoleCard({ role }: { role: RoleRow }) {
                       {permissionActionLabel(permission.action)}
                       {permission.context !== 'any' && (
                         <span className="text-muted-foreground">
-                          {' '}· {permissionContextLabel(permission.context)}
+                          {' '}
+                          · {permissionContextLabel(permission.context)}
                         </span>
                       )}
                     </Badge>

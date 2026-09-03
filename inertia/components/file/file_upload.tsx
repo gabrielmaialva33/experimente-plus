@@ -54,7 +54,7 @@ export function FileUpload() {
         } else if (firstError?.code === 'file-invalid-type') {
           setRejectionError('Este tipo de arquivo não é compatível.')
         } else {
-          setRejectionError(firstError?.message ?? 'Não foi possível aceitar o arquivo.')
+          setRejectionError('O arquivo não atende aos requisitos de envio.')
         }
         return
       }
@@ -110,7 +110,7 @@ export function FileUpload() {
       >
         <input {...getInputProps()} />
         <div className="flex size-11 items-center justify-center rounded-md bg-primary-soft text-primary-accent">
-          <CloudUpload className="size-6" />
+          <CloudUpload aria-hidden="true" className="size-6" />
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
@@ -125,7 +125,7 @@ export function FileUpload() {
       {selectedFile && (
         <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground">
-            <FileIcon className="size-5" />
+            <FileIcon aria-hidden="true" className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-foreground">{selectedFile.name}</p>
@@ -140,7 +140,7 @@ export function FileUpload() {
             disabled={loading}
             aria-label="Remover arquivo selecionado"
           >
-            <X className="size-4" />
+            <X aria-hidden="true" className="size-4" />
           </Button>
         </div>
       )}
@@ -152,7 +152,7 @@ export function FileUpload() {
           onClick={handleUpload}
           disabled={!selectedFile || loading}
         >
-          {loading && <Loader2 className="size-4 animate-spin" />}
+          {loading && <Loader2 aria-hidden="true" className="size-4 animate-spin" />}
           {loading ? 'Enviando…' : 'Enviar arquivo'}
         </Button>
       </div>
@@ -160,7 +160,7 @@ export function FileUpload() {
       {rejectionError && (
         <Alert variant="destructive" appearance="light">
           <AlertIcon>
-            <X className="size-4" />
+            <X aria-hidden="true" className="size-4" />
           </AlertIcon>
           <AlertContent>
             <AlertTitle>Arquivo recusado</AlertTitle>
@@ -172,7 +172,7 @@ export function FileUpload() {
       {error && (
         <Alert variant="destructive" appearance="light">
           <AlertIcon>
-            <X className="size-4" />
+            <X aria-hidden="true" className="size-4" />
           </AlertIcon>
           <AlertContent>
             <AlertTitle>Não foi possível enviar</AlertTitle>
@@ -184,7 +184,7 @@ export function FileUpload() {
       {uploadedFile && (
         <Alert variant="success" appearance="light">
           <AlertIcon>
-            <CloudUpload className="size-4" />
+            <CloudUpload aria-hidden="true" className="size-4" />
           </AlertIcon>
           <AlertContent>
             <AlertTitle>Arquivo enviado</AlertTitle>

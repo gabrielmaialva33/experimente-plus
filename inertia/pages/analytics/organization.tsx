@@ -280,11 +280,21 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                   </caption>
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
-                      <th scope="col" className="px-3 py-3 font-medium">Unidade</th>
-                      <th scope="col" className="px-3 py-3 text-right font-medium">Impressões</th>
-                      <th scope="col" className="px-3 py-3 text-right font-medium">Aberturas</th>
-                      <th scope="col" className="px-3 py-3 text-right font-medium">Ações</th>
-                      <th scope="col" className="px-3 py-3 text-right font-medium">Sessões</th>
+                      <th scope="col" className="px-3 py-3 font-medium">
+                        Unidade
+                      </th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">
+                        Impressões
+                      </th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">
+                        Aberturas
+                      </th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">
+                        Ações
+                      </th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium">
+                        Sessões
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

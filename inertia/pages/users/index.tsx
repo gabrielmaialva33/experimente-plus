@@ -38,6 +38,7 @@ import {
 } from '~/components/ui/dropdown-menu'
 import { PageHeader } from '~/components/page_header'
 import { useAuth } from '~/hooks/use_auth'
+import { globalRoleLabel } from '~/lib/labels'
 import type { PaginatedResponse } from '~/types'
 
 interface UserRole {
@@ -168,7 +169,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
               <div className="flex flex-wrap gap-1">
                 {roles.map((role) => (
                   <Badge key={role.id} variant="secondary" appearance="light" size="sm">
-                    {role.display_name ?? role.name}
+                    {globalRoleLabel(role.name, role.display_name)}
                   </Badge>
                 ))}
               </div>

@@ -146,7 +146,7 @@ export default function FilesPage({ files }: FilesPageProps) {
                       className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"
                     >
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <FileIcon className="size-5" />
+                        <FileIcon aria-hidden="true" className="size-5" />
                       </div>
 
                       <div className="min-w-0 flex-1">
@@ -167,7 +167,7 @@ export default function FilesPage({ files }: FilesPageProps) {
                       <div className="flex shrink-0 items-center gap-2">
                         <Button asChild variant="outline" size="sm">
                           <a href={file.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="size-4" />
+                            <ExternalLink aria-hidden="true" className="size-4" />
                             Abrir
                           </a>
                         </Button>
@@ -178,7 +178,7 @@ export default function FilesPage({ files }: FilesPageProps) {
                             size="sm"
                             onClick={() => setFileToDelete(file)}
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 aria-hidden="true" className="size-4" />
                             Excluir
                           </Button>
                         )}
