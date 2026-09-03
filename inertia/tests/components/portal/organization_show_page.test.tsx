@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import PortalOrganizationPage from '~/pages/portal/organizations/show'
 import { render } from '~/tests/test_utils'
 
-const { mockPut, mockRouterPost, guardState, formState } = vi.hoisted(() => ({
+const { mockPut, mockRouterPost, guardState, formState, authState } = vi.hoisted(() => ({
   mockPut: vi.fn(),
   mockRouterPost: vi.fn(),
   guardState: {
@@ -17,6 +17,15 @@ const { mockPut, mockRouterPost, guardState, formState } = vi.hoisted(() => ({
       processing: false,
       errors: {} as Record<string, string>,
     },
+  },
+  authState: {
+    permissions: [
+      'organizations.update',
+      'organizations.submit',
+      'establishments.create',
+      'analytics.read',
+      'pilot_feedback.create',
+    ],
   },
 }))
 
@@ -31,6 +40,15 @@ vi.mock('@inertiajs/react', async () => {
       </a>
     ),
     router: { post: mockRouterPost },
+    usePage: () => ({
+      props: {
+        auth: {
+          activeTenantId: 1,
+          permissions: authState.permissions,
+          tenants: [],
+        },
+      },
+    }),
     useForm: <T extends Record<string, unknown>>(initial: T) => {
       const [data, setDataState] = React.useState(initial)
 
@@ -113,6 +131,13 @@ describe('PortalOrganizationPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     formState.current = { isDirty: false, processing: false, errors: {} }
+    authState.permissions = [
+      'organizations.update',
+      'organizations.submit',
+      'establishments.create',
+      'analytics.read',
+      'pilot_feedback.create',
+    ]
   })
 
   it('shows field errors, translated metadata and semantic completeness', () => {
@@ -169,5 +194,18 @@ describe('PortalOrganizationPage', () => {
       {},
       expect.objectContaining({ preserveScroll: true })
     )
+  })
+
+  it('keeps a read-only organization view honest about unavailable actions', () => {
+    authState.permissions = []
+
+    render(
+      <PortalOrganizationPage organization={organization} feedback_targets={feedbackTargets} />
+    )
+
+    expect(screen.getByLabelText(/Razão social/)).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Enviar para análise' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Nova unidade' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('pilot-feedback-form')).not.toBeInTheDocument()
   })
 })

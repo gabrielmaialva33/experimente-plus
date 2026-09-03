@@ -16,6 +16,7 @@ import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { Button } from '~/components/ui/button'
+import { resolveRouteMetadata } from '~/config/navigation'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { organizationRoleLabel, organizationStatusLabel } from '~/lib/labels'
@@ -146,12 +147,12 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
           description="Organize empresas e unidades, acompanhe a qualidade das fichas e envie conteúdo para moderação."
           actions={
             canCreateOrganization && overview.organizations.length > 0 ? (
-            <Button asChild variant="primary">
-              <Link href="/portal/organizations/new">
-                <Plus className="size-4" />
-                Nova organização
-              </Link>
-            </Button>
+              <Button asChild variant="primary">
+                <Link href="/portal/organizations/new">
+                  <Plus className="size-4" />
+                  Nova organização
+                </Link>
+              </Button>
             ) : null
           }
         />
@@ -298,25 +299,39 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                         </p>
 
                         <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                          {organization.onboarding.map((step) => (
-                            <Link
-                              key={step.key}
-                              href={step.href}
-                              className={cn(
-                                'flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                step.completed
-                                  ? 'border-success/20 bg-success/[0.06] text-foreground hover:bg-success/10'
-                                  : 'border-border hover:border-primary/25 hover:bg-accent/50'
-                              )}
-                            >
-                              {step.completed ? (
-                                <CheckCircle2 className="size-4 shrink-0 text-success" />
-                              ) : (
-                                <CircleDashed className="size-4 shrink-0 text-muted-foreground" />
-                              )}
-                              <span>{step.label}</span>
-                            </Link>
-                          ))}
+                          {organization.onboarding.map((step) => {
+                            const capability = resolveRouteMetadata(step.href)?.capability
+                            const canOpenStep = !capability || can(capability)
+                            const className = cn(
+                              'flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              step.completed
+                                ? 'border-success/20 bg-success/[0.06] text-foreground hover:bg-success/10'
+                                : 'border-border hover:border-primary/25 hover:bg-accent/50'
+                            )
+                            const content = (
+                              <>
+                                {step.completed ? (
+                                  <CheckCircle2 className="size-4 shrink-0 text-success" />
+                                ) : (
+                                  <CircleDashed className="size-4 shrink-0 text-muted-foreground" />
+                                )}
+                                <span>{step.label}</span>
+                              </>
+                            )
+
+                            return canOpenStep ? (
+                              <Link key={step.key} href={step.href} className={className}>
+                                {content}
+                              </Link>
+                            ) : (
+                              <div
+                                key={step.key}
+                                className={cn(className, 'pointer-events-none opacity-65')}
+                              >
+                                {content}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     </div>

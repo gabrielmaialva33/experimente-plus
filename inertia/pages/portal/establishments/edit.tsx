@@ -664,9 +664,9 @@ export default function EstablishmentEditorPage({
             activeSection={activeSection}
             onNavigate={navigateTo}
             score={completeness.score}
-          eligible={completeness.eligible}
-          editable={editable}
-          submitAllowed={submitAllowed}
+            eligible={completeness.eligible}
+            editable={editable}
+            submitAllowed={submitAllowed}
             submitting={submitting}
             busy={editorBusy}
             unsavedSectionCount={dirtySections.length}

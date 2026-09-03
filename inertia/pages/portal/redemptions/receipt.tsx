@@ -33,13 +33,13 @@ export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps)
             <Button asChild variant="outline" size="lg">
               <Link href="/portal/redemptions">
                 <ArrowLeft />
-                Voltar às utilizações validadas
+                Voltar às utilizações
               </Link>
             </Button>
           }
         />
 
-        <section className="mx-auto max-w-3xl rounded-3xl border border-success/25 bg-card p-6 shadow-sm sm:p-8">
+        <section className="mx-auto max-w-3xl rounded-lg border border-success/25 bg-card p-6 sm:p-8">
           <div className="flex items-center gap-3 text-success">
             <CheckCircle2 className="size-7" />
             <p className="font-bold">Utilização confirmada</p>
@@ -51,26 +51,26 @@ export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps)
           <p className="mt-2 text-sm text-muted-foreground">{formatDate(receipt.redeemed_at)}</p>
 
           <dl className="mt-7 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-muted/40 p-4">
+            <div className="rounded-md border border-border bg-muted/40 p-4">
               <dt className="flex items-center gap-2 text-xs text-muted-foreground">
                 <UserRound className="size-4" /> Titular
               </dt>
               <dd className="mt-2 font-semibold">{receipt.holder.full_name}</dd>
               <dd className="mt-1 text-sm text-muted-foreground">{receipt.holder.email}</dd>
             </div>
-            <div className="rounded-2xl bg-muted/40 p-4">
+            <div className="rounded-md border border-border bg-muted/40 p-4">
               <dt className="flex items-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="size-4" /> Uso registrado
               </dt>
               <dd className="mt-2 font-semibold">Utilização nº {receipt.redemption_number}</dd>
               <dd className="mt-1 text-sm text-muted-foreground">
-                Validador #{receipt.redeemed_by}
+                Registrada pela equipe da unidade
               </dd>
             </div>
           </dl>
 
           {receipt.offer.terms ? (
-            <div className="mt-6 rounded-2xl border border-border/70 p-4">
+            <div className="mt-6 rounded-md border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 Regras vigentes no momento da utilização
               </p>

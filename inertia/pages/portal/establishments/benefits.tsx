@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 
+import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import {
   EditorField,
@@ -22,6 +24,7 @@ import {
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -191,6 +194,12 @@ export default function EstablishmentBenefitsPage({
   offers,
   errors = {},
 }: EstablishmentBenefitsProps) {
+  const { can } = useAuth()
+  const canCreate = can('benefit_offers.create')
+  const canUpdate = can('benefit_offers.update')
+  const canArchive = can('benefit_offers.archive')
+  const canReadRedemptions = can('benefit_offers.read')
+  const canManageOffers = canCreate || canUpdate
   const [form, setForm] = useState<OfferFormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -200,7 +209,9 @@ export default function EstablishmentBenefitsPage({
   const usedEditionIds = useMemo(() => new Set(offers.map((offer) => offer.edition_id)), [offers])
   const editionsForCreation = editions.filter((edition) => !usedEditionIds.has(edition.id))
   const canShowForm =
-    establishment.published && (editingId !== null || editionsForCreation.length > 0)
+    establishment.published &&
+    ((editingId !== null && canUpdate) ||
+      (editingId === null && canCreate && editionsForCreation.length > 0))
 
   function updateField<Key extends keyof OfferFormState>(key: Key, value: OfferFormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -327,7 +338,7 @@ export default function EstablishmentBenefitsPage({
   }
 
   function archive(offer: BenefitOffer) {
-    if (!window.confirm(`Arquivar a oferta “${offer.title}”? O histórico será preservado.`)) return
+    if (!canArchive) return
     runAction(`/portal/benefit-offers/${offer.id}`, offer.id, 'delete')
   }
 
@@ -361,19 +372,25 @@ export default function EstablishmentBenefitsPage({
           }
         />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button asChild size="lg" className="min-h-11">
-            <Link href="/portal/redemptions/validate">Validar benefício</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="min-h-11">
-            <Link href="/portal/redemptions">Utilizações validadas</Link>
-          </Button>
-        </div>
+        {canUpdate || canReadRedemptions ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            {canUpdate ? (
+              <Button asChild variant="outline" size="lg" className="min-h-11">
+                <Link href="/portal/redemptions/validate">Validar benefício</Link>
+              </Button>
+            ) : null}
+            {canReadRedemptions ? (
+              <Button asChild variant="outline" size="lg" className="min-h-11">
+                <Link href="/portal/redemptions">Utilizações</Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
 
         {!establishment.published ? (
-          <section className="rounded-3xl border border-warning/30 bg-warning/10 p-6 shadow-xs">
+          <section className="rounded-lg border border-warning/30 bg-warning/10 p-6">
             <div className="flex items-start gap-4">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-background/80 text-warning-foreground">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-md border border-warning/20 bg-background text-warning-foreground">
                 <Store className="size-5" />
               </span>
               <div>
@@ -387,315 +404,331 @@ export default function EstablishmentBenefitsPage({
           </section>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)] xl:items-start">
-          <section className="rounded-3xl border border-border/70 bg-card p-5 shadow-xs sm:p-6 xl:sticky xl:top-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                  {editingId ? 'Editar oferta' : 'Nova oferta'}
-                </p>
-                <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
-                  {editingId ? 'Revise os termos pausados' : 'Configure o benefício do parceiro'}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Uma unidade pode participar uma vez em cada edição. Seja objetivo sobre restrições
-                  e dias de uso.
-                </p>
+        <div
+          className={cn(
+            'grid gap-6 xl:items-start',
+            canManageOffers && 'xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)]'
+          )}
+        >
+          {canManageOffers ? (
+            <section className="rounded-lg border border-border bg-card p-5 sm:p-6 xl:sticky xl:top-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                    {editingId ? 'Editar oferta' : 'Nova oferta'}
+                  </p>
+                  <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
+                    {editingId ? 'Revise os termos pausados' : 'Configure o benefício do parceiro'}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Uma unidade pode participar uma vez em cada edição. Seja objetivo sobre
+                    restrições e dias de uso.
+                  </p>
+                </div>
+                {editingId ? (
+                  <Button type="button" variant="ghost" size="icon" onClick={resetForm}>
+                    <X />
+                    <span className="sr-only">Cancelar edição</span>
+                  </Button>
+                ) : null}
               </div>
-              {editingId ? (
-                <Button type="button" variant="ghost" size="icon" onClick={resetForm}>
-                  <X />
-                  <span className="sr-only">Cancelar edição</span>
-                </Button>
-              ) : null}
-            </div>
 
-            {!canShowForm ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-border bg-muted/35 p-5 text-sm leading-6 text-muted-foreground">
-                {!establishment.published
-                  ? 'O formulário será liberado após a publicação da unidade.'
-                  : editions.length === 0
-                    ? 'Ainda não há edição disponível para esta cidade. A operação precisa criar uma edição primeiro.'
-                    : 'Esta unidade já possui uma oferta em todas as edições disponíveis.'}
-              </div>
-            ) : (
-              <form onSubmit={submit} className="mt-6 grid gap-4">
-                <EditorField htmlFor="offer-edition" label="Edição">
-                  <select
-                    id="offer-edition"
-                    required
-                    value={form.edition_id}
-                    onChange={(event) => updateField('edition_id', event.target.value)}
-                    className={editorSelectClassName}
-                    disabled={processing || editingId !== null}
+              {!canShowForm ? (
+                <div className="mt-6 rounded-md border border-dashed border-border bg-muted/35 p-5 text-sm leading-6 text-muted-foreground">
+                  {!establishment.published
+                    ? 'O formulário será liberado após a publicação da unidade.'
+                    : !canCreate
+                      ? 'Selecione uma oferta editável para revisar seus dados.'
+                      : editions.length === 0
+                        ? 'Ainda não há edição disponível para esta cidade. A operação precisa criar uma edição primeiro.'
+                        : 'Esta unidade já possui uma oferta em todas as edições disponíveis.'}
+                </div>
+              ) : (
+                <form onSubmit={submit} className="mt-6 grid gap-4" aria-busy={processing}>
+                  <EditorField htmlFor="offer-edition" label="Edição">
+                    <select
+                      id="offer-edition"
+                      required
+                      value={form.edition_id}
+                      onChange={(event) => updateField('edition_id', event.target.value)}
+                      className={editorSelectClassName}
+                      disabled={processing || editingId !== null}
+                    >
+                      <option value="">Selecione uma edição</option>
+                      {(editingId ? editions : editionsForCreation).map((edition) => (
+                        <option key={edition.id} value={edition.id}>
+                          {edition.name} — {edition.city.name}
+                        </option>
+                      ))}
+                    </select>
+                  </EditorField>
+
+                  <EditorField htmlFor="offer-type" label="Modalidade">
+                    <select
+                      id="offer-type"
+                      value={form.benefit_type}
+                      onChange={(event) => {
+                        updateField('benefit_type', event.target.value as BenefitType)
+                        updateField('discount_value', '')
+                      }}
+                      className={editorSelectClassName}
+                      disabled={processing}
+                    >
+                      {Object.entries(benefitTypeLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </EditorField>
+
+                  {form.benefit_type === 'percentage' ? (
+                    <EditorField htmlFor="offer-percentage" label="Percentual">
+                      <div className="relative">
+                        <Input
+                          id="offer-percentage"
+                          type="number"
+                          min={1}
+                          max={100}
+                          inputMode="numeric"
+                          value={form.discount_value}
+                          onChange={(event) => updateField('discount_value', event.target.value)}
+                          className="pr-10"
+                          disabled={processing}
+                        />
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                          %
+                        </span>
+                      </div>
+                    </EditorField>
+                  ) : null}
+
+                  {form.benefit_type === 'fixed_amount' ? (
+                    <EditorField htmlFor="offer-amount" label="Valor do desconto">
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          id="offer-amount"
+                          inputMode="decimal"
+                          value={form.discount_value}
+                          onChange={(event) => updateField('discount_value', event.target.value)}
+                          placeholder="20,00"
+                          className="pl-10"
+                          disabled={processing}
+                        />
+                      </div>
+                    </EditorField>
+                  ) : null}
+
+                  <EditorField htmlFor="offer-title" label="Título">
+                    <Input
+                      id="offer-title"
+                      required
+                      minLength={2}
+                      maxLength={180}
+                      value={form.title}
+                      onChange={(event) => updateField('title', event.target.value)}
+                      placeholder="Peça um prato e ganhe outro"
+                      disabled={processing}
+                    />
+                  </EditorField>
+
+                  <EditorField
+                    htmlFor="offer-description"
+                    label="Como funciona"
+                    hint="Explique o benefício em linguagem direta para o consumidor."
                   >
-                    <option value="">Selecione uma edição</option>
-                    {(editingId ? editions : editionsForCreation).map((edition) => (
-                      <option key={edition.id} value={edition.id}>
-                        {edition.name} — {edition.city.name}
-                      </option>
-                    ))}
-                  </select>
-                </EditorField>
+                    <Textarea
+                      id="offer-description"
+                      required
+                      rows={4}
+                      value={form.description}
+                      onChange={(event) => updateField('description', event.target.value)}
+                      placeholder="O segundo item deve ter valor igual ou menor ao primeiro."
+                      disabled={processing}
+                    />
+                  </EditorField>
 
-                <EditorField htmlFor="offer-type" label="Modalidade">
-                  <select
-                    id="offer-type"
-                    value={form.benefit_type}
-                    onChange={(event) => {
-                      updateField('benefit_type', event.target.value as BenefitType)
-                      updateField('discount_value', '')
-                    }}
-                    className={editorSelectClassName}
-                    disabled={processing}
-                  >
-                    {Object.entries(benefitTypeLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </EditorField>
+                  <EditorField htmlFor="offer-terms" label="Regras e exceções" hint="Opcional">
+                    <Textarea
+                      id="offer-terms"
+                      rows={3}
+                      value={form.terms}
+                      onChange={(event) => updateField('terms', event.target.value)}
+                      placeholder="Não cumulativo. Exceto feriados e datas comemorativas."
+                      disabled={processing}
+                    />
+                  </EditorField>
 
-                {form.benefit_type === 'percentage' ? (
-                  <EditorField htmlFor="offer-percentage" label="Percentual">
-                    <div className="relative">
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-semibold">Dias disponíveis</legend>
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                      {weekdays.map((weekday) => {
+                        const selected = (form.available_weekdays_mask & weekday.bit) !== 0
+                        return (
+                          <button
+                            key={weekday.bit}
+                            type="button"
+                            aria-pressed={selected}
+                            aria-label={weekday.long}
+                            onClick={() => toggleWeekday(weekday.bit)}
+                            disabled={processing}
+                            className={cn(
+                              'min-h-11 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              selected
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                            )}
+                          >
+                            {weekday.short}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <EditorField htmlFor="offer-time-start" label="A partir de" hint="Opcional">
                       <Input
-                        id="offer-percentage"
+                        id="offer-time-start"
+                        type="time"
+                        value={form.daily_start_time}
+                        onChange={(event) => updateField('daily_start_time', event.target.value)}
+                        disabled={processing}
+                      />
+                    </EditorField>
+                    <EditorField htmlFor="offer-time-end" label="Até" hint="Opcional">
+                      <Input
+                        id="offer-time-end"
+                        type="time"
+                        value={form.daily_end_time}
+                        onChange={(event) => updateField('daily_end_time', event.target.value)}
+                        disabled={processing}
+                      />
+                    </EditorField>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <EditorField htmlFor="offer-party-size" label="Mínimo de pessoas">
+                      <Input
+                        id="offer-party-size"
                         type="number"
                         min={1}
                         max={100}
                         inputMode="numeric"
-                        value={form.discount_value}
-                        onChange={(event) => updateField('discount_value', event.target.value)}
-                        className="pr-10"
+                        value={form.minimum_party_size}
+                        onChange={(event) => updateField('minimum_party_size', event.target.value)}
                         disabled={processing}
                       />
-                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
-                        %
-                      </span>
-                    </div>
-                  </EditorField>
-                ) : null}
-
-                {form.benefit_type === 'fixed_amount' ? (
-                  <EditorField htmlFor="offer-amount" label="Valor do desconto">
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                        R$
-                      </span>
+                    </EditorField>
+                    <EditorField htmlFor="offer-redemption-limit" label="Usos por acesso">
                       <Input
-                        id="offer-amount"
-                        inputMode="decimal"
-                        value={form.discount_value}
-                        onChange={(event) => updateField('discount_value', event.target.value)}
-                        placeholder="20,00"
-                        className="pl-10"
+                        id="offer-redemption-limit"
+                        type="number"
+                        min={1}
+                        max={100}
+                        inputMode="numeric"
+                        value={form.max_redemptions_per_access}
+                        onChange={(event) =>
+                          updateField('max_redemptions_per_access', event.target.value)
+                        }
                         disabled={processing}
                       />
-                    </div>
-                  </EditorField>
-                ) : null}
-
-                <EditorField htmlFor="offer-title" label="Título">
-                  <Input
-                    id="offer-title"
-                    required
-                    minLength={2}
-                    maxLength={180}
-                    value={form.title}
-                    onChange={(event) => updateField('title', event.target.value)}
-                    placeholder="Peça um prato e ganhe outro"
-                    disabled={processing}
-                  />
-                </EditorField>
-
-                <EditorField
-                  htmlFor="offer-description"
-                  label="Como funciona"
-                  hint="Explique o benefício em linguagem direta para o consumidor."
-                >
-                  <Textarea
-                    id="offer-description"
-                    required
-                    rows={4}
-                    value={form.description}
-                    onChange={(event) => updateField('description', event.target.value)}
-                    placeholder="O segundo item deve ter valor igual ou menor ao primeiro."
-                    disabled={processing}
-                  />
-                </EditorField>
-
-                <EditorField htmlFor="offer-terms" label="Regras e exceções" hint="Opcional">
-                  <Textarea
-                    id="offer-terms"
-                    rows={3}
-                    value={form.terms}
-                    onChange={(event) => updateField('terms', event.target.value)}
-                    placeholder="Não cumulativo. Exceto feriados e datas comemorativas."
-                    disabled={processing}
-                  />
-                </EditorField>
-
-                <fieldset className="space-y-2">
-                  <legend className="text-sm font-semibold">Dias disponíveis</legend>
-                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
-                    {weekdays.map((weekday) => {
-                      const selected = (form.available_weekdays_mask & weekday.bit) !== 0
-                      return (
-                        <button
-                          key={weekday.bit}
-                          type="button"
-                          aria-pressed={selected}
-                          aria-label={weekday.long}
-                          onClick={() => toggleWeekday(weekday.bit)}
-                          disabled={processing}
-                          className={cn(
-                            'min-h-11 rounded-xl border px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            selected
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                          )}
-                        >
-                          {weekday.short}
-                        </button>
-                      )
-                    })}
+                    </EditorField>
                   </div>
-                </fieldset>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <EditorField htmlFor="offer-time-start" label="A partir de" hint="Opcional">
-                    <Input
-                      id="offer-time-start"
-                      type="time"
-                      value={form.daily_start_time}
-                      onChange={(event) => updateField('daily_start_time', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                  <EditorField htmlFor="offer-time-end" label="Até" hint="Opcional">
-                    <Input
-                      id="offer-time-end"
-                      type="time"
-                      value={form.daily_end_time}
-                      onChange={(event) => updateField('daily_end_time', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.reservation_required}
+                        onChange={(event) =>
+                          updateField('reservation_required', event.target.checked)
+                        }
+                        className="size-4 accent-primary"
+                        disabled={processing}
+                      />
+                      Exige reserva
+                    </label>
+                    <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.on_premise_only}
+                        onChange={(event) => updateField('on_premise_only', event.target.checked)}
+                        className="size-4 accent-primary"
+                        disabled={processing}
+                      />
+                      Somente no local
+                    </label>
+                  </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <EditorField htmlFor="offer-party-size" label="Mínimo de pessoas">
-                    <Input
-                      id="offer-party-size"
-                      type="number"
-                      min={1}
-                      max={100}
-                      inputMode="numeric"
-                      value={form.minimum_party_size}
-                      onChange={(event) => updateField('minimum_party_size', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                  <EditorField htmlFor="offer-redemption-limit" label="Usos por acesso">
-                    <Input
-                      id="offer-redemption-limit"
-                      type="number"
-                      min={1}
-                      max={100}
-                      inputMode="numeric"
-                      value={form.max_redemptions_per_access}
-                      onChange={(event) =>
-                        updateField('max_redemptions_per_access', event.target.value)
-                      }
-                      disabled={processing}
-                    />
-                  </EditorField>
-                </div>
+                  {localError ? (
+                    <p
+                      role="alert"
+                      className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    >
+                      {localError}
+                    </p>
+                  ) : null}
+                  {Object.keys(errors).length > 0 ? (
+                    <p
+                      role="alert"
+                      className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    >
+                      Revise os campos destacados pelo servidor e tente novamente.
+                    </p>
+                  ) : null}
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-3 py-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form.reservation_required}
-                      onChange={(event) =>
-                        updateField('reservation_required', event.target.checked)
-                      }
-                      className="size-4 accent-primary"
-                      disabled={processing}
-                    />
-                    Exige reserva
-                  </label>
-                  <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-3 py-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form.on_premise_only}
-                      onChange={(event) => updateField('on_premise_only', event.target.checked)}
-                      className="size-4 accent-primary"
-                      disabled={processing}
-                    />
-                    Somente no local
-                  </label>
-                </div>
-
-                {localError ? (
-                  <p
-                    role="alert"
-                    className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                  >
-                    {localError}
-                  </p>
-                ) : null}
-                {Object.keys(errors).length > 0 ? (
-                  <p
-                    role="alert"
-                    className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                  >
-                    Revise os campos destacados pelo servidor e tente novamente.
-                  </p>
-                ) : null}
-
-                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-                  {editingId ? (
+                  <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                    {editingId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        className="min-h-11"
+                        onClick={resetForm}
+                        disabled={processing}
+                      >
+                        Cancelar
+                      </Button>
+                    ) : null}
                     <Button
-                      type="button"
-                      variant="outline"
+                      type="submit"
                       size="lg"
                       className="min-h-11"
-                      onClick={resetForm}
                       disabled={processing}
+                      aria-busy={processing}
                     >
-                      Cancelar
+                      {processing ? (
+                        <Loader2 className="animate-spin" />
+                      ) : editingId ? (
+                        <Edit3 />
+                      ) : (
+                        <Plus />
+                      )}
+                      {processing ? 'Salvando…' : editingId ? 'Salvar oferta' : 'Criar oferta'}
                     </Button>
-                  ) : null}
-                  <Button type="submit" size="lg" className="min-h-11" disabled={processing}>
-                    {processing ? (
-                      <Loader2 className="animate-spin" />
-                    ) : editingId ? (
-                      <Edit3 />
-                    ) : (
-                      <Plus />
-                    )}
-                    {processing ? 'Salvando…' : editingId ? 'Salvar oferta' : 'Criar oferta'}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </section>
+                  </div>
+                </form>
+              )}
+            </section>
+          ) : null}
 
           <section aria-label="Ofertas da unidade" className="space-y-4">
             {offers.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center shadow-xs">
-                <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Gift className="size-6" />
-                </span>
-                <h2 className="mt-5 text-lg font-bold">Nenhum benefício configurado</h2>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                  Crie a primeira oferta desta unidade. Ela começa em rascunho e só conta para a
-                  publicação da edição depois de ativada.
-                </p>
-              </div>
+              <EmptyState
+                className="rounded-lg border border-dashed border-border bg-card"
+                headingLevel={2}
+                icon={Gift}
+                title="Nenhum benefício configurado"
+                description={
+                  canCreate
+                    ? 'Crie a primeira oferta desta unidade. Ela começa em rascunho e só conta para a publicação da edição depois de ativada.'
+                    : 'Ainda não há oferta vinculada a esta unidade.'
+                }
+              />
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 {offers.map((offer) => {
@@ -706,8 +739,9 @@ export default function EstablishmentBenefitsPage({
                   return (
                     <article
                       key={offer.id}
+                      aria-busy={busy}
                       className={cn(
-                        'flex min-h-full flex-col rounded-3xl border border-border/70 bg-card p-5 shadow-xs transition-shadow hover:shadow-md sm:p-6',
+                        'flex min-h-full flex-col rounded-lg border border-border bg-card p-5 sm:p-6',
                         offer.status === 'archived' && 'opacity-70'
                       )}
                     >
@@ -734,7 +768,7 @@ export default function EstablishmentBenefitsPage({
                         {offer.description}
                       </p>
 
-                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-muted/45 p-4 text-sm">
+                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/45 p-4 text-sm">
                         <div className="col-span-2">
                           <dt className="text-xs text-muted-foreground">Benefício</dt>
                           <dd className="mt-1 font-semibold">{describeBenefit(offer)}</dd>
@@ -763,7 +797,7 @@ export default function EstablishmentBenefitsPage({
                       </dl>
 
                       {offer.terms ? (
-                        <div className="mt-4 rounded-2xl border border-border/70 p-4">
+                        <div className="mt-4 rounded-md border border-border p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                             Regras
                           </p>
@@ -772,7 +806,7 @@ export default function EstablishmentBenefitsPage({
                       ) : null}
 
                       <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row sm:flex-wrap">
-                        {editable ? (
+                        {editable && canUpdate ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -785,9 +819,10 @@ export default function EstablishmentBenefitsPage({
                             Editar
                           </Button>
                         ) : null}
-                        {editable ? (
+                        {editable && canUpdate ? (
                           <Button
                             type="button"
+                            variant="outline"
                             size="sm"
                             className="min-h-10 flex-1"
                             onClick={() =>
@@ -803,7 +838,7 @@ export default function EstablishmentBenefitsPage({
                             Ativar
                           </Button>
                         ) : null}
-                        {offer.status === 'active' ? (
+                        {offer.status === 'active' && canUpdate ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -822,18 +857,27 @@ export default function EstablishmentBenefitsPage({
                             Pausar
                           </Button>
                         ) : null}
-                        {editable ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="min-h-10"
-                            onClick={() => archive(offer)}
-                            disabled={busy}
-                          >
-                            <Archive />
-                            Arquivar
-                          </Button>
+                        {editable && canArchive ? (
+                          <ConfirmDialog
+                            title="Arquivar oferta?"
+                            description={`A oferta “${offer.title}” deixará de ficar disponível. O histórico será preservado.`}
+                            confirmLabel="Arquivar oferta"
+                            destructive
+                            processing={busy}
+                            onConfirm={() => archive(offer)}
+                            trigger={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="min-h-10"
+                                disabled={busy}
+                              >
+                                <Archive />
+                                Arquivar
+                              </Button>
+                            }
+                          />
                         ) : null}
                       </div>
                     </article>

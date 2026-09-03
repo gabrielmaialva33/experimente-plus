@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react'
 import { ArrowLeft, CheckCircle2, Loader2, MapPin, ScanLine, Store, UserRound } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
+import { ConfirmDialog } from '~/components/confirm_dialog'
 import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -31,6 +32,7 @@ function extractToken(input: string): string {
 
 export default function PartnerValidationPage({ token, preview }: PartnerValidationPageProps) {
   const [input, setInput] = useState(token)
+  const [inspecting, setInspecting] = useState(false)
   const [processing, setProcessing] = useState(false)
 
   function inspect(event: FormEvent<HTMLFormElement>) {
@@ -38,11 +40,19 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
     const normalized = extractToken(input)
     if (!normalized) return
 
-    router.get('/portal/redemptions/validate', { token: normalized }, { preserveState: false })
+    setInspecting(true)
+    router.get(
+      '/portal/redemptions/validate',
+      { token: normalized },
+      {
+        preserveState: false,
+        onFinish: () => setInspecting(false),
+      }
+    )
   }
 
   function confirm() {
-    if (!preview || !window.confirm('Confirmar a utilização deste benefício?')) return
+    if (!preview) return
 
     setProcessing(true)
     router.post(
@@ -66,7 +76,7 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
             <Button asChild variant="outline" size="lg">
               <Link href="/portal/redemptions">
                 <ArrowLeft />
-                Utilizações validadas
+                Utilizações
               </Link>
             </Button>
           }
@@ -74,10 +84,11 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
 
         <form
           onSubmit={inspect}
-          className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-7"
+          className="rounded-lg border border-border bg-card p-5 sm:p-7"
+          aria-busy={inspecting}
         >
           <label htmlFor="presentation-token" className="text-sm font-semibold">
-            Link ou token temporário
+            Link da apresentação
           </label>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row">
             <Input
@@ -87,17 +98,24 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
               autoComplete="off"
               placeholder="Cole o link apresentado pelo cliente"
               className="min-h-12 flex-1"
+              disabled={inspecting}
             />
-            <Button type="submit" size="lg" disabled={!input.trim()}>
-              <ScanLine />
-              Conferir
+            <Button
+              type="submit"
+              variant={preview ? 'outline' : 'primary'}
+              size="lg"
+              disabled={!input.trim() || inspecting}
+              aria-busy={inspecting}
+            >
+              {inspecting ? <Loader2 className="animate-spin" /> : <ScanLine />}
+              {inspecting ? 'Conferindo…' : 'Conferir'}
             </Button>
           </div>
         </form>
 
         {preview ? (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-            <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-7">
+            <div className="rounded-lg border border-border bg-card p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
                 Benefício apresentado
               </p>
@@ -109,19 +127,19 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
               </p>
 
               <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-muted/40 p-4">
+                <div className="rounded-md border border-border bg-muted/40 p-4">
                   <dt className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Store className="size-4" /> Estabelecimento
                   </dt>
                   <dd className="mt-2 font-semibold">{preview.benefit.establishment_name}</dd>
                 </div>
-                <div className="rounded-2xl bg-muted/40 p-4">
+                <div className="rounded-md border border-border bg-muted/40 p-4">
                   <dt className="flex items-center gap-2 text-xs text-muted-foreground">
                     <MapPin className="size-4" /> Edição
                   </dt>
                   <dd className="mt-2 font-semibold">{preview.benefit.edition_name}</dd>
                 </div>
-                <div className="rounded-2xl bg-muted/40 p-4 sm:col-span-2">
+                <div className="rounded-md border border-border bg-muted/40 p-4 sm:col-span-2">
                   <dt className="flex items-center gap-2 text-xs text-muted-foreground">
                     <UserRound className="size-4" /> Titular
                   </dt>
@@ -135,7 +153,7 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
               </dl>
 
               {preview.benefit.terms ? (
-                <div className="mt-5 rounded-2xl border border-border/70 p-4">
+                <div className="mt-5 rounded-md border border-border p-4">
                   <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                     Regras
                   </p>
@@ -146,7 +164,7 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
               ) : null}
             </div>
 
-            <aside className="rounded-3xl border border-success/25 bg-success/8 p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
+            <aside className="rounded-lg border border-success/25 bg-success/8 p-5 sm:p-6 lg:sticky lg:top-6">
               <CheckCircle2 className="size-8 text-success" />
               <h2 className="mt-4 text-lg font-bold">Apresentação válida</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -158,16 +176,25 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
                   ? 'utilização restante'
                   : 'utilizações restantes'}
               </p>
-              <Button
-                type="button"
-                size="lg"
-                className="mt-5 min-h-12 w-full"
-                onClick={confirm}
-                disabled={processing}
-              >
-                {processing ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-                {processing ? 'Confirmando…' : 'Confirmar utilização'}
-              </Button>
+              <ConfirmDialog
+                title="Confirmar utilização?"
+                description={`Confira o benefício de ${preview.holder.full_name} em ${preview.benefit.establishment_name}. Após a confirmação, o comprovante será emitido e a utilização não poderá ser desfeita.`}
+                confirmLabel="Confirmar utilização"
+                processing={processing}
+                onConfirm={confirm}
+                trigger={
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="mt-5 min-h-12 w-full"
+                    disabled={processing}
+                    aria-busy={processing}
+                  >
+                    {processing ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                    {processing ? 'Confirmando…' : 'Confirmar utilização'}
+                  </Button>
+                }
+              />
             </aside>
           </section>
         ) : null}

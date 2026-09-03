@@ -1,8 +1,10 @@
 import { Head, Link } from '@inertiajs/react'
 import { ArrowRight, CheckCircle2, ReceiptText, ScanLine } from 'lucide-react'
 
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
+import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import type { RedemptionHistory } from '~/types/benefit_redemption'
 
@@ -19,23 +21,28 @@ function formatDateTime(value: string): string {
 }
 
 export default function PartnerRedemptionsPage({ history }: PartnerRedemptionsPageProps) {
+  const { can } = useAuth()
+  const canValidate = can('benefit_offers.update')
+
   return (
     <MainLayout>
-      <Head title="Utilizações validadas" />
+      <Head title="Utilizações" />
 
       <div className="space-y-7">
         <PageHeader
           eyebrow="Portal do parceiro"
           icon={ReceiptText}
-          title="Utilizações validadas"
+          title="Utilizações"
           description="Consulte os comprovantes emitidos pelas unidades que você administra."
           actions={
-            <Button asChild size="lg">
-              <Link href="/portal/redemptions/validate">
-                <ScanLine />
-                Validar benefício
-              </Link>
-            </Button>
+            canValidate ? (
+              <Button asChild size="lg">
+                <Link href="/portal/redemptions/validate">
+                  <ScanLine />
+                  Validar benefício
+                </Link>
+              </Button>
+            ) : null
           }
           meta={
             <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
@@ -45,26 +52,26 @@ export default function PartnerRedemptionsPage({ history }: PartnerRedemptionsPa
         />
 
         {history.redemptions.length === 0 ? (
-          <section className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center shadow-xs">
-            <ReceiptText className="mx-auto size-8 text-muted-foreground" />
-            <h2 className="mt-4 font-bold">Nenhum benefício validado ainda</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-              Os comprovantes aparecerão aqui depois da primeira utilização confirmada.
-            </p>
-          </section>
+          <EmptyState
+            className="rounded-lg border border-dashed border-border bg-card"
+            headingLevel={2}
+            icon={ReceiptText}
+            title="Nenhuma utilização registrada"
+            description="Os comprovantes aparecerão aqui depois da primeira utilização confirmada."
+          />
         ) : (
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {history.redemptions.map((redemption) => (
               <Link
                 key={redemption.id}
                 href={`/portal/redemptions/${redemption.receipt_code}`}
-                className="group rounded-3xl border border-border/70 bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md"
+                className="rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-2xl bg-success/10 text-success">
+                  <span className="flex size-10 items-center justify-center rounded-md border border-success/20 bg-success/10 text-success">
                     <CheckCircle2 className="size-5" />
                   </span>
-                  <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight className="size-4 text-muted-foreground" />
                 </div>
                 <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-primary">
                   {redemption.establishment.name}
