@@ -11,19 +11,26 @@ interface SearchOptions {
   cityId: number
   query: ICatalog.SearchQuery
   sponsoredOnly: boolean
-  limit: number
-  offset: number
+  page: number
+  perPage: number
 }
 
 export interface CatalogSearchPage {
   rows: ICatalog.CatalogRow[]
   total: number
+  page: number
 }
 
 interface SearchEnvelopeRow {
   establishment_id: unknown
+  effective_page: unknown
   total_count: unknown
   [key: string]: unknown
+}
+
+type CatalogDatabaseRow = Omit<ICatalog.CatalogRow, 'published_at' | 'public_updated_at'> & {
+  published_at: string | Date
+  public_updated_at: string | Date
 }
 
 export default class CatalogSearchRepository {
@@ -265,8 +272,8 @@ export default class CatalogSearchRepository {
       cityId,
       query,
       sponsoredOnly: false,
-      limit: query.per_page,
-      offset: (query.page - 1) * query.per_page,
+      page: query.page,
+      perPage: query.per_page,
     })
   }
 
@@ -280,8 +287,8 @@ export default class CatalogSearchRepository {
       cityId,
       query,
       sponsoredOnly: true,
-      limit: 3,
-      offset: 0,
+      page: 1,
+      perPage: 3,
     })
 
     return page.rows
@@ -292,7 +299,7 @@ export default class CatalogSearchRepository {
     cityId: number,
     establishmentSlug: string
   ): Promise<ICatalog.CatalogRow | null> {
-    const result = await db.rawQuery<{ rows: ICatalog.CatalogRow[] }>(
+    const result = await db.rawQuery<{ rows: CatalogDatabaseRow[] }>(
       `
         SELECT
           projection.*,
@@ -366,7 +373,7 @@ export default class CatalogSearchRepository {
       ? 'projection.is_sponsored = true'
       : 'projection.is_sponsored = false'
 
-    const result = await db.rawQuery<{ rows: ICatalog.CatalogRow[] }>(
+    const result = await db.rawQuery<{ rows: CatalogDatabaseRow[] }>(
       `
         WITH RECURSIVE
         input AS (
@@ -502,17 +509,36 @@ export default class CatalogSearchRepository {
           SELECT count(*)::integer AS total_count
           FROM ranked
         ),
+        pagination AS (
+          SELECT
+            totals.total_count,
+            CASE
+              WHEN totals.total_count = 0 THEN 1
+              ELSE GREATEST(
+                1::numeric,
+                LEAST(
+                  ?::numeric,
+                  ceil(totals.total_count::numeric / ?::numeric)
+                )
+              )::integer
+            END AS effective_page
+          FROM totals
+        ),
         paged AS (
           SELECT ranked.*
           FROM ranked
           ORDER BY ${rankedOrder}
           LIMIT ?
-          OFFSET ?
+          OFFSET (
+            SELECT (pagination.effective_page::bigint - 1) * ?::bigint
+            FROM pagination
+          )
         )
         SELECT
           paged.*,
-          totals.total_count
-        FROM totals
+          pagination.total_count,
+          pagination.effective_page
+        FROM pagination
         LEFT JOIN paged ON TRUE
         ORDER BY ${pagedOrder}
       `,
@@ -524,8 +550,10 @@ export default class CatalogSearchRepository {
         options.tenantId,
         options.tenantId,
         options.cityId,
-        options.limit,
-        options.offset,
+        options.page,
+        options.perPage,
+        options.perPage,
+        options.perPage,
       ]
     )
 
@@ -533,17 +561,18 @@ export default class CatalogSearchRepository {
 
     return {
       total: Number(rows[0]?.total_count ?? 0),
+      page: Number(rows[0]?.effective_page ?? 1),
       rows: rows.flatMap((row) => {
         if (row.establishment_id === null || row.establishment_id === undefined) {
           return []
         }
 
-        return [this.normalizeRow(row as unknown as ICatalog.CatalogRow)]
+        return [this.normalizeRow(row as unknown as CatalogDatabaseRow)]
       }),
     }
   }
 
-  private normalizeRow(row: ICatalog.CatalogRow): ICatalog.CatalogRow {
+  private normalizeRow(row: CatalogDatabaseRow): ICatalog.CatalogRow {
     return {
       ...row,
       establishment_id: Number(row.establishment_id),
@@ -557,7 +586,22 @@ export default class CatalogSearchRepository {
       relevance_score: Number(row.relevance_score ?? 0),
       total_count: Number(row.total_count ?? 0),
       is_open_now: Boolean(row.is_open_now),
+      published_at: this.serializeTimestamp(row.published_at, 'published_at'),
+      public_updated_at: this.serializeTimestamp(row.public_updated_at, 'public_updated_at'),
     }
+  }
+
+  private serializeTimestamp(
+    value: string | Date,
+    field: 'published_at' | 'public_updated_at'
+  ): string {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString()
+    }
+
+    throw new TypeError(`Catalog projection ${field} must be a valid timestamp`)
   }
 
   private orderBy(sort: ICatalog.Sort, relation: 'ranked' | 'paged'): string {

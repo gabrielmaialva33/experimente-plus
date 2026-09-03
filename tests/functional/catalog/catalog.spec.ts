@@ -12,6 +12,7 @@ import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRevisionMedia from '#modules/media/models/establishment_revision_media'
 import IRoles from '#modules/roles/interfaces/role_interface'
+import CatalogService from '#modules/catalog/services/catalog_service'
 import {
   createEstablishmentScenario,
   type EstablishmentScenario,
@@ -211,6 +212,43 @@ test.group('Public catalog', (group) => {
     await rm(app.makePath('storage', 'media'), { recursive: true, force: true })
   })
 
+  test('rejects fractional pagination before executing the catalog service', async ({
+    client,
+    assert,
+    cleanup,
+  }) => {
+    const originalSearch = CatalogService.prototype.search
+    let searchCalls = 0
+
+    CatalogService.prototype.search = async () => {
+      searchCalls += 1
+      throw new Error('CatalogService.search must not run for invalid pagination')
+    }
+    cleanup(() => {
+      CatalogService.prototype.search = originalSearch
+    })
+
+    const headers = {
+      'host': 'validacao.experimente.test',
+      'x-forwarded-host': 'validacao.experimente.test',
+      'x-forwarded-for': '198.51.100.240',
+    }
+    const fractionalPage = await client
+      .get('/api/v1/catalog/cities/cidade-nao-resolvida/establishments?page=1.5')
+      .headers(headers)
+    const fractionalPageSize = await client
+      .get('/api/v1/catalog/cities/cidade-nao-resolvida/establishments?per_page=2.5')
+      .headers(headers)
+
+    fractionalPage.assertStatus(422)
+    fractionalPageSize.assertStatus(422)
+    fractionalPage.assertBodyContains({ errors: [{ field: 'page', rule: 'withoutDecimals' }] })
+    fractionalPageSize.assertBodyContains({
+      errors: [{ field: 'per_page', rule: 'withoutDecimals' }],
+    })
+    assert.equal(searchCalls, 0)
+  })
+
   test('keeps drafts private and exposes an allowlisted projection after atomic publication', async ({
     client,
     assert,
@@ -313,6 +351,17 @@ test.group('Public catalog', (group) => {
     assert.notProperty(detail.body(), 'tenant_id')
     assert.notProperty(detail.body(), 'reviewed_by')
     assert.notProperty(detail.body(), 'review_notes')
+
+    const catalogService = await app.container.make(CatalogService)
+    const publishedSlug = revision.slug
+    if (!publishedSlug) throw new Error('Published revision must have a public slug')
+    const serverProjection = await catalogService.show(
+      `${scenario.tenant.slug}.experimente.test`,
+      scenario.city.slug,
+      publishedSlug
+    )
+    assert.isString(serverProjection.published_at)
+    assert.isString(serverProjection.updated_at)
 
     // catalog SSR pages expose the published projection through the operation hostname
     const publicRow = await db
@@ -469,7 +518,7 @@ test.group('Public catalog', (group) => {
 
     const search = await client
       .get(
-        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?category=${scenario.primaryCategory.slug}`
+        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?category=${scenario.primaryCategory.slug}&page=999`
       )
       .headers(publicHeaders(scenario))
     search.assertStatus(200)
@@ -539,7 +588,7 @@ test.group('Public catalog', (group) => {
       .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2`)
       .headers(publicHeaders(scenario))
     const pageBeyondLast = await client
-      .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=3`)
+      .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2147483648`)
       .headers(publicHeaders(scenario))
     firstPage.assertStatus(200)
     secondPage.assertStatus(200)
@@ -550,20 +599,20 @@ test.group('Public catalog', (group) => {
     assert.lengthOf(secondPage.body().organic_results, 1)
     assert.deepInclude(pageBeyondLast.body().meta, {
       total: 3,
-      page: 3,
+      page: 2,
       per_page: 2,
       last_page: 2,
       next_page_url: null,
     })
     assert.equal(
       pageBeyondLast.body().meta.previous_page_url,
-      `/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2`
+      `/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=1`
     )
     assert.equal(
       pageBeyondLast.body().meta.last_page_url,
       `/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2`
     )
-    assert.deepEqual(pageBeyondLast.body().organic_results, [])
+    assert.deepEqual(pageBeyondLast.body().organic_results, secondPage.body().organic_results)
 
     const allSlugs = [
       ...firstPage.body().organic_results,

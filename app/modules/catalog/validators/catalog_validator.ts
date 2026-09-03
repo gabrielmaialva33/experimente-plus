@@ -19,8 +19,8 @@ export const catalogSearchValidator = vine.compile(
     q: vine.string().trim().maxLength(120).optional(),
     category: slug().optional(),
     open_now: vine.boolean().optional(),
-    page: vine.number().min(1).optional(),
-    per_page: vine.number().min(1).max(CATALOG_MAX_PAGE_SIZE).optional(),
+    page: vine.number().withoutDecimals().min(1).optional(),
+    per_page: vine.number().withoutDecimals().min(1).max(CATALOG_MAX_PAGE_SIZE).optional(),
     sort: vine.enum(CATALOG_SORTS).optional(),
   })
 )

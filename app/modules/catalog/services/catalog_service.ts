@@ -98,9 +98,11 @@ export default class CatalogService {
       q: query.q.trim(),
       category: query.category ? this.requireSlug(query.category) : undefined,
     }
+    // The requested page stays in the cache identity, while the repository
+    // canonicalizes the response to the last available page in the same query.
     const cacheKey = this.cacheService.key([
       'search',
-      'context-pagination-v2',
+      'context-pagination-v3',
       tenantId,
       projectionVersion,
       city.slug,
@@ -165,6 +167,7 @@ export default class CatalogService {
       )
       const total = organicPage.total
       const lastPage = Math.max(1, Math.ceil(total / normalizedQuery.per_page))
+      const effectivePage = organicPage.page
 
       return {
         context: {
@@ -191,20 +194,18 @@ export default class CatalogService {
         },
         meta: {
           total,
-          page: normalizedQuery.page,
+          page: effectivePage,
           per_page: normalizedQuery.per_page,
           last_page: lastPage,
           first_page: 1,
           first_page_url: this.pageUrl(city.slug, normalizedQuery, 1),
           last_page_url: this.pageUrl(city.slug, normalizedQuery, lastPage),
           next_page_url:
-            normalizedQuery.page < lastPage
-              ? this.pageUrl(city.slug, normalizedQuery, normalizedQuery.page + 1)
+            effectivePage < lastPage
+              ? this.pageUrl(city.slug, normalizedQuery, effectivePage + 1)
               : null,
           previous_page_url:
-            normalizedQuery.page > 1
-              ? this.pageUrl(city.slug, normalizedQuery, normalizedQuery.page - 1)
-              : null,
+            effectivePage > 1 ? this.pageUrl(city.slug, normalizedQuery, effectivePage - 1) : null,
         },
         query: {
           q: normalizedQuery.q || null,

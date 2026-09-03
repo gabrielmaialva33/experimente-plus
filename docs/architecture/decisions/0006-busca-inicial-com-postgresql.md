@@ -161,9 +161,15 @@ O primeiro agrupamento usa `America/Sao_Paulo`, mas timezone deve ser dado da ci
 O MVP pode usar `page` e `per_page`, com:
 
 - máximo configurado;
+- valores inteiros positivos, rejeitando frações na borda HTTP;
 - ordenação determinística;
 - filtros repetíveis;
 - `establishment_id` como desempate.
+
+A busca normaliza uma página solicitada além do intervalo para a última página real dentro da
+mesma consulta que calcula o total e lê os resultados. Quando o total é zero, usa-se a primeira
+página. Metadados e URLs representam sempre essa página efetiva; a chave de cache pode conservar a
+página originalmente solicitada sem alterar o envelope canônico.
 
 Se ranking personalizado ou atualização muito frequente tornar offset instável, a API poderá evoluir para cursor sem alterar o service de busca.
 

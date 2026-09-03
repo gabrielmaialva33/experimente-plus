@@ -2332,7 +2332,7 @@ components:
         page:
           type: integer
           minimum: 1
-          description: For known filters, preserves the requested page even beyond `last_page`; an unknown category slug is normalized to page 1.
+          description: Effective page returned by the search. Requests beyond the available range normalize to `last_page`; searches with no organic results normalize to page 1.
         per_page:
           type: integer
           minimum: 1
@@ -4237,6 +4237,11 @@ paths:
         SSR route /cidades/{citySlug}/categorias/{categorySlug} returns 404 for the
         same missing route identity so that a nonexistent category page is not
         indexable.
+
+        Pagination is canonicalized in the search query: when `page` is greater
+        than `last_page`, the response returns the real last page and its rows.
+        Searches with no organic results use page 1. The `meta.page` value and all
+        pagination URLs always describe that effective page.
       tags: [Catalog]
       security: []
       parameters:

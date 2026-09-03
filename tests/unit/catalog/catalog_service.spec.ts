@@ -40,7 +40,7 @@ test.group('CatalogService', () => {
       },
       async searchOrganic() {
         searchCalls.organic += 1
-        return { rows: [], total: 0 }
+        return { rows: [], total: 0, page: 1 }
       },
       async searchSponsored() {
         searchCalls.sponsored += 1
@@ -107,7 +107,7 @@ test.group('CatalogService', () => {
     assert.equal(result.meta.last_page_url, result.meta.first_page_url)
   })
 
-  test('keeps the real pagination total when the requested page has no rows', async ({
+  test('uses the effective page returned by the repository for pagination metadata', async ({
     assert,
   }) => {
     const operationResolver = {
@@ -136,7 +136,7 @@ test.group('CatalogService', () => {
         return null
       },
       async searchOrganic() {
-        return { rows: [], total: 21 }
+        return { rows: [], total: 21, page: 3 }
       },
       async searchSponsored() {
         return []
@@ -167,14 +167,14 @@ test.group('CatalogService', () => {
 
     assert.deepInclude(result.meta, {
       total: 21,
-      page: 4,
+      page: 3,
       per_page: 10,
       last_page: 3,
       next_page_url: null,
     })
     assert.equal(
       result.meta.previous_page_url,
-      '/api/v1/catalog/cities/cornelio-procopio/establishments?sort=name&per_page=10&page=3'
+      '/api/v1/catalog/cities/cornelio-procopio/establishments?sort=name&per_page=10&page=2'
     )
     assert.equal(
       result.meta.last_page_url,
@@ -221,7 +221,7 @@ test.group('CatalogService', () => {
         }
       },
       async searchOrganic() {
-        return { rows: [], total: 0 }
+        return { rows: [], total: 0, page: 1 }
       },
       async searchSponsored() {
         return []
