@@ -19,10 +19,19 @@ describe('navigation configuration', () => {
   })
 
   it('prefers the most specific child route', () => {
-    expect(resolveRouteMetadata('/portal/establishments/42/benefits')?.id).toBe(
-      'portal-establishment-benefits'
-    )
+    expect(resolveRouteMetadata('/portal/establishments/42/benefits')).toMatchObject({
+      id: 'portal-establishment-benefits',
+      title: 'Benefícios da unidade',
+    })
+    expect(resolveRouteMetadata('/portal/establishments/42')).toMatchObject({
+      id: 'portal-establishment',
+      title: 'Editor da unidade',
+    })
     expect(matchNavigationItem('/portal/redemptions/ABC-123')?.id).toBe('portal-redemptions')
+    expect(resolveRouteMetadata('/portal/redemptions/ABC-123')).toMatchObject({
+      id: 'portal-receipt',
+      title: 'Comprovante de utilização',
+    })
     expect(resolveRouteMetadata('/portal/redemptions/validate?token=ABC')?.id).toBe(
       'portal-redemption-validation'
     )
