@@ -12,7 +12,15 @@ import {
   CardToolbar,
 } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
+import {
+  globalRoleDescription,
+  globalRoleLabel,
+  permissionActionLabel,
+  permissionContextLabel,
+  permissionResourceLabel,
+} from '~/lib/labels'
 
 interface RolePermission {
   id: number
@@ -38,7 +46,8 @@ interface RolesPageProps {
 const SLUG_BADGE: Record<string, 'primary' | 'destructive' | 'info' | 'success' | 'secondary'> = {
   root: 'destructive',
   admin: 'primary',
-  editor: 'info',
+  moderator: 'info',
+  editor: 'secondary',
   user: 'success',
   guest: 'secondary',
 }
@@ -66,14 +75,11 @@ function RoleCard({ role }: { role: RoleRow }) {
             </div>
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2">
-                {role.name}
-                <Badge variant={SLUG_BADGE[role.slug] ?? 'secondary'} appearance="light" size="sm">
-                  {role.slug}
-                </Badge>
+                {globalRoleLabel(role.slug, role.name)}
               </CardTitle>
-              {role.description && (
-                <p className="mt-0.5 text-sm text-muted-foreground">{role.description}</p>
-              )}
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {globalRoleDescription(role.slug)}
+              </p>
             </div>
           </div>
         </CardHeading>
@@ -86,27 +92,29 @@ function RoleCard({ role }: { role: RoleRow }) {
       </CardHeader>
       <CardContent>
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium">Permissions</p>
-          <Badge variant="secondary" appearance="light" size="sm">
+          <p className="text-sm font-medium">Permissões atribuídas</p>
+          <Badge variant={SLUG_BADGE[role.slug] ?? 'secondary'} appearance="light" size="sm">
             {role.permissions.length}
           </Badge>
         </div>
 
         {role.permissions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No permissions assigned.</p>
+          <p className="text-sm text-muted-foreground">Nenhuma permissão atribuída.</p>
         ) : (
           <div className="space-y-3">
             {grouped.map(([resource, permissions]) => (
               <div key={resource}>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {resource}
+                  {permissionResourceLabel(resource)}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {permissions.map((permission) => (
                     <Badge key={permission.id} variant="info" appearance="outline" size="sm">
-                      {permission.action}
+                      {permissionActionLabel(permission.action)}
                       {permission.context !== 'any' && (
-                        <span className="text-muted-foreground">:{permission.context}</span>
+                        <span className="text-muted-foreground">
+                          {' '}· {permissionContextLabel(permission.context)}
+                        </span>
                       )}
                     </Badge>
                   ))}
@@ -123,18 +131,22 @@ function RoleCard({ role }: { role: RoleRow }) {
 export default function RolesPage({ roles }: RolesPageProps) {
   return (
     <MainLayout>
-      <Head title="Roles" />
+      <Head title="Papéis" />
 
       <div className="space-y-6">
         <PageHeader
-          title="Roles"
-          description="Roles bundle permissions and are assigned to users across the application."
+          title="Papéis globais"
+          description="Papéis agrupam capacidades da plataforma. O acesso a organizações continua dependendo de membership e policy de domínio."
         />
 
         {roles.length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No roles found.
+            <CardContent className="p-0">
+              <EmptyState
+                icon={ShieldCheck}
+                title="Nenhum papel encontrado"
+                description="Ainda não há papéis globais configurados."
+              />
             </CardContent>
           </Card>
         ) : (

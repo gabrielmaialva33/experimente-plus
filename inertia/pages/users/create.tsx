@@ -22,30 +22,30 @@ export default function CreateUserPage() {
 
   return (
     <MainLayout>
-      <Head title="Create user" />
+      <Head title="Adicionar usuário" />
 
       <div className="space-y-6">
         <PageHeader
-          title="Create new user"
-          description="Fill out the form to add a new user."
+          title="Adicionar usuário"
+          description="Crie uma conta administrativa com os dados necessários."
           actions={
-            <Link href="/users">
-              <Button variant="outline">
+            <Button asChild variant="outline">
+              <Link href="/users">
                 <ArrowLeft className="size-4" />
-                Back to users
-              </Button>
-            </Link>
+                Voltar para usuários
+              </Link>
+            </Button>
           }
         />
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} aria-busy={processing}>
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle>User details</CardTitle>
+              <CardTitle>Dados do usuário</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field
-                label="Full name"
+                label="Nome completo"
                 name="full_name"
                 value={data.full_name}
                 onChange={(event) => setData('full_name', event.target.value)}
@@ -64,18 +64,18 @@ export default function CreateUserPage() {
                 required
               />
               <Field
-                label="Password"
+                label="Senha"
                 name="password"
                 type="password"
                 value={data.password}
                 onChange={(event) => setData('password', event.target.value)}
                 error={errors.password}
-                hint="Must be at least 8 characters"
+                hint="Use pelo menos 8 caracteres."
                 autoComplete="new-password"
                 required
               />
               <Field
-                label="Confirm password"
+                label="Confirmar senha"
                 name="password_confirmation"
                 type="password"
                 value={data.password_confirmation}
@@ -86,13 +86,11 @@ export default function CreateUserPage() {
               />
             </CardContent>
             <CardFooter className="justify-end gap-2 border-t pt-5">
-              <Link href="/users">
-                <Button variant="outline" type="button">
-                  Cancel
-                </Button>
-              </Link>
+              <Button asChild variant="outline" type="button">
+                <Link href="/users">Cancelar</Link>
+              </Button>
               <Button variant="primary" type="submit" disabled={processing}>
-                {processing ? 'Saving...' : 'Save user'}
+                {processing ? 'Salvando…' : 'Salvar usuário'}
               </Button>
             </CardFooter>
           </Card>

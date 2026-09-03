@@ -24,30 +24,30 @@ export default function EditUserPage({ user }: EditUserPageProps) {
 
   return (
     <MainLayout>
-      <Head title={`Edit user: ${user.full_name}`} />
+      <Head title={`Editar usuário: ${user.full_name}`} />
 
       <div className="space-y-6">
         <PageHeader
-          title="Edit user"
-          description="Update the user's editable profile details."
+          title="Editar usuário"
+          description="Atualize os dados editáveis desta conta."
           actions={
-            <Link href="/users">
-              <Button variant="outline">
+            <Button asChild variant="outline">
+              <Link href="/users">
                 <ArrowLeft className="size-4" />
-                Back to users
-              </Button>
-            </Link>
+                Voltar para usuários
+              </Link>
+            </Button>
           }
         />
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} aria-busy={processing}>
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle>User details</CardTitle>
+              <CardTitle>Dados do usuário</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field
-                label="Full name"
+                label="Nome completo"
                 name="full_name"
                 value={data.full_name}
                 onChange={(event) => setData('full_name', event.target.value)}
@@ -60,19 +60,17 @@ export default function EditUserPage({ user }: EditUserPageProps) {
                 name="email"
                 type="email"
                 value={user.email}
-                hint="The sign-in email cannot be changed from this screen."
+                hint="O e-mail de acesso não pode ser alterado por esta tela."
                 disabled
                 readOnly
               />
             </CardContent>
             <CardFooter className="justify-end gap-2 border-t pt-5">
-              <Link href="/users">
-                <Button variant="outline" type="button">
-                  Cancel
-                </Button>
-              </Link>
+              <Button asChild variant="outline" type="button">
+                <Link href="/users">Cancelar</Link>
+              </Button>
               <Button variant="primary" type="submit" disabled={processing}>
-                {processing ? 'Saving...' : 'Save changes'}
+                {processing ? 'Salvando…' : 'Salvar alterações'}
               </Button>
             </CardFooter>
           </Card>

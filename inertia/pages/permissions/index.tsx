@@ -12,8 +12,14 @@ import {
   CardToolbar,
 } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
+import { EmptyState } from '~/components/empty_state'
 import { Input } from '~/components/ui/input'
 import { PageHeader } from '~/components/page_header'
+import {
+  permissionActionLabel,
+  permissionContextLabel,
+  permissionResourceLabel,
+} from '~/lib/labels'
 
 interface PermissionRow {
   id: number
@@ -68,19 +74,20 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
 
   return (
     <MainLayout>
-      <Head title="Permissions" />
+      <Head title="Permissões" />
 
       <div className="space-y-6">
         <PageHeader
-          title="Permissions"
-          description="Granular permissions follow the resource.action.context convention, grouped by resource."
+          title="Permissões"
+          description="Capacidades globais agrupadas por recurso. As policies do domínio continuam limitando cada organização e unidade."
         />
 
         <div className="relative max-w-sm">
           <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search permissions..."
+            placeholder="Buscar permissões"
+            aria-label="Buscar permissões"
             className="w-full ps-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -89,8 +96,12 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
 
         {grouped.length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No permissions match your search.
+            <CardContent className="p-0">
+              <EmptyState
+                icon={KeyRound}
+                title="Nenhuma permissão encontrada"
+                description="Tente outro termo de busca."
+              />
             </CardContent>
           </Card>
         ) : (
@@ -103,7 +114,7 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
                       <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <KeyRound className="size-4" />
                       </div>
-                      <CardTitle className="capitalize">{resource}</CardTitle>
+                      <CardTitle>{permissionResourceLabel(resource)}</CardTitle>
                     </div>
                   </CardHeading>
                   <CardToolbar>
@@ -119,14 +130,9 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
                       className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium capitalize">
-                          {permission.action}
+                        <p className="truncate text-sm font-medium">
+                          {permissionActionLabel(permission.action)}
                         </p>
-                        {permission.description && (
-                          <p className="truncate text-xs text-muted-foreground">
-                            {permission.description}
-                          </p>
-                        )}
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">
                         <Badge
@@ -134,11 +140,11 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
                           appearance="light"
                           size="sm"
                         >
-                          {permission.action}
+                          {permissionActionLabel(permission.action)}
                         </Badge>
                         {permission.context !== 'any' && (
                           <Badge variant="secondary" appearance="outline" size="sm">
-                            {permission.context}
+                            {permissionContextLabel(permission.context)}
                           </Badge>
                         )}
                       </div>

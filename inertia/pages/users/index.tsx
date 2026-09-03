@@ -10,6 +10,7 @@ import {
 import { Edit, MoreVertical, Plus, Search, Trash2 } from 'lucide-react'
 
 import { MainLayout } from '~/layouts'
+import { ConfirmDialog } from '~/components/confirm_dialog'
 import {
   Card,
   CardContent,
@@ -35,16 +36,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '~/components/ui/alert-dialog'
 import { PageHeader } from '~/components/page_header'
 import { useAuth } from '~/hooks/use_auth'
 import type { PaginatedResponse } from '~/types'
@@ -85,7 +76,7 @@ function initialsOf(name: string) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString('pt-BR', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -99,6 +90,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
   const canDelete = can('users.delete')
 
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [searchValue, setSearchValue] = useState(search)
 
   const currentPage = Number(users.meta.current_page)
@@ -148,7 +140,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
       columnHelper.columns([
         columnHelper.accessor('full_name', {
           id: 'full_name',
-          header: ({ column }) => <DataGridColumnHeader column={column} title="Name" />,
+          header: ({ column }) => <DataGridColumnHeader column={column} title="Nome" />,
           cell: ({ row }) => (
             <div className="flex items-center gap-3">
               <Avatar className="size-8">
@@ -166,7 +158,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
         }),
         columnHelper.accessor('roles', {
           id: 'roles',
-          header: 'Roles',
+          header: 'Papéis',
           cell: ({ row }) => {
             const roles = row.original.roles ?? []
             if (roles.length === 0) {
@@ -186,22 +178,22 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
         }),
         columnHelper.accessor('email_verified_at', {
           id: 'email_verified_at',
-          header: 'Status',
+          header: 'Situação',
           cell: ({ row }) =>
             row.original.email_verified_at ? (
               <Badge variant="success" appearance="light" size="sm">
-                Verified
+                Verificado
               </Badge>
             ) : (
               <Badge variant="warning" appearance="light" size="sm">
-                Unverified
+                Não verificado
               </Badge>
             ),
           enableSorting: false,
         }),
         columnHelper.accessor('created_at', {
           id: 'created_at',
-          header: ({ column }) => <DataGridColumnHeader column={column} title="Created" />,
+          header: ({ column }) => <DataGridColumnHeader column={column} title="Cadastro" />,
           cell: ({ row }) => (
             <span className="text-sm text-muted-foreground">
               {formatDate(row.original.created_at)}
@@ -215,18 +207,18 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
           cell: ({ row }) => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" mode="icon" size="sm" aria-label="Open user actions">
+                <Button variant="ghost" mode="icon" size="sm" aria-label="Abrir ações do usuário">
                   <MoreVertical className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>Ações</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {canEdit && (
                   <DropdownMenuItem asChild>
                     <Link href={`/users/${row.original.id}/edit`}>
                       <Edit className="size-4" />
-                      Edit user
+                      Editar usuário
                     </Link>
                   </DropdownMenuItem>
                 )}
@@ -237,7 +229,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
                     onSelect={() => setUserToDelete(row.original)}
                   >
                     <Trash2 className="size-4" />
-                    Deactivate user
+                    Desativar usuário
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -266,53 +258,44 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
   })
 
   const confirmDelete = () => {
-    if (!userToDelete || !canDelete) return
+    if (!userToDelete || !canDelete || deleting) return
+    setDeleting(true)
     router.delete(`/users/${userToDelete.id}`, {
       preserveScroll: true,
-      onFinish: () => setUserToDelete(null),
+      onFinish: () => {
+        setDeleting(false)
+        setUserToDelete(null)
+      },
     })
   }
 
   return (
     <MainLayout>
-      <Head title="Users" />
+      <Head title="Usuários" />
 
-      <AlertDialog
+      <ConfirmDialog
         open={Boolean(userToDelete)}
-        onOpenChange={(open) => !open && setUserToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{userToDelete?.full_name}</strong> will no longer be able to sign in and will
-              disappear from normal user listings.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Deactivate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={(open) => !open && !deleting && setUserToDelete(null)}
+        title="Desativar usuário?"
+        description={`${userToDelete?.full_name ?? 'Este usuário'} não poderá mais entrar e sairá das listagens comuns. O histórico administrativo será preservado.`}
+        confirmLabel="Desativar usuário"
+        destructive
+        processing={deleting}
+        onConfirm={confirmDelete}
+      />
 
       <div className="space-y-6">
         <PageHeader
-          title="Users"
-          description="Manage application users and their global roles."
+          title="Usuários"
+          description="Administre contas e seus papéis globais na plataforma."
           actions={
             canCreate ? (
-              <Link href="/users/create">
-                <Button variant="primary">
+              <Button asChild>
+                <Link href="/users/create">
                   <Plus className="size-4" />
-                  Add user
-                </Button>
-              </Link>
+                  Adicionar usuário
+                </Link>
+              </Button>
             ) : undefined
           }
         />
@@ -320,7 +303,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
         <Card>
           <CardHeader>
             <CardHeading>
-              <CardTitle>All users</CardTitle>
+              <CardTitle>Todos os usuários</CardTitle>
             </CardHeading>
             <CardToolbar>
               <form
@@ -333,7 +316,8 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
                 <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search users..."
+                  placeholder="Buscar por nome ou e-mail"
+                  aria-label="Buscar usuários"
                   className="w-full ps-9 sm:w-64"
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
@@ -346,7 +330,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
               table={table}
               recordCount={total}
               tableLayout={{ rowBorder: true, headerBackground: true }}
-              emptyMessage="No users found."
+              emptyMessage="Nenhum usuário encontrado."
             >
               <DataGridContainer border={false}>
                 <DataGridTable />
