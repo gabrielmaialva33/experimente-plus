@@ -1,8 +1,6 @@
 import { Head, Link } from '@inertiajs/react'
-import { ClipboardCheck, MapPin, Store } from 'lucide-react'
 
 import { LoginForm } from '~/components/auth'
-import { useApp } from '~/hooks/use_app'
 import { AuthSplitLayout } from '~/layouts/auth/auth_split_layout'
 
 interface LoginPageProps {
@@ -10,8 +8,6 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ errors }: LoginPageProps) {
-  const application = useApp()
-
   return (
     <>
       <Head title="Entrar">
@@ -19,27 +15,9 @@ export default function LoginPage({ errors }: LoginPageProps) {
       </Head>
       <AuthSplitLayout
         title="Entrar"
-        subtitle="Acesse o Portal para gerenciar organizações, unidades e publicações."
-        formEyebrow="Portal do parceiro"
-        panelTitle={`Bem-vindo de volta ao ${application.name}`}
-        panelDescription="Gerencie suas organizações e unidades, acompanhe a moderação e mantenha sua presença no catálogo sempre atualizada."
-        features={[
-          {
-            title: 'Portal do parceiro',
-            description: 'Organize empresas e unidades em um só lugar',
-            icon: Store,
-          },
-          {
-            title: 'Fichas com qualidade',
-            description: 'Acompanhe a completude e envie para moderação',
-            icon: ClipboardCheck,
-          },
-          {
-            title: 'Presença regional',
-            description: 'Apareça para quem explora a sua cidade',
-            icon: MapPin,
-          },
-        ]}
+        subtitle="Acesse sua carteira e, quando tiver uma organização, o Portal do parceiro."
+        contextTitle="O catálogo não exige login"
+        contextDescription="Você pode explorar cidades, categorias e estabelecimentos antes de criar uma conta."
         footer={
           <>
             <span className="text-muted-foreground">Ainda não tem conta? </span>

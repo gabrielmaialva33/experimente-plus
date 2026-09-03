@@ -1,8 +1,6 @@
 import { Head, Link } from '@inertiajs/react'
-import { Compass, Store, Users } from 'lucide-react'
 
 import { RegisterForm } from '~/components/auth'
-import { useApp } from '~/hooks/use_app'
 import { AuthSplitLayout } from '~/layouts/auth/auth_split_layout'
 
 interface RegisterPageProps {
@@ -10,8 +8,6 @@ interface RegisterPageProps {
 }
 
 export default function RegisterPage({ errors }: RegisterPageProps) {
-  const application = useApp()
-
   return (
     <>
       <Head title="Criar conta">
@@ -19,28 +15,10 @@ export default function RegisterPage({ errors }: RegisterPageProps) {
       </Head>
       <AuthSplitLayout
         title="Criar conta"
-        subtitle="Crie seu acesso pessoal. A organização e as unidades serão configuradas depois."
-        formEyebrow="Comece pelo seu acesso"
+        subtitle="Crie seu acesso pessoal. Organizações e unidades são configuradas separadamente depois."
         contentWidth="wide"
-        panelTitle={`Faça parte do ${application.name}`}
-        panelDescription="Divulgue seus estabelecimentos, receba retorno da moderação e acompanhe o interesse do público da sua região."
-        features={[
-          {
-            title: 'Cadastro simples',
-            description: 'Crie a organização e as unidades no seu ritmo',
-            icon: Store,
-          },
-          {
-            title: 'Feito para a região',
-            description: 'Descoberta por cidade e categoria, sem intermediários',
-            icon: Compass,
-          },
-          {
-            title: 'Você no controle',
-            description: 'Convide sua equipe e defina quem edita cada ficha',
-            icon: Users,
-          },
-        ]}
+        contextTitle="Uma conta, usos diferentes"
+        contextDescription="A conta começa como acesso pessoal. O Portal é liberado pelas relações reais com organizações, sem escolher um papel global no cadastro."
         footer={
           <>
             <span className="text-muted-foreground">Já tem uma conta? </span>

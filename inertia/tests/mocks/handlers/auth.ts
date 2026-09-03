@@ -9,6 +9,7 @@ interface SignUpBody {
   email?: string
   password?: string
   full_name?: string
+  terms_accepted?: boolean
 }
 
 export const authHandlers = [
@@ -58,7 +59,7 @@ export const authHandlers = [
     const body = (await request.json()) as SignUpBody
 
     // Validate required fields
-    if (!body.email || !body.password || !body.full_name) {
+    if (!body.email || !body.password || !body.full_name || body.terms_accepted !== true) {
       return new HttpResponse(
         JSON.stringify({
           message: 'Validation failed',

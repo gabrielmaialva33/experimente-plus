@@ -5,7 +5,7 @@ import { LoginForm } from '~/components/auth/login_form'
 import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
 import { render } from '~/tests/test_utils'
 
-const { mockPost } = vi.hoisted(() => ({ mockPost: vi.fn() }))
+const mocks = vi.hoisted(() => ({ mockPost: vi.fn(), processing: false }))
 
 // Mock the inertia useForm hook with real local state so the controlled
 // inputs actually update when the user types (the previous static mock left
@@ -27,8 +27,8 @@ vi.mock('@inertiajs/react', async () => {
       return {
         data,
         setData: (key: keyof T, value: unknown) => setData((prev) => ({ ...prev, [key]: value })),
-        post: mockPost,
-        processing: false,
+        post: mocks.mockPost,
+        processing: mocks.processing,
         errors: {} as Record<string, string>,
       }
     },
@@ -38,6 +38,7 @@ vi.mock('@inertiajs/react', async () => {
 describe('LoginForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.processing = false
   })
 
   it('renders the login form with all fields', () => {
@@ -100,7 +101,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Senha'), 'password123')
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
-    expect(mockPost).toHaveBeenCalledWith('/login')
+    expect(mocks.mockPost).toHaveBeenCalledWith('/login')
   })
 
   it('announces the general server error in an accessible alert', () => {
@@ -116,5 +117,14 @@ describe('LoginForm', () => {
     render(<LoginForm errors={{ uid: 'campo obrigatório' }} />)
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('exposes the deterministic loading state to assistive technology', () => {
+    mocks.processing = true
+
+    render(<LoginForm />)
+
+    expect(screen.getByRole('form', { name: 'Entrar' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Entrando...' })).toBeDisabled()
   })
 })

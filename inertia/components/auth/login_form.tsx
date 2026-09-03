@@ -25,7 +25,7 @@ export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" aria-label="Entrar" aria-busy={processing}>
       {generalError ? (
         <Alert variant="destructive" appearance="light">
           <AlertContent>
@@ -69,7 +69,7 @@ export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
 
       <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
         {processing ? <Loader2 className="size-4 animate-spin" /> : null}
-        {processing ? 'Entrando...' : 'Entrar'}
+        <span aria-live="polite">{processing ? 'Entrando...' : 'Entrar'}</span>
       </Button>
     </form>
   )

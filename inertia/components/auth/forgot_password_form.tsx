@@ -20,7 +20,12 @@ export default function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form
+      onSubmit={submit}
+      className="space-y-4"
+      aria-label="Recuperar senha"
+      aria-busy={processing}
+    >
       {flash?.success ? (
         <Alert variant="success" appearance="light">
           <AlertContent>
@@ -39,14 +44,13 @@ export default function ForgotPasswordForm() {
         error={errors.email}
         placeholder="voce@exemplo.com"
         required
-        autoFocus
         autoComplete="email"
         leftIcon={<Mail className="size-4" />}
       />
 
       <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
         {processing ? <Loader2 className="size-4 animate-spin" /> : null}
-        {processing ? 'Enviando...' : 'Enviar link de redefinição'}
+        <span aria-live="polite">{processing ? 'Enviando...' : 'Enviar link de redefinição'}</span>
       </Button>
     </form>
   )

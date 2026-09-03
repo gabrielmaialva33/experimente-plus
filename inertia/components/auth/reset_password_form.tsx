@@ -41,7 +41,12 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form
+      onSubmit={submit}
+      className="space-y-4"
+      aria-label="Redefinir senha"
+      aria-busy={processing}
+    >
       {sharedErrors?.general ? (
         <Alert variant="destructive" appearance="light">
           <AlertContent>
@@ -58,7 +63,6 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         onChange={(event) => setData('password', event.target.value)}
         error={errors.password}
         required
-        autoFocus
         autoComplete="new-password"
       />
 
@@ -77,7 +81,7 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
       <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
         {processing ? <Loader2 className="size-4 animate-spin" /> : null}
-        {processing ? 'Redefinindo...' : 'Redefinir senha'}
+        <span aria-live="polite">{processing ? 'Redefinindo...' : 'Redefinir senha'}</span>
       </Button>
     </form>
   )
