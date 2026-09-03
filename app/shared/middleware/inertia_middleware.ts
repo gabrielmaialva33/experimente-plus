@@ -4,6 +4,7 @@ import type { NextFn } from '@adonisjs/core/types/http'
 import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
 import PermissionService from '#modules/permissions/services/permission_service'
+import { findApplicationSetCookies } from '#shared/utils/public_response_cookies'
 import env from '#start/env'
 
 type SharedUser = {
@@ -21,9 +22,28 @@ type SharedTenant = {
 }
 
 export default class InertiaMiddleware extends BaseInertiaMiddleware {
+  private readonly personalizedPages = new WeakSet<HttpContext>()
+
   async share(ctx: HttpContext) {
     const auth = await this.resolveAuth(ctx)
     const environment = env.get('NODE_ENV')
+    const errors = {
+      ...this.getValidationErrors(ctx),
+      ...(ctx.session?.flashMessages.get('errors') ?? {}),
+    }
+    const flash = {
+      success: ctx.session?.flashMessages.get('success') ?? null,
+      error: ctx.session?.flashMessages.get('error') ?? null,
+    }
+
+    if (
+      auth.user ||
+      Object.keys(errors).length > 0 ||
+      flash.success !== null ||
+      flash.error !== null
+    ) {
+      this.personalizedPages.add(ctx)
+    }
 
     return {
       app: {
@@ -38,14 +58,8 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       // on sign-in, `submission` on portal submit and `moderation` when the
       // PublicationGate blocks an approval. The base middleware only reads
       // the validation bag, so manual flashes would never reach the client.
-      errors: {
-        ...this.getValidationErrors(ctx),
-        ...(ctx.session?.flashMessages.get('errors') ?? {}),
-      },
-      flash: {
-        success: ctx.session?.flashMessages.get('success') ?? null,
-        error: ctx.session?.flashMessages.get('error') ?? null,
-      },
+      errors,
+      flash,
       auth,
     }
   }
@@ -55,9 +69,101 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
 
     try {
       return await next()
+    } catch (error) {
+      if (this.isInertiaRequest(ctx) || this.isPublicCacheCandidate(ctx)) {
+        this.preventCaching(ctx)
+      }
+
+      throw error
     } finally {
       this.dispose(ctx)
     }
+  }
+
+  dispose(ctx: HttpContext) {
+    if (!ctx.response.isPending) {
+      return
+    }
+
+    const varyBeforeDispose = ctx.response.getHeader('Vary')
+
+    super.dispose(ctx)
+
+    // @adonisjs/inertia currently sets Vary with `header`, replacing cache
+    // dimensions already declared by the route. Rebuild it through Adonis'
+    // merge-aware API so Host, X-Inertia and compression variants survive.
+    const varyFields = [varyBeforeDispose, ctx.response.getHeader('Vary')]
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .flatMap((value) => String(value ?? '').split(','))
+      .map((field) => field.trim())
+      .filter(Boolean)
+
+    if (varyFields.length > 0) {
+      ctx.response.removeHeader('Vary')
+      ctx.response.vary(varyFields)
+    }
+
+    const isInertiaRequest = this.isInertiaRequest(ctx)
+    const isPersonalizedPage = this.personalizedPages.has(ctx)
+    const isPublicCacheCandidate = this.isPublicCacheCandidate(ctx)
+
+    // Inertia page objects can be partial, personalized, or replaced with a
+    // version-mismatch response during super.dispose. Shared authenticated
+    // props also make the initial HTML private. Only a successful anonymous
+    // HTML representation may retain the controller's public cache policy.
+    if (
+      isInertiaRequest ||
+      isPersonalizedPage ||
+      (isPublicCacheCandidate && ctx.response.getStatus() !== 200)
+    ) {
+      this.preventCaching(ctx)
+      return
+    }
+
+    if (isPublicCacheCandidate) {
+      this.removeInfrastructureCookiesFromPublicResponse(ctx)
+    }
+  }
+
+  private isInertiaRequest(ctx: HttpContext): boolean {
+    return ctx.inertia.requestInfo().isInertiaRequest
+  }
+
+  private isPublicCacheCandidate(ctx: HttpContext): boolean {
+    return String(ctx.response.getHeader('Cache-Control') ?? '')
+      .split(',')
+      .some((directive) => directive.trim().toLowerCase() === 'public')
+  }
+
+  private preventCaching(ctx: HttpContext): void {
+    ctx.response.header('Cache-Control', 'private, no-store')
+  }
+
+  private removeInfrastructureCookiesFromPublicResponse(ctx: HttpContext): void {
+    const setCookie = ctx.response.getHeader('Set-Cookie')
+    if (setCookie === undefined) {
+      return
+    }
+
+    const applicationCookies = findApplicationSetCookies(setCookie, {
+      session: env.get('SESSION_COOKIE_NAME', 'experimente-plus-session'),
+      csrf: 'XSRF-TOKEN',
+      // The cookie store persists the encrypted values in a second cookie
+      // whose exact name is the current Session.sessionId. Other stores do not.
+      sessionData: env.get('SESSION_DRIVER') === 'cookie' ? ctx.session.sessionId : undefined,
+    })
+
+    if (applicationCookies.length > 0) {
+      this.preventCaching(ctx)
+      return
+    }
+
+    // Session and Shield create fresh session/CSRF cookies even for an anonymous
+    // GET. With the cookie store, session data is a third encrypted cookie named
+    // after the current session id. The public catalog HTML does not embed the
+    // token or expose a mutation form, so none may enter a shared cache entry.
+    // The next non-cacheable page/Inertia response issues a fresh set.
+    ctx.response.removeHeader('Set-Cookie')
   }
 
   private async resolveAuth(ctx: HttpContext): Promise<{

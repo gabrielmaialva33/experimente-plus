@@ -13,19 +13,19 @@ export default class CatalogPagesController {
   constructor(private catalogService: CatalogService) {}
 
   async cities({ inertia, request, response }: HttpContext) {
-    const cities = await this.catalogService.cities(request.hostname())
     this.publicCache(response, 300)
+    const cities = await this.catalogService.cities(request.hostname())
     return inertia.render('catalog/cities', {
       catalog: cities,
     })
   }
 
   async categories({ inertia, params, request, response }: HttpContext) {
+    this.publicCache(response, 300)
     const categories = await this.catalogService.categories(
       request.hostname(),
       String(params.citySlug)
     )
-    this.publicCache(response, 300)
     return inertia.render('catalog/categories', {
       catalog: categories,
       city_slug: categories.city.slug,
@@ -33,6 +33,7 @@ export default class CatalogPagesController {
   }
 
   async index({ inertia, params, request, response }: HttpContext) {
+    this.publicCache(response, 60)
     const payload = await request.validateUsing(catalogSearchValidator)
     const hostname = request.hostname()
     const citySlug = String(params.citySlug)
@@ -49,7 +50,6 @@ export default class CatalogPagesController {
     const result = await this.catalogService.search(hostname, citySlug, query)
     const filterCategories = await this.catalogService.categories(hostname, citySlug)
 
-    this.publicCache(response, 60)
     return inertia.render('catalog/establishments', {
       catalog: result,
       city_slug: result.context.city.slug,
@@ -58,6 +58,7 @@ export default class CatalogPagesController {
   }
 
   async indexByCategory({ inertia, params, request, response }: HttpContext) {
+    this.publicCache(response, 60)
     const payload = await request.validateUsing(catalogSearchValidator)
     const categorySlug = String(params.categorySlug)
     const result = await this.catalogService.search(request.hostname(), String(params.citySlug), {
@@ -77,7 +78,6 @@ export default class CatalogPagesController {
       throw new NotFoundException('Category not found')
     }
 
-    this.publicCache(response, 60)
     return inertia.render('catalog/category', {
       catalog: result,
       city_slug: result.context.city.slug,
@@ -86,12 +86,12 @@ export default class CatalogPagesController {
   }
 
   async show({ inertia, params, request, response }: HttpContext) {
+    this.publicCache(response, 300)
     const establishment = await this.catalogService.show(
       request.hostname(),
       String(params.citySlug),
       String(params.establishmentSlug)
     )
-    this.publicCache(response, 300)
     return inertia.render('catalog/establishment', {
       catalog: establishment,
       city_slug: establishment.city.slug,
@@ -103,6 +103,8 @@ export default class CatalogPagesController {
       'Cache-Control',
       `public, max-age=${maxAge}, stale-while-revalidate=${maxAge * 2}`
     )
-    response.header('Vary', 'Host, Accept-Encoding')
+    // The same URL serves the initial HTML document and the Inertia JSON page.
+    // They must never share a browser/CDN cache entry.
+    response.vary(['Host', 'X-Inertia', 'Accept-Encoding'])
   }
 }

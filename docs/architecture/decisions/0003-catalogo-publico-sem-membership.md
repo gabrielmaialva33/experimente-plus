@@ -116,6 +116,25 @@ versão da projeção
 
 Publicação, suspensão, alteração de cidade/categoria e nova revisão aprovada invalidam as chaves relacionadas. O cache nunca torna um item suspenso permanentemente visível; a invalidação faz parte da mesma operação de mudança de estado ou de um evento confiável com retry.
 
+A API JSON allowlisted e não personalizada pode manter cache público, variando por `Host` e pelas
+dimensões de representação adicionadas pela pilha HTTP, como `Accept-Encoding`.
+
+Nas páginas Inertia, somente o documento HTML inicial, anônimo e com status `200`, pode manter
+`Cache-Control: public`. O mesmo HTML passa a ser `private, no-store` quando a renderização
+compartilha usuário, e-mail, tenants ou permissões. Toda requisição com `X-Inertia` termina como
+`private, no-store`, inclusive visitas completas, recargas parciais, incompatibilidade de versão
+(`409`), redirects e erros. Respostas não `200` das rotas web cacheáveis também são `private,
+no-store`.
+
+O HTML cacheável varia por `Host`, `X-Inertia` e `Accept-Encoding`, com composição aditiva de
+`Vary`. `Cookie` e `Authorization` não entram em `Vary`: respostas personalizadas não são
+armazenáveis, em vez de multiplicarem chaves de cache por credencial.
+
+Os cookies técnicos de sessão e CSRF criados automaticamente durante um GET são removidos somente
+das respostas anônimas allowlisted que permanecerem públicas; o HTML do catálogo nesse conjunto não
+contém formulário mutável. Qualquer outro `Set-Cookie` torna a resposta `private, no-store`; a
+próxima resposta não cacheável emite um novo par de sessão e CSRF.
+
 ### Preview privado
 
 Parceiros, Moderadores e Administradores poderão visualizar rascunhos por uma rota privada de preview. Preview:
@@ -187,4 +206,9 @@ Rejeitada. É mais seguro construir DTOs públicos allowlisted do que depender d
 - DTO público não contém CNPJ, memberships ou moderação;
 - `temporarily_closed` aparece sinalizado e não passa em “aberto agora”;
 - `permanently_closed` não aparece em busca normal;
-- preview exige autorização e não usa cache público.
+- preview exige autorização e não usa cache público;
+- somente HTML anônimo `200` mantém cache público nas páginas;
+- HTML autenticado e toda resposta a `X-Inertia` usam `private, no-store`;
+- recarga parcial, incompatibilidade de versão, redirect, `404` e demais erros de página não usam
+  cache público;
+- API pública não personalizada mantém cache público e mescla `Vary: Host, Accept-Encoding`.

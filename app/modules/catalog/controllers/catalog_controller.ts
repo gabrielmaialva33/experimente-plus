@@ -56,6 +56,6 @@ export default class CatalogController {
       'Cache-Control',
       `public, max-age=${maxAge}, stale-while-revalidate=${maxAge * 2}`
     )
-    response.header('Vary', 'Host, Accept-Encoding')
+    response.vary(['Host', 'Accept-Encoding'])
   }
 }

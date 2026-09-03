@@ -116,6 +116,31 @@ As URLs usam slugs. IDs internos, autorias, notas de revisão, checksums, evento
 
 As páginas públicas recebem os dados no servidor e renderizam conteúdo útil sem depender de JavaScript no primeiro carregamento. A ficha inclui JSON-LD `LocalBusiness` apenas com dados publicados. O sitemap pode ser acrescentado sobre a mesma projeção quando a política de indexação e canonicalização estiver fechada.
 
+Uma URL de página pública possui duas representações: o documento HTML inicial e o page object JSON
+das visitas Inertia. Somente o HTML anônimo com status `200` é cacheável publicamente. Se a
+renderização compartilhar usuário, e-mail, tenants ou permissões, o HTML usa `Cache-Control:
+private, no-store`.
+
+Toda requisição com `X-Inertia` usa `private, no-store`, inclusive visita completa, recarga parcial,
+incompatibilidade de versão (`409`), redirect ou erro. Respostas não `200` das rotas web cacheáveis
+também não são armazenáveis. A política não depende de variar por todos os cabeçalhos de recarga
+parcial ou versão, eliminando a possibilidade de um page object reduzido ou personalizado contaminar
+um cache compartilhado.
+
+O HTML público cacheável varia obrigatoriamente por `Host` e `X-Inertia`, mantendo também dimensões
+adicionadas pela pilha HTTP, como `Accept-Encoding`. Middlewares mesclam `Vary`, nunca substituem
+dimensões já declaradas. `Cookie` e `Authorization` não são dimensões de `Vary`: respostas com dados
+autenticados são `private, no-store`. A API JSON allowlisted e não personalizada continua cacheável
+publicamente e varia por `Host` e `Accept-Encoding`.
+
+Como Session e Shield emitem cookies técnicos mesmo em um GET anônimo, respostas allowlisted que
+permanecerem públicas removem os cookies de sessão/CSRF; o HTML do catálogo nesse conjunto não contém
+formulário mutável. Com o driver `cookie`, além do cookie configurado que referencia a sessão, o
+store persiste os dados criptografados em outro cookie cujo nome é exatamente o identificador da
+sessão atual exposto por `Session.sessionId`. Somente esses nomes técnicos exatos são removidos. Um
+cookie adicional — inclusive outro nome em formato UUID — rebaixa a resposta para `private,
+no-store`.
+
 ## Integridade e segurança
 
 - operação pública não é escolhida por parâmetros do usuário;
@@ -160,3 +185,8 @@ As páginas públicas recebem os dados no servidor e renderizam conteúdo útil 
 - página de encerrado permanentemente não contém CTA;
 - rebuild completo produz a mesma projeção lógica;
 - versão de cache muda após qualquer fonte relevante.
+- HTML público anônimo `200` preserva `Vary: Host, X-Inertia, Accept-Encoding`;
+- HTML autenticado nunca usa cache público, mesmo na mesma URL do catálogo;
+- toda resposta a `X-Inertia`, inclusive parcial ou `409` por versão, usa `private, no-store`;
+- redirect, `404` e demais respostas não `200` das páginas cacheáveis usam `private, no-store`;
+- API JSON pública permanece cacheável e preserva `Vary: Host, Accept-Encoding`.

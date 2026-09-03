@@ -2,6 +2,7 @@ import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import app from '@adonisjs/core/services/app'
+import type { HttpContext } from '@adonisjs/core/http'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 import type { ApiClient } from '@japa/api-client'
@@ -12,6 +13,7 @@ import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRevisionMedia from '#modules/media/models/establishment_revision_media'
 import IRoles from '#modules/roles/interfaces/role_interface'
+import CatalogPagesController from '#modules/catalog/controllers/catalog_pages_controller'
 import CatalogService from '#modules/catalog/services/catalog_service'
 import {
   createEstablishmentScenario,
@@ -30,6 +32,7 @@ const publicHeaders = (scenario: EstablishmentScenario) => ({
 interface TestInertiaPage {
   component: string
   props: Record<string, unknown>
+  version?: string
 }
 
 function parseInertiaPage(response: { text(): string }): TestInertiaPage {
@@ -247,6 +250,189 @@ test.group('Public catalog', (group) => {
       errors: [{ field: 'per_page', rule: 'withoutDecimals' }],
     })
     assert.equal(searchCalls, 0)
+  })
+
+  test('only caches anonymous HTML while keeping Inertia and personalized pages private', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('catalog-inertia-cache')
+    const pagePath = '/cidades'
+    const pageHeaders = publicHeaders(scenario)
+
+    const html = await client.get(pagePath).headers(pageHeaders)
+
+    html.assertStatus(200)
+    html.assertHeader('cache-control', 'public, max-age=300, stale-while-revalidate=600')
+    assert.match(String(html.header('content-type')), /^text\/html\b/)
+    assert.notExists(html.header('x-inertia'))
+    assert.notExists(html.header('set-cookie'))
+    const htmlPage = parseInertiaPage(html)
+    assert.equal(htmlPage.component, 'catalog/cities')
+    assert.isString(htmlPage.version)
+    assert.isNull((htmlPage.props.auth as { user: unknown }).user)
+
+    const htmlVary = String(html.header('vary'))
+      .split(',')
+      .map((field) => field.trim().toLowerCase())
+    assert.includeMembers(htmlVary, ['host', 'x-inertia', 'accept-encoding'])
+    assert.notIncludeMembers(htmlVary, ['cookie', 'authorization'])
+
+    const inertiaHeaders = {
+      ...pageHeaders,
+      'x-inertia': 'true',
+      'x-inertia-version': String(htmlPage.version),
+    }
+    const inertia = await client.get(pagePath).headers(inertiaHeaders)
+
+    inertia.assertStatus(200)
+    inertia.assertHeader('cache-control', 'private, no-store')
+    inertia.assertHeader('x-inertia', 'true')
+    assert.match(String(inertia.header('content-type')), /^application\/json\b/)
+    assert.equal(inertia.body().component, 'catalog/cities')
+    assert.deepEqual(inertia.body().props.catalog, htmlPage.props.catalog)
+
+    const inertiaVary = String(inertia.header('vary'))
+      .split(',')
+      .map((field) => field.trim().toLowerCase())
+    assert.includeMembers(inertiaVary, ['host', 'x-inertia', 'accept-encoding'])
+    assert.notIncludeMembers(inertiaVary, ['cookie', 'authorization'])
+
+    const partial = await client.get(pagePath).headers({
+      ...inertiaHeaders,
+      'x-inertia-partial-component': 'catalog/cities',
+      'x-inertia-partial-data': 'catalog',
+    })
+
+    partial.assertStatus(200)
+    partial.assertHeader('cache-control', 'private, no-store')
+    partial.assertHeader('x-inertia', 'true')
+    assert.deepEqual(partial.body().props, { catalog: htmlPage.props.catalog })
+    assert.include((partial.body().sharedProps as string[]) ?? [], 'auth')
+
+    const versionMismatch = await client.get(pagePath).headers({
+      ...pageHeaders,
+      'x-inertia': 'true',
+      'x-inertia-version': 'stale-assets-version',
+    })
+
+    versionMismatch.assertStatus(409)
+    versionMismatch.assertHeader('cache-control', 'private, no-store')
+    versionMismatch.assertHeader('x-inertia-location', pagePath)
+    versionMismatch.assertHeader('x-inertia-version', String(htmlPage.version))
+    assert.notExists(versionMismatch.header('x-inertia'))
+
+    const authenticatedHtml = await client
+      .get(pagePath)
+      .headers(pageHeaders)
+      .loginAs(scenario.owner)
+
+    authenticatedHtml.assertStatus(200)
+    authenticatedHtml.assertHeader('cache-control', 'private, no-store')
+    const authenticatedPage = parseInertiaPage(authenticatedHtml)
+    const authenticatedUser = (
+      authenticatedPage.props.auth as { user: { id: number; email: string } | null }
+    ).user
+    assert.deepInclude(authenticatedUser, {
+      id: scenario.owner.id,
+      email: scenario.owner.email,
+    })
+
+    const flashedHtml = await client
+      .get(pagePath)
+      .headers(pageHeaders)
+      .withFlashMessages({ success: 'Mensagem individual do visitante' })
+
+    flashedHtml.assertStatus(200)
+    flashedHtml.assertHeader('cache-control', 'private, no-store')
+    assert.equal(
+      (parseInertiaPage(flashedHtml).props.flash as { success: string | null }).success,
+      'Mensagem individual do visitante'
+    )
+
+    const authenticatedInertia = await client
+      .get(pagePath)
+      .headers(inertiaHeaders)
+      .loginAs(scenario.owner)
+
+    authenticatedInertia.assertStatus(200)
+    authenticatedInertia.assertHeader('cache-control', 'private, no-store')
+    assert.deepInclude(authenticatedInertia.body().props.auth.user, {
+      id: scenario.owner.id,
+      email: scenario.owner.email,
+    })
+
+    const notFound = await client
+      .get(`/cidades/${scenario.city.slug}/categorias/categoria-inexistente`)
+      .headers(pageHeaders)
+
+    notFound.assertStatus(404)
+    notFound.assertHeader('cache-control', 'private, no-store')
+
+    const redirect = await client
+      .get(`/cidades/${scenario.city.slug}?page=1.5`)
+      .headers({ ...pageHeaders, accept: 'text/html', referer: pagePath })
+      .redirects(0)
+
+    redirect.assertStatus(302)
+    redirect.assertHeader('cache-control', 'private, no-store')
+    redirect.assertHeader('location', pagePath)
+
+    const api = await client.get('/api/v1/catalog/cities').headers(pageHeaders)
+
+    api.assertStatus(200)
+    api.assertHeader('cache-control', 'public, max-age=300, stale-while-revalidate=600')
+    assert.notExists(api.header('set-cookie'))
+    const apiVary = String(api.header('vary'))
+      .split(',')
+      .map((field) => field.trim().toLowerCase())
+    assert.includeMembers(apiVary, ['host', 'accept-encoding'])
+    assert.notIncludeMembers(apiVary, ['x-inertia', 'cookie', 'authorization'])
+  })
+
+  test('removes the active session infrastructure cookies from anonymous public HTML', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('catalog-session-cookie-cache')
+    const html = await client.get('/cidades').headers(publicHeaders(scenario))
+
+    html.assertStatus(200)
+    html.assertHeader('cache-control', 'public, max-age=300, stale-while-revalidate=600')
+    assert.notExists(html.header('set-cookie'))
+  })
+
+  test('keeps an unrelated UUID cookie and downgrades the HTML response to private', async ({
+    client,
+    assert,
+    cleanup,
+  }) => {
+    const unrelatedCookieName = 'f88c68d1-aad2-40bb-b619-402a7c1f5521'
+    const originalCities = CatalogPagesController.prototype.cities
+
+    CatalogPagesController.prototype.cities = async function (ctx: HttpContext) {
+      ctx.response.cookie(unrelatedCookieName, 'application-data', {
+        httpOnly: true,
+        sameSite: 'lax',
+      })
+      return originalCities.call(this, ctx)
+    }
+    cleanup(() => {
+      CatalogPagesController.prototype.cities = originalCities
+    })
+
+    const scenario = await createEstablishmentScenario('catalog-application-cookie-cache')
+    const html = await client.get('/cidades').headers(publicHeaders(scenario))
+    const setCookieHeader = html.headers()['set-cookie'] as string | string[] | undefined
+    const setCookies = Array.isArray(setCookieHeader)
+      ? setCookieHeader
+      : setCookieHeader
+        ? [setCookieHeader]
+        : []
+
+    html.assertStatus(200)
+    html.assertHeader('cache-control', 'private, no-store')
+    assert.isTrue(setCookies.some((cookie) => cookie.startsWith(`${unrelatedCookieName}=`)))
   })
 
   test('keeps drafts private and exposes an allowlisted projection after atomic publication', async ({
