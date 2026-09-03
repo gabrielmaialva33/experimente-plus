@@ -173,7 +173,9 @@ function AppearanceTab() {
                   {active ? <Check aria-hidden="true" className="size-4 text-primary" /> : null}
                 </span>
                 <span>
-                  <span className="block text-sm font-semibold text-foreground">{option.label}</span>
+                  <span className="block text-sm font-semibold text-foreground">
+                    {option.label}
+                  </span>
                   <span className="mt-1 block text-xs leading-5">{option.description}</span>
                 </span>
               </button>
@@ -220,11 +222,7 @@ function AccountTab() {
         </CardHeading>
       </CardHeader>
       <CardContent>
-        <form
-          onSubmit={requestDeletion}
-          aria-busy={form.processing}
-          className="max-w-xl space-y-5"
-        >
+        <form onSubmit={requestDeletion} aria-busy={form.processing} className="max-w-xl space-y-5">
           {generalError ? (
             <Alert variant="destructive" role="alert">
               <AlertTitle>Não foi possível excluir a conta</AlertTitle>
@@ -329,8 +327,8 @@ function OperationsTab() {
         <CardHeading>
           <CardTitle>Operações</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Operações isolam dados privados. Cidades e organizações continuam dentro da
-            operação selecionada.
+            Operações isolam dados privados. Cidades e organizações continuam dentro da operação
+            selecionada.
           </p>
         </CardHeading>
       </CardHeader>
