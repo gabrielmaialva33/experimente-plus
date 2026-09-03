@@ -594,13 +594,7 @@ export default function BenefitsBackofficePage({
 
                       <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row sm:flex-wrap">
                         {canListAccesses ? (
-                          <Button
-                            asChild
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="min-h-10 flex-1"
-                          >
+                          <Button asChild variant="outline" size="sm" className="min-h-10 flex-1">
                             <Link href="/backoffice/accesses">
                               <UsersRound aria-hidden="true" />
                               Acessos

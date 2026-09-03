@@ -63,14 +63,16 @@ export default function ModerationRevisionPage({
 
   return (
     <MainLayout>
-      <Head title={`Moderar ${text(revision, 'public_name', 'revisão')}`} />
+      <Head title="Revisão de conteúdo" />
 
       <div className="space-y-8">
         <PageHeader
-          eyebrow="Moderação de conteúdo"
-          title={publicName}
+          eyebrow="Moderação"
+          title="Revisão de conteúdo"
           description={
-            submittedAt ? `Submetida em ${submittedAt}` : 'Data de submissão indisponível'
+            submittedAt
+              ? `${publicName} · submetida em ${submittedAt}`
+              : `${publicName} · data de submissão indisponível`
           }
           meta={
             <>

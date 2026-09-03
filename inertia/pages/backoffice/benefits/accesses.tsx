@@ -188,13 +188,13 @@ export default function BenefitAccessesPage({
 
   return (
     <MainLayout>
-      <Head title="Acessos às edições" />
+      <Head title="Acessos a edições" />
 
       <div className="space-y-7">
         <PageHeader
           eyebrow="Operação comercial"
           icon={WalletCards}
-          title="Acessos às edições"
+          title="Acessos a edições"
           description="Conceda uma edição a usuários já cadastrados na operação. A carteira é liberada imediatamente e seus benefícios são derivados das ofertas ativas."
           meta={
             <>
