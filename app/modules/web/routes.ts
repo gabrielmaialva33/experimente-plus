@@ -4,8 +4,10 @@ import IPermission from '#modules/permissions/interfaces/permission_interface'
 import env from '#start/env'
 import { middleware } from '#start/kernel'
 import { passwordResetRequestThrottle, passwordResetThrottle } from '#start/limiter'
+import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
 
 const InertiaAuthController = () => import('#modules/web/controllers/auth_controller')
+const InertiaLegalController = () => import('#modules/web/controllers/legal_controller')
 const InertiaDashboardController = () => import('#modules/web/controllers/dashboard_controller')
 const InertiaAnalyticsController = () =>
   import('#modules/analytics/controllers/analytics_pages_controller')
@@ -54,11 +56,14 @@ router
   .as('password.reset.post')
   .use([middleware.guest({ guards: ['jwt'] }), passwordResetThrottle])
 
+router.get('/termos', [InertiaLegalController, 'terms']).as('legal.terms')
+router.get('/privacidade', [InertiaLegalController, 'privacy']).as('legal.privacy')
+
 router
   .get('/', async ({ auth, response, inertia }) => {
     try {
-      await auth.use('jwt').authenticate()
-      return response.redirect('/dashboard')
+      const user = await auth.use('jwt').authenticate()
+      return response.redirect(await resolveAuthenticatedLandingPath(user))
     } catch {
       return inertia.render('home', {})
     }

@@ -190,9 +190,8 @@ router
   .use(middleware.tenant({ required: true }))
 
 router
-  .get('/carteira', [BenefitWalletController, 'page'])
+  .get('/carteira', ({ response }) => response.redirect().toPath('/wallet'))
   .use(middleware.auth({ guards: ['jwt'] }))
-  .use(middleware.tenant({ required: true }))
 
 // EP-11 — presentation and transactional redemption
 const BenefitRedemptionsController = () =>

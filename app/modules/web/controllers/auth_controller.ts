@@ -11,7 +11,11 @@ import {
   resetPasswordValidator,
 } from '#modules/auth/validators/session_validator'
 import IRole from '#modules/roles/interfaces/role_interface'
-import { createUserValidator, signInValidator } from '#modules/users/validators/users_validator'
+import {
+  publicRegistrationValidator,
+  signInValidator,
+} from '#modules/users/validators/users_validator'
+import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
 
 export default class InertiaAuthController {
   async showLogin({ inertia }: HttpContext) {
@@ -72,7 +76,9 @@ export default class InertiaAuthController {
         .use('jwt')
         .generate(result.user, result.activeTenantId ? { tenantId: result.activeTenantId } : {})
 
-      return response.redirect('/dashboard')
+      return response.redirect(
+        await resolveAuthenticatedLandingPath(result.user, result.activeTenantId)
+      )
     } catch {
       session.flash('errors', {
         general: 'Não foi possível entrar. Verifique suas credenciais e tente novamente.',
@@ -85,7 +91,13 @@ export default class InertiaAuthController {
     const { request, response, session, auth } = ctx
 
     try {
-      const data = await request.validateUsing(createUserValidator)
+      const registration = await request.validateUsing(publicRegistrationValidator)
+      const data = {
+        full_name: registration.full_name,
+        email: registration.email,
+        username: registration.username,
+        password: registration.password,
+      }
       const signUpService = await app.container.make(SignUpService)
       const { user, activeTenantId, emailVerificationSent } = await signUpService.run(data, {
         issueApiTokens: false,
@@ -104,7 +116,7 @@ export default class InertiaAuthController {
       )
       AuthEventService.emitLoginSucceeded(user, 'password', isAdmin, ctx)
 
-      return response.redirect('/dashboard')
+      return response.redirect(await resolveAuthenticatedLandingPath(user, activeTenantId))
     } catch (error) {
       if (error && typeof error === 'object' && 'messages' in error) {
         session.flash('errors', error.messages as Record<string, unknown>)
