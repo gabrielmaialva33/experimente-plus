@@ -26,6 +26,9 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/portal/redemptions/validate?token=ABC')?.id).toBe(
       'portal-redemption-validation'
     )
+    expect(resolveRouteMetadata('/organizations/42/analytics')?.id).toBe(
+      'portal-organization-analytics'
+    )
   })
 
   it('normalizes query strings and trailing slashes when matching navigation', () => {
@@ -41,6 +44,28 @@ describe('navigation configuration', () => {
     expect(consumerItems.some((item) => ['/', '/dashboard', '/settings'].includes(item.href))).toBe(
       false
     )
+  })
+
+  it('keeps Portal and Backoffice as separate navigation contexts', () => {
+    const portalItems = navigationItemsForSurface('portal', 'sidebar', { activeTenantId: 12 })
+    const backofficeItems = navigationItemsForSurface('backoffice', 'sidebar', {
+      activeTenantId: 12,
+    })
+
+    expect(portalItems.map((item) => item.href)).toEqual(['/portal', '/portal/redemptions'])
+    expect(portalItems.every((item) => item.surface === 'portal')).toBe(true)
+    expect(backofficeItems.every((item) => item.surface === 'backoffice')).toBe(true)
+    expect(backofficeItems.some((item) => item.href.startsWith('/portal'))).toBe(false)
+    expect(backofficeItems.some((item) => item.href === '/settings')).toBe(false)
+  })
+
+  it('keeps personal settings outside operational navigation', () => {
+    expect(resolveRouteMetadata('/settings')).toMatchObject({
+      id: 'consumer-settings',
+      surface: 'consumer',
+      title: 'Conta e preferências',
+    })
+    expect(NAVIGATION_ITEMS.some((item) => item.href === '/settings')).toBe(false)
   })
 
   it('keeps authenticated and guest public navigation in the central tree', () => {
@@ -144,5 +169,12 @@ describe('navigation configuration', () => {
 
     expect(benefitsPage).not.toContain(removedRoute)
     expect(benefitsPage).toContain('href="/portal/redemptions"')
+  })
+
+  it('does not link to a non-existent benefit-edition access page', () => {
+    const benefitsPage = readFileSync('inertia/pages/backoffice/benefits/index.tsx', 'utf8')
+
+    expect(benefitsPage).not.toMatch(/\/backoffice\/benefits\/\$\{edition\.id\}\/accesses/)
+    expect(benefitsPage).toContain('/backoffice/accesses')
   })
 })
