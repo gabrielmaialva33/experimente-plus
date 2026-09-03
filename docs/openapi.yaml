@@ -5227,7 +5227,7 @@ paths:
     post:
       operationId: signUp
       summary: User registration
-      description: Creates a user, assigns the default role, optionally creates a personal workspace according to `REGISTRATION_WORKSPACE_MODE`, and returns tenant-scoped API tokens. Email delivery failure does not roll back the account.
+      description: Creates a user after explicit acceptance of the current Terms of Use and Privacy Policy, assigns the default role, optionally creates a personal workspace according to `REGISTRATION_WORKSPACE_MODE`, and returns tenant-scoped API tokens. Acceptance is required at the request boundary; this version does not claim to persist versioned legal evidence. Email delivery failure does not roll back the account.
       tags:
         - Authentication
       security: []
@@ -5242,6 +5242,7 @@ paths:
                 - email
                 - password
                 - password_confirmation
+                - terms_accepted
               properties:
                 full_name:
                   type: string
@@ -5263,6 +5264,10 @@ paths:
                   type: string
                   format: password
                   example: 'password123'
+                terms_accepted:
+                  type: boolean
+                  enum: [true]
+                  description: Must be true after the user reads the current Terms of Use and Privacy Policy.
       responses:
         '201':
           description: Registration successful

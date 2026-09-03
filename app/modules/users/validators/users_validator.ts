@@ -1,7 +1,7 @@
 import vine from '@vinejs/vine'
 
-export const createUserValidator = vine.compile(
-  vine.object({
+function userCreationFields() {
+  return {
     full_name: vine.string().trim(),
     email: vine
       .string()
@@ -21,6 +21,21 @@ export const createUserValidator = vine.compile(
       })
       .optional(),
     password: vine.string().minLength(8).confirmed({ confirmationField: 'password_confirmation' }),
+  }
+}
+
+/** Administrative user creation does not represent a public terms acceptance. */
+export const createUserValidator = vine.compile(vine.object(userCreationFields()))
+
+/**
+ * Public registration must explicitly accept the current legal documents. The
+ * acceptance is validated at the boundary and intentionally not persisted as
+ * evidence until the product defines a versioned consent/audit contract.
+ */
+export const publicRegistrationValidator = vine.compile(
+  vine.object({
+    ...userCreationFields(),
+    terms_accepted: vine.accepted(),
   })
 )
 

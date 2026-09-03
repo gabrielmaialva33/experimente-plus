@@ -75,6 +75,19 @@ Descobrir, organizar e compartilhar experiências locais de maneira personalizad
 
 A exigência de visita para avaliar ainda está aberta na especificação e não deve ser implementada até existir uma regra verificável.
 
+### Aceite no cadastro do piloto
+
+O cadastro público exige a confirmação explícita dos documentos disponíveis em `/termos` e
+`/privacidade`. A validação ocorre no boundary HTTP tanto no formulário web quanto na API pública;
+criação administrativa de usuário não representa aceite em nome de outra pessoa.
+
+O schema atual não possui contrato versionado de consentimento. Por isso, o valor aceito não é
+gravado no usuário e a aplicação não afirma possuir timestamp ou prova auditável de aceite. Antes de
+uma operação pública em escala, conteúdo, canal de privacidade, versionamento e eventual evidência
+persistida precisam de decisão jurídica e técnica própria. As regressões ficam em
+`tests/functional/web/auth.spec.ts`, `tests/functional/sessions/sign_up.spec.ts` e
+`inertia/tests/components/auth/`.
+
 ### Jornada prioritária
 
 ```text

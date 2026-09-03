@@ -71,7 +71,8 @@ Content-Type: application/json
 }
 
 ### Sign Up (Register)
-# Creates new user account and returns tokens
+# Creates a new user account and returns tokens. The current API validates the
+# acceptance but does not persist versioned evidence of the accepted documents.
 POST {{baseUrl}}/api/v1/sessions/sign-up
 Content-Type: application/json
 
@@ -80,7 +81,8 @@ Content-Type: application/json
   "email": "john@example.com",
   "username": "johndoe",
   "password": "password123",
-  "password_confirmation": "password123"
+  "password_confirmation": "password123",
+  "terms_accepted": true
 }
 
 ### Sign Up (Minimal - without username)
@@ -91,7 +93,8 @@ Content-Type: application/json
   "full_name": "Jane Smith",
   "email": "jane@example.com",
   "password": "password123",
-  "password_confirmation": "password123"
+  "password_confirmation": "password123",
+  "terms_accepted": true
 }
 
 ### Request Password Reset

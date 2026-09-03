@@ -32,6 +32,7 @@ test.group('Sessions sign up', (group) => {
       username: 'janedoe',
       password: 'password123',
       password_confirmation: 'password123',
+      terms_accepted: true,
     }
 
     const response = await client.post('/api/v1/sessions/sign-up').json(userData)
@@ -86,6 +87,7 @@ test.group('Sessions sign up', (group) => {
       username: 'operation-member',
       password: 'password123',
       password_confirmation: 'password123',
+      terms_accepted: true,
     })
 
     response.assertStatus(201)
@@ -122,6 +124,7 @@ test.group('Sessions sign up', (group) => {
       username: 'delivery-failure',
       password: 'password123',
       password_confirmation: 'password123',
+      terms_accepted: true,
     })
 
     response.assertStatus(201)
@@ -149,6 +152,7 @@ test.group('Sessions sign up', (group) => {
         username: 'janedoe',
         password: 'password123',
         password_confirmation: 'password123',
+        terms_accepted: true,
       })
 
     response.assertStatus(422)
@@ -179,6 +183,7 @@ test.group('Sessions sign up', (group) => {
         username: 'johndoe',
         password: 'password123',
         password_confirmation: 'password123',
+        terms_accepted: true,
       })
 
     response.assertStatus(422)
@@ -216,6 +221,10 @@ test.group('Sessions sign up', (group) => {
           rule: 'required',
           message: 'The password field must be defined',
         },
+        {
+          field: 'terms_accepted',
+          rule: 'required',
+        },
       ],
     })
   })
@@ -230,6 +239,7 @@ test.group('Sessions sign up', (group) => {
         username: 'janedoe',
         password: 'password123',
         password_confirmation: 'password123',
+        terms_accepted: true,
       })
 
     response.assertStatus(422)
@@ -253,6 +263,7 @@ test.group('Sessions sign up', (group) => {
         username: 'janedoe',
         password: '12345',
         password_confirmation: '12345',
+        terms_accepted: true,
       })
 
     response.assertStatus(422)
@@ -273,6 +284,7 @@ test.group('Sessions sign up', (group) => {
       username: 'least-privilege',
       password: 'password123',
       password_confirmation: 'password123',
+      terms_accepted: true,
     })
 
     response.assertStatus(201)
@@ -320,6 +332,7 @@ test.group('Sessions sign up', (group) => {
       username: 'janeuser',
       password: 'password123',
       password_confirmation: 'password123',
+      terms_accepted: true,
     }
 
     const response = await client.post('/api/v1/sessions/sign-up').json(userData)
@@ -337,5 +350,30 @@ test.group('Sessions sign up', (group) => {
 
     assert.lengthOf(userRoles, 1)
     assert.equal(userRoles[0].slug, 'user')
+  })
+
+  test('should reject public registration when legal documents are not accepted', async ({
+    client,
+  }) => {
+    const response = await client
+      .post('/api/v1/sessions/sign-up')
+      .header('Accept', 'application/json')
+      .json({
+        full_name: 'No Legal Acceptance',
+        email: 'no-legal-acceptance@example.com',
+        password: 'password123',
+        password_confirmation: 'password123',
+        terms_accepted: false,
+      })
+
+    response.assertStatus(422)
+    response.assertBodyContains({
+      errors: [
+        {
+          field: 'terms_accepted',
+          rule: 'accepted',
+        },
+      ],
+    })
   })
 })

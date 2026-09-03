@@ -5,7 +5,10 @@ import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service
 import SignInService from '#modules/auth/services/sign_in_service'
 import SignUpService from '#modules/auth/services/sign_up_service'
 import { refreshSessionValidator } from '#modules/auth/validators/session_validator'
-import { createUserValidator, signInValidator } from '#modules/users/validators/users_validator'
+import {
+  publicRegistrationValidator,
+  signInValidator,
+} from '#modules/users/validators/users_validator'
 
 export default class SessionsController {
   async signIn(ctx: HttpContext) {
@@ -33,7 +36,13 @@ export default class SessionsController {
   }
 
   async signUp({ request, response }: HttpContext) {
-    const payload = await request.validateUsing(createUserValidator)
+    const registration = await request.validateUsing(publicRegistrationValidator)
+    const payload = {
+      full_name: registration.full_name,
+      email: registration.email,
+      username: registration.username,
+      password: registration.password,
+    }
     const service = await app.container.make(SignUpService)
     const { user, auth, emailVerificationSent } = await service.run(payload)
 

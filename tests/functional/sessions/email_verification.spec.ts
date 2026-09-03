@@ -25,6 +25,7 @@ test.group('Email verification', (group) => {
       email: 'testverify@example.com',
       password: 'password123',
       password_confirmation: 'password123',
+      terms_accepted: true,
     })
 
     response.assertStatus(201)
