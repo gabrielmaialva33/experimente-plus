@@ -333,7 +333,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
               tableLayout={{ rowBorder: true, headerBackground: true }}
               emptyMessage="Nenhum usuário encontrado."
             >
-              <DataGridContainer border={false}>
+              <DataGridContainer border={false} ariaLabel="Lista de usuários">
                 <DataGridTable />
               </DataGridContainer>
               <div className="border-t p-4">

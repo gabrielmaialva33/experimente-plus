@@ -79,7 +79,7 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
       <div className="space-y-6">
         <PageHeader
           title="Permissões"
-          description="Capacidades globais agrupadas por recurso. As policies do domínio continuam limitando cada organização e unidade."
+          description="Capacidades globais agrupadas por recurso. As regras do domínio continuam limitando cada organização e unidade."
         />
 
         <div className="relative max-w-sm">

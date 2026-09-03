@@ -86,7 +86,7 @@ export default function CreateUserPage() {
               />
             </CardContent>
             <CardFooter className="justify-end gap-2 border-t pt-5">
-              <Button asChild variant="outline" type="button">
+              <Button asChild variant="outline">
                 <Link href="/users">Cancelar</Link>
               </Button>
               <Button variant="primary" type="submit" disabled={processing}>

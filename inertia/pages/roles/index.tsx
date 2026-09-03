@@ -136,8 +136,9 @@ export default function RolesPage({ roles }: RolesPageProps) {
 
       <div className="space-y-6">
         <PageHeader
-          title="Papéis globais"
-          description="Papéis agrupam capacidades da plataforma. O acesso a organizações continua dependendo de membership e policy de domínio."
+          eyebrow="Administração global"
+          title="Papéis"
+          description="Papéis agrupam capacidades da plataforma. O acesso a organizações continua dependendo do vínculo e das regras de domínio."
         />
 
         {roles.length === 0 ? (
