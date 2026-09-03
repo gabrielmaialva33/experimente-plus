@@ -75,6 +75,30 @@ export namespace ICatalog {
     establishments_count: number
   }
 
+  export interface CategoryIdentityRow {
+    slug: string
+    name: string
+    description: string | null
+    icon: string | null
+    parent_slug: string | null
+    family_slug: string
+    family_name: string
+    family_icon: string | null
+  }
+
+  export interface CategoryIdentityProjection {
+    slug: string
+    name: string
+    description: string | null
+    icon: string | null
+    parent_slug: string | null
+    family: {
+      slug: string
+      name: string
+      icon: string | null
+    }
+  }
+
   export interface AddressProjection {
     postal_code: string | null
     street: string | null
@@ -219,14 +243,18 @@ export namespace ICatalog {
   }
 
   export interface SearchResult {
+    context: {
+      city: Pick<CityProjection, 'slug' | 'name' | 'state_code' | 'timezone'>
+      category: CategoryIdentityProjection | null
+    }
     meta: {
       total: number
       page: number
       per_page: number
       last_page: number
       first_page: number
-      first_page_url: string | null
-      last_page_url: string | null
+      first_page_url: string
+      last_page_url: string
       next_page_url: string | null
       previous_page_url: string | null
     }

@@ -26,11 +26,10 @@ O catálogo também precisa lidar corretamente com:
 
 Toda consulta pública começa em `PublicOperationResolver`.
 
-A ordem de resolução do hostname é:
-
-1. `X-Forwarded-Host`, quando fornecido pelo proxy confiável;
-2. `Host` bruto;
-3. hostname normalizado pelo framework.
+A aplicação usa o hostname normalizado pelo framework. `X-Forwarded-Host` só participa da
+resolução quando a conexão vem de um endereço aceito por `TRUST_PROXY`; caso contrário, o valor
+vem do cabeçalho `Host` da própria requisição. No deploy Docker, apenas a faixa privada usada pelo
+gateway do proxy é confiável.
 
 O valor é normalizado para minúsculas, sem porta e sem aceitar que o cliente escolha `tenant_id` por query string ou payload. Hostname desconhecido retorna `404`, evitando revelar operações existentes.
 

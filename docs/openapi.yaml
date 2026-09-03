@@ -927,8 +927,7 @@ components:
               attribute_definition_id:
                 type: integer
                 minimum: 1
-              value:
-                nullable: true
+              value: {}
               option_ids:
                 type: array
                 uniqueItems: true
@@ -2255,6 +2254,126 @@ components:
           items:
             $ref: '#/components/schemas/CatalogCategoryProjection'
 
+    CatalogSearchCityContext:
+      type: object
+      additionalProperties: false
+      required: [slug, name, state_code, timezone]
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+        state_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        timezone:
+          type: string
+
+    CatalogCategoryIdentityProjection:
+      type: object
+      additionalProperties: false
+      required: [slug, name, description, icon, parent_slug, family]
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        icon:
+          type: [string, 'null']
+        parent_slug:
+          type: [string, 'null']
+        family:
+          type: object
+          additionalProperties: false
+          required: [slug, name, icon]
+          properties:
+            slug:
+              type: string
+              pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+            name:
+              type: string
+            icon:
+              type: [string, 'null']
+
+    CatalogSearchContext:
+      type: object
+      additionalProperties: false
+      required: [city, category]
+      properties:
+        city:
+          $ref: '#/components/schemas/CatalogSearchCityContext'
+        category:
+          oneOf:
+            - $ref: '#/components/schemas/CatalogCategoryIdentityProjection'
+            - type: 'null'
+
+    CatalogSearchMeta:
+      type: object
+      additionalProperties: false
+      required:
+        - total
+        - page
+        - per_page
+        - last_page
+        - first_page
+        - first_page_url
+        - last_page_url
+        - next_page_url
+        - previous_page_url
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+          description: For known filters, preserves the requested page even beyond `last_page`; an unknown category slug is normalized to page 1.
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 50
+        last_page:
+          type: integer
+          minimum: 1
+        first_page:
+          type: integer
+          const: 1
+        first_page_url:
+          type: string
+          format: uri-reference
+        last_page_url:
+          type: string
+          format: uri-reference
+        next_page_url:
+          type: [string, 'null']
+          format: uri-reference
+        previous_page_url:
+          type: [string, 'null']
+          format: uri-reference
+
+    CatalogSearchQuery:
+      type: object
+      additionalProperties: false
+      required: [q, category, open_now, sort]
+      properties:
+        q:
+          type: [string, 'null']
+          maxLength: 120
+        category:
+          type: [string, 'null']
+          maxLength: 180
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        open_now:
+          type: boolean
+        sort:
+          type: string
+          enum: [relevance, name, recent]
+
     CatalogSearchItem:
       type: object
       required:
@@ -2311,14 +2430,15 @@ components:
 
     CatalogSearchResult:
       type: object
-      required: [meta, query, sponsored_results, organic_results]
+      additionalProperties: false
+      required: [context, meta, query, sponsored_results, organic_results]
       properties:
+        context:
+          $ref: '#/components/schemas/CatalogSearchContext'
         meta:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/CatalogSearchMeta'
         query:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/CatalogSearchQuery'
         sponsored_results:
           type: array
           items:
@@ -4106,7 +4226,17 @@ paths:
     get:
       operationId: searchCatalogEstablishments
       summary: Search discoverable establishments inside a city
-      description: Searches the rebuildable PostgreSQL catalog projection with privacy-safe filters, sponsored separation and deterministic pagination.
+      description: |
+        Searches the rebuildable PostgreSQL catalog projection with privacy-safe
+        filters, sponsored separation and deterministic pagination.
+
+        A syntactically valid category slug that does not resolve to an active
+        category is represented as a successful empty search: the API returns 200,
+        preserves the slug in query.category, sets context.category to null and
+        returns empty sponsored_results and organic_results arrays. The canonical
+        SSR route /cidades/{citySlug}/categorias/{categorySlug} returns 404 for the
+        same missing route identity so that a nonexistent category page is not
+        indexable.
       tags: [Catalog]
       security: []
       parameters:
@@ -4123,8 +4253,10 @@ paths:
             maxLength: 120
         - name: category
           in: query
+          description: A well-formed but unknown or inactive slug produces the canonical empty 200 response; a malformed slug produces 422.
           schema:
             type: string
+            maxLength: 180
             pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
         - name: open_now
           in: query
@@ -4152,7 +4284,7 @@ paths:
             default: relevance
       responses:
         '200':
-          description: Sponsored and organic catalog results
+          description: Sponsored and organic catalog results. An unknown or inactive category is represented by `context.category = null` and empty result arrays.
           content:
             application/json:
               schema:

@@ -15,6 +15,17 @@ interface SearchOptions {
   offset: number
 }
 
+export interface CatalogSearchPage {
+  rows: ICatalog.CatalogRow[]
+  total: number
+}
+
+interface SearchEnvelopeRow {
+  establishment_id: unknown
+  total_count: unknown
+  [key: string]: unknown
+}
+
 export default class CatalogSearchRepository {
   async getProjectionVersion(tenantId: number): Promise<number> {
     const result = await db.rawQuery<{ rows: VersionRow[] }>(
@@ -209,11 +220,46 @@ export default class CatalogSearchRepository {
     }))
   }
 
+  async findActiveCategoryBySlug(
+    tenantId: number,
+    categorySlug: string
+  ): Promise<ICatalog.CategoryIdentityRow | null> {
+    const result = await db.rawQuery<{ rows: ICatalog.CategoryIdentityRow[] }>(
+      `
+        SELECT
+          category.slug,
+          category.name,
+          category.description,
+          category.icon,
+          parent.slug AS parent_slug,
+          family.slug AS family_slug,
+          family.name AS family_name,
+          family.icon AS family_icon
+        FROM categories category
+        JOIN category_families family
+          ON family.id = category.family_id
+         AND family.tenant_id = category.tenant_id
+         AND family.is_active = true
+        LEFT JOIN categories parent
+          ON parent.id = category.parent_id
+         AND parent.tenant_id = category.tenant_id
+         AND parent.is_active = true
+        WHERE category.tenant_id = ?
+          AND category.slug = ?
+          AND category.is_active = true
+        LIMIT 1
+      `,
+      [tenantId, categorySlug]
+    )
+
+    return result.rows[0] ?? null
+  }
+
   async searchOrganic(
     tenantId: number,
     cityId: number,
     query: ICatalog.SearchQuery
-  ): Promise<ICatalog.CatalogRow[]> {
+  ): Promise<CatalogSearchPage> {
     return this.runSearch({
       tenantId,
       cityId,
@@ -229,7 +275,7 @@ export default class CatalogSearchRepository {
     cityId: number,
     query: ICatalog.SearchQuery
   ): Promise<ICatalog.CatalogRow[]> {
-    return this.runSearch({
+    const page = await this.runSearch({
       tenantId,
       cityId,
       query,
@@ -237,6 +283,8 @@ export default class CatalogSearchRepository {
       limit: 3,
       offset: 0,
     })
+
+    return page.rows
   }
 
   async findBySlug(
@@ -311,8 +359,9 @@ export default class CatalogSearchRepository {
     }
   }
 
-  private async runSearch(options: SearchOptions): Promise<ICatalog.CatalogRow[]> {
-    const orderBy = this.orderBy(options.query.sort)
+  private async runSearch(options: SearchOptions): Promise<CatalogSearchPage> {
+    const rankedOrder = this.orderBy(options.query.sort, 'ranked')
+    const pagedOrder = this.orderBy(options.query.sort, 'paged')
     const sponsorshipPredicate = options.sponsoredOnly
       ? 'projection.is_sponsored = true'
       : 'projection.is_sponsored = false'
@@ -448,14 +497,24 @@ export default class CatalogSearchRepository {
                 projection.special_days
               )
             )
+        ),
+        totals AS (
+          SELECT count(*)::integer AS total_count
+          FROM ranked
+        ),
+        paged AS (
+          SELECT ranked.*
+          FROM ranked
+          ORDER BY ${rankedOrder}
+          LIMIT ?
+          OFFSET ?
         )
         SELECT
-          ranked.*,
-          count(*) OVER()::integer AS total_count
-        FROM ranked
-        ORDER BY ${orderBy}
-        LIMIT ?
-        OFFSET ?
+          paged.*,
+          totals.total_count
+        FROM totals
+        LEFT JOIN paged ON TRUE
+        ORDER BY ${pagedOrder}
       `,
       [
         options.query.q,
@@ -470,7 +529,18 @@ export default class CatalogSearchRepository {
       ]
     )
 
-    return result.rows.map((row) => this.normalizeRow(row))
+    const rows = result.rows as unknown as SearchEnvelopeRow[]
+
+    return {
+      total: Number(rows[0]?.total_count ?? 0),
+      rows: rows.flatMap((row) => {
+        if (row.establishment_id === null || row.establishment_id === undefined) {
+          return []
+        }
+
+        return [this.normalizeRow(row as unknown as ICatalog.CatalogRow)]
+      }),
+    }
   }
 
   private normalizeRow(row: ICatalog.CatalogRow): ICatalog.CatalogRow {
@@ -490,15 +560,15 @@ export default class CatalogSearchRepository {
     }
   }
 
-  private orderBy(sort: ICatalog.Sort): string {
+  private orderBy(sort: ICatalog.Sort, relation: 'ranked' | 'paged'): string {
     if (sort === 'name') {
-      return 'ranked.normalized_name ASC, ranked.establishment_id ASC'
+      return `${relation}.normalized_name ASC, ${relation}.establishment_id ASC`
     }
 
     if (sort === 'recent') {
-      return 'ranked.published_at DESC, ranked.establishment_id ASC'
+      return `${relation}.published_at DESC, ${relation}.establishment_id ASC`
     }
 
-    return 'ranked.relevance_score DESC, ranked.normalized_name ASC, ranked.establishment_id ASC'
+    return `${relation}.relevance_score DESC, ${relation}.normalized_name ASC, ${relation}.establishment_id ASC`
   }
 }

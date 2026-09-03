@@ -72,6 +72,8 @@ declare module '@adonisjs/inertia/types' {
       catalog: any
       city_slug: string | null
       category_slug: string | null
+      city: any
+      category: any
     }
     'catalog/establishment': {
       catalog: any

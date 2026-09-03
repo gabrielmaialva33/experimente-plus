@@ -24,7 +24,7 @@ export default class AnalyticsRedirectController {
       throw new NotFoundException('Tracked action not found')
     }
 
-    const hostname = this.hostname(context)
+    const hostname = context.request.hostname()
     const tenantId = await this.eventService.resolveTenant(hostname)
     const trackingAllowed = this.trackingPreference.allows(
       context.request.header('dnt'),
@@ -42,14 +42,5 @@ export default class AnalyticsRedirectController {
     )
 
     return context.response.redirect(destination)
-  }
-
-  private hostname({ request }: HttpContext): string | null {
-    const forwardedHost = request.header('x-forwarded-host')
-    const rawHost = request.header('host')
-    const value = forwardedHost ?? rawHost ?? request.hostname()
-    const normalized = Array.isArray(value) ? value[0] : value
-
-    return normalized?.split(',')[0]?.trim().replace(/:\d+$/, '').toLowerCase() || null
   }
 }

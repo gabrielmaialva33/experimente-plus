@@ -256,6 +256,12 @@ test.group('Public catalog', (group) => {
       .headers(publicHeaders(scenario))
     search.assertStatus(200)
     assert.equal(search.body().meta.total, 1)
+    assert.deepInclude(search.body().context.city, {
+      slug: scenario.city.slug,
+      name: scenario.city.name,
+      state_code: scenario.city.state_code,
+    })
+    assert.isNull(search.body().context.category)
     assert.lengthOf(search.body().organic_results, 1)
     search.assertBodyContains({
       organic_results: [
@@ -275,6 +281,22 @@ test.group('Public catalog', (group) => {
     assert.notProperty(result, 'published_revision_id')
     assert.notProperty(result, 'review_notes')
     assert.notProperty(result.cover.asset, 'checksum_sha256')
+
+    const parentCategorySearch = await client
+      .get(
+        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?category=${scenario.parentCategory.slug}`
+      )
+      .headers(publicHeaders(scenario))
+    parentCategorySearch.assertStatus(200)
+    assert.equal(parentCategorySearch.body().meta.total, 1)
+    assert.deepInclude(parentCategorySearch.body().context.category, {
+      slug: scenario.parentCategory.slug,
+      name: scenario.parentCategory.name,
+    })
+    assert.equal(
+      parentCategorySearch.body().organic_results[0].primary_category.slug,
+      scenario.primaryCategory.slug
+    )
 
     const detail = await client
       .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments/${revision.slug}`)
@@ -363,11 +385,71 @@ test.group('Public catalog', (group) => {
     assert.equal(categoryInertia.component, 'catalog/category')
     assert.equal(categoryInertia.props.city_slug, published.city_slug)
     assert.equal(categoryInertia.props.category_slug, published.category_slug)
-    assert.equal(
-      (categoryInertia.props.catalog as { query?: { category?: string } }).query?.category,
-      published.category_slug
-    )
+    const categoryCatalog = categoryInertia.props.catalog as {
+      context: {
+        city: Record<string, unknown>
+        category: Record<string, unknown>
+      }
+      query?: { category?: string }
+    }
+    assert.deepInclude(categoryCatalog.context.city, {
+      slug: published.city_slug,
+      name: published.city_name,
+    })
+    assert.deepInclude(categoryCatalog.context.category, {
+      slug: published.category_slug,
+      name: published.category_name,
+    })
+    assert.equal(categoryCatalog.query?.category, published.category_slug)
     assert.include(JSON.stringify(categoryInertia.props.catalog), published.public_name)
+
+    const parentCategoryPage = await client
+      .get(`/cidades/${published.city_slug}/categorias/${scenario.parentCategory.slug}`)
+      .headers(publicHeaders(scenario))
+    parentCategoryPage.assertStatus(200)
+    const parentCategoryInertia = parseInertiaPage(parentCategoryPage)
+    assert.equal(parentCategoryInertia.component, 'catalog/category')
+    const parentCategoryCatalog = parentCategoryInertia.props.catalog as {
+      context: { category: Record<string, unknown> }
+      organic_results: Array<{ primary_category: { slug: string } }>
+    }
+    assert.deepInclude(parentCategoryCatalog.context.category, {
+      slug: scenario.parentCategory.slug,
+      name: scenario.parentCategory.name,
+    })
+    assert.equal(
+      parentCategoryCatalog.organic_results[0].primary_category.slug,
+      scenario.primaryCategory.slug
+    )
+
+    const unknownCategoryPage = await client
+      .get(`/cidades/${published.city_slug}/categorias/categoria-inexistente`)
+      .headers(publicHeaders(scenario))
+    unknownCategoryPage.assertStatus(404)
+
+    const unknownCategorySearch = await client
+      .get(
+        `/api/v1/catalog/cities/${published.city_slug}/establishments?category=categoria-inexistente&page=3`
+      )
+      .headers(publicHeaders(scenario))
+    unknownCategorySearch.assertStatus(200)
+    assert.isNull(unknownCategorySearch.body().context.category)
+    assert.equal(unknownCategorySearch.body().meta.total, 0)
+    assert.equal(unknownCategorySearch.body().meta.page, 1)
+    assert.equal(unknownCategorySearch.body().meta.last_page, 1)
+    assert.isNull(unknownCategorySearch.body().meta.previous_page_url)
+    assert.isNull(unknownCategorySearch.body().meta.next_page_url)
+    assert.equal(
+      unknownCategorySearch.body().meta.first_page_url,
+      unknownCategorySearch.body().meta.last_page_url
+    )
+    assert.equal(unknownCategorySearch.body().query.category, 'categoria-inexistente')
+    assert.deepEqual(unknownCategorySearch.body().sponsored_results, [])
+    assert.deepEqual(unknownCategorySearch.body().organic_results, [])
+    unknownCategorySearch.assertHeader(
+      'cache-control',
+      'public, max-age=60, stale-while-revalidate=120'
+    )
 
     const detailPage = await client
       .get(`/cidades/${published.city_slug}/estabelecimentos/${published.establishment_slug}`)
@@ -377,6 +459,48 @@ test.group('Public catalog', (group) => {
     assert.equal(detailInertia.component, 'catalog/establishment')
     assert.equal(detailInertia.props.city_slug, published.city_slug)
     assert.include(JSON.stringify(detailInertia.props.catalog), published.public_name)
+  })
+
+  test('keeps an active category addressable when it has no establishments', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('catalog-empty-category')
+
+    const search = await client
+      .get(
+        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?category=${scenario.primaryCategory.slug}`
+      )
+      .headers(publicHeaders(scenario))
+    search.assertStatus(200)
+    assert.deepInclude(search.body().context.category, {
+      slug: scenario.primaryCategory.slug,
+      name: scenario.primaryCategory.name,
+    })
+    assert.deepInclude(search.body().meta, {
+      total: 0,
+      page: 1,
+      last_page: 1,
+      next_page_url: null,
+      previous_page_url: null,
+    })
+    assert.deepEqual(search.body().sponsored_results, [])
+    assert.deepEqual(search.body().organic_results, [])
+
+    const categoryPage = await client
+      .get(`/cidades/${scenario.city.slug}/categorias/${scenario.primaryCategory.slug}`)
+      .headers(publicHeaders(scenario))
+    categoryPage.assertStatus(200)
+    const categoryInertia = parseInertiaPage(categoryPage)
+    assert.equal(categoryInertia.component, 'catalog/category')
+    assert.deepInclude(
+      (categoryInertia.props.catalog as { context: { category: Record<string, unknown> } }).context
+        .category,
+      {
+        slug: scenario.primaryCategory.slug,
+        name: scenario.primaryCategory.name,
+      }
+    )
   })
 
   test('supports deterministic text, typo, category and pagination filters', async ({
@@ -414,12 +538,32 @@ test.group('Public catalog', (group) => {
     const secondPage = await client
       .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2`)
       .headers(publicHeaders(scenario))
+    const pageBeyondLast = await client
+      .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=3`)
+      .headers(publicHeaders(scenario))
     firstPage.assertStatus(200)
     secondPage.assertStatus(200)
+    pageBeyondLast.assertStatus(200)
     assert.equal(firstPage.body().meta.total, 3)
     assert.equal(firstPage.body().meta.last_page, 2)
     assert.lengthOf(firstPage.body().organic_results, 2)
     assert.lengthOf(secondPage.body().organic_results, 1)
+    assert.deepInclude(pageBeyondLast.body().meta, {
+      total: 3,
+      page: 3,
+      per_page: 2,
+      last_page: 2,
+      next_page_url: null,
+    })
+    assert.equal(
+      pageBeyondLast.body().meta.previous_page_url,
+      `/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2`
+    )
+    assert.equal(
+      pageBeyondLast.body().meta.last_page_url,
+      `/api/v1/catalog/cities/${scenario.city.slug}/establishments?per_page=2&page=2`
+    )
+    assert.deepEqual(pageBeyondLast.body().organic_results, [])
 
     const allSlugs = [
       ...firstPage.body().organic_results,

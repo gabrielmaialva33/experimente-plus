@@ -81,10 +81,10 @@ export default class OwnershipService {
       return false
     }
 
-    const [isOwner, newOwner] = await Promise.all([
-      this.checkDirectOwnership(currentOwnerId, resourceId, rule),
-      User.find(newOwnerId),
-    ])
+    // Database reads may share one transaction-bound connection. Keep them
+    // sequential so a transfer never issues concurrent queries on a busy client.
+    const isOwner = await this.checkDirectOwnership(currentOwnerId, resourceId, rule)
+    const newOwner = await User.find(newOwnerId)
 
     if (!isOwner || !newOwner) {
       return false

@@ -96,9 +96,11 @@ export default class CatalogService {
     const normalizedQuery: ICatalog.SearchQuery = {
       ...query,
       q: query.q.trim(),
+      category: query.category ? this.requireSlug(query.category) : undefined,
     }
     const cacheKey = this.cacheService.key([
       'search',
+      'context-pagination-v2',
       tenantId,
       projectionVersion,
       city.slug,
@@ -111,14 +113,82 @@ export default class CatalogService {
     ])
 
     return this.cacheService.remember(cacheKey, 60, async () => {
-      const [organicRows, sponsoredRows] = await Promise.all([
-        this.catalogRepository.searchOrganic(tenantId, city.id, normalizedQuery),
-        this.catalogRepository.searchSponsored(tenantId, city.id, normalizedQuery),
-      ])
-      const total = organicRows[0]?.total_count ?? 0
+      // Keep reads sequential because Lucid may bind both repositories to the
+      // same transaction connection (for example in tests or a composed use case).
+      // node-postgres no longer supports concurrent queries on a busy client.
+      const categoryRow = normalizedQuery.category
+        ? await this.catalogRepository.findActiveCategoryBySlug(tenantId, normalizedQuery.category)
+        : null
+
+      if (normalizedQuery.category && !categoryRow) {
+        return {
+          context: {
+            city: {
+              slug: city.slug,
+              name: city.name,
+              state_code: city.state_code,
+              timezone: city.timezone,
+            },
+            category: null,
+          },
+          meta: {
+            total: 0,
+            page: 1,
+            per_page: normalizedQuery.per_page,
+            last_page: 1,
+            first_page: 1,
+            first_page_url: this.pageUrl(city.slug, normalizedQuery, 1),
+            last_page_url: this.pageUrl(city.slug, normalizedQuery, 1),
+            next_page_url: null,
+            previous_page_url: null,
+          },
+          query: {
+            q: normalizedQuery.q || null,
+            category: normalizedQuery.category,
+            open_now: normalizedQuery.open_now,
+            sort: normalizedQuery.sort,
+          },
+          sponsored_results: [],
+          organic_results: [],
+        }
+      }
+
+      const organicPage = await this.catalogRepository.searchOrganic(
+        tenantId,
+        city.id,
+        normalizedQuery
+      )
+      const sponsoredRows = await this.catalogRepository.searchSponsored(
+        tenantId,
+        city.id,
+        normalizedQuery
+      )
+      const total = organicPage.total
       const lastPage = Math.max(1, Math.ceil(total / normalizedQuery.per_page))
 
       return {
+        context: {
+          city: {
+            slug: city.slug,
+            name: city.name,
+            state_code: city.state_code,
+            timezone: city.timezone,
+          },
+          category: categoryRow
+            ? {
+                slug: categoryRow.slug,
+                name: categoryRow.name,
+                description: categoryRow.description,
+                icon: categoryRow.icon,
+                parent_slug: categoryRow.parent_slug,
+                family: {
+                  slug: categoryRow.family_slug,
+                  name: categoryRow.family_name,
+                  icon: categoryRow.family_icon,
+                },
+              }
+            : null,
+        },
         meta: {
           total,
           page: normalizedQuery.page,
@@ -146,7 +216,7 @@ export default class CatalogService {
           const item = this.searchItem(row)
           return item ? [item] : []
         }),
-        organic_results: organicRows.flatMap((row) => {
+        organic_results: organicPage.rows.flatMap((row) => {
           const item = this.searchItem(row)
           return item ? [item] : []
         }),

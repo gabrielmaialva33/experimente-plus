@@ -31,7 +31,7 @@ export default class AnalyticsEventsController {
       })
     }
 
-    const hostname = this.hostname(context)
+    const hostname = context.request.hostname()
     const tenantId = await this.eventService.resolveTenant(hostname)
     const anonymousSessionHash = this.sessionService.resolve(context, tenantId)
     const result = await this.eventService.recordBatchForTenant(
@@ -42,14 +42,5 @@ export default class AnalyticsEventsController {
     )
 
     return context.response.accepted(result)
-  }
-
-  private hostname({ request }: HttpContext): string | null {
-    const forwardedHost = request.header('x-forwarded-host')
-    const rawHost = request.header('host')
-    const value = forwardedHost ?? rawHost ?? request.hostname()
-    const normalized = Array.isArray(value) ? value[0] : value
-
-    return normalized?.split(',')[0]?.trim().replace(/:\d+$/, '').toLowerCase() || null
   }
 }

@@ -12,14 +12,14 @@ export default class CatalogController {
   constructor(private catalogService: CatalogService) {}
 
   async cities({ request, response }: HttpContext) {
-    const cities = await this.catalogService.cities(this.hostname(request))
+    const cities = await this.catalogService.cities(request.hostname())
     this.publicCache(response, 300)
     return response.ok(cities)
   }
 
   async categories({ params, request, response }: HttpContext) {
     const categories = await this.catalogService.categories(
-      this.hostname(request),
+      request.hostname(),
       String(params.citySlug)
     )
     this.publicCache(response, 300)
@@ -28,18 +28,14 @@ export default class CatalogController {
 
   async index({ params, request, response }: HttpContext) {
     const payload = await request.validateUsing(catalogSearchValidator)
-    const result = await this.catalogService.search(
-      this.hostname(request),
-      String(params.citySlug),
-      {
-        q: payload.q ?? '',
-        category: payload.category,
-        open_now: payload.open_now ?? catalogDefaults.open_now,
-        page: payload.page ?? catalogDefaults.page,
-        per_page: payload.per_page ?? catalogDefaults.per_page,
-        sort: payload.sort ?? catalogDefaults.sort,
-      }
-    )
+    const result = await this.catalogService.search(request.hostname(), String(params.citySlug), {
+      q: payload.q ?? '',
+      category: payload.category,
+      open_now: payload.open_now ?? catalogDefaults.open_now,
+      page: payload.page ?? catalogDefaults.page,
+      per_page: payload.per_page ?? catalogDefaults.per_page,
+      sort: payload.sort ?? catalogDefaults.sort,
+    })
 
     this.publicCache(response, 60)
     return response.ok(result)
@@ -47,20 +43,12 @@ export default class CatalogController {
 
   async show({ params, request, response }: HttpContext) {
     const establishment = await this.catalogService.show(
-      this.hostname(request),
+      request.hostname(),
       String(params.citySlug),
       String(params.establishmentSlug)
     )
     this.publicCache(response, 300)
     return response.ok(establishment)
-  }
-
-  private hostname(request: HttpContext['request']): string {
-    const forwardedHost = request.header('x-forwarded-host')?.split(',')[0]?.trim()
-    const rawHost = request.header('host')?.split(',')[0]?.trim()
-    const resolvedHost = forwardedHost ?? rawHost ?? request.hostname() ?? ''
-
-    return resolvedHost.replace(/:\d+$/, '')
   }
 
   private publicCache(response: HttpContext['response'], maxAge: number): void {
