@@ -11,55 +11,27 @@ import {
 } from 'lucide-react'
 
 import { ConsumerFlowShell } from '~/components/consumer/consumer_flow_shell'
+import { EmptyState } from '~/components/empty_state'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { cn } from '~/lib/utils'
+import { Card, CardContent, CardHeader } from '~/components/ui/card'
 import type { BenefitWallet, WalletBenefit } from '~/types/benefit'
 
 interface WalletPageProps {
   wallet: BenefitWallet
 }
 
-const stateMeta: Record<string, { label: string; className: string; icon: typeof Clock3 }> = {
-  available: {
-    label: 'Disponível agora',
-    className: 'border-success/25 bg-success/10 text-success',
-    icon: CheckCircle2,
-  },
-  upcoming: {
-    label: 'Em breve',
-    className: 'border-primary/20 bg-primary/10 text-primary',
-    icon: CalendarClock,
-  },
-  outside_schedule: {
-    label: 'Fora do horário',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
-    icon: Clock3,
-  },
-  paused: {
-    label: 'Temporariamente pausado',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
-    icon: PauseCircle,
-  },
-  expired: {
-    label: 'Encerrado',
-    className: 'border-border bg-muted text-muted-foreground',
-    icon: Clock3,
-  },
-  revoked: {
-    label: 'Acesso revogado',
-    className: 'border-destructive/20 bg-destructive/10 text-destructive',
-    icon: PauseCircle,
-  },
-  redeemed: {
-    label: 'Utilizado',
-    className: 'border-border bg-muted text-muted-foreground',
-    icon: TicketCheck,
-  },
-  unavailable: {
-    label: 'Indisponível',
-    className: 'border-border bg-muted text-muted-foreground',
-    icon: PauseCircle,
-  },
+type BadgeVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'destructive'
+
+const stateMeta: Record<string, { label: string; variant: BadgeVariant; icon: typeof Clock3 }> = {
+  available: { label: 'Disponível agora', variant: 'success', icon: CheckCircle2 },
+  upcoming: { label: 'Em breve', variant: 'primary', icon: CalendarClock },
+  outside_schedule: { label: 'Fora do horário', variant: 'warning', icon: Clock3 },
+  paused: { label: 'Temporariamente pausado', variant: 'warning', icon: PauseCircle },
+  expired: { label: 'Encerrado', variant: 'secondary', icon: Clock3 },
+  revoked: { label: 'Acesso revogado', variant: 'destructive', icon: PauseCircle },
+  redeemed: { label: 'Utilizado', variant: 'secondary', icon: TicketCheck },
+  unavailable: { label: 'Indisponível', variant: 'secondary', icon: PauseCircle },
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -85,9 +57,20 @@ function benefitLabel(benefit: WalletBenefit): string {
   const labels: Record<string, string> = {
     buy_one_get_one: 'Compre um e ganhe outro',
     complimentary_item: 'Item cortesia',
-    custom: 'Benefício especial',
+    custom: 'Benefício',
   }
-  return labels[benefit.benefit_type] ?? 'Benefício exclusivo'
+  return labels[benefit.benefit_type] ?? 'Benefício'
+}
+
+function SummaryItem({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function WalletPage({ wallet }: WalletPageProps) {
@@ -96,131 +79,107 @@ export default function WalletPage({ wallet }: WalletPageProps) {
   return (
     <ConsumerFlowShell
       title="Minha carteira"
-      description="Seus acessos e benefícios são calculados em tempo real. Apresente um benefício somente quando estiver no estabelecimento."
+      description="Acessos e benefícios disponíveis para sua conta. A disponibilidade é confirmada novamente no momento da utilização."
       actions={
         <Button asChild variant="outline">
           <Link href="/wallet/history">
-            <History />
+            <History aria-hidden="true" />
             Utilizações
           </Link>
         </Button>
       }
     >
-      <Head title="Minha carteira" />
+      <Head title="Minha carteira">
+        <meta name="robots" content="noindex,nofollow" />
+      </Head>
 
-      <section className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
-          <p className="text-xs text-muted-foreground">Edições</p>
-          <p className="mt-1 text-2xl font-black">{summary.passes}</p>
-        </div>
-        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
-          <p className="text-xs text-muted-foreground">Benefícios</p>
-          <p className="mt-1 text-2xl font-black">{summary.benefits}</p>
-        </div>
-        <div className="rounded-2xl border border-success/20 bg-success/10 p-4 shadow-xs">
-          <p className="text-xs text-muted-foreground">Disponíveis</p>
-          <p className="mt-1 text-2xl font-black text-success">{summary.available}</p>
-        </div>
-        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
-          <p className="text-xs text-muted-foreground">Utilizados</p>
-          <p className="mt-1 text-2xl font-black">{summary.redeemed}</p>
-        </div>
+      <section
+        aria-label="Resumo da carteira"
+        className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
+        <SummaryItem label="Edições" value={summary.passes} />
+        <SummaryItem label="Benefícios" value={summary.benefits} />
+        <SummaryItem label="Disponíveis" value={summary.available} />
+        <SummaryItem label="Utilizações concluídas" value={summary.redeemed} />
       </section>
 
       {passes.length === 0 ? (
-        <section className="rounded-3xl border border-dashed border-border bg-card px-6 py-16 text-center shadow-xs">
-          <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <TicketCheck className="size-6" />
-          </span>
-          <h2 className="mt-5 text-lg font-bold">Sua carteira ainda está vazia</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Quando um acesso a uma edição for concedido à sua conta, os benefícios aparecerão aqui
-            automaticamente.
-          </p>
-        </section>
+        <Card>
+          <EmptyState
+            headingLevel={2}
+            icon={TicketCheck}
+            title="Sua carteira ainda está vazia"
+            description="Quando a operação conceder acesso a uma edição para sua conta, os benefícios aparecerão aqui."
+          >
+            <Button asChild variant="outline">
+              <Link href="/cidades">Explorar estabelecimentos</Link>
+            </Button>
+          </EmptyState>
+        </Card>
       ) : (
-        <div className="space-y-7">
-          {passes.map((pass) => {
-            const { edition, access, benefits } = pass
-            const { city } = edition
-            const passKey = access.id
-
-            return (
-              <section
-                key={passKey}
-                className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
-              >
-                <div className="border-b border-border/70 bg-primary/[0.055] p-5 sm:p-7">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                        <MapPin className="size-3.5" />
-                        {city.name} · {city.state_code}
-                      </p>
-                      <h2 className="mt-2 text-2xl font-black tracking-[-0.035em]">
-                        {edition.name}
-                      </h2>
-                      {edition.description ? (
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                          {edition.description}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="shrink-0 rounded-2xl border border-border/70 bg-background/75 px-4 py-3 text-sm">
-                      <p className="text-xs text-muted-foreground">Utilização</p>
-                      <p className="mt-1 font-semibold">
-                        {formatDate(edition.usage_starts_at)} — {formatDate(edition.usage_ends_at)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5 sm:p-7">
-                  {benefits.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
-                      Esta edição ainda não possui benefícios disponíveis para sua carteira.
+        <div className="space-y-6">
+          {passes.map(({ edition, access, benefits }) => (
+            <Card key={access.id}>
+              <CardHeader className="flex-col sm:flex-row sm:items-start">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                    <MapPin className="size-3.5" aria-hidden="true" />
+                    {edition.city.name} · {edition.city.state_code}
+                  </p>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight">{edition.name}</h2>
+                  {edition.description ? (
+                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+                      {edition.description}
                     </p>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {benefits.map((benefit) => {
-                        const state = benefit.availability
-                        const meta = stateMeta[state] ?? stateMeta.unavailable
-                        const Icon = meta.icon
-                        const establishment = benefit.establishment
-                        const offerId = benefit.offer_id
-                        const accessId = benefit.access_id
-                        const remaining = Number(
-                          benefit.remaining_redemptions ?? benefit.max_redemptions_per_access
-                        )
+                  ) : null}
+                </div>
+                <dl className="shrink-0 text-sm sm:text-end">
+                  <dt className="text-xs text-muted-foreground">Período de utilização</dt>
+                  <dd className="mt-1 font-medium">
+                    {formatDate(edition.usage_starts_at)} — {formatDate(edition.usage_ends_at)}
+                  </dd>
+                </dl>
+              </CardHeader>
 
-                        return (
-                          <article
-                            key={benefit.key}
-                            className="flex min-h-full flex-col rounded-3xl border border-border/70 bg-background p-5 shadow-xs"
-                          >
+              <CardContent>
+                {benefits.length === 0 ? (
+                  <EmptyState
+                    icon={null}
+                    title="Nenhum benefício disponível nesta edição"
+                    description="A carteira será atualizada quando houver uma oferta válida para este acesso."
+                    className="py-7"
+                  />
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {benefits.map((benefit) => {
+                      const state = benefit.availability
+                      const meta = stateMeta[state] ?? stateMeta.unavailable
+                      const Icon = meta.icon
+                      const remaining = Number(
+                        benefit.remaining_redemptions ?? benefit.max_redemptions_per_access
+                      )
+                      const canUse =
+                        state === 'available' && benefit.offer_id > 0 && benefit.access_id > 0
+
+                      return (
+                        <Card key={benefit.key} className="h-full bg-background">
+                          <CardContent className="flex h-full flex-col p-5">
                             <div className="flex items-start justify-between gap-3">
-                              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                                <Store className="size-5" />
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                                <Store className="size-4" aria-hidden="true" />
                               </span>
-                              <span
-                                className={cn(
-                                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold',
-                                  meta.className
-                                )}
-                              >
-                                <Icon className="size-3.5" />
+                              <Badge variant={meta.variant} appearance="light">
+                                <Icon aria-hidden="true" />
                                 {meta.label}
-                              </span>
+                              </Badge>
                             </div>
 
-                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.1em] text-primary">
                               {benefitLabel(benefit)}
                             </p>
-                            <h3 className="mt-1 text-lg font-bold tracking-[-0.025em]">
-                              {benefit.title}
-                            </h3>
-                            <p className="mt-2 text-sm font-semibold text-muted-foreground">
-                              {establishment.public_name ?? 'Estabelecimento participante'}
+                            <h3 className="mt-1 text-lg font-semibold">{benefit.title}</h3>
+                            <p className="mt-1 text-sm font-medium text-muted-foreground">
+                              {benefit.establishment.public_name || 'Estabelecimento participante'}
                             </p>
                             {benefit.description ? (
                               <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">
@@ -229,34 +188,36 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                             ) : null}
 
                             <div className="mt-auto pt-5">
-                              {state === 'available' && offerId > 0 && accessId > 0 ? (
-                                <Button asChild variant="cta" size="lg" className="min-h-11 w-full">
-                                  <Link href={`/wallet/accesses/${accessId}/offers/${offerId}/use`}>
-                                    <TicketCheck />
+                              {canUse ? (
+                                <Button asChild variant="cta" size="lg" className="w-full">
+                                  <Link
+                                    href={`/wallet/accesses/${benefit.access_id}/offers/${benefit.offer_id}/use`}
+                                  >
+                                    <TicketCheck aria-hidden="true" />
                                     Usar benefício
                                   </Link>
                                 </Button>
                               ) : (
-                                <div className="rounded-xl bg-muted/55 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
+                                <p className="rounded-md border bg-muted/40 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
                                   {state === 'redeemed'
                                     ? 'Todas as utilizações foram concluídas.'
                                     : 'Este benefício não pode ser apresentado agora.'}
-                                </div>
+                                </p>
                               )}
-                              <p className="mt-2 text-center text-[0.68rem] text-muted-foreground">
+                              <p className="mt-2 text-center text-xs text-muted-foreground">
                                 {remaining}{' '}
                                 {remaining === 1 ? 'utilização restante' : 'utilizações restantes'}
                               </p>
                             </div>
-                          </article>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </section>
-            )
-          })}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </ConsumerFlowShell>

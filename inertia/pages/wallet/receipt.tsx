@@ -1,8 +1,10 @@
 import { Head, Link } from '@inertiajs/react'
-import { ArrowLeft, CheckCircle2, ReceiptText, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react'
 
-import { ConsumerShell } from '~/components/consumer/consumer_shell'
+import { ConsumerFlowShell } from '~/components/consumer/consumer_flow_shell'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
+import { Card, CardContent, CardHeader } from '~/components/ui/card'
 import type { RedemptionReceipt } from '~/types/benefit_redemption'
 
 interface WalletReceiptPageProps {
@@ -19,82 +21,80 @@ function formatDate(value: string): string {
 
 export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
   return (
-    <ConsumerShell>
-      <Head title={`Comprovante ${receipt.receipt_code}`} />
-
-      <div className="mx-auto w-full max-w-3xl">
-        <Button asChild variant="ghost" className="-ml-3 min-h-11">
+    <ConsumerFlowShell
+      title="Comprovante"
+      description="Registro permanente de uma utilização confirmada."
+      actions={
+        <Button asChild variant="outline">
           <Link href="/wallet/history">
-            <ArrowLeft />
+            <ArrowLeft aria-hidden="true" />
             Voltar às utilizações
           </Link>
         </Button>
+      }
+    >
+      <Head title={`Comprovante ${receipt.receipt_code}`}>
+        <meta name="robots" content="noindex,nofollow" />
+      </Head>
 
-        <section className="mt-5 overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-          <div className="bg-success/10 px-6 py-8 text-center sm:px-10">
-            <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-background text-success shadow-sm">
-              <CheckCircle2 className="size-8" />
-            </span>
-            <p className="mt-4 text-sm font-semibold text-success">Benefício confirmado</p>
-            <h1 className="mt-1 text-2xl font-black tracking-[-0.03em] sm:text-3xl">
-              {receipt.offer.title}
-            </h1>
-            <p className="mt-2 text-muted-foreground">{receipt.establishment.name}</p>
+      <Card className="mx-auto max-w-3xl">
+        <CardHeader className="flex-col items-start bg-success-soft">
+          <Badge variant="success" appearance="outline">
+            <CheckCircle2 aria-hidden="true" />
+            Utilização confirmada
+          </Badge>
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">{receipt.offer.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{receipt.establishment.name}</p>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-5">
+          <div className="rounded-md border bg-muted/35 p-4 text-center">
+            <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+              Código do comprovante
+            </p>
+            <code className="mt-1 block break-all text-lg font-semibold tracking-wide">
+              {receipt.receipt_code}
+            </code>
           </div>
 
-          <div className="p-6 sm:p-10">
-            <div className="flex flex-col gap-2 rounded-2xl border border-border bg-muted/35 p-5 text-center">
-              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Código do comprovante
-              </span>
-              <strong className="font-mono text-xl tracking-wide">{receipt.receipt_code}</strong>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border p-4">
+              <dt className="text-xs text-muted-foreground">Edição</dt>
+              <dd className="mt-1 font-medium">{receipt.edition.name}</dd>
             </div>
-
-            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/70 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                  Edição
-                </dt>
-                <dd className="mt-1 font-semibold">{receipt.edition.name}</dd>
-              </div>
-              <div className="rounded-2xl border border-border/70 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                  Utilização
-                </dt>
-                <dd className="mt-1 font-semibold">#{receipt.redemption_number}</dd>
-              </div>
-              <div className="rounded-2xl border border-border/70 p-4 sm:col-span-2">
-                <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                  Confirmado em
-                </dt>
-                <dd className="mt-1 font-semibold">{formatDate(receipt.redeemed_at)}</dd>
-              </div>
-            </dl>
-
-            {receipt.offer.terms ? (
-              <div className="mt-6 rounded-2xl border border-border/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                  Regras vigentes no momento da utilização
-                </p>
-                <p className="mt-2 whitespace-pre-line text-sm leading-6">{receipt.offer.terms}</p>
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex items-start gap-3 rounded-2xl bg-muted/35 p-4 text-sm leading-6 text-muted-foreground">
-              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
-              Este comprovante é permanente e foi criado pelo servidor no momento da confirmação do
-              parceiro.
+            <div className="rounded-md border p-4">
+              <dt className="text-xs text-muted-foreground">Utilização</dt>
+              <dd className="mt-1 font-medium tabular-nums">#{receipt.redemption_number}</dd>
             </div>
+            <div className="rounded-md border p-4 sm:col-span-2">
+              <dt className="text-xs text-muted-foreground">Confirmado em</dt>
+              <dd className="mt-1 font-medium">{formatDate(receipt.redeemed_at)}</dd>
+            </div>
+          </dl>
 
-            <Button asChild className="mt-6 min-h-12 w-full">
-              <Link href="/wallet">
-                <ReceiptText />
-                Voltar à carteira
-              </Link>
-            </Button>
+          {receipt.offer.terms ? (
+            <section aria-labelledby="receipt-terms-title" className="rounded-md border p-4">
+              <h3 id="receipt-terms-title" className="text-sm font-semibold">
+                Regras vigentes no momento da utilização
+              </h3>
+              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                {receipt.offer.terms}
+              </p>
+            </section>
+          ) : null}
+
+          <div className="flex items-start gap-3 rounded-md border bg-muted/35 p-4 text-sm leading-6 text-muted-foreground">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+            Este comprovante foi criado pelo servidor no momento da confirmação do estabelecimento.
           </div>
-        </section>
-      </div>
-    </ConsumerShell>
+
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/wallet">Voltar à carteira</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </ConsumerFlowShell>
   )
 }

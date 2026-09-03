@@ -1,9 +1,10 @@
 import { Head, Link } from '@inertiajs/react'
-import { ArrowLeft, Check, Clock3, Copy, RefreshCw, ShieldCheck, TicketCheck } from 'lucide-react'
+import { ArrowLeft, Check, Clock3, Copy, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { ConsumerShell } from '~/components/consumer/consumer_shell'
+import { ConsumerFlowShell } from '~/components/consumer/consumer_flow_shell'
 import { Button } from '~/components/ui/button'
+import { Card, CardContent } from '~/components/ui/card'
 import type { RedemptionPresentation } from '~/types/benefit_redemption'
 
 interface PresentBenefitPageProps {
@@ -48,117 +49,113 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
   }
 
   return (
-    <ConsumerShell>
-      <Head title={`Usar ${benefit.offer_title}`} />
+    <ConsumerFlowShell
+      title="Usar benefício"
+      description="Mostre a apresentação temporária somente quando estiver no estabelecimento."
+      actions={
+        <Button asChild variant="outline">
+          <Link href="/wallet">
+            <ArrowLeft aria-hidden="true" />
+            Voltar à carteira
+          </Link>
+        </Button>
+      }
+    >
+      <Head title={`Usar ${benefit.offer_title}`}>
+        <meta name="robots" content="noindex,nofollow" />
+      </Head>
 
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <Button asChild variant="ghost" className="-ml-3 min-h-11">
-            <Link href="/wallet">
-              <ArrowLeft />
-              Voltar à carteira
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="min-h-11">
-            <Link href="/wallet/history">
-              <TicketCheck />
-              Utilizações
-            </Link>
-          </Button>
-        </div>
+      <Card className="mx-auto max-w-5xl overflow-hidden">
+        <CardContent className="grid p-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="p-5 sm:p-7">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+              {benefit.establishment_name}
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{benefit.offer_title}</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              {benefit.offer_description}
+            </p>
 
-        <section className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_24rem]">
-            <div className="p-5 sm:p-8 lg:p-10">
-              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                <ShieldCheck className="size-4" />
-                Apresentação segura
+            <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-md border bg-muted/35 p-4">
+                <dt className="text-xs text-muted-foreground">Edição</dt>
+                <dd className="mt-1 font-medium">{benefit.edition_name}</dd>
               </div>
-              <p className="mt-5 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {benefit.establishment_name}
-              </p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                {benefit.offer_title}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-                {benefit.offer_description}
-              </p>
-
-              <dl className="mt-7 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-muted/45 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    Edição
-                  </dt>
-                  <dd className="mt-1 font-semibold">{benefit.edition_name}</dd>
-                </div>
-                <div className="rounded-2xl bg-muted/45 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    Utilizações restantes
-                  </dt>
-                  <dd className="mt-1 font-semibold">{benefit.remaining_redemptions}</dd>
-                </div>
-              </dl>
-
-              {benefit.terms ? (
-                <div className="mt-6 rounded-2xl border border-border/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    Regras do benefício
-                  </p>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-6">{benefit.terms}</p>
-                </div>
-              ) : null}
-
-              <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-6">
-                Mostre este código somente ao atendimento do estabelecimento. A confirmação final é
-                feita pelo parceiro no servidor.
+              <div className="rounded-md border bg-muted/35 p-4">
+                <dt className="text-xs text-muted-foreground">Utilizações restantes</dt>
+                <dd className="mt-1 font-medium tabular-nums">{benefit.remaining_redemptions}</dd>
               </div>
+            </dl>
+
+            {benefit.terms ? (
+              <section aria-labelledby="benefit-terms-title" className="mt-5 rounded-md border p-4">
+                <h3 id="benefit-terms-title" className="text-sm font-semibold">
+                  Regras do benefício
+                </h3>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                  {benefit.terms}
+                </p>
+              </section>
+            ) : null}
+
+            <div className="mt-5 flex items-start gap-3 rounded-md border border-primary/25 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />A apresentação
+              não conclui o uso sozinha. A confirmação final é feita no servidor por uma pessoa
+              autorizada da organização.
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center border-t bg-muted/30 p-5 sm:p-7 lg:border-l lg:border-t-0">
+            <div className="w-full max-w-[18rem] rounded-md border bg-white p-3">
+              <img
+                src={presentation.qr_data_url}
+                alt="QR Code temporário para validar o benefício"
+                className="aspect-square w-full"
+              />
             </div>
 
-            <div className="flex flex-col items-center justify-center border-t border-border/70 bg-muted/25 p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <div className="w-full max-w-[20rem] rounded-3xl bg-white p-4 shadow-sm">
-                <img
-                  src={presentation.qr_data_url}
-                  alt="QR Code temporário para validar o benefício"
-                  className="aspect-square w-full"
-                />
-              </div>
+            <p className="mt-4 flex items-center gap-2 text-sm font-medium" aria-hidden="true">
+              <Clock3 className="size-4 text-primary" />
+              {expired ? 'Código expirado' : `Expira em ${formatRemaining(remaining)}`}
+            </p>
+            <p className="sr-only" role="status">
+              {expired ? 'O código expirou.' : 'Código temporário válido.'}
+            </p>
 
-              <div className="mt-5 flex items-center gap-2 text-sm font-semibold">
-                <Clock3 className="size-4 text-primary" />
-                {expired ? 'Código expirado' : `Expira em ${formatRemaining(remaining)}`}
-              </div>
-
-              {!expired ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-4 min-h-12 w-full max-w-[20rem]"
-                  onClick={copyValidationLink}
-                >
-                  {copyStatus === 'copied' ? <Check /> : <Copy />}
+            {!expired ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 w-full max-w-[18rem]"
+                onClick={copyValidationLink}
+              >
+                {copyStatus === 'copied' ? (
+                  <Check aria-hidden="true" />
+                ) : (
+                  <Copy aria-hidden="true" />
+                )}
+                <span aria-live="polite">
                   {copyStatus === 'copied'
                     ? 'Link copiado'
                     : copyStatus === 'error'
                       ? 'Não foi possível copiar'
                       : 'Copiar link de validação'}
-                </Button>
-              ) : null}
-
-              {expired ? (
-                <Button
-                  type="button"
-                  size="lg"
-                  className="mt-4 min-h-12 w-full max-w-[20rem]"
-                  onClick={() => window.location.reload()}
-                >
-                  <RefreshCw />
-                  Gerar novo código
-                </Button>
-              ) : null}
-            </div>
+                </span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="primary"
+                className="mt-4 w-full max-w-[18rem]"
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw aria-hidden="true" />
+                Gerar novo código
+              </Button>
+            )}
           </div>
-        </section>
-      </div>
-    </ConsumerShell>
+        </CardContent>
+      </Card>
+    </ConsumerFlowShell>
   )
 }

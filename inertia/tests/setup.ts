@@ -3,6 +3,14 @@ import { server } from './mocks/server'
 import { QueryClient } from '@tanstack/react-query'
 import { beforeAll, afterEach, afterAll, vi } from 'vitest'
 
+class ResizeObserverMock implements ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+
 // Mock InertiaJS
 vi.mock('@inertiajs/react', () => ({
   usePage: vi.fn(() => ({

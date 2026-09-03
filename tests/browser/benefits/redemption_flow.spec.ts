@@ -12,12 +12,17 @@ type PresentationPagePayload = {
   }
 }
 
-async function signIn(page: Page, email: string, password: string) {
+async function signIn(
+  page: Page,
+  email: string,
+  password: string,
+  expectedLanding: '/wallet' | '/portal'
+) {
   await page.goto('/login')
   await page.fill('input[name="uid"]', email)
   await page.fill('input[name="password"]', password)
   await page.getByRole('button', { name: 'Entrar' }).click()
-  await page.waitForURL('**/dashboard', { timeout: 30_000 })
+  await page.waitForURL(`**${expectedLanding}`, { timeout: 30_000 })
 }
 
 async function resetSession(browserContext: BrowserContext) {
@@ -37,12 +42,30 @@ test.group('Benefit redemption browser flow', () => {
 
     await browserContext.grantPermissions(['clipboard-read', 'clipboard-write'])
     const holderPage = await browserContext.newPage()
-    await signIn(holderPage, scenario.users.holder.email, password)
+    await holderPage.setViewportSize({ width: 390, height: 844 })
+    await signIn(holderPage, scenario.users.holder.email, password, '/wallet')
     await holderPage.goto('/carteira')
 
     await holderPage.getByRole('heading', { name: 'Minha carteira' }).waitFor()
+    await holderPage.keyboard.press('Tab')
+    assert.isTrue(
+      await holderPage.evaluate(
+        () =>
+          (globalThis as any).document.activeElement?.textContent?.includes(
+            'Pular para o conteúdo principal'
+          ) === true
+      )
+    )
+    assert.equal(await holderPage.locator('main#conteudo-principal').count(), 1)
+    assert.isFalse(
+      await holderPage.evaluate(
+        () =>
+          (globalThis as any).document.documentElement.scrollWidth > (globalThis as any).innerWidth
+      )
+    )
     await holderPage.getByText('Disponível agora', { exact: true }).waitFor()
     await holderPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
+    await holderPage.getByRole('link', { name: 'Usar benefício' }).waitFor()
 
     const presentationResponsePromise = holderPage.waitForResponse(
       (response) =>
@@ -55,7 +78,13 @@ test.group('Benefit redemption browser flow', () => {
     const presentationResponse = await presentationResponsePromise
     const payload = (await presentationResponse.json()) as PresentationPagePayload
 
-    await holderPage.getByText('Apresentação segura', { exact: true }).waitFor()
+    await holderPage.getByRole('heading', { name: 'Usar benefício' }).waitFor()
+    assert.isFalse(
+      await holderPage.evaluate(
+        () =>
+          (globalThis as any).document.documentElement.scrollWidth > (globalThis as any).innerWidth
+      )
+    )
     await holderPage
       .getByRole('img', { name: 'QR Code temporário para validar o benefício' })
       .waitFor()
@@ -74,7 +103,7 @@ test.group('Benefit redemption browser flow', () => {
     await resetSession(browserContext)
 
     const partnerPage = await browserContext.newPage()
-    await signIn(partnerPage, scenario.users.partner.email, password)
+    await signIn(partnerPage, scenario.users.partner.email, password, '/portal')
     await partnerPage.goto(payload.props.presentation.validation_url)
 
     await partnerPage.getByRole('heading', { name: 'Validar benefício' }).waitFor()
@@ -97,7 +126,7 @@ test.group('Benefit redemption browser flow', () => {
     await resetSession(browserContext)
 
     const holderHistoryPage = await browserContext.newPage()
-    await signIn(holderHistoryPage, scenario.users.holder.email, password)
+    await signIn(holderHistoryPage, scenario.users.holder.email, password, '/wallet')
     await holderHistoryPage.goto('/wallet/history')
 
     await holderHistoryPage.getByRole('heading', { name: 'Utilizações' }).waitFor()
