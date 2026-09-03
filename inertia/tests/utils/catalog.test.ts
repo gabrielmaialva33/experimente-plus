@@ -28,6 +28,7 @@ describe('catalog projection adapters', () => {
         slug: 'cornelio-procopio',
         name: 'Cornélio Procópio',
         state_code: 'PR',
+        timezone: 'America/Sao_Paulo',
       },
       categories: [
         {
@@ -51,7 +52,7 @@ describe('catalog projection adapters', () => {
         establishmentsCount: 12,
       },
     ])
-    expect(listing.city?.name).toBe('Cornélio Procópio')
+    expect(listing.city.name).toBe('Cornélio Procópio')
     expect(listing.categories[0]).toMatchObject({
       slug: 'cafes',
       name: 'Cafés',
@@ -62,6 +63,22 @@ describe('catalog projection adapters', () => {
 
   it('normalizes sponsored, organic, pagination and query data from the public search', () => {
     const result = catalogSearch({
+      context: {
+        city: {
+          slug: 'cornelio-procopio',
+          name: 'Cornélio Procópio',
+          state_code: 'PR',
+          timezone: 'America/Sao_Paulo',
+        },
+        category: {
+          slug: 'cafes',
+          name: 'Cafés',
+          description: 'Cafés e boas pausas.',
+          icon: null,
+          parent_slug: null,
+          family: { slug: 'gastronomia', name: 'Gastronomia', icon: null },
+        },
+      },
       sponsored_results: [
         {
           slug: 'cafe-aurora',
@@ -98,6 +115,22 @@ describe('catalog projection adapters', () => {
 
     expect(result.meta).toEqual({ total: 2, page: 2, perPage: 12, lastPage: 3 })
     expect(result.query).toEqual({ q: 'cafe', category: 'cafes', openNow: true, sort: 'recent' })
+    expect(result.context).toEqual({
+      city: {
+        slug: 'cornelio-procopio',
+        name: 'Cornélio Procópio',
+        stateCode: 'PR',
+        timezone: 'America/Sao_Paulo',
+      },
+      category: {
+        slug: 'cafes',
+        name: 'Cafés',
+        description: 'Cafés e boas pausas.',
+        icon: null,
+        parentSlug: null,
+        family: { slug: 'gastronomia', name: 'Gastronomia', icon: null },
+      },
+    })
     expect(result.sponsored[0]).toMatchObject({
       slug: 'cafe-aurora',
       cityName: 'Cornélio Procópio',
@@ -113,6 +146,68 @@ describe('catalog projection adapters', () => {
       },
     })
     expect(result.organic[0].businessStatus).toBe('temporarily_closed')
+  })
+
+  it('rejects catalog payloads without the required canonical city', () => {
+    expect(() => catalogCategories({ categories: [] })).toThrow(
+      'Catalog categories response is missing its canonical city'
+    )
+    expect(() =>
+      catalogSearch({
+        context: { city: null, category: null },
+        sponsored_results: [],
+        organic_results: [],
+        meta: {},
+        query: {},
+      })
+    ).toThrow('Catalog search response is missing its canonical city')
+    expect(
+      catalogDetail({
+        slug: 'sem-cidade',
+        name: 'Estabelecimento sem cidade canônica',
+        city_slug: 'slug-nao-deve-virar-nome',
+        city_name: 'Nome legado',
+      })
+    ).toBeNull()
+  })
+
+  it('does not manufacture missing fields for reduced catalog contexts', () => {
+    expect(() =>
+      catalogCategories({
+        city: { slug: 'londrina', name: 'Londrina', state_code: 'PR' },
+        categories: [],
+      })
+    ).toThrow('Catalog categories response is missing its canonical city')
+
+    const city = {
+      slug: 'londrina',
+      name: 'Londrina',
+      state_code: 'PR',
+      timezone: 'America/Sao_Paulo',
+    }
+    const emptyResult = {
+      sponsored_results: [],
+      organic_results: [],
+      meta: {},
+      query: {},
+    }
+
+    expect(() => catalogSearch({ context: { city }, ...emptyResult })).toThrow(
+      'Catalog search response is missing its canonical category context'
+    )
+    expect(() =>
+      catalogSearch({
+        context: {
+          city,
+          category: {
+            slug: 'cafes',
+            name: 'Cafés',
+            family: { slug: 'gastronomia', name: 'Gastronomia' },
+          },
+        },
+        ...emptyResult,
+      })
+    ).toThrow('Catalog search response has an invalid canonical category context')
   })
 
   it('normalizes the full published establishment detail and preserves false and zero values', () => {

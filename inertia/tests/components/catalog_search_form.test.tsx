@@ -61,9 +61,9 @@ describe('CatalogSearchForm', () => {
     )
 
     expect(screen.getByRole('searchbox', { name: 'O que você procura?' })).toHaveValue('café')
-    expect(screen.getByRole('combobox', { name: 'Filtrar por categoria' })).toHaveValue('cafes')
+    expect(screen.getByRole('combobox', { name: 'Categoria' })).toHaveValue('cafes')
     expect(screen.getByRole('option', { name: 'Cafés (8)' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Ordenar resultados' })).toHaveValue('name')
+    expect(screen.getByRole('combobox', { name: 'Ordenar por' })).toHaveValue('name')
     expect(screen.getByRole('checkbox', { name: 'Aberto agora' })).toBeChecked()
     expect(container.querySelector('input[name="per_page"]')).toHaveValue('24')
 
@@ -88,9 +88,7 @@ describe('CatalogSearchForm', () => {
       />
     )
 
-    expect(
-      screen.queryByRole('combobox', { name: 'Filtrar por categoria' })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Categoria' })).not.toBeInTheDocument()
     expect(screen.getByText('Categoria: Cafés')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Limpar filtros' })).toHaveAttribute(
       'href',

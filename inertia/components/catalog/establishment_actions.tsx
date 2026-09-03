@@ -65,16 +65,13 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
   }
 
   return (
-    <section
-      aria-labelledby="contact-actions-title"
-      className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6"
-    >
+    <section aria-labelledby="contact-actions-title" className="rounded-lg border bg-card p-5">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-          Ações rápidas
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+          Contato e rota
         </p>
         <h2 id="contact-actions-title" className="mt-1 text-lg font-semibold">
-          Fale ou chegue até lá
+          Entre em contato
         </h2>
       </div>
 
@@ -84,9 +81,10 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'whatsapp')}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               <MessageCircleMore className="size-4" /> Chamar no WhatsApp
+              <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </Button>
         ) : null}
@@ -96,9 +94,10 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'route')}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               <MapPinned className="size-4" /> Traçar rota
+              <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </Button>
         ) : null}
@@ -116,17 +115,19 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'website')}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               <Globe2 className="size-4" /> Visitar o site
+              <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </Button>
         ) : null}
 
         {detail.contacts.bookingUrl ? (
           <Button variant="outline" size="lg" className="h-11 justify-start" asChild>
-            <a href={detail.contacts.bookingUrl} target="_blank" rel="noreferrer">
+            <a href={detail.contacts.bookingUrl} target="_blank" rel="noopener noreferrer">
               <CalendarCheck className="size-4" /> Agendar ou reservar
+              <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </Button>
         ) : null}
@@ -136,9 +137,10 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={externalInstagramHref(detail.contacts.instagram)}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               <AtSign className="size-4" /> Ver Instagram
+              <span className="sr-only"> (abre em nova aba)</span>
             </a>
           </Button>
         ) : null}

@@ -17,9 +17,9 @@ function visiblePages(current: number, last: number): number[] {
 }
 
 const directionClassName =
-  'inline-flex min-h-11 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none sm:flex-none'
 const pageClassName =
-  'inline-flex size-11 items-center justify-center rounded-lg border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+  'inline-flex size-10 items-center justify-center rounded-md border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none'
 
 export function CatalogPagination({ path, query, meta }: CatalogPaginationProps) {
   if (meta.lastPage <= 1) return null
@@ -31,7 +31,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
   return (
     <nav
       aria-label="Paginação dos resultados"
-      className="mt-10 flex flex-wrap items-center justify-center gap-2"
+      className="mt-8 flex items-center justify-between gap-2 sm:justify-center"
     >
       {previousAvailable ? (
         <Link
@@ -51,40 +51,46 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
         </span>
       )}
 
-      {pages[0] > 1 ? (
-        <span aria-hidden="true" className="px-1 text-muted-foreground">
-          …
-        </span>
-      ) : null}
+      <p className="shrink-0 text-sm text-muted-foreground sm:hidden" aria-live="polite">
+        Página <span className="font-semibold text-foreground">{meta.page}</span> de {meta.lastPage}
+      </p>
 
-      {pages.map((page) =>
-        page === meta.page ? (
-          <span
-            key={page}
-            aria-current="page"
-            aria-label={`Página ${page}, página atual`}
-            className={cn(pageClassName, 'border-primary bg-primary text-primary-foreground')}
-          >
-            {page}
+      <div className="hidden items-center gap-2 sm:flex">
+        {pages[0] > 1 ? (
+          <span aria-hidden="true" className="px-1 text-muted-foreground">
+            …
           </span>
-        ) : (
-          <Link
-            key={page}
-            href={pageHref(path, query, page, meta.perPage)}
-            preserveScroll
-            aria-label={`Ir para a página ${page}`}
-            className={cn(pageClassName, 'bg-card hover:border-primary/40 hover:text-primary')}
-          >
-            {page}
-          </Link>
-        )
-      )}
+        ) : null}
 
-      {pages.at(-1)! < meta.lastPage ? (
-        <span aria-hidden="true" className="px-1 text-muted-foreground">
-          …
-        </span>
-      ) : null}
+        {pages.map((page) =>
+          page === meta.page ? (
+            <span
+              key={page}
+              aria-current="page"
+              aria-label={`Página ${page}, página atual`}
+              className={cn(pageClassName, 'border-primary bg-primary text-primary-foreground')}
+            >
+              {page}
+            </span>
+          ) : (
+            <Link
+              key={page}
+              href={pageHref(path, query, page, meta.perPage)}
+              preserveScroll
+              aria-label={`Ir para a página ${page}`}
+              className={cn(pageClassName, 'bg-card hover:border-primary/40 hover:text-primary')}
+            >
+              {page}
+            </Link>
+          )
+        )}
+
+        {pages.at(-1)! < meta.lastPage ? (
+          <span aria-hidden="true" className="px-1 text-muted-foreground">
+            …
+          </span>
+        ) : null}
+      </div>
 
       {nextAvailable ? (
         <Link

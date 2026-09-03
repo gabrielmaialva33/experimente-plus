@@ -25,6 +25,26 @@ export interface CatalogCategory {
   isPrimary: boolean
 }
 
+export interface CatalogCitySummary {
+  slug: string
+  name: string
+  stateCode: string
+  timezone: string
+}
+
+export interface CatalogCategorySummary {
+  slug: string
+  name: string
+  description: string | null
+  icon: string | null
+  parentSlug: string | null
+  family: {
+    slug: string
+    name: string
+    icon: string | null
+  }
+}
+
 export interface CatalogMedia {
   url: string
   altText: string
@@ -66,6 +86,10 @@ export interface CatalogSearchQuery {
 }
 
 export interface CatalogSearchResult {
+  context: {
+    city: CatalogCitySummary
+    category: CatalogCategorySummary | null
+  }
   sponsored: CatalogSearchItem[]
   organic: CatalogSearchItem[]
   meta: CatalogSearchMeta
@@ -236,13 +260,16 @@ export function booleanValue(record: JsonRecord | null, ...keys: string[]): bool
   return null
 }
 
-export function slugLabel(slug: string | null | undefined): string {
-  if (!slug) return ''
-  return slug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toLocaleUpperCase('pt-BR') + part.slice(1))
-    .join(' ')
+type NullableStringField = { valid: true; value: string | null } | { valid: false }
+
+function nullableStringField(record: JsonRecord | null, key: string): NullableStringField {
+  if (!record || !Object.prototype.hasOwnProperty.call(record, key)) return { valid: false }
+
+  const value = record[key]
+  if (value === null) return { valid: true, value: null }
+  if (typeof value === 'string' && value.trim()) return { valid: true, value: value.trim() }
+
+  return { valid: false }
 }
 
 export function coverUrl(record: JsonRecord | null): string | null {
@@ -293,6 +320,22 @@ function parseCity(value: unknown): CatalogCity | null {
   }
 }
 
+export function catalogCity(value: unknown): CatalogCity | null {
+  return parseCity(value)
+}
+
+function parseCitySummary(value: unknown): CatalogCitySummary | null {
+  const city = asRecord(value)
+  const slug = stringValue(city, 'slug')
+  const name = stringValue(city, 'name')
+  const stateCode = stringValue(city, 'state_code')
+  const timezone = stringValue(city, 'timezone')
+
+  if (!slug || !name || !stateCode || !timezone) return null
+
+  return { slug, name, stateCode, timezone }
+}
+
 function parseCategory(value: unknown): CatalogCategory | null {
   const category = asRecord(value)
   const slug = stringValue(category, 'slug', 'category_slug')
@@ -309,6 +352,49 @@ function parseCategory(value: unknown): CatalogCategory | null {
     familyName: stringValue(family, 'name') ?? stringValue(category, 'family_name'),
     establishmentsCount: numberValue(category, 'establishments_count', 'count', 'total') ?? 0,
     isPrimary: booleanValue(category, 'is_primary') ?? false,
+  }
+}
+
+export function catalogCategory(value: unknown): CatalogCategory | null {
+  return parseCategory(value)
+}
+
+function parseCategorySummary(value: unknown): CatalogCategorySummary | null {
+  const category = asRecord(value)
+  const family = recordValue(category, 'family')
+  const slug = stringValue(category, 'slug')
+  const name = stringValue(category, 'name')
+  const familySlug = stringValue(family, 'slug')
+  const familyName = stringValue(family, 'name')
+  const description = nullableStringField(category, 'description')
+  const icon = nullableStringField(category, 'icon')
+  const parentSlug = nullableStringField(category, 'parent_slug')
+  const familyIcon = nullableStringField(family, 'icon')
+
+  if (
+    !slug ||
+    !name ||
+    !familySlug ||
+    !familyName ||
+    !description.valid ||
+    !icon.valid ||
+    !parentSlug.valid ||
+    !familyIcon.valid
+  ) {
+    return null
+  }
+
+  return {
+    slug,
+    name,
+    description: description.value,
+    icon: icon.value,
+    parentSlug: parentSlug.value,
+    family: {
+      slug: familySlug,
+      name: familyName,
+      icon: familyIcon.value,
+    },
   }
 }
 
@@ -336,7 +422,8 @@ function parseSearchItem(value: unknown, sponsored = false): CatalogSearchItem |
   const slug = stringValue(item, 'slug', 'establishment_slug')
   const name = stringValue(item, 'name', 'public_name')
   if (!slug || !name) return null
-  const city = recordValue(item, 'city')
+  const city = parseCity(recordValue(item, 'city'))
+  if (!city) return null
   const address = recordValue(item, 'address')
   const categories = recordsAt(item, 'categories').flatMap((category) => {
     const parsed = parseCategory(category)
@@ -351,10 +438,9 @@ function parseSearchItem(value: unknown, sponsored = false): CatalogSearchItem |
     slug,
     name,
     shortDescription: stringValue(item, 'short_description', 'description'),
-    citySlug: stringValue(city, 'slug') ?? stringValue(item, 'city_slug') ?? '',
-    cityName: stringValue(city, 'name') ?? stringValue(item, 'city_name') ?? '',
-    stateCode:
-      stringValue(city, 'state_code') ?? stringValue(item, 'city_state_code', 'state_code'),
+    citySlug: city.slug,
+    cityName: city.name,
+    stateCode: city.stateCode,
     district: stringValue(address, 'district', 'neighborhood'),
     businessStatus: normalizedBusinessStatus(stringValue(item, 'business_status')),
     isOpenNow: booleanValue(item, 'is_open_now', 'open_now') ?? false,
@@ -373,12 +459,18 @@ export function catalogCities(value: unknown): CatalogCity[] {
 }
 
 export function catalogCategories(value: unknown): {
-  city: CatalogCity | null
+  city: CatalogCitySummary
   categories: CatalogCategory[]
 } {
   const record = asRecord(value)
+  const city = parseCitySummary(recordValue(record, 'city'))
+
+  if (!city) {
+    throw new TypeError('Catalog categories response is missing its canonical city')
+  }
+
   return {
-    city: parseCity(recordValue(record, 'city')),
+    city,
     categories: recordsAt(record, 'categories').flatMap((category) => {
       const parsed = parseCategory(category)
       return parsed ? [parsed] : []
@@ -388,10 +480,31 @@ export function catalogCategories(value: unknown): {
 
 export function catalogSearch(value: unknown): CatalogSearchResult {
   const record = asRecord(value)
+  const context = recordValue(record, 'context')
   const meta = recordValue(record, 'meta')
   const query = recordValue(record, 'query')
+  const city = parseCitySummary(recordValue(context, 'city'))
+
+  if (!city) {
+    throw new TypeError('Catalog search response is missing its canonical city')
+  }
+
+  if (!context || !Object.prototype.hasOwnProperty.call(context, 'category')) {
+    throw new TypeError('Catalog search response is missing its canonical category context')
+  }
+
+  const rawCategory = context.category
+  const category = rawCategory === null ? null : parseCategorySummary(rawCategory)
+
+  if (rawCategory !== null && !category) {
+    throw new TypeError('Catalog search response has an invalid canonical category context')
+  }
 
   return {
+    context: {
+      city,
+      category,
+    },
     sponsored: recordsAt(record, 'sponsored_results').flatMap((item) => {
       const parsed = parseSearchItem(item, true)
       return parsed ? [parsed] : []
@@ -480,18 +593,8 @@ export function catalogDetail(value: unknown): CatalogDetail | CatalogHistorical
   const name = stringValue(detail, 'name', 'public_name')
   if (!slug || !name) return null
 
-  const cityRecord = recordValue(detail, 'city')
-  const city =
-    parseCity(cityRecord) ??
-    ({
-      slug: stringValue(detail, 'city_slug') ?? '',
-      name: stringValue(detail, 'city_name') ?? '',
-      stateCode: stringValue(detail, 'city_state_code', 'state_code'),
-      countryCode: null,
-      timezone: stringValue(detail, 'city_timezone'),
-      regionName: null,
-      establishmentsCount: 0,
-    } satisfies CatalogCity)
+  const city = parseCity(recordValue(detail, 'city'))
+  if (!city) return null
 
   const businessStatus = normalizedBusinessStatus(stringValue(detail, 'business_status'))
   if (booleanValue(detail, 'historical') || businessStatus === 'permanently_closed') {
