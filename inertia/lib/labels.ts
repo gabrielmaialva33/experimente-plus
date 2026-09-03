@@ -33,6 +33,15 @@ export function organizationRoleLabel(role: string | null | undefined): string {
   return role ? (ORGANIZATION_ROLE_LABELS[role] ?? role) : 'Membro'
 }
 
+export const OPERATION_ROLE_LABELS: Record<string, string> = {
+  owner: 'Responsável pela operação',
+  member: 'Membro da operação',
+}
+
+export function operationRoleLabel(role: string | null | undefined): string {
+  return role ? (OPERATION_ROLE_LABELS[role] ?? role) : 'Membro da operação'
+}
+
 export const PILOT_FEEDBACK_CONTEXT_LABELS: Record<string, string> = {
   general: 'Geral',
   onboarding: 'Onboarding',

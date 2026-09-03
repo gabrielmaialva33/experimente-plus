@@ -4,9 +4,11 @@ import {
   Check,
   ChevronDown,
   ChevronsUpDown,
+  Compass,
   LogOut,
   Menu,
   Settings,
+  Store,
   TicketPercent,
 } from 'lucide-react'
 
@@ -14,7 +16,12 @@ import { AppBrand } from '~/components/app_brand'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Button } from '~/components/ui/button'
-import { resolveRouteMetadata, SURFACE_LABELS } from '~/config/navigation'
+import {
+  navigationItemsForSurface,
+  resolveRouteMetadata,
+  SURFACE_LABELS,
+  type NavigationSurface,
+} from '~/config/navigation'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +32,7 @@ import {
 } from '~/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet'
 import { useAuth } from '~/hooks/use_auth'
-import { organizationRoleLabel } from '~/lib/labels'
+import { operationRoleLabel } from '~/lib/labels'
 import { SidebarNav } from './sidebar'
 
 function initialsOf(name: string): string {
@@ -53,7 +60,7 @@ function TenantSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="h-9 max-w-[230px] gap-2 rounded-full bg-background px-2.5 shadow-xs"
+          className="h-9 max-w-[230px] gap-2 rounded-md bg-background px-2.5"
         >
           <Avatar className="size-6">
             <AvatarFallback className="bg-primary/10 text-[0.62rem] font-bold text-primary">
@@ -88,7 +95,7 @@ function TenantSwitcher() {
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-medium">{tenant.name}</span>
               <span className="truncate text-xs text-muted-foreground">
-                {organizationRoleLabel(tenant.role)}
+                {operationRoleLabel(tenant.role)}
               </span>
             </span>
             {tenant.id === activeTenant?.id && <Check className="size-4 text-primary" />}
@@ -99,8 +106,8 @@ function TenantSwitcher() {
   )
 }
 
-function UserMenu() {
-  const { user } = useAuth()
+function UserMenu({ surface }: { surface: NavigationSurface }) {
+  const { user, activeTenantId, can } = useAuth()
 
   if (!user) {
     return (
@@ -110,12 +117,17 @@ function UserMenu() {
     )
   }
 
+  const firstBackofficeDestination = navigationItemsForSurface('backoffice', 'sidebar', {
+    activeTenantId,
+  }).find((item) => !item.capability || can(item.capability))
+  const BackofficeIcon = firstBackofficeDestination?.icon
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-10 gap-2 rounded-full py-1 pe-2 ps-1 hover:bg-accent/70"
+          className="h-10 gap-2 rounded-md py-1 pe-2 ps-1 hover:bg-accent"
           aria-label="Abrir menu do usuário"
         >
           <Avatar className="size-8">
@@ -144,15 +156,40 @@ function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/wallet">
-            <TicketPercent className="size-4" />
-            Minha carteira
+          <Link href="/cidades">
+            <Compass className="size-4" />
+            Explorar
           </Link>
         </DropdownMenuItem>
+        {activeTenantId !== null ? (
+          <DropdownMenuItem asChild>
+            <Link href="/wallet">
+              <TicketPercent className="size-4" />
+              Carteira
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {activeTenantId !== null && surface !== 'portal' ? (
+          <DropdownMenuItem asChild>
+            <Link href="/portal">
+              <Store className="size-4" />
+              Portal do parceiro
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {firstBackofficeDestination && BackofficeIcon && surface !== 'backoffice' ? (
+          <DropdownMenuItem asChild>
+            <Link href={firstBackofficeDestination.href}>
+              <BackofficeIcon className="size-4" />
+              Operação
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings">
             <Settings className="size-4" />
-            Configurações
+            Conta e preferências
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -165,7 +202,7 @@ function UserMenu() {
   )
 }
 
-export function Header() {
+export function Header({ surface }: { surface: NavigationSurface }) {
   const { url } = usePage()
   const metadata = resolveRouteMetadata(url)
   const context = metadata
@@ -176,7 +213,7 @@ export function Header() {
   useEffect(() => setMobileOpen(false), [url])
 
   return (
-    <header className="sticky top-0 z-40 flex h-[72px] w-full items-center border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
+    <header className="sticky top-0 z-40 flex min-h-[72px] w-full items-center border-b border-border bg-background pt-[env(safe-area-inset-top)]">
       <div className="app-container flex items-center gap-3">
         <div className="flex items-center gap-2 lg:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -185,11 +222,14 @@ export function Header() {
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[304px] gap-0 p-0">
+            <SheetContent
+              side="left"
+              className="w-[304px] gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
+            >
               <div className="flex h-[72px] items-center border-b border-border/70 px-5">
                 <AppBrand onNavigate={() => setMobileOpen(false)} />
               </div>
-              <SidebarNav onNavigate={() => setMobileOpen(false)} />
+              <SidebarNav surface={surface} onNavigate={() => setMobileOpen(false)} />
             </SheetContent>
           </Sheet>
           <AppBrand href="/" collapsed className="sm:hidden" />
@@ -208,9 +248,9 @@ export function Header() {
         </div>
 
         <div className="ms-auto flex items-center gap-1.5 sm:gap-2">
-          <TenantSwitcher />
+          {surface !== 'consumer' ? <TenantSwitcher /> : null}
           <ThemeToggle />
-          <UserMenu />
+          <UserMenu surface={surface} />
         </div>
       </div>
     </header>

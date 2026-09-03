@@ -7,7 +7,7 @@ export function useAuth() {
 
   const tenants = auth?.tenants ?? []
   const activeTenantId = auth?.activeTenantId ?? null
-  const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId) ?? tenants[0] ?? null
+  const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId) ?? null
   const permissions = auth?.permissions ?? []
 
   return {

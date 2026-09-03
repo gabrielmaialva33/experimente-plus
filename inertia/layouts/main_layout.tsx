@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle2, Info, TriangleAlert, type LucideIcon } from 
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
+import { resolveRouteMetadata, type NavigationSurface } from '~/config/navigation'
 import { cn } from '~/lib/utils'
 import { Header } from './main/components/header'
 import { Sidebar } from './main/components/sidebar'
@@ -20,7 +21,8 @@ interface FlashMessage {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
-  const { flash } = usePage().props as {
+  const page = usePage()
+  const { flash } = page.props as {
     flash?: {
       success?: string | null
       error?: string | null
@@ -28,6 +30,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       info?: string | null
     }
   }
+  const surface: NavigationSurface = resolveRouteMetadata(page.url)?.surface ?? 'backoffice'
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem('experimente.sidebar.collapsed') === 'true')
@@ -71,7 +74,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-muted/35">
       <SkipLink />
-      <Sidebar isCollapsed={collapsed} onToggle={toggleSidebar} />
+      <Sidebar surface={surface} isCollapsed={collapsed} onToggle={toggleSidebar} />
 
       <div
         className={cn(
@@ -79,7 +82,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           collapsed ? 'lg:ps-[84px]' : 'lg:ps-[272px]'
         )}
       >
-        <Header />
+        <Header surface={surface} />
 
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none" role="main">
           <div className="app-container py-6 sm:py-8">
@@ -89,7 +92,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   key={key}
                   role={key === 'error' ? 'alert' : 'status'}
                   className={cn(
-                    'mb-4 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-xs',
+                    'mb-4 flex items-start gap-3 rounded-md border px-4 py-3 text-sm',
                     className
                   )}
                 >
@@ -103,7 +106,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </main>
 
-        <footer className="border-t border-border/60 bg-background/50 py-4 text-xs text-muted-foreground">
+        <footer className="border-t border-border bg-background py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground">
           <div className="app-container flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span>© {new Date().getFullYear()} Experimente+</span>
             <span>Descoberta local com contexto, confiança e identidade regional.</span>

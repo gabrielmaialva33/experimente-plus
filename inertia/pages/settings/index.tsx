@@ -1,16 +1,32 @@
-import { Head, useForm, usePage } from '@inertiajs/react'
+import { Head, router, useForm, usePage } from '@inertiajs/react'
 import { useTheme } from 'next-themes'
-import { Building2, Check, Monitor, Moon, Sun, Trash2, type LucideIcon } from 'lucide-react'
+import {
+  Building2,
+  Check,
+  Loader2,
+  Monitor,
+  Moon,
+  ShieldAlert,
+  Sun,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 
-import { MainLayout } from '~/layouts'
-import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '~/components/ui/card'
-import { Button } from '~/components/ui/button'
-import { Badge } from '~/components/ui/badge'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
+import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
+import { EditorField } from '~/components/portal/establishment_editor/editor_field'
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '~/components/ui/card'
+import { Input } from '~/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { useAuth } from '~/hooks/use_auth'
+import { MainLayout } from '~/layouts'
+import { firstError } from '~/lib/form_errors'
+import { operationRoleLabel } from '~/lib/labels'
 import { cn } from '~/lib/utils'
 
 interface SettingsProfile {
@@ -24,66 +40,94 @@ interface SettingsPageProps {
   profile: SettingsProfile
 }
 
-const THEMES: { value: string; label: string; icon: LucideIcon }[] = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
+const THEMES: { value: string; label: string; description: string; icon: LucideIcon }[] = [
+  { value: 'light', label: 'Claro', description: 'Sempre usar o tema claro.', icon: Sun },
+  { value: 'dark', label: 'Escuro', description: 'Sempre usar o tema escuro.', icon: Moon },
+  {
+    value: 'system',
+    label: 'Do dispositivo',
+    description: 'Acompanhar a preferência do sistema.',
+    icon: Monitor,
+  },
 ]
 
 function ProfileTab({ profile }: { profile: SettingsProfile }) {
-  const { data, setData, post, processing, errors } = useForm({
-    full_name: profile.full_name,
-    username: profile.username ?? '',
-  })
+  const form = useForm({ full_name: profile.full_name, username: profile.username ?? '' })
 
-  const submit = (event: React.FormEvent) => {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    post('/settings/profile', { preserveScroll: true })
+    if (form.processing) return
+    form.post('/settings/profile', { preserveScroll: true })
   }
 
   return (
-    <Card>
+    <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle>Profile</CardTitle>
-          <p className="text-sm text-muted-foreground">Update your personal information.</p>
+          <CardTitle>Dados pessoais</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Atualize como seu nome aparece nas áreas autenticadas.
+          </p>
         </CardHeading>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="max-w-xl space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="full_name">Full name</Label>
-            <Input
-              id="full_name"
-              value={data.full_name}
-              onChange={(event) => setData('full_name', event.target.value)}
-              aria-invalid={!!errors.full_name}
-            />
-            {errors.full_name && <p className="text-sm text-destructive">{errors.full_name}</p>}
+        <form onSubmit={submit} aria-busy={form.processing} className="space-y-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <EditorField
+              htmlFor="settings-full-name"
+              label="Nome completo"
+              required
+              error={firstError(form.errors.full_name)}
+            >
+              <Input
+                id="settings-full-name"
+                name="full_name"
+                required
+                autoComplete="name"
+                disabled={form.processing}
+                value={form.data.full_name}
+                onChange={(event) => form.setData('full_name', event.target.value)}
+              />
+            </EditorField>
+
+            <EditorField
+              htmlFor="settings-username"
+              label="Nome de usuário"
+              hint="Opcional. Usado apenas para identificar sua conta dentro da plataforma."
+              error={firstError(form.errors.username)}
+            >
+              <Input
+                id="settings-username"
+                name="username"
+                autoComplete="username"
+                disabled={form.processing}
+                value={form.data.username}
+                onChange={(event) => form.setData('username', event.target.value)}
+              />
+            </EditorField>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              value={data.username}
-              onChange={(event) => setData('username', event.target.value)}
-              aria-invalid={!!errors.username}
-            />
-            {errors.username && <p className="text-sm text-destructive">{errors.username}</p>}
-          </div>
+          <EditorField
+            htmlFor="settings-email"
+            label="E-mail de acesso"
+            hint="Este e-mail é usado para entrar e ainda não pode ser alterado por esta tela."
+          >
+            <Input id="settings-email" value={profile.email} readOnly aria-readonly="true" />
+          </EditorField>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={profile.email} readOnly disabled />
-            <p className="text-xs text-muted-foreground">
-              Your email is used to sign in and cannot be changed here.
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <p role="status" aria-live="polite" className="me-auto text-sm text-success">
+              {form.recentlySuccessful ? 'Dados pessoais atualizados.' : ''}
             </p>
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" variant="primary" disabled={processing}>
-              {processing ? 'Saving...' : 'Save changes'}
+            <Button type="submit" disabled={form.processing || !form.isDirty}>
+              {form.processing ? (
+                <>
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                  Salvando…
+                </>
+              ) : (
+                'Salvar alterações'
+              )}
             </Button>
           </div>
         </form>
@@ -96,36 +140,42 @@ function AppearanceTab() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <Card>
+    <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle>Appearance</CardTitle>
-          <p className="text-sm text-muted-foreground">Customize how the interface looks.</p>
+          <CardTitle>Aparência</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Escolha um tema. A preferência fica salva neste navegador.
+          </p>
         </CardHeading>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Tema da interface">
           {THEMES.map((option) => {
             const active = theme === option.value
+            const Icon = option.icon
+
             return (
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={active}
                 onClick={() => setTheme(option.value)}
                 className={cn(
-                  'relative flex flex-col items-center gap-3 rounded-lg border p-5 text-sm font-medium transition-colors',
+                  'relative flex min-h-32 flex-col items-start gap-3 rounded-md border p-4 text-start outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   active
-                    ? 'border-primary bg-primary/5 text-foreground'
-                    : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    ? 'border-primary bg-primary-soft text-foreground'
+                    : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
                 )}
               >
-                {active && (
-                  <span className="absolute end-2 top-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Check className="size-3" />
-                  </span>
-                )}
-                <option.icon className="size-6" />
-                {option.label}
+                <span className="flex w-full items-center justify-between gap-2">
+                  <Icon aria-hidden="true" className="size-5" />
+                  {active ? <Check aria-hidden="true" className="size-4 text-primary" /> : null}
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-foreground">{option.label}</span>
+                  <span className="mt-1 block text-xs leading-5">{option.description}</span>
+                </span>
               </button>
             )
           })}
@@ -136,165 +186,236 @@ function AppearanceTab() {
 }
 
 function AccountTab() {
-  const { errors: sharedErrors } = usePage().props as { errors?: Record<string, string> }
-  const {
-    data,
-    setData,
-    delete: deleteRequest,
-    processing,
-    errors,
-  } = useForm({
-    current_password: '',
-    confirmation: '',
-  })
+  const { errors: sharedErrors } = usePage().props as { errors?: Record<string, unknown> }
+  const form = useForm({ current_password: '', confirmation: '' })
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const generalError = firstError(sharedErrors?.general)
 
-  const submit = (event: React.FormEvent) => {
+  function requestDeletion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    deleteRequest('/settings/account')
+    if (form.processing) return
+    setDialogOpen(true)
   }
 
+  function confirmDeletion() {
+    if (form.processing) return
+    form.delete('/settings/account', {
+      preserveScroll: true,
+      onFinish: () => setDialogOpen(false),
+    })
+  }
+
+  const confirmationReady =
+    Boolean(form.data.current_password) && form.data.confirmation.trim().toUpperCase() === 'DELETE'
+
   return (
-    <Card className="border-destructive/40">
+    <Card className="max-w-3xl border-destructive/40">
       <CardHeader>
         <CardHeading>
-          <CardTitle className="text-destructive">Delete account</CardTitle>
+          <CardTitle className="text-destructive">Segurança e exclusão</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Permanently disable your account, revoke active credentials and release your email for a
-            future registration. Historical audit references are retained as an anonymized user.
+            A exclusão desativa a conta, revoga as credenciais e anonimiza seus dados pessoais.
+            Referências históricas exigidas para auditoria permanecem sem identificar você.
           </p>
         </CardHeading>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="max-w-xl space-y-5">
-          {sharedErrors?.general && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {sharedErrors.general}
-            </div>
-          )}
+        <form
+          onSubmit={requestDeletion}
+          aria-busy={form.processing}
+          className="max-w-xl space-y-5"
+        >
+          {generalError ? (
+            <Alert variant="destructive" role="alert">
+              <AlertTitle>Não foi possível excluir a conta</AlertTitle>
+              <AlertDescription>{generalError}</AlertDescription>
+            </Alert>
+          ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="current_password">Current password</Label>
+          <EditorField
+            htmlFor="settings-current-password"
+            label="Senha atual"
+            required
+            error={firstError(form.errors.current_password)}
+          >
             <Input
-              id="current_password"
+              id="settings-current-password"
+              name="current_password"
               type="password"
-              value={data.current_password}
-              onChange={(event) => setData('current_password', event.target.value)}
+              required
               autoComplete="current-password"
-              aria-invalid={!!errors.current_password}
+              disabled={form.processing}
+              value={form.data.current_password}
+              onChange={(event) => form.setData('current_password', event.target.value)}
             />
-            {errors.current_password && (
-              <p className="text-sm text-destructive">{errors.current_password}</p>
-            )}
-          </div>
+          </EditorField>
 
-          <div className="space-y-2">
-            <Label htmlFor="delete_confirmation">
-              Type <span className="font-semibold">DELETE</span> to confirm
-            </Label>
+          <EditorField
+            htmlFor="settings-delete-confirmation"
+            label={
+              <>
+                Digite <strong>DELETE</strong> para confirmar
+              </>
+            }
+            required
+            hint="A palavra de confirmação evita uma exclusão acidental."
+            error={firstError(form.errors.confirmation)}
+          >
             <Input
-              id="delete_confirmation"
-              value={data.confirmation}
-              onChange={(event) => setData('confirmation', event.target.value)}
+              id="settings-delete-confirmation"
+              name="confirmation"
+              required
               autoComplete="off"
-              aria-invalid={!!errors.confirmation}
+              spellCheck={false}
+              disabled={form.processing}
+              value={form.data.confirmation}
+              onChange={(event) => form.setData('confirmation', event.target.value)}
             />
-            {errors.confirmation && (
-              <p className="text-sm text-destructive">{errors.confirmation}</p>
-            )}
-          </div>
+          </EditorField>
 
           <Button
             type="submit"
             variant="destructive"
-            disabled={
-              processing ||
-              !data.current_password ||
-              data.confirmation.trim().toUpperCase() !== 'DELETE'
-            }
+            disabled={form.processing || !confirmationReady}
           >
-            <Trash2 className="size-4" />
-            {processing ? 'Deleting account...' : 'Delete my account'}
+            <Trash2 aria-hidden="true" className="size-4" />
+            Excluir minha conta
           </Button>
         </form>
+
+        <ConfirmDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title="Excluir sua conta permanentemente?"
+          description="Você sairá do Experimente+ e perderá o acesso à carteira, ao Portal e às áreas administrativas. Esta ação não pode ser desfeita."
+          confirmLabel="Confirmar exclusão"
+          destructive
+          processing={form.processing}
+          disabled={!confirmationReady}
+          onConfirm={confirmDeletion}
+        />
       </CardContent>
     </Card>
   )
 }
 
-function WorkspacesTab() {
+function OperationsTab() {
   const { tenants, activeTenantId, can } = useAuth()
-  const { data, setData, post, processing, errors, reset } = useForm({ name: '' })
-  const canCreateWorkspace = can('tenants.create')
+  const form = useForm({ name: '' })
+  const [switchingId, setSwitchingId] = useState<number | null>(null)
+  const canCreateOperation = can('tenants.create')
 
-  const submit = (event: React.FormEvent) => {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    post('/settings/workspaces', {
+    if (form.processing) return
+    form.post('/settings/workspaces', {
       preserveScroll: true,
-      onSuccess: () => reset(),
+      onSuccess: () => form.reset(),
     })
   }
 
+  function switchOperation(tenantId: number) {
+    if (tenantId === activeTenantId || switchingId !== null) return
+    setSwitchingId(tenantId)
+    router.post(
+      '/tenant/switch',
+      { tenant_id: tenantId },
+      {
+        preserveScroll: true,
+        onFinish: () => setSwitchingId(null),
+      }
+    )
+  }
+
   return (
-    <Card>
+    <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle>Workspaces</CardTitle>
+          <CardTitle>Operações</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Workspaces you belong to and your membership role in each.
+            Operações isolam dados privados. Cidades e organizações continuam dentro da
+            operação selecionada.
           </p>
         </CardHeading>
       </CardHeader>
-      <CardContent className="p-0">
-        {canCreateWorkspace && (
-          <form onSubmit={submit} className="space-y-3 border-b border-border p-5">
-            <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="workspace_name">New workspace</Label>
+      <CardContent className="space-y-5">
+        {canCreateOperation ? (
+          <form onSubmit={submit} aria-busy={form.processing} className="space-y-3 border-b pb-5">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <EditorField
+                htmlFor="settings-operation-name"
+                label="Nome da nova operação"
+                required
+                error={firstError(form.errors.name)}
+              >
                 <Input
-                  id="workspace_name"
-                  value={data.name}
-                  onChange={(event) => setData('name', event.target.value)}
-                  placeholder="Acme Workspace"
-                  aria-invalid={!!errors.name}
+                  id="settings-operation-name"
+                  name="name"
+                  required
+                  disabled={form.processing}
+                  value={form.data.name}
+                  onChange={(event) => form.setData('name', event.target.value)}
+                  placeholder="Nome da operação"
                 />
-              </div>
-              <Button type="submit" variant="primary" disabled={processing || !data.name.trim()}>
-                {processing ? 'Creating...' : 'Create workspace'}
+              </EditorField>
+              <Button type="submit" disabled={form.processing || !form.data.name.trim()}>
+                {form.processing ? (
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                ) : null}
+                {form.processing ? 'Criando…' : 'Criar operação'}
               </Button>
             </div>
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </form>
-        )}
+        ) : null}
 
         {tenants.length === 0 ? (
-          <p className="p-5 text-sm text-muted-foreground">
-            You don&apos;t belong to any workspace yet. Create one to unlock tenant-scoped features.
-          </p>
+          <EmptyState
+            icon={Building2}
+            title="Nenhuma operação disponível"
+            description="Sua conta ainda não participa de uma operação ativa."
+            className="py-8"
+          />
         ) : (
-          <ul className="divide-y divide-border">
-            {tenants.map((tenant) => (
-              <li key={tenant.id} className="flex items-center gap-3 px-5 py-3.5">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Building2 className="size-4.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{tenant.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{tenant.slug}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {tenant.role && (
-                    <Badge variant="secondary" appearance="light" size="sm">
-                      {tenant.role}
-                    </Badge>
-                  )}
-                  {tenant.id === activeTenantId && (
+          <ul className="divide-y divide-border" aria-busy={switchingId !== null}>
+            {tenants.map((tenant) => {
+              const active = tenant.id === activeTenantId
+              const switching = switchingId === tenant.id
+
+              return (
+                <li
+                  key={tenant.id}
+                  className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-accent">
+                    <Building2 aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{tenant.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {operationRoleLabel(tenant.role)}
+                    </span>
+                  </span>
+                  {active ? (
                     <Badge variant="primary" appearance="light" size="sm">
-                      Active
+                      Operação ativa
                     </Badge>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={switchingId !== null}
+                      onClick={() => switchOperation(tenant.id)}
+                    >
+                      {switching ? (
+                        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                      ) : null}
+                      {switching ? 'Selecionando…' : 'Usar esta operação'}
+                    </Button>
                   )}
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         )}
       </CardContent>
@@ -302,29 +423,45 @@ function WorkspacesTab() {
   )
 }
 
+function labelWithStrong(prefix: string, value: string): ReactNode {
+  return (
+    <>
+      {prefix} <strong>{value}</strong>
+    </>
+  )
+}
+
 export default function SettingsPage({ profile }: SettingsPageProps) {
   const { url } = usePage()
+  const { tenants, can } = useAuth()
   const requestedTab = new URL(url, 'http://localhost').searchParams.get('tab')
-  const defaultTab = ['profile', 'appearance', 'workspaces', 'account'].includes(requestedTab ?? '')
-    ? requestedTab!
-    : 'profile'
+  const showOperations = tenants.length > 0 || can('tenants.create')
+  const allowedTabs = new Set(['profile', 'appearance', 'security'])
+  if (showOperations) allowedTabs.add('operations')
+  const normalizedRequestedTab = requestedTab === 'workspaces' ? 'operations' : requestedTab
+  const defaultTab =
+    normalizedRequestedTab && allowedTabs.has(normalizedRequestedTab)
+      ? normalizedRequestedTab
+      : 'profile'
 
   return (
     <MainLayout>
-      <Head title="Settings" />
+      <Head title="Conta e preferências" />
 
       <div className="space-y-6">
         <PageHeader
-          title="Settings"
-          description="Manage your account, appearance and workspaces."
+          icon={ShieldAlert}
+          eyebrow="Minha conta"
+          title="Conta e preferências"
+          description="Gerencie seus dados pessoais, a aparência da interface e as opções de segurança realmente disponíveis."
         />
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
-          <TabsList variant="line">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
-            <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsList variant="line" aria-label="Seções da conta">
+            <TabsTrigger value="profile">Dados pessoais</TabsTrigger>
+            <TabsTrigger value="appearance">Aparência</TabsTrigger>
+            {showOperations ? <TabsTrigger value="operations">Operações</TabsTrigger> : null}
+            <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -333,10 +470,12 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
           <TabsContent value="appearance">
             <AppearanceTab />
           </TabsContent>
-          <TabsContent value="workspaces">
-            <WorkspacesTab />
-          </TabsContent>
-          <TabsContent value="account">
+          {showOperations ? (
+            <TabsContent value="operations">
+              <OperationsTab />
+            </TabsContent>
+          ) : null}
+          <TabsContent value="security">
             <AccountTab />
           </TabsContent>
         </Tabs>
