@@ -8,6 +8,7 @@ import {
   navigationItemsForSurface,
   NAVIGATION_ITEMS,
   PUBLIC_NAVIGATION,
+  publicNavigationItemsFor,
   ROUTE_METADATA,
   resolveRouteMetadata,
 } from '~/config/navigation'
@@ -52,13 +53,22 @@ describe('navigation configuration', () => {
       '/cidades',
       '/wallet',
       '/portal',
+      '/logout',
     ])
     expect(PUBLIC_NAVIGATION.mobile.guest.map((item) => item.href)).toEqual([
       '/cidades',
       '/login',
       '/register',
     ])
-    expect(PUBLIC_NAVIGATION.footer.map((item) => item.href)).toEqual(['/cidades'])
+    expect(PUBLIC_NAVIGATION.footer.map((item) => item.href)).toEqual([
+      '/cidades',
+      '/termos',
+      '/privacidade',
+    ])
+    expect(PUBLIC_NAVIGATION.utility.authenticated.map((item) => item.href)).toEqual([
+      '/portal',
+      '/logout',
+    ])
 
     const guestRegistrationPlacements = [
       ...PUBLIC_NAVIGATION.header.guest.map((item) => ({ placement: 'header', ...item })),
@@ -70,6 +80,44 @@ describe('navigation configuration', () => {
     expect(guestRegistrationPlacements[0]).toMatchObject({
       placement: 'mobile',
       label: 'Cadastrar negócio',
+    })
+  })
+
+  it('removes tenant-required destinations when the authenticated account has no operation', () => {
+    const availability = { authenticated: true, activeTenantId: null }
+
+    expect(publicNavigationItemsFor('header', availability).map((item) => item.href)).toEqual([
+      '/cidades',
+    ])
+    expect(publicNavigationItemsFor('mobile', availability).map((item) => item.href)).toEqual([
+      '/cidades',
+      '/logout',
+    ])
+    expect(publicNavigationItemsFor('utility', availability).map((item) => item.href)).toEqual([
+      '/logout',
+    ])
+    expect(
+      navigationItemsForSurface('consumer', 'consumer-shell', { activeTenantId: null }).map(
+        (item) => item.href
+      )
+    ).toEqual(['/cidades'])
+  })
+
+  it('resolves the public legal documents as real destinations', () => {
+    expect(resolveRouteMetadata('/termos')).toMatchObject({
+      id: 'public-terms',
+      surface: 'public',
+    })
+    expect(resolveRouteMetadata('/privacidade')).toMatchObject({
+      id: 'public-privacy',
+      surface: 'public',
+    })
+  })
+
+  it('uses the consumer action vocabulary in the central presentation metadata', () => {
+    expect(resolveRouteMetadata('/wallet/accesses/7/offers/11/use')).toMatchObject({
+      id: 'consumer-presentation',
+      title: 'Usar benefício',
     })
   })
 

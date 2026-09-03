@@ -1,10 +1,9 @@
-import { Link, usePage } from '@inertiajs/react'
-import { LogIn, Store } from 'lucide-react'
+import { Link, router, usePage } from '@inertiajs/react'
 
 import { AppBrand } from '~/components/app_brand'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { Button } from '~/components/ui/button'
-import { isNavigationHrefActive, PUBLIC_NAVIGATION } from '~/config/navigation'
+import { isNavigationHrefActive, publicNavigationItemsFor } from '~/config/navigation'
 import { cn } from '~/lib/utils'
 import type { AuthSharedProps } from '~/types'
 
@@ -12,7 +11,9 @@ export function PublicHeader() {
   const { url, props } = usePage()
   const auth = props.auth as AuthSharedProps | undefined
   const authenticated = Boolean(auth?.user)
-  const navigation = PUBLIC_NAVIGATION.header[authenticated ? 'authenticated' : 'guest']
+  const availability = { authenticated, activeTenantId: auth?.activeTenantId ?? null }
+  const navigation = publicNavigationItemsFor('header', availability)
+  const utilityItems = publicNavigationItemsFor('utility', availability)
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
@@ -43,19 +44,36 @@ export function PublicHeader() {
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
 
-          {authenticated ? (
-            <Button variant="outline" size="sm" className="hidden md:inline-flex" asChild>
-              <Link href="/portal">
-                <Store /> Portal
-              </Link>
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex" asChild>
-              <Link href="/login">
-                <LogIn /> Entrar
-              </Link>
-            </Button>
-          )}
+          {utilityItems.map((item) => {
+            const Icon = item.icon
+
+            return item.method === 'post' ? (
+              <Button
+                key={item.href}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="hidden md:inline-flex"
+                onClick={() => router.post(item.href)}
+              >
+                <Icon aria-hidden="true" />
+                {item.label}
+              </Button>
+            ) : (
+              <Button
+                key={item.href}
+                variant={authenticated ? 'outline' : 'ghost'}
+                size="sm"
+                className="hidden md:inline-flex"
+                asChild
+              >
+                <Link href={item.href}>
+                  <Icon aria-hidden="true" />
+                  {item.label}
+                </Link>
+              </Button>
+            )
+          })}
         </div>
       </div>
     </header>

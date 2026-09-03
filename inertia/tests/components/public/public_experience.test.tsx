@@ -13,7 +13,10 @@ import { render } from '~/tests/test_utils'
 const pageState = vi.hoisted(() => ({
   url: '/',
   user: null as null | { id: number; full_name: string; email: string },
+  activeTenantId: null as number | null,
 }))
+
+const inertia = vi.hoisted(() => ({ post: vi.fn() }))
 
 vi.mock('@inertiajs/react', () => ({
   Head: () => null,
@@ -22,6 +25,7 @@ vi.mock('@inertiajs/react', () => ({
       {children}
     </a>
   ),
+  router: { post: inertia.post },
   usePage: () => ({
     url: pageState.url,
     props: {
@@ -35,7 +39,7 @@ vi.mock('@inertiajs/react', () => ({
       auth: {
         user: pageState.user,
         tenants: [],
-        activeTenantId: null,
+        activeTenantId: pageState.activeTenantId,
         permissions: [],
       },
     },
@@ -49,6 +53,8 @@ vi.mock('~/components/theme/theme_toggle', () => ({
 afterEach(() => {
   pageState.url = '/'
   pageState.user = null
+  pageState.activeTenantId = null
+  inertia.post.mockReset()
 })
 
 describe('public discovery experience', () => {
@@ -72,6 +78,7 @@ describe('public discovery experience', () => {
   it('shows only distinct authenticated destinations in the public header', () => {
     pageState.url = '/wallet'
     pageState.user = { id: 7, full_name: 'Ana Souza', email: 'ana@example.com' }
+    pageState.activeTenantId = 31
 
     const { container } = render(<PublicHeader />)
     const header = screen.getByRole('banner')
@@ -85,6 +92,7 @@ describe('public discovery experience', () => {
     expect(within(header).queryByRole('link', { name: 'Para parceiros' })).not.toBeInTheDocument()
     expect(container.querySelectorAll('a[href="/wallet"]')).toHaveLength(1)
     expect(container.querySelectorAll('a[href="/portal"]')).toHaveLength(1)
+    expect(within(header).getByRole('button', { name: 'Sair' })).toBeEnabled()
   })
 
   it('uses the centralized guest destinations in the mobile navigation', () => {
@@ -111,6 +119,7 @@ describe('public discovery experience', () => {
   it('uses the authenticated destinations and marks the wallet active on mobile', () => {
     pageState.url = '/wallet/history'
     pageState.user = { id: 7, full_name: 'Ana Souza', email: 'ana@example.com' }
+    pageState.activeTenantId = 31
 
     render(<PublicMobileNavigation />)
     const navigation = screen.getByRole('navigation', { name: 'Navegação móvel' })
@@ -129,6 +138,33 @@ describe('public discovery experience', () => {
       '/portal'
     )
     expect(within(navigation).queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
+    expect(within(navigation).getByRole('button', { name: 'Sair' })).toBeEnabled()
+  })
+
+  it('keeps an authenticated account without an operation on valid public destinations', async () => {
+    pageState.url = '/cidades'
+    pageState.user = { id: 8, full_name: 'Bruno Lima', email: 'bruno@example.com' }
+    const { user } = render(
+      <>
+        <PublicHeader />
+        <PublicMobileNavigation />
+      </>
+    )
+    const header = screen.getByRole('banner')
+    const mobile = screen.getByRole('navigation', { name: 'Navegação móvel' })
+
+    expect(within(header).getByRole('link', { name: 'Explorar' })).toHaveAttribute(
+      'href',
+      '/cidades'
+    )
+    expect(within(header).queryByRole('link', { name: 'Carteira' })).not.toBeInTheDocument()
+    expect(within(header).queryByRole('link', { name: 'Portal' })).not.toBeInTheDocument()
+    expect(within(mobile).queryByRole('link', { name: 'Carteira' })).not.toBeInTheDocument()
+    expect(within(mobile).queryByRole('link', { name: 'Portal' })).not.toBeInTheDocument()
+    expect(within(mobile).getAllByRole('link')).toHaveLength(1)
+
+    await user.click(within(mobile).getByRole('button', { name: 'Sair' }))
+    expect(inertia.post).toHaveBeenCalledWith('/logout')
   })
 
   it('preserves the accessible public shell contract', () => {

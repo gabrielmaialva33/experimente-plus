@@ -3,9 +3,12 @@ import {
   Building2,
   ClipboardCheck,
   Compass,
+  FileCheck2,
+  FileLock2,
   KeyRound,
   LayoutDashboard,
   LogIn,
+  LogOut,
   MessageSquareText,
   ScanLine,
   Settings,
@@ -20,12 +23,14 @@ import {
 
 export type NavigationSurface = 'public' | 'consumer' | 'portal' | 'backoffice'
 export type NavigationPlacement = 'consumer-shell' | 'sidebar'
-export type PublicNavigationPlacement = 'header' | 'mobile' | 'footer'
+export type PublicNavigationPlacement = 'header' | 'mobile' | 'utility' | 'footer'
 
 export interface PublicNavigationItem {
   label: string
   href: string
   icon: LucideIcon
+  method?: 'post'
+  requiresActiveTenant?: boolean
 }
 
 interface PublicNavigationTree {
@@ -36,7 +41,13 @@ interface PublicNavigationTree {
 interface PublicNavigationConfig {
   header: PublicNavigationTree
   mobile: PublicNavigationTree
+  utility: PublicNavigationTree
   footer: readonly PublicNavigationItem[]
+}
+
+export interface NavigationAvailability {
+  authenticated: boolean
+  activeTenantId: number | null
 }
 
 export interface NavigationBreadcrumb {
@@ -66,6 +77,8 @@ export interface NavigationItem {
   section: string
   placements: readonly NavigationPlacement[]
   capability?: string
+  /** The destination is guarded by tenant middleware and needs an active operation. */
+  requiresActiveTenant?: boolean
   developmentOnly?: boolean
 }
 
@@ -80,15 +93,26 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
   header: {
     authenticated: [
       { label: 'Explorar', href: '/cidades', icon: Compass },
-      { label: 'Carteira', href: '/wallet', icon: TicketPercent },
+      {
+        label: 'Carteira',
+        href: '/wallet',
+        icon: TicketPercent,
+        requiresActiveTenant: true,
+      },
     ],
     guest: [{ label: 'Explorar', href: '/cidades', icon: Compass }],
   },
   mobile: {
     authenticated: [
       { label: 'Explorar', href: '/cidades', icon: Compass },
-      { label: 'Carteira', href: '/wallet', icon: TicketPercent },
-      { label: 'Portal', href: '/portal', icon: Store },
+      {
+        label: 'Carteira',
+        href: '/wallet',
+        icon: TicketPercent,
+        requiresActiveTenant: true,
+      },
+      { label: 'Portal', href: '/portal', icon: Store, requiresActiveTenant: true },
+      { label: 'Sair', href: '/logout', icon: LogOut, method: 'post' },
     ],
     guest: [
       { label: 'Explorar', href: '/cidades', icon: Compass },
@@ -96,7 +120,18 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
       { label: 'Cadastrar negócio', href: '/register', icon: UserPlus },
     ],
   },
-  footer: [{ label: 'Explorar cidades', href: '/cidades', icon: Compass }],
+  utility: {
+    authenticated: [
+      { label: 'Portal', href: '/portal', icon: Store, requiresActiveTenant: true },
+      { label: 'Sair', href: '/logout', icon: LogOut, method: 'post' },
+    ],
+    guest: [{ label: 'Entrar', href: '/login', icon: LogIn }],
+  },
+  footer: [
+    { label: 'Explorar cidades', href: '/cidades', icon: Compass },
+    { label: 'Termos de Uso', href: '/termos', icon: FileCheck2 },
+    { label: 'Privacidade', href: '/privacidade', icon: FileLock2 },
+  ],
 }
 
 /**
@@ -104,6 +139,22 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
  * resolved by specificity, so a receipt or benefit page wins over its parent surface.
  */
 export const ROUTE_METADATA: readonly RouteMetadata[] = [
+  {
+    id: 'public-privacy',
+    pattern: '/privacidade',
+    surface: 'public',
+    title: 'Política de Privacidade',
+    description: 'Como o Experimente+ trata dados pessoais e sinais de descoberta.',
+    breadcrumbs: [{ label: 'Privacidade' }],
+  },
+  {
+    id: 'public-terms',
+    pattern: '/termos',
+    surface: 'public',
+    title: 'Termos de Uso',
+    description: 'Regras para usar o catálogo, a conta e os benefícios do Experimente+.',
+    breadcrumbs: [{ label: 'Termos de Uso' }],
+  },
   {
     id: 'public-establishment',
     pattern: '/cidades/:citySlug/estabelecimentos/:establishmentSlug',
@@ -156,7 +207,7 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     id: 'consumer-presentation',
     pattern: '/wallet/accesses/:accessId/offers/:offerId/use',
     surface: 'consumer',
-    title: 'Apresentar benefício',
+    title: 'Usar benefício',
     description: 'Gere uma apresentação temporária para confirmar a utilização.',
     breadcrumbs: [{ label: 'Carteira', href: '/wallet' }, { label: 'Apresentação' }],
   },
@@ -403,6 +454,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     surface: 'consumer',
     section: 'Descoberta',
     placements: ['consumer-shell', 'sidebar'],
+    requiresActiveTenant: true,
   },
   {
     id: 'portal-home',
@@ -571,10 +623,25 @@ export function resolveRouteMetadata(
 
 export function navigationItemsForSurface(
   surface: NavigationSurface,
-  placement?: NavigationPlacement
+  placement?: NavigationPlacement,
+  availability?: Pick<NavigationAvailability, 'activeTenantId'>
 ): NavigationItem[] {
   return NAVIGATION_ITEMS.filter(
-    (item) => item.surface === surface && (!placement || item.placements.includes(placement))
+    (item) =>
+      item.surface === surface &&
+      (!placement || item.placements.includes(placement)) &&
+      (!availability || !item.requiresActiveTenant || availability.activeTenantId !== null)
+  )
+}
+
+export function publicNavigationItemsFor(
+  placement: Exclude<PublicNavigationPlacement, 'footer'>,
+  availability: NavigationAvailability
+): PublicNavigationItem[] {
+  const audience = availability.authenticated ? 'authenticated' : 'guest'
+
+  return PUBLIC_NAVIGATION[placement][audience].filter(
+    (item) => !item.requiresActiveTenant || availability.activeTenantId !== null
   )
 }
 

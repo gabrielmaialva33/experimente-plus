@@ -26,6 +26,10 @@ declare module '@adonisjs/inertia/types' {
     'auth/forgot_password': Record<string, never>
     'auth/reset_password': { token: string }
 
+    // Legal
+    'legal/terms': Record<string, never>
+    'legal/privacy': Record<string, never>
+
     // Root / misc
     'home': Record<string, never>
     'ui_demo': Record<string, never>
