@@ -21,6 +21,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_NAME: Env.schema.string.optional(),
   APP_URL: Env.schema.string.optional(),
   APP_SOURCE_URL: Env.schema.string.optional(),
+  TRUST_PROXY: Env.schema.string.optional(),
   PUBLIC_TENANT_SLUG: Env.schema.string.optional(),
   APP_KEY: Env.schema.string(),
   ACCESS_TOKEN_SECRET: Env.schema.string.optional(),
@@ -88,41 +89,6 @@ export default await Env.create(new URL('../', import.meta.url), {
   REDIS_PORT: Env.schema.number.optional(),
   REDIS_PASSWORD: Env.schema.string.optional(),
   REDIS_DB: Env.schema.number.optional(),
-  /*
-  |----------------------------------------------------------
-  | Variables for @rlanz/bull-queue
-  |----------------------------------------------------------
-  */
-  QUEUE_REDIS_HOST: Env.schema.string.optional({ format: 'host' }),
-  QUEUE_REDIS_PORT: Env.schema.number.optional(),
-  QUEUE_REDIS_PASSWORD: Env.schema.string.optional(),
-
-  /*
-  |----------------------------------------------------------
-  | Variables for configuring ally package
-  |----------------------------------------------------------
-  */
-  DISCORD_CLIENT_ID: Env.schema.string.optional(),
-  DISCORD_CLIENT_SECRET: Env.schema.string.optional(),
-
-  FACEBOOK_CLIENT_ID: Env.schema.string.optional(),
-  FACEBOOK_CLIENT_SECRET: Env.schema.string.optional(),
-
-  GITHUB_CLIENT_ID: Env.schema.string.optional(),
-  GITHUB_CLIENT_SECRET: Env.schema.string.optional(),
-
-  GOOGLE_CLIENT_ID: Env.schema.string.optional(),
-  GOOGLE_CLIENT_SECRET: Env.schema.string.optional(),
-
-  LINKEDIN_CLIENT_ID: Env.schema.string.optional(),
-  LINKEDIN_CLIENT_SECRET: Env.schema.string.optional(),
-
-  SPOTIFY_CLIENT_ID: Env.schema.string.optional(),
-  SPOTIFY_CLIENT_SECRET: Env.schema.string.optional(),
-
-  TWITTER_CLIENT_ID: Env.schema.string.optional(),
-  TWITTER_CLIENT_SECRET: Env.schema.string.optional(),
-
   // S3
   AWS_ACCESS_KEY_ID: Env.schema.string.optional(),
   AWS_SECRET_ACCESS_KEY: Env.schema.string.optional(),

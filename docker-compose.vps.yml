@@ -15,6 +15,9 @@ services:
     environment:
       PORT: 3333
       HOST: 0.0.0.0
+      # nginx reaches the container through Docker's private gateway. Trust only
+      # that address class so forwarded host/protocol headers are honored.
+      TRUST_PROXY: uniquelocal
     volumes:
       - storage:/app/storage
       - uploads:/app/public/uploads

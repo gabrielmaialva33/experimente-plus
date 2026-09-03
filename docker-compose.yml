@@ -99,9 +99,6 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis}
       REDIS_DB: 0
-      QUEUE_REDIS_HOST: redis
-      QUEUE_REDIS_PORT: 6379
-      QUEUE_REDIS_PASSWORD: ${REDIS_PASSWORD:-redis}
       MAIL_MAILER: smtp
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@example.com}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Experimente+}

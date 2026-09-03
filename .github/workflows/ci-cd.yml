@@ -13,8 +13,6 @@ jobs:
       DB_PORT: 5432
       REDIS_PORT: 6379
       REDIS_PASSWORD: ''
-      QUEUE_REDIS_PORT: 6379
-      QUEUE_REDIS_PASSWORD: ''
 
     services:
       postgres:
