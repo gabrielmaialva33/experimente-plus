@@ -115,7 +115,7 @@ function TenantSwitcher() {
 }
 
 function UserMenu({ surface }: { surface: NavigationSurface }) {
-  const { user, activeTenantId, can } = useAuth()
+  const { user, activeTenantId, platformAccess, can } = useAuth()
 
   if (!user) {
     return (
@@ -127,6 +127,7 @@ function UserMenu({ surface }: { surface: NavigationSurface }) {
 
   const firstBackofficeDestination = navigationItemsForSurface('backoffice', 'sidebar', {
     activeTenantId,
+    platformAccess,
   }).find((item) => hasNavigationCapability(item, can))
   const BackofficeIcon = firstBackofficeDestination?.icon
 
@@ -248,7 +249,7 @@ export function Header({ surface }: { surface: NavigationSurface }) {
               <SidebarNav surface={surface} onNavigate={() => setMobileOpen(false)} />
             </SheetContent>
           </Sheet>
-          <AppBrand href="/" collapsed className="sm:hidden" />
+          <AppBrand href="/" collapsed />
         </div>
 
         <div className="hidden min-w-0 items-center gap-3 lg:flex">

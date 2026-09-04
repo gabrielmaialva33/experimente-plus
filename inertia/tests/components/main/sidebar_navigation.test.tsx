@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SidebarNav } from '~/layouts/main/components/sidebar'
 import { render, screen } from '~/tests/test_utils'
@@ -7,6 +7,7 @@ import { render, screen } from '~/tests/test_utils'
 const mocks = vi.hoisted(() => ({
   url: '/portal',
   activeTenantId: 7 as number | null,
+  platformAccess: null as 'platform_admin' | 'platform_moderator' | null,
   permissions: [] as string[],
 }))
 
@@ -22,6 +23,7 @@ vi.mock('@inertiajs/react', () => ({
       app: { demoPagesEnabled: false },
       auth: {
         activeTenantId: mocks.activeTenantId,
+        platformAccess: mocks.platformAccess,
         permissions: mocks.permissions,
         tenants: [{ id: 7, name: 'Operação Norte', role: 'admin' }],
       },
@@ -30,7 +32,14 @@ vi.mock('@inertiajs/react', () => ({
 }))
 
 describe('SidebarNav', () => {
-  it('renders only Portal destinations allowed by the current capabilities', () => {
+  beforeEach(() => {
+    mocks.url = '/portal'
+    mocks.activeTenantId = 7
+    mocks.platformAccess = null
+    mocks.permissions = []
+  })
+
+  it('keeps organization-scoped Portal actions out of the global sidebar', () => {
     mocks.url = '/portal/redemptions'
     mocks.activeTenantId = 7
     mocks.permissions = ['benefit_offers.read', 'dashboard.read']
@@ -38,17 +47,28 @@ describe('SidebarNav', () => {
     render(<SidebarNav surface="portal" />)
 
     expect(screen.getByRole('navigation', { name: 'Navegação — Portal do parceiro' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Visão geral' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Utilizações' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Visão geral' })).not.toHaveAttribute('aria-current')
+    expect(screen.queryByRole('link', { name: 'Utilizações' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Painel operacional')).not.toBeInTheDocument()
+  })
+
+  it('marks the Portal overview only on its exact destination', () => {
+    mocks.url = '/portal'
+    mocks.activeTenantId = 7
+    mocks.permissions = ['benefit_offers.read']
+
+    render(<SidebarNav surface="portal" />)
+
+    expect(screen.getByRole('link', { name: 'Visão geral' })).toHaveAttribute(
       'aria-current',
       'page'
     )
-    expect(screen.queryByText('Painel operacional')).not.toBeInTheDocument()
   })
 
   it('renders only permitted Backoffice destinations and keeps the specific active state', () => {
     mocks.url = '/backoffice/moderation/45'
     mocks.activeTenantId = 7
+    mocks.platformAccess = 'platform_moderator'
     mocks.permissions = ['establishments.list', 'benefit_accesses.list']
 
     render(<SidebarNav surface="backoffice" />)
@@ -62,10 +82,11 @@ describe('SidebarNav', () => {
     expect(screen.queryByText('Edições e benefícios')).not.toBeInTheDocument()
   })
 
-  it('shows the edition workspace to update-only operators', () => {
+  it('shows the edition workspace to read-only operation moderators', () => {
     mocks.url = '/backoffice/benefits'
     mocks.activeTenantId = 7
-    mocks.permissions = ['benefit_editions.update']
+    mocks.platformAccess = 'platform_moderator'
+    mocks.permissions = ['benefit_editions.list']
 
     render(<SidebarNav surface="backoffice" />)
 
@@ -75,9 +96,21 @@ describe('SidebarNav', () => {
     )
   })
 
+  it('keeps every Backoffice destination hidden from a USER with shared permissions', () => {
+    mocks.url = '/dashboard'
+    mocks.activeTenantId = 7
+    mocks.permissions = ['benefit_editions.list', 'benefit_accesses.list', 'establishments.list']
+
+    render(<SidebarNav surface="backoffice" />)
+
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+    expect(screen.queryByText('Operação')).not.toBeInTheDocument()
+  })
+
   it('hides operation-bound destinations without an active operation', () => {
     mocks.url = '/users'
     mocks.activeTenantId = null
+    mocks.platformAccess = 'platform_admin'
     mocks.permissions = ['establishments.list', 'users.list']
 
     render(<SidebarNav surface="backoffice" />)

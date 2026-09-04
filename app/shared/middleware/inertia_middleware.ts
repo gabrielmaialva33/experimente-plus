@@ -3,6 +3,9 @@ import app from '@adonisjs/core/services/app'
 import type { NextFn } from '@adonisjs/core/types/http'
 import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
+import OrganizationPolicyService, {
+  type PlatformAccess,
+} from '#modules/organizations/services/organization_policy_service'
 import PermissionService from '#modules/permissions/services/permission_service'
 import { resolveActiveTenantId } from '#shared/utils/active_tenant'
 import { findApplicationSetCookies } from '#shared/utils/public_response_cookies'
@@ -171,12 +174,14 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     user: SharedUser | null
     tenants: SharedTenant[]
     activeTenantId: number | null
+    platformAccess: PlatformAccess | null
     permissions: string[]
   }> {
     const empty = {
       user: null,
       tenants: [] as SharedTenant[],
       activeTenantId: null,
+      platformAccess: null,
       permissions: [] as string[],
     }
 
@@ -208,13 +213,20 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     const claimedTenantId = guard.tokenPayload?.tenantId
     const activeTenantId = resolveActiveTenantId(tenants, claimedTenantId)
 
-    const permissionService = await app.container.make(PermissionService)
-    const permissions = await permissionService.getEffectivePermissionNames(user.id)
+    const [permissionService, organizationPolicy] = await Promise.all([
+      app.container.make(PermissionService),
+      app.container.make(OrganizationPolicyService),
+    ])
+    const [permissions, platformAccess] = await Promise.all([
+      permissionService.getEffectivePermissionNames(user.id),
+      organizationPolicy.resolvePlatformAccess(user),
+    ])
 
     return {
       user: { id: user.id, full_name: user.full_name, email: user.email },
       tenants,
       activeTenantId,
+      platformAccess,
       permissions,
     }
   }

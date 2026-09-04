@@ -23,10 +23,13 @@ export interface TenantSummary {
   role: string | null
 }
 
+export type PlatformAccess = 'platform_admin' | 'platform_moderator'
+
 export interface AuthSharedProps {
   user: AuthUser | null
   tenants: TenantSummary[]
   activeTenantId: number | null
+  platformAccess: PlatformAccess | null
   permissions: string[]
 }
 

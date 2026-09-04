@@ -46,14 +46,15 @@ export function SidebarNav({
 }) {
   const url = useCurrentUrl()
   const application = useApp()
-  const { activeTenantId, can } = useAuth()
+  const { activeTenantId, platformAccess, can } = useAuth()
 
-  const visibleItems = navigationItemsForSurface(surface, 'sidebar', { activeTenantId }).filter(
-    (item) => {
-      if (item.developmentOnly && !application.demoPagesEnabled) return false
-      return hasNavigationCapability(item, can)
-    }
-  )
+  const visibleItems = navigationItemsForSurface(surface, 'sidebar', {
+    activeTenantId,
+    platformAccess,
+  }).filter((item) => {
+    if (item.developmentOnly && !application.demoPagesEnabled) return false
+    return hasNavigationCapability(item, can)
+  })
   const visibleSections = visibleItems.reduce<NavigationSection[]>((sections, item) => {
     const section = sections.find((candidate) => candidate.label === item.section)
     if (section) section.items.push(item)

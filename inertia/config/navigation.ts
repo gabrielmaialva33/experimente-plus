@@ -10,7 +10,6 @@ import {
   LogIn,
   LogOut,
   MessageSquareText,
-  ScanLine,
   Store,
   TicketPercent,
   Upload,
@@ -19,6 +18,8 @@ import {
   Users,
   WalletCards,
 } from 'lucide-react'
+
+import type { PlatformAccess } from '~/types'
 
 export type NavigationSurface = 'public' | 'consumer' | 'portal' | 'backoffice'
 export type NavigationPlacement = 'consumer-shell' | 'sidebar'
@@ -47,6 +48,7 @@ interface PublicNavigationConfig {
 export interface NavigationAvailability {
   authenticated: boolean
   activeTenantId: number | null
+  platformAccess?: PlatformAccess | null
 }
 
 export interface NavigationBreadcrumb {
@@ -82,6 +84,8 @@ export interface NavigationItem {
   capabilitiesAnyOf?: readonly string[]
   /** The destination is guarded by tenant middleware and needs an active operation. */
   requiresActiveTenant?: boolean
+  /** Matches only this path, excluding descendant routes. */
+  exact?: boolean
   developmentOnly?: boolean
 }
 
@@ -368,7 +372,7 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     surface: 'backoffice',
     title: 'Edições e benefícios',
     description: 'Edições comerciais, ofertas vinculadas e publicação.',
-    capabilitiesAnyOf: ['benefit_editions.create', 'benefit_editions.update'],
+    capability: 'benefit_editions.list',
     breadcrumbs: [{ label: 'Edições e benefícios' }],
     includeChildren: true,
   },
@@ -499,17 +503,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     requiresActiveTenant: true,
-  },
-  {
-    id: 'portal-redemptions',
-    label: 'Utilizações',
-    href: '/portal/redemptions',
-    icon: ScanLine,
-    surface: 'portal',
-    section: 'Portal do parceiro',
-    placements: ['sidebar'],
-    capability: 'benefit_offers.read',
-    requiresActiveTenant: true,
+    exact: true,
   },
   {
     id: 'backoffice-dashboard',
@@ -541,7 +535,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     surface: 'backoffice',
     section: 'Operação',
     placements: ['sidebar'],
-    capabilitiesAnyOf: ['benefit_editions.create', 'benefit_editions.update'],
+    capability: 'benefit_editions.list',
     requiresActiveTenant: true,
   },
   {
@@ -657,8 +651,10 @@ export function resolveRouteMetadata(
 export function navigationItemsForSurface(
   surface: NavigationSurface,
   placement?: NavigationPlacement,
-  availability?: Pick<NavigationAvailability, 'activeTenantId'>
+  availability?: Pick<NavigationAvailability, 'activeTenantId' | 'platformAccess'>
 ): NavigationItem[] {
+  if (surface === 'backoffice' && (availability?.platformAccess ?? null) === null) return []
+
   return NAVIGATION_ITEMS.filter(
     (item) =>
       item.surface === surface &&
@@ -687,10 +683,10 @@ export function publicNavigationItemsFor(
   )
 }
 
-export function isNavigationHrefActive(url: string, href: string): boolean {
+export function isNavigationHrefActive(url: string, href: string, exact = false): boolean {
   const pathname = normalizePath(url)
   const target = normalizePath(href)
-  if (target === '/') return pathname === '/'
+  if (target === '/' || exact) return pathname === target
   return pathname === target || pathname.startsWith(`${target}/`)
 }
 
@@ -700,7 +696,7 @@ export function matchNavigationItem(
 ): NavigationItem | null {
   return (
     items
-      .filter((item) => isNavigationHrefActive(url, item.href))
+      .filter((item) => isNavigationHrefActive(url, item.href, item.exact))
       .sort((left, right) => pathSegments(right.href).length - pathSegments(left.href).length)[0] ??
     null
   )

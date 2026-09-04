@@ -362,7 +362,7 @@ test.group('Web authentication', (group) => {
     assert.equal(login.header('location'), '/wallet')
   })
 
-  test('should keep a platform role without an active operation in public discovery', async ({
+  test('should share canonical platform access without requiring an active operation', async ({
     client,
     assert,
   }) => {
@@ -381,6 +381,28 @@ test.group('Web authentication', (group) => {
 
     login.assertStatus(302)
     assert.equal(login.header('location'), '/cidades')
+
+    const rootSettings = await client.get('/settings').loginAs(user)
+    rootSettings.assertStatus(200)
+    assert.equal(
+      (parseInertiaPage(rootSettings).props.auth as { platformAccess: string | null })
+        .platformAccess,
+      'platform_admin'
+    )
+
+    const moderator = await User.create({
+      full_name: 'Moderator Without Operation',
+      email: 'moderator-without-operation@example.com',
+      password: 'password123',
+    })
+    await attachRole(moderator, IRole.Slugs.MODERATOR)
+    const moderatorSettings = await client.get('/settings').loginAs(moderator)
+    moderatorSettings.assertStatus(200)
+    assert.equal(
+      (parseInertiaPage(moderatorSettings).props.auth as { platformAccess: string | null })
+        .platformAccess,
+      'platform_moderator'
+    )
   })
 
   test('should honor an explicit tenant claim across landing and shared navigation', async ({

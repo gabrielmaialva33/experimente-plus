@@ -27,7 +27,7 @@ describe('navigation configuration', () => {
       id: 'portal-establishment',
       title: 'Editor da unidade',
     })
-    expect(matchNavigationItem('/portal/redemptions/ABC-123')?.id).toBe('portal-redemptions')
+    expect(matchNavigationItem('/portal/redemptions/ABC-123')).toBeNull()
     expect(resolveRouteMetadata('/portal/redemptions/ABC-123')).toMatchObject({
       id: 'portal-receipt',
       title: 'Comprovante de utilização',
@@ -42,7 +42,10 @@ describe('navigation configuration', () => {
 
   it('normalizes query strings and trailing slashes when matching navigation', () => {
     expect(isNavigationHrefActive('/wallet/?tab=active#offer', '/wallet')).toBe(true)
-    expect(matchNavigationItem('/portal/redemptions/?page=2')?.id).toBe('portal-redemptions')
+    expect(matchNavigationItem('/wallet/accesses/7/offers/11/use')?.id).toBe('consumer-wallet')
+    expect(matchNavigationItem('/portal/?page=2')?.id).toBe('portal-home')
+    expect(matchNavigationItem('/portal/redemptions/?page=2')).toBeNull()
+    expect(isNavigationHrefActive('/portal/establishments/42', '/portal', true)).toBe(false)
   })
 
   it('filters navigation by surface without mixing operational items into consumer navigation', () => {
@@ -59,13 +62,23 @@ describe('navigation configuration', () => {
     const portalItems = navigationItemsForSurface('portal', 'sidebar', { activeTenantId: 12 })
     const backofficeItems = navigationItemsForSurface('backoffice', 'sidebar', {
       activeTenantId: 12,
+      platformAccess: 'platform_moderator',
     })
 
-    expect(portalItems.map((item) => item.href)).toEqual(['/portal', '/portal/redemptions'])
+    expect(portalItems.map((item) => item.href)).toEqual(['/portal'])
     expect(portalItems.every((item) => item.surface === 'portal')).toBe(true)
     expect(backofficeItems.every((item) => item.surface === 'backoffice')).toBe(true)
     expect(backofficeItems.some((item) => item.href.startsWith('/portal'))).toBe(false)
     expect(backofficeItems.some((item) => item.href === '/settings')).toBe(false)
+  })
+
+  it('fails closed for Backoffice when platform access is absent', () => {
+    expect(
+      navigationItemsForSurface('backoffice', 'sidebar', {
+        activeTenantId: 12,
+        platformAccess: null,
+      })
+    ).toEqual([])
   })
 
   it('keeps personal settings outside operational navigation', () => {
@@ -167,10 +180,7 @@ describe('navigation configuration', () => {
 
     expect(resolveRouteMetadata('/portal/redemptions')?.capability).toBe('benefit_offers.read')
     expect(resolveRouteMetadata('/backoffice/moderation')?.capability).toBe('establishments.list')
-    expect(resolveRouteMetadata('/backoffice/benefits')?.capabilitiesAnyOf).toEqual([
-      'benefit_editions.create',
-      'benefit_editions.update',
-    ])
+    expect(resolveRouteMetadata('/backoffice/benefits')?.capability).toBe('benefit_editions.list')
   })
 
   it('does not expose the conditional UI demo route in central navigation', () => {

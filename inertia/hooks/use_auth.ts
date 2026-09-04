@@ -8,6 +8,7 @@ export function useAuth() {
   const tenants = auth?.tenants ?? []
   const activeTenantId = auth?.activeTenantId ?? null
   const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId) ?? null
+  const platformAccess = auth?.platformAccess ?? null
   const permissions = auth?.permissions ?? []
 
   return {
@@ -16,6 +17,8 @@ export function useAuth() {
     tenants,
     activeTenant,
     activeTenantId,
+    platformAccess,
+    isPlatformStaff: platformAccess !== null,
     permissions,
     can: (permission: string) => permissions.includes(permission),
     canAny: (required: string[]) => required.some((permission) => permissions.includes(permission)),
