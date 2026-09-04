@@ -129,7 +129,7 @@ test.group('Data grid', () => {
     await page.locator('td:has-text("api-gateway")').first().waitFor()
 
     // The control is icon-only; its accessible name comes from an sr-only span.
-    await page.locator('button:has-text("Go to next page")').click()
+    await page.getByRole('button', { name: 'Ir para a próxima página' }).click()
 
     // 8 rows, 5 per page -> the second page holds the remaining 3.
     await page.locator('td:has-text("search-indexer")').first().waitFor({ timeout: 10000 })

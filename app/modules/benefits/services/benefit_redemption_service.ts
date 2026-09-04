@@ -279,11 +279,18 @@ export default class BenefitRedemptionService {
     tenantId: number,
     actor: User
   ): Promise<IBenefitRedemption.HistoryProjection> {
+    if (await this.organizationPolicy.isPlatformAdmin(actor)) {
+      const redemptions = await this.repository.listForTenant(tenantId)
+      return {
+        redemptions: redemptions.map((redemption) => this.toReceipt(redemption)),
+        total: redemptions.length,
+      }
+    }
+
     const memberships = await OrganizationMember.query()
       .where('tenant_id', tenantId)
       .where('user_id', actor.id)
       .where('status', 'active')
-      .whereIn('role', ['owner', 'admin', 'editor'])
       .select('organization_id')
     const organizationIds = memberships.map((membership) => membership.organization_id)
     const redemptions = await this.repository.listForOrganizations(tenantId, organizationIds)
@@ -443,6 +450,7 @@ export default class BenefitRedemptionService {
       offer_id: context.offer.id,
       edition_id: context.edition.id,
       edition_name: context.edition.name,
+      organization_id: context.establishment.organization_id,
       establishment_id: context.establishment.id,
       establishment_name: context.revision.public_name ?? 'Estabelecimento',
       offer_title: context.offer.title,

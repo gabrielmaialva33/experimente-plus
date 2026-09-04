@@ -14,7 +14,7 @@ import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import IRole from '#modules/roles/interfaces/role_interface'
 import { createEstablishmentScenario } from '#tests/functional/establishments/helpers'
-import { createUser } from '#tests/functional/organizations/helpers'
+import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
 
 let sequence = 0
 
@@ -261,6 +261,29 @@ test.group('Benefit redemptions', (group) => {
     )
     assert.equal(preview.holder.id, fixture.consumer.id)
     assert.equal(preview.benefit.establishment_id, fixture.establishment.id)
+    assert.equal(preview.benefit.organization_id, fixture.scenario.organization.id)
+
+    const platformPreview = await service.preview(
+      fixture.scenario.tenant.id,
+      presentation.token,
+      fixture.admin
+    )
+    assert.equal(platformPreview.benefit.organization_id, fixture.scenario.organization.id)
+
+    const analyst = await createUser({
+      prefix: 'redemption-analyst',
+      tenant: fixture.scenario.tenant,
+    })
+    await addOrganizationMember({
+      tenant: fixture.scenario.tenant,
+      organization: fixture.scenario.organization,
+      user: analyst,
+      role: 'analyst',
+    })
+    const analystAttempt = await captureFailure(() =>
+      service.preview(fixture.scenario.tenant.id, presentation.token, analyst)
+    )
+    assert.exists(analystAttempt)
 
     const outsiderAttempt = await captureFailure(() =>
       service.preview(fixture.scenario.tenant.id, presentation.token, fixture.outsider)
@@ -368,6 +391,22 @@ test.group('Benefit redemptions', (group) => {
       fixture.scenario.owner
     )
     assert.equal(partnerHistory.total, 1)
+
+    const analyst = await createUser({
+      prefix: 'redemption-history-analyst',
+      tenant: fixture.scenario.tenant,
+    })
+    await addOrganizationMember({
+      tenant: fixture.scenario.tenant,
+      organization: fixture.scenario.organization,
+      user: analyst,
+      role: 'analyst',
+    })
+    const analystHistory = await service.partnerHistory(fixture.scenario.tenant.id, analyst)
+    assert.equal(analystHistory.total, 1)
+
+    const platformHistory = await service.partnerHistory(fixture.scenario.tenant.id, fixture.admin)
+    assert.equal(platformHistory.total, 1)
 
     const outsiderHistory = await service.partnerHistory(
       fixture.scenario.tenant.id,

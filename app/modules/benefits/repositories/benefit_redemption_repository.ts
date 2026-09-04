@@ -56,6 +56,13 @@ export default class BenefitRedemptionRepository {
       .orderBy('id', 'desc')
   }
 
+  async listForTenant(tenantId: number): Promise<BenefitRedemption[]> {
+    return BenefitRedemption.query()
+      .where('tenant_id', tenantId)
+      .orderBy('redeemed_at', 'desc')
+      .orderBy('id', 'desc')
+  }
+
   async listForOrganizations(
     tenantId: number,
     organizationIds: number[]

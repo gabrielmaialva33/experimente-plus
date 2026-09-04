@@ -7,7 +7,9 @@ import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import City from '#modules/geography/models/city'
+import Permission from '#modules/permissions/models/permission'
 import IRole from '#modules/roles/interfaces/role_interface'
+import Role from '#modules/roles/models/role'
 import { createEstablishmentScenario } from '#tests/functional/establishments/helpers'
 import { createUser } from '#tests/functional/organizations/helpers'
 
@@ -390,5 +392,38 @@ test.group('Benefits', (group) => {
     partner.assertStatus(200)
     assert.include(partner.text(), 'portal/establishments/benefits')
     assert.include(partner.text(), 'Café participante pages')
+  })
+
+  test('allows operation staff with update but without create to open the edition workspace', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('benefit-update-only')
+    const admin = await createUser({
+      prefix: 'benefit-update-only-admin',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.ADMIN,
+      tenantRole: 'admin',
+    })
+    const adminRole = await Role.findByOrFail('slug', IRole.Slugs.ADMIN)
+    const createPermission = await Permission.findByOrFail('name', 'benefit_editions.create')
+    await adminRole.related('permissions').detach([createPermission.id])
+
+    const response = await client
+      .get('/backoffice/benefits')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+
+    response.assertStatus(200)
+    assert.include(response.text(), 'backoffice/benefits/index')
+
+    const createAttempt = await client
+      .post('/backoffice/benefits')
+      .withCsrfToken()
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(admin)
+      .json(editionPayload(scenario.city.id))
+
+    createAttempt.assertStatus(403)
   })
 })

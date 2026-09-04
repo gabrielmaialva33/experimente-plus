@@ -11,12 +11,14 @@ import {
 } from '#modules/benefits/validators/benefit_validator'
 import Establishment from '#modules/establishments/models/establishment'
 import City from '#modules/geography/models/city'
+import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 
 @inject()
 export default class BenefitPagesController {
   constructor(
     private editionService: BenefitEditionService,
-    private offerService: BenefitOfferService
+    private offerService: BenefitOfferService,
+    private resourceAuthorization: OrganizationResourceAuthorizationService
   ) {}
 
   async backoffice({ auth, inertia, response, tenant }: HttpContext) {
@@ -81,6 +83,11 @@ export default class BenefitPagesController {
     const cityId = establishment.published_revision?.city_id ?? null
     const availableEditions = await this.editionService.listAvailable(tenant!.id)
     const editions = availableEditions.filter((edition) => edition.city_id === cityId)
+    const allowedActions = await this.resourceAuthorization.forOrganization(
+      tenant!.id,
+      establishment.organization_id,
+      actor
+    )
 
     return inertia.render('portal/establishments/benefits', {
       establishment: {
@@ -92,6 +99,7 @@ export default class BenefitPagesController {
       },
       editions,
       offers,
+      allowed_actions: allowedActions,
     })
   }
 

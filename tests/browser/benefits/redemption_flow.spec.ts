@@ -111,8 +111,12 @@ test.group('Benefit redemption browser flow', () => {
     await partnerPage.getByText(scenario.users.holder.full_name, { exact: false }).waitFor()
     await partnerPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
 
-    partnerPage.once('dialog', (dialog) => dialog.accept())
-    await partnerPage.getByRole('button', { name: 'Confirmar utilização' }).click()
+    await partnerPage.getByRole('button', { name: 'Confirmar utilização', exact: true }).click()
+    const confirmationDialog = partnerPage.getByRole('alertdialog')
+    await confirmationDialog.waitFor()
+    await confirmationDialog
+      .getByRole('button', { name: 'Confirmar utilização', exact: true })
+      .click()
     await partnerPage.waitForURL(/\/portal\/redemptions\/EXP-[A-F0-9]+$/, {
       timeout: 30_000,
     })

@@ -107,7 +107,14 @@ router
     router
       .get('/', [BenefitPagesController, 'backoffice'])
       .as('backoffice.benefits.index')
-      .use(permission(IPermission.Resources.BENEFIT_EDITIONS, IPermission.Actions.CREATE))
+      .use(
+        middleware.permission({
+          permissions: [
+            `${IPermission.Resources.BENEFIT_EDITIONS}.${IPermission.Actions.CREATE}`,
+            `${IPermission.Resources.BENEFIT_EDITIONS}.${IPermission.Actions.UPDATE}`,
+          ],
+        })
+      )
     router
       .post('/', [BenefitPagesController, 'createEdition'])
       .as('backoffice.benefits.create')

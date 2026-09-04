@@ -15,6 +15,7 @@ namespace IBenefitRedemption {
     offer_id: number
     edition_id: number
     edition_name: string
+    organization_id: number
     establishment_id: number
     establishment_name: string
     offer_title: string

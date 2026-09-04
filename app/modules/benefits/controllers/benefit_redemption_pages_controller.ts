@@ -3,10 +3,14 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import { benefitPresentationTokenValidator } from '#modules/benefits/validators/benefit_redemption_validator'
+import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 
 @inject()
 export default class BenefitRedemptionPagesController {
-  constructor(private redemptionService: BenefitRedemptionService) {}
+  constructor(
+    private redemptionService: BenefitRedemptionService,
+    private resourceAuthorization: OrganizationResourceAuthorizationService
+  ) {}
 
   async present({ auth, inertia, params, request, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
@@ -41,11 +45,21 @@ export default class BenefitRedemptionPagesController {
     this.setPrivateHeaders(response)
     const input = request.input('token')
     const token = typeof input === 'string' ? input.trim() : ''
-    const preview = token
-      ? await this.redemptionService.preview(tenant!.id, token, auth.getUserOrFail())
-      : null
+    const actor = auth.getUserOrFail()
+    const preview = token ? await this.redemptionService.preview(tenant!.id, token, actor) : null
+    const allowedActions = preview
+      ? await this.resourceAuthorization.forOrganization(
+          tenant!.id,
+          preview.benefit.organization_id,
+          actor
+        )
+      : await this.resourceAuthorization.forActor(tenant!.id, actor)
 
-    return inertia.render('portal/redemptions/validate', { token, preview })
+    return inertia.render('portal/redemptions/validate', {
+      token,
+      preview,
+      allowed_actions: allowedActions,
+    })
   }
 
   async redeem({ auth, request, response, session, tenant }: HttpContext) {
@@ -61,8 +75,15 @@ export default class BenefitRedemptionPagesController {
 
   async partnerHistory({ auth, inertia, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
-    const history = await this.redemptionService.partnerHistory(tenant!.id, auth.getUserOrFail())
-    return inertia.render('portal/redemptions/index', { history })
+    const actor = auth.getUserOrFail()
+    const [history, allowedActions] = await Promise.all([
+      this.redemptionService.partnerHistory(tenant!.id, actor),
+      this.resourceAuthorization.forActor(tenant!.id, actor),
+    ])
+    return inertia.render('portal/redemptions/index', {
+      history,
+      allowed_actions: allowedActions,
+    })
   }
 
   async partnerReceipt({ auth, inertia, params, response, tenant }: HttpContext) {
