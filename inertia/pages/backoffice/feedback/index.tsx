@@ -70,7 +70,7 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
           eyebrow="Backoffice"
           icon={MessageSquareText}
           title="Feedback do piloto"
-          description="Transforme relatos de onboarding, editor, catálogo e moderação em decisões de produto rastreáveis."
+          description="Transforme relatos dos primeiros passos, do editor, do catálogo e da moderação em decisões de produto rastreáveis."
         />
 
         <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-5">

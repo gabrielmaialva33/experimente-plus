@@ -163,6 +163,7 @@ export default function BenefitsBackofficePage({
     () => editions.filter((edition) => edition.status === 'published').length,
     [editions]
   )
+  const showEditionForm = canCreate || editingId !== null
 
   function updateField<Key extends keyof EditionFormState>(key: Key, value: EditionFormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -275,7 +276,7 @@ export default function BenefitsBackofficePage({
           eyebrow="Operação comercial"
           icon={TicketPercent}
           title="Edições e benefícios"
-          description="Organize cada temporada por cidade, validade e preço. A publicação só é liberada quando existe ao menos uma oferta ativa."
+          description="Organize cada edição por cidade, validade e preço. A publicação só é liberada quando existe ao menos uma oferta ativa."
           meta={
             <>
               <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
@@ -299,16 +300,19 @@ export default function BenefitsBackofficePage({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    {editingId ? 'Editar edição' : 'Nova edição'}
+                    {editingId ? 'Editar edição' : canCreate ? 'Nova edição' : 'Edição existente'}
                   </p>
                   <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
                     {editingId
                       ? 'Ajuste o período e a apresentação'
-                      : 'Prepare a próxima temporada'}
+                      : canCreate
+                        ? 'Prepare a próxima edição'
+                        : 'Selecione uma edição para editar'}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Informe o valor de referência da edição. Acessos são administrados separadamente
-                    e não alteram a publicação das ofertas.
+                    {showEditionForm
+                      ? 'Informe o valor de referência da edição. Acessos são administrados separadamente e não alteram a publicação das ofertas.'
+                      : 'Use a ação Editar em uma edição disponível para carregar seus dados neste painel.'}
                   </p>
                 </div>
                 {editingId ? (
@@ -319,154 +323,170 @@ export default function BenefitsBackofficePage({
                 ) : null}
               </div>
 
-              <form onSubmit={submit} aria-busy={processing} className="mt-6 grid gap-4">
-                <EditorField
-                  htmlFor="edition-city"
-                  label="Cidade"
-                  hint="Praça atendida pela edição"
-                >
-                  <select
-                    id="edition-city"
-                    required
-                    value={form.city_id}
-                    onChange={(event) => updateField('city_id', event.target.value)}
-                    className={editorSelectClassName}
-                    disabled={processing || cities.length === 0}
-                  >
-                    <option value="">Selecione uma cidade</option>
-                    {cities.map((city) => (
-                      <option key={city.id} value={city.id}>
-                        {city.name} — {city.state_code}
-                      </option>
-                    ))}
-                  </select>
-                </EditorField>
-
-                <EditorField htmlFor="edition-name" label="Nome da edição">
-                  <Input
-                    id="edition-name"
-                    required
-                    minLength={2}
-                    maxLength={160}
-                    value={form.name}
-                    onChange={(event) => updateField('name', event.target.value)}
-                    placeholder="Experimente Cornélio 2026/2027"
-                    disabled={processing}
-                  />
-                </EditorField>
-
-                <EditorField
-                  htmlFor="edition-description"
-                  label="Apresentação"
-                  hint="Texto interno por enquanto; a vitrine pública virá no corte de acesso."
-                >
-                  <Textarea
-                    id="edition-description"
-                    rows={4}
-                    value={form.description}
-                    onChange={(event) => updateField('description', event.target.value)}
-                    placeholder="Uma seleção de benefícios para conhecer os melhores lugares da cidade."
-                    disabled={processing}
-                  />
-                </EditorField>
-
-                <EditorField htmlFor="edition-price" label="Preço de referência">
-                  <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      R$
-                    </span>
-                    <Input
-                      id="edition-price"
-                      inputMode="decimal"
-                      value={form.price_reais}
-                      onChange={(event) => updateField('price_reais', event.target.value)}
-                      placeholder="149,90"
-                      className="pl-10"
-                      disabled={processing}
-                    />
-                  </div>
-                </EditorField>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <EditorField htmlFor="edition-usage-start" label="Início de uso">
-                    <Input
-                      id="edition-usage-start"
-                      type="date"
-                      required
-                      value={form.usage_starts_on}
-                      onChange={(event) => updateField('usage_starts_on', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                  <EditorField htmlFor="edition-usage-end" label="Fim de uso">
-                    <Input
-                      id="edition-usage-end"
-                      type="date"
-                      required
-                      value={form.usage_ends_on}
-                      onChange={(event) => updateField('usage_ends_on', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
+              {showEditionForm ? (
+                <form onSubmit={submit} aria-busy={processing} className="mt-6 grid gap-4">
                   <EditorField
-                    htmlFor="edition-sales-start"
-                    label="Início das vendas"
-                    hint="Opcional"
+                    htmlFor="edition-city"
+                    label="Cidade"
+                    hint="Praça atendida pela edição"
                   >
-                    <Input
-                      id="edition-sales-start"
-                      type="date"
-                      value={form.sales_starts_on}
-                      onChange={(event) => updateField('sales_starts_on', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                  <EditorField htmlFor="edition-sales-end" label="Fim das vendas" hint="Opcional">
-                    <Input
-                      id="edition-sales-end"
-                      type="date"
-                      value={form.sales_ends_on}
-                      onChange={(event) => updateField('sales_ends_on', event.target.value)}
-                      disabled={processing}
-                    />
-                  </EditorField>
-                </div>
-
-                {localError ? (
-                  <p
-                    role="alert"
-                    className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                  >
-                    {localError}
-                  </p>
-                ) : null}
-                {Object.keys(errors).length > 0 ? (
-                  <p
-                    role="alert"
-                    className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                  >
-                    Revise os campos destacados pelo servidor e tente novamente.
-                  </p>
-                ) : null}
-
-                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-                  {editingId ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="min-h-11"
-                      onClick={resetForm}
-                      disabled={processing}
+                    <select
+                      id="edition-city"
+                      required
+                      value={form.city_id}
+                      onChange={(event) => updateField('city_id', event.target.value)}
+                      className={editorSelectClassName}
+                      disabled={processing || cities.length === 0}
                     >
-                      Cancelar
-                    </Button>
+                      <option value="">Selecione uma cidade</option>
+                      {cities.map((city) => (
+                        <option key={city.id} value={city.id}>
+                          {city.name} — {city.state_code}
+                        </option>
+                      ))}
+                    </select>
+                  </EditorField>
+
+                  <EditorField htmlFor="edition-name" label="Nome da edição">
+                    <Input
+                      id="edition-name"
+                      required
+                      minLength={2}
+                      maxLength={160}
+                      value={form.name}
+                      onChange={(event) => updateField('name', event.target.value)}
+                      placeholder="Experimente Cornélio 2026/2027"
+                      disabled={processing}
+                    />
+                  </EditorField>
+
+                  <EditorField
+                    htmlFor="edition-description"
+                    label="Apresentação"
+                    hint="Texto interno por enquanto; a vitrine pública virá no corte de acesso."
+                  >
+                    <Textarea
+                      id="edition-description"
+                      rows={4}
+                      value={form.description}
+                      onChange={(event) => updateField('description', event.target.value)}
+                      placeholder="Uma seleção de benefícios para conhecer a cidade."
+                      disabled={processing}
+                    />
+                  </EditorField>
+
+                  <EditorField htmlFor="edition-price" label="Preço de referência">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                        R$
+                      </span>
+                      <Input
+                        id="edition-price"
+                        inputMode="decimal"
+                        value={form.price_reais}
+                        onChange={(event) => updateField('price_reais', event.target.value)}
+                        placeholder="149,90"
+                        className="pl-10"
+                        disabled={processing}
+                      />
+                    </div>
+                  </EditorField>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <EditorField htmlFor="edition-usage-start" label="Início de uso">
+                      <Input
+                        id="edition-usage-start"
+                        type="date"
+                        required
+                        value={form.usage_starts_on}
+                        onChange={(event) => updateField('usage_starts_on', event.target.value)}
+                        disabled={processing}
+                      />
+                    </EditorField>
+                    <EditorField htmlFor="edition-usage-end" label="Fim de uso">
+                      <Input
+                        id="edition-usage-end"
+                        type="date"
+                        required
+                        value={form.usage_ends_on}
+                        onChange={(event) => updateField('usage_ends_on', event.target.value)}
+                        disabled={processing}
+                      />
+                    </EditorField>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <EditorField
+                      htmlFor="edition-sales-start"
+                      label="Início das vendas"
+                      hint="Opcional"
+                    >
+                      <Input
+                        id="edition-sales-start"
+                        type="date"
+                        value={form.sales_starts_on}
+                        onChange={(event) => updateField('sales_starts_on', event.target.value)}
+                        disabled={processing}
+                      />
+                    </EditorField>
+                    <EditorField htmlFor="edition-sales-end" label="Fim das vendas" hint="Opcional">
+                      <Input
+                        id="edition-sales-end"
+                        type="date"
+                        value={form.sales_ends_on}
+                        onChange={(event) => updateField('sales_ends_on', event.target.value)}
+                        disabled={processing}
+                      />
+                    </EditorField>
+                  </div>
+
+                  {localError ? (
+                    <p
+                      role="alert"
+                      className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    >
+                      {localError}
+                    </p>
                   ) : null}
-                  {editingId ? (
-                    canUpdate ? (
+                  {Object.keys(errors).length > 0 ? (
+                    <p
+                      role="alert"
+                      className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    >
+                      Revise os campos destacados pelo servidor e tente novamente.
+                    </p>
+                  ) : null}
+
+                  <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                    {editingId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        className="min-h-11"
+                        onClick={resetForm}
+                        disabled={processing}
+                      >
+                        Cancelar
+                      </Button>
+                    ) : null}
+                    {editingId ? (
+                      canUpdate ? (
+                        <Button
+                          type="submit"
+                          size="lg"
+                          className="min-h-11"
+                          disabled={processing || cities.length === 0}
+                        >
+                          {processing ? (
+                            <Loader2 aria-hidden="true" className="animate-spin" />
+                          ) : (
+                            <Edit3 aria-hidden="true" />
+                          )}
+                          {processing ? 'Salvando…' : 'Salvar alterações'}
+                        </Button>
+                      ) : null
+                    ) : canCreate ? (
                       <Button
                         type="submit"
                         size="lg"
@@ -476,28 +496,22 @@ export default function BenefitsBackofficePage({
                         {processing ? (
                           <Loader2 aria-hidden="true" className="animate-spin" />
                         ) : (
-                          <Edit3 aria-hidden="true" />
+                          <Plus aria-hidden="true" />
                         )}
-                        {processing ? 'Salvando…' : 'Salvar alterações'}
+                        {processing ? 'Salvando…' : 'Criar edição'}
                       </Button>
-                    ) : null
-                  ) : canCreate ? (
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="min-h-11"
-                      disabled={processing || cities.length === 0}
-                    >
-                      {processing ? (
-                        <Loader2 aria-hidden="true" className="animate-spin" />
-                      ) : (
-                        <Plus aria-hidden="true" />
-                      )}
-                      {processing ? 'Salvando…' : 'Criar edição'}
-                    </Button>
-                  ) : null}
-                </div>
-              </form>
+                    ) : null}
+                  </div>
+                </form>
+              ) : (
+                <EmptyState
+                  icon={Edit3}
+                  headingLevel={3}
+                  title="Nenhuma edição selecionada"
+                  description="Escolha uma edição na lista para consultar e alterar seus dados."
+                  className="mt-6 border border-dashed border-border py-8"
+                />
+              )}
             </section>
           ) : null}
 
@@ -509,7 +523,7 @@ export default function BenefitsBackofficePage({
                 title="Nenhuma edição criada"
                 description={
                   canCreate
-                    ? 'Cadastre a primeira temporada. Depois, cada parceiro poderá vincular uma oferta à sua unidade publicada.'
+                    ? 'Cadastre a primeira edição. Depois, cada parceiro poderá vincular uma oferta à sua unidade publicada.'
                     : 'Ainda não existem edições cadastradas nesta operação.'
                 }
                 className="rounded-lg border border-dashed border-border bg-card"
