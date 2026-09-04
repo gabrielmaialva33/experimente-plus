@@ -10,7 +10,9 @@ type HttpMethod = (typeof HTTP_METHODS)[number]
 
 type OpenApiSchema = {
   $ref?: string
+  additionalProperties?: boolean
   const?: unknown
+  description?: string
   maxLength?: number
   minLength?: number
   pattern?: string
@@ -24,27 +26,26 @@ type OpenApiParameter = {
   schema?: OpenApiSchema
 }
 
+type OpenApiResponse = {
+  $ref?: string
+  description?: string
+  content?: Record<
+    string,
+    {
+      schema?: OpenApiSchema
+      example?: Record<string, unknown>
+      examples?: Record<string, { value?: Record<string, unknown> }>
+    }
+  >
+}
+
 type OpenApiOperation = {
   operationId?: string
   parameters?: OpenApiParameter[]
   requestBody?: {
     content?: Record<string, { schema?: OpenApiSchema }>
   }
-  responses?: Record<
-    string,
-    {
-      $ref?: string
-      description?: string
-      content?: Record<
-        string,
-        {
-          schema?: OpenApiSchema
-          example?: Record<string, unknown>
-          examples?: Record<string, { value?: Record<string, unknown> }>
-        }
-      >
-    }
-  >
+  responses?: Record<string, OpenApiResponse>
 }
 
 type OpenApiPathItem = Partial<Record<HttpMethod, OpenApiOperation>>
@@ -53,6 +54,7 @@ type OpenApiDocument = {
   openapi?: string
   paths?: Record<string, OpenApiPathItem>
   components?: {
+    responses?: Record<string, OpenApiResponse>
     schemas?: Record<string, OpenApiSchema>
   }
 }
@@ -236,9 +238,49 @@ test.group('Documentation', () => {
     assert.include(schemas.AuthResponse?.required ?? [], 'auth')
     assert.deepEqual(schemas.AuthResponse?.properties?.username?.type, ['string', 'null'])
 
-    assert.equal(schemas.BenefitPresentationToken?.minLength, 45)
+    assert.equal(schemas.BenefitPresentationToken?.minLength, 46)
     assert.equal(schemas.BenefitPresentationToken?.maxLength, 512)
-    assert.equal(schemas.BenefitPresentationToken?.pattern, '^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$')
+    assert.equal(
+      schemas.BenefitPresentationToken?.pattern,
+      '^(?:(?:[A-Za-z0-9_-]{4})+|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-][AQgw]|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$'
+    )
+    assert.equal(schemas.BenefitPresentationTokenInput?.minLength, 46)
+    assert.equal(schemas.BenefitPresentationTokenInput?.maxLength, 512)
+    assert.equal(
+      schemas.BenefitPresentationTokenInput?.pattern,
+      '^\\s*(?:(?:[A-Za-z0-9_-]{4})+|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-][AQgw]|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\\s*$'
+    )
+    assert.isUndefined(schemas.BenefitPresentationRequest?.additionalProperties)
+    assert.include(
+      schemas.BenefitPresentationRequest?.description ?? '',
+      'Unknown request properties are accepted and discarded'
+    )
+    assert.isUndefined(schemas.BenefitPresentationTokenRequest?.additionalProperties)
+    assert.include(
+      schemas.BenefitPresentationTokenRequest?.description ?? '',
+      'Surrounding whitespace in the HTTP token field is normalized'
+    )
+    assert.include(
+      schemas.BenefitPresentationTokenRequest?.description ?? '',
+      'Unknown request properties are accepted and discarded'
+    )
+    assert.equal(
+      schemas.BenefitPresentationTokenRequest?.properties?.token?.$ref,
+      '#/components/schemas/BenefitPresentationTokenInput'
+    )
+    for (const responseSchema of [
+      'BenefitPresentation',
+      'BenefitRedemptionPreview',
+      'BenefitRedemptionReceipt',
+    ]) {
+      assert.isFalse(schemas[responseSchema]?.additionalProperties)
+    }
+    for (const responseSchema of ['BenefitPresentation', 'BenefitRedemptionPreview']) {
+      assert.equal(
+        schemas[responseSchema]?.properties?.token?.$ref,
+        '#/components/schemas/BenefitPresentationToken'
+      )
+    }
     assert.equal(schemas.BenefitReceiptCode?.minLength, 20)
     assert.equal(schemas.BenefitReceiptCode?.maxLength, 20)
     assert.equal(schemas.BenefitReceiptCode?.pattern, '^EXP-[0-9A-F]{16}$')
@@ -262,11 +304,35 @@ test.group('Documentation', () => {
       '/api/v1/benefit-redemptions/preview',
       '/api/v1/benefit-redemptions',
     ]) {
+      const operation = operationAt(specification, tokenPath, 'post')
       assert.equal(
-        operationAt(specification, tokenPath, 'post')?.responses?.['400']?.$ref,
-        '#/components/responses/PrivateInvalidBenefitPresentationError'
+        operation?.requestBody?.content?.['application/json']?.schema?.$ref,
+        '#/components/schemas/BenefitPresentationTokenRequest'
+      )
+      assert.equal(
+        operation?.responses?.['400']?.$ref,
+        '#/components/responses/PrivateBenefitRedemptionBadRequest'
       )
     }
+
+    const redemptionBadRequest =
+      specification.components?.responses?.PrivateBenefitRedemptionBadRequest
+    assert.include(redemptionBadRequest?.description ?? '', 'invalid or expired')
+    assert.include(redemptionBadRequest?.description ?? '', 'redemption limit')
+    assert.deepInclude(
+      redemptionBadRequest?.content?.['application/json']?.examples?.invalidPresentation?.value ??
+        {},
+      {
+        status: 400,
+        message:
+          'Esta apresentação é inválida ou expirou. Peça ao cliente para gerar uma nova apresentação e tente novamente.',
+      }
+    )
+    assert.deepInclude(
+      redemptionBadRequest?.content?.['application/json']?.examples?.benefitNotRedeemable?.value ??
+        {},
+      { status: 400, message: 'Benefit offer is not active' }
+    )
 
     const refreshSchema = operationAt(specification, '/api/v1/sessions/refresh', 'post')
       ?.responses?.['200']?.content?.['application/json']?.schema

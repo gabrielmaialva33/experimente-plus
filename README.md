@@ -270,6 +270,10 @@ código volta ao commit anterior.
 publicando somente no loopback, atrás de um nginx que termina TLS. PostgreSQL e Redis são
 containers compartilhados alcançados por rede Docker externa.
 
+Antes do deploy na VPS, configure `BENEFIT_PRESENTATION_BASE_URL` com uma origem `https://` pública
+ou garanta que o fallback `APP_URL` seja uma origem HTTPS válida; caso contrário, o bootstrap de
+produção falhará intencionalmente.
+
 A chave usada pela CI carrega um _forced command_ no `authorized_keys` do host, então ela executa
 `deploy.sh` e nada mais.
 
@@ -280,6 +284,10 @@ A chave usada pela CI carrega um _forced command_ no `authorized_keys` do host, 
 Enquanto o produto não possui uma versão estável publicada, o schema deve representar uma
 instalação nova e canônica. Mudanças em tabelas ainda não lançadas entram na migration `create_*`
 original; bancos descartáveis de desenvolvimento e teste devem ser recriados.
+
+Como o tamanho e o formato de `benefit_redemptions.receipt_code` foram corrigidos na migration
+`create_*` original, bancos de desenvolvimento e teste que já a executaram precisam ser recriados
+antes de validar esse contrato. Esta documentação não autoriza reset de banco com dados de piloto.
 
 Depois da primeira versão estável, o histórico passa a ser append-only.
 

@@ -1006,8 +1006,8 @@ components:
 
     BenefitPresentationRequest:
       type: object
+      description: Unknown request properties are accepted and discarded during validation.
       required: [access_id, offer_id]
-      additionalProperties: false
       properties:
         access_id:
           type: integer
@@ -1046,18 +1046,25 @@ components:
 
     BenefitPresentationToken:
       type: string
-      minLength: 45
+      minLength: 46
       maxLength: 512
-      pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
-      description: Five-minute signed base64url payload.signature token. Inputs outside this transport grammar receive 422; invalid signatures, claims, or expiry receive a generic 400. Never log or persist the raw value.
+      pattern: '^(?:(?:[A-Za-z0-9_-]{4})+|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-][AQgw]|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$'
+      description: Canonical five-minute signed, unpadded base64url payload.signature token. Segment length, alphabet, and unused pad bits must survive an exact decode-encode round trip. Invalid signatures, claims, or expiry receive a generic 400. Never log or persist the raw value.
+
+    BenefitPresentationTokenInput:
+      type: string
+      minLength: 46
+      maxLength: 512
+      pattern: '^\s*(?:(?:[A-Za-z0-9_-]{4})+|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-][AQgw]|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\s*$'
+      description: HTTP input form of the presentation token. The raw field is limited to 512 characters before surrounding whitespace is removed; its normalized content must be a canonical BenefitPresentationToken. Transport grammar failures receive 422.
 
     BenefitPresentationTokenRequest:
       type: object
+      description: Surrounding whitespace in the HTTP token field is normalized before applying the transport grammar. Unknown request properties are accepted and discarded. Emitted tokens and values accepted directly by the presentation service remain canonical and contain no surrounding whitespace.
       required: [token]
-      additionalProperties: false
       properties:
         token:
-          $ref: '#/components/schemas/BenefitPresentationToken'
+          $ref: '#/components/schemas/BenefitPresentationTokenInput'
 
     BenefitRedemptionPreview:
       type: object
@@ -3707,8 +3714,8 @@ components:
             status: 400
             message: An active tenant is required for this operation
 
-    PrivateInvalidBenefitPresentationError:
-      description: A structurally valid presentation token is invalid, tampered with, or expired.
+    PrivateBenefitRedemptionBadRequest:
+      description: A structurally valid presentation is invalid or expired, or the current benefit, access, edition, offer, establishment, schedule, or redemption limit no longer permits redemption. Presentation failures use one generic message; current domain-state failures preserve their actionable message.
       headers:
         Cache-Control:
           $ref: '#/components/headers/PrivateCacheControl'
@@ -3720,9 +3727,17 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiMessageError'
-          example:
-            status: 400
-            message: Esta apresentação é inválida ou expirou. Peça ao cliente para gerar uma nova apresentação e tente novamente.
+          examples:
+            invalidPresentation:
+              summary: Invalid, tampered, or expired presentation
+              value:
+                status: 400
+                message: Esta apresentação é inválida ou expirou. Peça ao cliente para gerar uma nova apresentação e tente novamente.
+            benefitNotRedeemable:
+              summary: Benefit state changed after presentation
+              value:
+                status: 400
+                message: Benefit offer is not active
 
     PrivateForbiddenError:
       description: The active operation or organization policy denies access.
@@ -6286,7 +6301,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BenefitRedemptionPreview'
         '400':
-          $ref: '#/components/responses/PrivateInvalidBenefitPresentationError'
+          $ref: '#/components/responses/PrivateBenefitRedemptionBadRequest'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -6334,7 +6349,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BenefitRedemptionReceipt'
         '400':
-          $ref: '#/components/responses/PrivateInvalidBenefitPresentationError'
+          $ref: '#/components/responses/PrivateBenefitRedemptionBadRequest'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':

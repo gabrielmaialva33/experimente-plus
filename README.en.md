@@ -271,6 +271,10 @@ returns to the previous commit.
 alone, published on the loopback only, behind an nginx that terminates TLS. PostgreSQL and Redis are
 shared containers reached over an external Docker network.
 
+Before deploying to the VPS, configure `BENEFIT_PRESENTATION_BASE_URL` with a public `https://`
+origin or ensure the `APP_URL` fallback is a valid HTTPS origin; otherwise, production bootstrap
+will intentionally fail.
+
 The key the CI uses carries a forced command in the host's `authorized_keys`, so it runs `deploy.sh`
 and nothing else.
 
@@ -281,6 +285,11 @@ and nothing else.
 While the product has no published stable version, the schema must describe a fresh, canonical
 install. Changes to unreleased tables belong in the original `create_*` migration; disposable
 development and test databases should be recreated.
+
+Because the size and format of `benefit_redemptions.receipt_code` were corrected in its original
+`create_*` migration, development and test databases that already ran it must be recreated before
+validating this contract. This documentation does not authorize resetting a database with pilot
+data.
 
 After the first stable release, history becomes append-only.
 

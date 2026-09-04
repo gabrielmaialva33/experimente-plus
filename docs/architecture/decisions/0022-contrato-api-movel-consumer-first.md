@@ -104,6 +104,11 @@ O link usa a origem escolhida nesta ordem:
 2. `APP_URL`, somente em produção;
 3. origem confiável da requisição, somente em desenvolvimento e teste.
 
+Em produção, qualquer origem canônica selecionada deve usar `https://`; `http://` permanece
+restrito ao desenvolvimento e aos testes.
+O deploy da VPS deve fornecer `BENEFIT_PRESENTATION_BASE_URL` ou um `APP_URL` HTTPS válido antes de
+iniciar a aplicação; a ausência dessa configuração interrompe o bootstrap.
+
 O cliente não envia a origem. Repetir a confirmação do mesmo token retorna o comprovante original,
 o que permite retry seguro após uma resposta de rede ambígua sem criar outro resgate.
 
@@ -141,10 +146,12 @@ Uniformizar todos os erros é uma evolução separada; o EP-12 não altera contr
 
 ### 7. O OpenAPI é verificável contra o router
 
-`docs/openapi.yaml` é OpenAPI 3.1 e registra os DTOs móveis como objetos fechados. Uma regressão
-funcional parseia o YAML, exige `operationId` globalmente único e compara uma allowlist de métodos e
-paths móveis com `router.toJSON()`. A comparação é deliberadamente seletiva para não confundir rotas
-SSR, documentação e superfícies administrativas com o contrato do aplicativo.
+`docs/openapi.yaml` é OpenAPI 3.1. DTOs móveis de resposta são objetos fechados; DTOs de request
+aceitam propriedades desconhecidas e o VineJS as descarta, de modo que apenas os campos declarados
+chegam aos serviços. Uma regressão funcional parseia o YAML, exige `operationId` globalmente único e
+compara uma allowlist de métodos e paths móveis com `router.toJSON()`. A comparação é
+deliberadamente seletiva para não confundir rotas SSR, documentação e superfícies administrativas
+com o contrato do aplicativo.
 
 ## Consequências
 
@@ -153,7 +160,7 @@ SSR, documentação e superfícies administrativas com o contrato do aplicativo.
 - um único backend decide regras para web e aplicativo;
 - navegação parceira deriva de capacidades estáveis sem confundir role global e membership;
 - retries de confirmação são seguros e auditáveis;
-- DTOs fechados reduzem acoplamento com models Lucid;
+- DTOs de resposta fechados e requests filtrados reduzem acoplamento com models Lucid;
 - OpenAPI e exemplos HTTP passam a cobrir a jornada completa.
 
 ### Custos
