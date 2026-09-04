@@ -507,11 +507,19 @@ export default function BenefitAccessesPage({
                                   <X aria-hidden="true" />
                                 </Button>
                               </div>
+                              <label
+                                htmlFor={`access-${access.id}-revocation-reason`}
+                                className="text-xs font-medium text-foreground"
+                              >
+                                Motivo da revogação{' '}
+                                <span className="text-muted-foreground">(opcional)</span>
+                              </label>
                               <Textarea
+                                id={`access-${access.id}-revocation-reason`}
                                 rows={2}
                                 value={revocationReason}
                                 onChange={(event) => setRevocationReason(event.target.value)}
-                                placeholder="Motivo opcional"
+                                placeholder="Informe o contexto para o histórico"
                               />
                               <Button
                                 type="button"
