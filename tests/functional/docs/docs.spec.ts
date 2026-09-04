@@ -14,7 +14,9 @@ type OpenApiSchema = {
   const?: unknown
   description?: string
   maxLength?: number
+  maximum?: number
   minLength?: number
+  minimum?: number
   pattern?: string
   properties?: Record<string, OpenApiSchema>
   required?: string[]
@@ -255,6 +257,13 @@ test.group('Documentation', () => {
       schemas.BenefitPresentationRequest?.description ?? '',
       'Unknown request properties are accepted and discarded'
     )
+    for (const identifier of ['access_id', 'offer_id']) {
+      assert.equal(schemas.BenefitPresentationRequest?.properties?.[identifier]?.minimum, 1)
+      assert.equal(
+        schemas.BenefitPresentationRequest?.properties?.[identifier]?.maximum,
+        2_147_483_647
+      )
+    }
     assert.isUndefined(schemas.BenefitPresentationTokenRequest?.additionalProperties)
     assert.include(
       schemas.BenefitPresentationTokenRequest?.description ?? '',

@@ -779,9 +779,11 @@ components:
         access_id:
           type: integer
           minimum: 1
+          maximum: 2147483647
         offer_id:
           type: integer
           minimum: 1
+          maximum: 2147483647
         availability:
           type: string
           enum: [available, upcoming, outside_schedule, paused, expired, revoked, redeemed]

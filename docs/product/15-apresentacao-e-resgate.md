@@ -51,7 +51,8 @@ A confirmação cria o resgate em uma única transação. O parceiro recebe o me
 - token é assinado e não pode ser alterado;
 - somente membro autorizado da organização valida;
 - acesso, oferta, edição, unidade, horário e limite são reavaliados no servidor;
-- token utilizado não pode ser reapresentado;
+- repetir uma confirmação autorizada com o mesmo token não cria outro resgate: o retry devolve o
+  comprovante original associado ao nonce;
 - cada uso recebe sequência e comprovante únicos;
 - resgate é imutável neste primeiro corte;
 - benefício esgotado permanece no histórico, não como botão utilizável.
@@ -62,7 +63,7 @@ A confirmação cria o resgate em uma única transação. O parceiro recebe o me
 - apresentação assinada sem tabela de QR;
 - ação de uso na carteira;
 - confirmação autenticada no Portal;
-- proteção contra adulteração, expiração, replay e IDOR;
+- proteção contra adulteração, expiração, replay que tente duplicar resgate e IDOR;
 - limite por acesso/oferta;
 - comprovante para os dois lados;
 - histórico do consumidor e da unidade;
