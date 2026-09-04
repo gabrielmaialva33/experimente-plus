@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react'
+import { Head, Link, router, usePage } from '@inertiajs/react'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,9 +14,11 @@ import { useState, type FormEvent } from 'react'
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
+import { firstError } from '~/lib/form_errors'
 import type { OrganizationAllowedActions } from '~/types'
 import type { RedemptionPreview } from '~/types/benefit_redemption'
 
@@ -47,7 +49,9 @@ export default function PartnerValidationPage({
   preview,
   allowed_actions: allowedActions,
 }: PartnerValidationPageProps) {
+  const { errors } = usePage().props as { errors?: Record<string, unknown> }
   const canValidate = allowedActions.redemptions.validate
+  const presentationError = firstError(errors?.presentation)
   const [input, setInput] = useState(token)
   const [inspecting, setInspecting] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -98,6 +102,13 @@ export default function PartnerValidationPage({
             </Button>
           }
         />
+
+        {presentationError ? (
+          <Alert variant="destructive" appearance="light" role="alert">
+            <AlertTitle>Apresentação indisponível</AlertTitle>
+            <AlertDescription>{presentationError}</AlertDescription>
+          </Alert>
+        ) : null}
 
         {canValidate ? (
           <form

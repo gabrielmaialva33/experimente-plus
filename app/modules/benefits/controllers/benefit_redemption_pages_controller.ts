@@ -1,6 +1,9 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import InvalidBenefitPresentationException, {
+  INVALID_BENEFIT_PRESENTATION_MESSAGE,
+} from '#exceptions/invalid_benefit_presentation_exception'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import { benefitPresentationTokenValidator } from '#modules/benefits/validators/benefit_redemption_validator'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
@@ -41,12 +44,24 @@ export default class BenefitRedemptionPagesController {
     return inertia.render('wallet/receipt', { receipt })
   }
 
-  async validate({ auth, inertia, request, response, tenant }: HttpContext) {
+  async validate({ auth, inertia, request, response, session, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const input = request.input('token')
     const token = typeof input === 'string' ? input.trim() : ''
     const actor = auth.getUserOrFail()
-    const preview = token ? await this.redemptionService.preview(tenant!.id, token, actor) : null
+    let preview: Awaited<ReturnType<BenefitRedemptionService['preview']>> | null = null
+
+    try {
+      preview = token ? await this.redemptionService.preview(tenant!.id, token, actor) : null
+    } catch (error) {
+      if (!(error instanceof InvalidBenefitPresentationException)) {
+        throw error
+      }
+
+      session.flash('errors', { presentation: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+      return response.redirect().toPath('/portal/redemptions/validate')
+    }
+
     const allowedActions = preview
       ? await this.resourceAuthorization.forOrganization(
           tenant!.id,
@@ -64,11 +79,19 @@ export default class BenefitRedemptionPagesController {
 
   async redeem({ auth, request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(benefitPresentationTokenValidator)
-    const receipt = await this.redemptionService.redeem(
-      tenant!.id,
-      payload.token,
-      auth.getUserOrFail()
-    )
+    let receipt: Awaited<ReturnType<BenefitRedemptionService['redeem']>>
+
+    try {
+      receipt = await this.redemptionService.redeem(tenant!.id, payload.token, auth.getUserOrFail())
+    } catch (error) {
+      if (!(error instanceof InvalidBenefitPresentationException)) {
+        throw error
+      }
+
+      session.flash('errors', { presentation: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+      return response.redirect().toPath('/portal/redemptions/validate')
+    }
+
     session.flash('success', 'Benefício validado e comprovante emitido.')
     return response.redirect().toPath(`/portal/redemptions/${receipt.receipt_code}`)
   }

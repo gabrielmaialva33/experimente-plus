@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
-import BadRequestException from '#exceptions/bad_request_exception'
+import InvalidBenefitPresentationException from '#exceptions/invalid_benefit_presentation_exception'
 import type IBenefitRedemption from '#modules/benefits/interfaces/benefit_redemption_interface'
 import env from '#start/env'
 
@@ -82,7 +82,7 @@ export default class BenefitPresentationTokenService {
       .digest('base64url')
   }
 
-  private invalidToken(): BadRequestException {
-    return new BadRequestException('Presentation code is invalid or expired')
+  private invalidToken(): InvalidBenefitPresentationException {
+    return new InvalidBenefitPresentationException()
   }
 }

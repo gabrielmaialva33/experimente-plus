@@ -2,13 +2,17 @@ import { readFileSync } from 'node:fs'
 import type { ComponentProps, ReactNode } from 'react'
 
 import { screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import EstablishmentBenefitsPage from '~/pages/portal/establishments/benefits'
 import PartnerRedemptionsPage from '~/pages/portal/redemptions/index'
 import PartnerValidationPage from '~/pages/portal/redemptions/validate'
 import { render } from '~/tests/test_utils'
 import type { OrganizationAllowedActions } from '~/types'
+
+const mocks = vi.hoisted(() => ({
+  pageProps: {} as Record<string, unknown>,
+}))
 
 vi.mock('@inertiajs/react', () => ({
   Head: () => null,
@@ -23,6 +27,7 @@ vi.mock('@inertiajs/react', () => ({
     put: vi.fn(),
     delete: vi.fn(),
   },
+  usePage: () => ({ props: mocks.pageProps }),
 }))
 
 vi.mock('~/layouts/main_layout', () => ({
@@ -53,6 +58,10 @@ const readOnlyActions: OrganizationAllowedActions = {
   analytics: { read: true },
   pilot_feedback: { create: true },
 }
+
+beforeEach(() => {
+  mocks.pageProps = {}
+})
 
 describe('Portal server-projected allowed actions', () => {
   it('hides redemption validation for read-only organization access', () => {
@@ -326,6 +335,26 @@ describe('Portal server-projected allowed actions', () => {
 
     expect(screen.getByRole('heading', { level: 2, name: 'Validação indisponível' })).toBeVisible()
     expect(screen.queryByLabelText('Link da apresentação')).not.toBeInTheDocument()
+  })
+
+  it('explains an unavailable presentation and keeps the retry path visible', () => {
+    mocks.pageProps = {
+      errors: {
+        presentation:
+          'Esta apresentação é inválida ou expirou. Peça ao cliente para gerar uma nova apresentação e tente novamente.',
+      },
+    }
+    const actions: OrganizationAllowedActions = {
+      ...readOnlyActions,
+      redemptions: { read: true, validate: true },
+    }
+
+    render(<PartnerValidationPage token="" preview={null} allowed_actions={actions} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Apresentação indisponível')
+    expect(screen.getByRole('alert')).toHaveTextContent('Peça ao cliente para gerar')
+    expect(screen.getByLabelText('Link da apresentação')).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Conferir' })).toBeDisabled()
   })
 
   it('wires the establishment editor directly to scoped actions instead of global capabilities', () => {

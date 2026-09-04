@@ -1,4 +1,5 @@
 import app from '@adonisjs/core/services/app'
+import db from '@adonisjs/lucid/services/db'
 
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import testUtils from '@adonisjs/core/services/test_utils'
@@ -6,6 +7,10 @@ import { test } from '@japa/runner'
 import { randomUUID } from 'node:crypto'
 import { DateTime } from 'luxon'
 
+import BadRequestException from '#exceptions/bad_request_exception'
+import InvalidBenefitPresentationException, {
+  INVALID_BENEFIT_PRESENTATION_MESSAGE,
+} from '#exceptions/invalid_benefit_presentation_exception'
 import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitOffer from '#modules/benefits/models/benefit_offer'
@@ -209,6 +214,45 @@ async function captureFailure(callback: () => Promise<unknown>): Promise<unknown
   }
 }
 
+function createBarrier(participants: number): () => Promise<void> {
+  let arrivals = 0
+  let release: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+
+  return async () => {
+    arrivals += 1
+    if (arrivals === participants) {
+      release()
+    }
+    await gate
+  }
+}
+
+async function cleanupCommittedFixture(fixture: Awaited<ReturnType<typeof createFixture>>) {
+  const tenantId = fixture.scenario.tenant.id
+  const userIds = [
+    fixture.scenario.owner.id,
+    fixture.admin.id,
+    fixture.consumer.id,
+    fixture.outsider.id,
+  ]
+
+  await db.from('audit_logs').whereIn('user_id', userIds).delete()
+  await db.from('benefit_redemptions').where('tenant_id', tenantId).delete()
+  await db.from('benefit_accesses').where('tenant_id', tenantId).delete()
+  await db.from('benefit_offers').where('tenant_id', tenantId).delete()
+  await db.from('benefit_editions').where('tenant_id', tenantId).delete()
+  await db
+    .from('establishments')
+    .where('tenant_id', tenantId)
+    .update({ published_revision_id: null })
+  await db.from('establishments').where('tenant_id', tenantId).delete()
+  await db.from('tenants').where('id', tenantId).delete()
+  await db.from('users').whereIn('id', userIds).delete()
+}
+
 test.group('Benefit redemptions', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
 
@@ -351,7 +395,9 @@ test.group('Benefit redemptions', (group) => {
     assert.equal(receipt.offer.id, fixture.offer.id)
   })
 
-  test('keeps confirmation idempotent and serializes the redemption limit', async ({ assert }) => {
+  test('keeps sequential confirmation idempotent and enforces the redemption limit', async ({
+    assert,
+  }) => {
     const fixture = await createFixture('idempotent', 2)
     const service = await app.container.make(BenefitRedemptionService)
 
@@ -571,6 +617,69 @@ test.group('Benefit redemptions', (group) => {
     assert.include(partnerHistory.text(), 'portal/redemptions/index')
   })
 
+  test('expires presentations by their real TTL and gives partners a recoverable flow', async ({
+    assert,
+    cleanup,
+    client,
+  }) => {
+    const fixture = await createFixture('expired-token')
+    const service = await app.container.make(BenefitRedemptionService)
+    const originalDateNow = Date.now
+    const issuedAt = originalDateNow()
+    cleanup(() => {
+      Date.now = originalDateNow
+    })
+    Date.now = () => issuedAt
+
+    const presentation = await service.present(
+      fixture.scenario.tenant.id,
+      fixture.access.id,
+      fixture.offer.id,
+      fixture.consumer,
+      'http://localhost:3333'
+    )
+    Date.now = () => issuedAt + 301_000
+
+    const serviceFailure = await captureFailure(() =>
+      service.preview(fixture.scenario.tenant.id, presentation.token, fixture.scenario.owner)
+    )
+    assert.instanceOf(serviceFailure, InvalidBenefitPresentationException)
+
+    const apiPreview = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', String(fixture.scenario.tenant.id))
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    apiPreview.assertStatus(400)
+    apiPreview.assertBody({ status: 400, message: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+
+    const apiRedemption = await client
+      .post('/api/v1/benefit-redemptions')
+      .header('x-tenant-id', String(fixture.scenario.tenant.id))
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    apiRedemption.assertStatus(400)
+    apiRedemption.assertBody({ status: 400, message: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+
+    const validationPage = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(presentation.token)}`)
+      .header('x-tenant-id', String(fixture.scenario.tenant.id))
+      .loginAs(fixture.scenario.owner)
+    validationPage.assertStatus(200)
+    assert.include(validationPage.text(), 'portal/redemptions/validate')
+    assert.include(validationPage.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
+
+    const redemptionPage = await client
+      .post('/portal/redemptions')
+      .withCsrfToken()
+      .header('x-tenant-id', String(fixture.scenario.tenant.id))
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    redemptionPage.assertStatus(200)
+    assert.include(redemptionPage.text(), 'portal/redemptions/validate')
+    assert.include(redemptionPage.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
+  })
+
   test('rejects tampered and cross-tenant presentation tokens', async ({ assert }) => {
     const fixture = await createFixture('token')
     const other = await createFixture('other-operation')
@@ -592,5 +701,84 @@ test.group('Benefit redemptions', (group) => {
       service.preview(other.scenario.tenant.id, presentation.token, other.scenario.owner)
     )
     assert.exists(crossTenantAttempt)
+  })
+})
+
+test.group('Benefit redemption concurrency', () => {
+  // Deliberately avoid a global test transaction: each redemption must use an independent
+  // connection so the row lock and post-lock count are exercised instead of being simulated.
+  test('serializes distinct presentations and keeps the winner idempotent', async ({
+    assert,
+    cleanup,
+  }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+    const fixture = await createFixture('concurrent-limit')
+    cleanup(() => cleanupCommittedFixture(fixture))
+    const service = await app.container.make(BenefitRedemptionService)
+    const presentations = await Promise.all([
+      service.present(
+        fixture.scenario.tenant.id,
+        fixture.access.id,
+        fixture.offer.id,
+        fixture.consumer,
+        'http://localhost:3333'
+      ),
+      service.present(
+        fixture.scenario.tenant.id,
+        fixture.access.id,
+        fixture.offer.id,
+        fixture.consumer,
+        'http://localhost:3333'
+      ),
+    ])
+    assert.notEqual(presentations[0].token, presentations[1].token)
+
+    const start = createBarrier(2)
+    const redeemAfterBarrier = async (token: string) => {
+      await start()
+      return {
+        token,
+        receipt: await service.redeem(fixture.scenario.tenant.id, token, fixture.scenario.owner),
+      }
+    }
+    const results = await Promise.allSettled(
+      presentations.map((presentation) => redeemAfterBarrier(presentation.token))
+    )
+    const fulfilled = results.filter(
+      (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof redeemAfterBarrier>>> =>
+        result.status === 'fulfilled'
+    )
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected'
+    )
+
+    assert.lengthOf(fulfilled, 1)
+    assert.lengthOf(rejected, 1)
+    assert.instanceOf(rejected[0].reason, BadRequestException)
+    assert.equal(rejected[0].reason.message, 'Benefit offer redemption limit has been reached')
+
+    const rows = await BenefitRedemption.query()
+      .where('tenant_id', fixture.scenario.tenant.id)
+      .where('access_id', fixture.access.id)
+      .where('offer_id', fixture.offer.id)
+    assert.lengthOf(rows, 1)
+    assert.equal(rows[0].redemption_number, 1)
+    assert.equal(rows[0].id, fulfilled[0].value.receipt.id)
+
+    const replayReceipt = await service.redeem(
+      fixture.scenario.tenant.id,
+      fulfilled[0].value.token,
+      fixture.scenario.owner
+    )
+    assert.equal(replayReceipt.id, fulfilled[0].value.receipt.id)
+    assert.equal(
+      await BenefitRedemption.query()
+        .where('tenant_id', fixture.scenario.tenant.id)
+        .where('access_id', fixture.access.id)
+        .where('offer_id', fixture.offer.id)
+        .count('* as total')
+        .then((result) => Number(result[0].$extras.total)),
+      1
+    )
   })
 })
