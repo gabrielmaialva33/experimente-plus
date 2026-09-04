@@ -45,8 +45,9 @@ export default class PartnerPortalController {
   async index({ auth, inertia, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
-    const overview = await this.portalService.overview(tenant!.id, actor)
-    const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
+    const overview = await this.portalService.overview(tenant!.id, actor, authorizationContext)
+    const feedbackTargets = this.portalService.feedbackTargetsFromOverview(overview)
 
     return inertia.render('portal/index', { overview, feedback_targets: feedbackTargets })
   }
@@ -74,16 +75,11 @@ export default class PartnerPortalController {
     const organizationId = Number(params.organizationId)
     const organization = await this.portalService.organization(tenant!.id, organizationId, actor)
     const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
-    const allowedActions = await this.resourceAuthorization.forOrganization(
-      tenant!.id,
-      organizationId,
-      actor
-    )
 
     return inertia.render('portal/organizations/show', {
       organization,
       feedback_targets: feedbackTargets,
-      allowed_actions: allowedActions,
+      allowed_actions: organization.allowed_actions,
     })
   }
 
@@ -114,11 +110,13 @@ export default class PartnerPortalController {
   async newEstablishment({ auth, inertia, params, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
-    const organization = await this.portalService.organization(
+    const organizationId = Number(params.organizationId)
+    await this.establishmentService.authorizeCreateForOrganization(
       tenant!.id,
-      Number(params.organizationId),
+      organizationId,
       actor
     )
+    const organization = await this.portalService.organization(tenant!.id, organizationId, actor)
     const options = await this.portalService.creationOptions(tenant!.id)
 
     return inertia.render('portal/establishments/new', { organization, ...options })

@@ -1,13 +1,21 @@
 import { inject } from '@adonisjs/core'
 
+import NotFoundException from '#exceptions/not_found_exception'
 import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
+import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentCompletenessService from '#modules/establishments/services/establishment_completeness_service'
 import EstablishmentService from '#modules/establishments/services/establishment_service'
 import City from '#modules/geography/models/city'
-import OrganizationMember from '#modules/organizations/models/organization_member'
+import type IOrganization from '#modules/organizations/interfaces/organization_interface'
+import Organization from '#modules/organizations/models/organization'
 import OrganizationService from '#modules/organizations/services/organization_service'
+import OrganizationResourceAuthorizationService, {
+  type OrganizationActorAuthorizationContext,
+} from '#modules/organizations/services/organization_resource_authorization_service'
 import type IPortal from '#modules/portal/interfaces/portal_interface'
+import { feedbackTargetsFromOverview } from '#modules/portal/services/portal_overview_projection'
 import Category from '#modules/taxonomy/models/category'
 import type User from '#modules/users/models/user'
 
@@ -16,34 +24,42 @@ export default class PartnerPortalService {
   constructor(
     private organizationService: OrganizationService,
     private establishmentService: EstablishmentService,
+    private establishmentRepository: EstablishmentRepository,
     private completenessService: EstablishmentCompletenessService,
-    private effectiveAttributesService: EffectiveCategoryAttributesService
+    private effectiveAttributesService: EffectiveCategoryAttributesService,
+    private resourceAuthorization: OrganizationResourceAuthorizationService
   ) {}
 
-  async overview(tenantId: number, actor: User): Promise<IPortal.Overview> {
-    const organizations = await this.organizationService.list(tenantId, actor)
-    const memberships = await OrganizationMember.query()
-      .where('tenant_id', tenantId)
-      .where('user_id', actor.id)
-      .where('status', 'active')
+  async overview(
+    tenantId: number,
+    _actor: User,
+    authorizationContext: OrganizationActorAuthorizationContext
+  ): Promise<IPortal.Overview> {
+    const organizations = await this.organizationService.listFromAccessSnapshot(
+      tenantId,
+      authorizationContext.access_snapshot
+    )
     const roleByOrganization = new Map(
-      memberships.map((membership) => [membership.organization_id, membership.role])
+      authorizationContext.access_snapshot.organization_accesses.map((access) => [
+        access.organization_id,
+        access.capabilities.role,
+      ])
+    )
+    const establishmentsByOrganization = await this.establishmentSummariesForOrganizations(
+      tenantId,
+      organizations
     )
 
-    const organizationSummaries: IPortal.OrganizationSummary[] = []
-    for (const organization of organizations) {
+    const organizationSummaries = organizations.map((organization) => {
       const serialized = organization.serialize() as Record<string, unknown>
       const organizationId = Number(serialized.id)
-      const establishments = await this.establishmentSummaries(tenantId, organizationId, actor)
-
-      organizationSummaries.push(
-        this.organizationSummary(
-          serialized,
-          roleByOrganization.get(organizationId) ?? null,
-          establishments
-        )
+      return this.organizationSummary(
+        serialized,
+        roleByOrganization.get(organizationId) ?? null,
+        establishmentsByOrganization.get(organizationId) ?? [],
+        this.resourceAuthorization.forOrganizationFromContext(organizationId, authorizationContext)
       )
-    }
+    })
 
     return {
       organizations: organizationSummaries,
@@ -68,18 +84,20 @@ export default class PartnerPortalService {
 
   async organization(tenantId: number, organizationId: number, actor: User) {
     const organization = await this.organizationService.show(tenantId, organizationId, actor)
-    const membership = await OrganizationMember.query()
-      .where('tenant_id', tenantId)
-      .where('organization_id', organizationId)
-      .where('user_id', actor.id)
-      .where('status', 'active')
-      .first()
-    const establishments = await this.establishmentSummaries(tenantId, organizationId, actor)
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenantId, actor)
+    const organizationAccess = authorizationContext.access_snapshot.organization_accesses.find(
+      (access) => access.organization_id === organizationId
+    )
+    const establishmentsByOrganization = await this.establishmentSummariesForOrganizations(
+      tenantId,
+      [organization]
+    )
 
     return this.organizationSummary(
       organization.serialize() as Record<string, unknown>,
-      membership?.role ?? null,
-      establishments
+      organizationAccess?.capabilities.role ?? null,
+      establishmentsByOrganization.get(organizationId) ?? [],
+      this.resourceAuthorization.forOrganizationFromContext(organizationId, authorizationContext)
     )
   }
 
@@ -135,60 +153,75 @@ export default class PartnerPortalService {
   }
 
   async feedbackTargets(tenantId: number, actor: User) {
-    const overview = await this.overview(tenantId, actor)
-
-    return {
-      organizations: overview.organizations.map((organization) => ({
-        id: organization.id,
-        label: organization.trade_name,
-      })),
-      establishments: overview.organizations.flatMap((organization) =>
-        organization.establishments.map((establishment) => ({
-          id: establishment.id,
-          organization_id: organization.id,
-          label:
-            this.stringValue(establishment.revision, 'public_name') ??
-            `Unidade ${establishment.id}`,
-        }))
-      ),
-    }
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenantId, actor)
+    const overview = await this.overview(tenantId, actor, authorizationContext)
+    return this.feedbackTargetsFromOverview(overview)
   }
 
-  private async establishmentSummaries(
+  feedbackTargetsFromOverview(overview: IPortal.Overview): IPortal.FeedbackTargets {
+    return feedbackTargetsFromOverview(overview)
+  }
+
+  private async establishmentSummariesForOrganizations(
     tenantId: number,
-    organizationId: number,
-    actor: User
-  ): Promise<IPortal.EstablishmentSummary[]> {
-    const establishments = await this.establishmentService.list(tenantId, organizationId, actor)
+    organizations: readonly Organization[]
+  ): Promise<Map<number, IPortal.EstablishmentSummary[]>> {
+    const establishments = await this.establishmentRepository.listForAuthorizedOrganizations(
+      tenantId,
+      organizations.map((organization) => organization.id)
+    )
+    const completenessByEstablishment =
+      await this.completenessService.checkManyForAuthorizedOrganizations(
+        tenantId,
+        organizations,
+        establishments
+      )
+    const summariesByOrganization = new Map<number, IPortal.EstablishmentSummary[]>()
 
-    const summaries: IPortal.EstablishmentSummary[] = []
     for (const establishment of establishments) {
-      const record = establishment as Record<string, unknown>
-      const id = Number(record.id)
-      const completeness = await this.completenessService.check(tenantId, id, actor)
+      const completeness = completenessByEstablishment.get(establishment.id)
+      if (!completeness) {
+        throw new NotFoundException('Establishment completeness not found')
+      }
 
+      const revision = establishment.revisions[0] ?? establishment.published_revision ?? null
+      const summaries = summariesByOrganization.get(establishment.organization_id) ?? []
       summaries.push({
-        id,
-        organization_id: Number(record.organization_id),
-        lifecycle_status: String(record.lifecycle_status),
-        business_status: String(record.business_status),
-        published_revision_id:
-          record.published_revision_id === null || record.published_revision_id === undefined
-            ? null
-            : Number(record.published_revision_id),
-        revision: this.recordValue(record.revision),
-        published_revision: this.recordValue(record.published_revision),
+        id: establishment.id,
+        organization_id: establishment.organization_id,
+        public_name: revision?.public_name?.trim() || `Unidade ${establishment.id}`,
+        lifecycle_status: establishment.lifecycle_status,
+        business_status: establishment.business_status,
+        published_revision_id: establishment.published_revision_id,
+        revision: this.revisionSummary(revision),
+        published_revision: this.revisionSummary(establishment.published_revision),
         completeness,
       })
+      summariesByOrganization.set(establishment.organization_id, summaries)
     }
 
-    return summaries
+    return summariesByOrganization
+  }
+
+  private revisionSummary(revision: EstablishmentRevision | null): Record<string, unknown> | null {
+    if (!revision) {
+      return null
+    }
+
+    return {
+      id: revision.id,
+      status: revision.status,
+      public_name: revision.public_name,
+      slug: revision.slug,
+      city_id: revision.city_id,
+    }
   }
 
   private organizationSummary(
     organization: Record<string, unknown>,
     role: string | null,
-    establishments: IPortal.EstablishmentSummary[]
+    establishments: IPortal.EstablishmentSummary[],
+    allowedActions: IOrganization.AllowedActions
   ): IPortal.OrganizationSummary {
     const id = Number(organization.id)
     const status = String(organization.status)
@@ -219,6 +252,7 @@ export default class PartnerPortalService {
           : String(organization.website),
       status,
       role,
+      allowed_actions: allowedActions,
       establishments,
       totals: {
         establishments: establishments.length,
@@ -232,12 +266,14 @@ export default class PartnerPortalService {
           label: 'Organização criada',
           completed: true,
           href: `/portal/organizations/${id}`,
+          available: allowedActions.organizations.read,
         },
         {
           key: 'organization_active',
           label: 'Organização aprovada e ativa',
           completed: status === 'active',
           href: `/portal/organizations/${id}`,
+          available: allowedActions.organizations.read,
         },
         {
           key: 'establishment_created',
@@ -246,6 +282,9 @@ export default class PartnerPortalService {
           href: hasUnit
             ? `/portal/establishments/${establishments[0].id}`
             : `/portal/organizations/${id}/establishments/new`,
+          available: hasUnit
+            ? allowedActions.establishments.read
+            : allowedActions.establishments.create,
         },
         {
           key: 'establishment_complete',
@@ -254,6 +293,9 @@ export default class PartnerPortalService {
           href: hasUnit
             ? `/portal/establishments/${establishments[0].id}`
             : `/portal/organizations/${id}/establishments/new`,
+          available: hasUnit
+            ? allowedActions.establishments.read
+            : allowedActions.establishments.create,
         },
         {
           key: 'establishment_published',
@@ -262,12 +304,16 @@ export default class PartnerPortalService {
           href: hasUnit
             ? `/portal/establishments/${establishments[0].id}`
             : `/portal/organizations/${id}/establishments/new`,
+          available: hasUnit
+            ? allowedActions.establishments.read
+            : allowedActions.establishments.create,
         },
         {
           key: 'analytics_available',
           label: 'Métricas de descoberta disponíveis',
           completed: hasPublishedUnit,
           href: `/organizations/${id}/analytics`,
+          available: allowedActions.analytics.read,
         },
       ],
     }

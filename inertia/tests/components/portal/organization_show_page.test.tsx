@@ -177,6 +177,10 @@ describe('PortalOrganizationPage', () => {
     expect(screen.getByRole('button', { name: 'Enviar para análise' })).toBeDisabled()
     expect(screen.getByText(/Propriet/)).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '72')
+    expect(screen.getByRole('link', { name: 'Ver analytics' })).toHaveAttribute(
+      'href',
+      '/organizations/4/analytics'
+    )
   })
 
   it('prevents duplicate save requests synchronously', () => {
@@ -244,6 +248,7 @@ describe('PortalOrganizationPage', () => {
     expect(screen.getByLabelText(/Razão social/)).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Enviar para análise' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Nova unidade' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Ver analytics' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('pilot-feedback-form')).not.toBeInTheDocument()
   })
 })

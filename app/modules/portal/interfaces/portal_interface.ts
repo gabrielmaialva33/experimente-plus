@@ -1,9 +1,11 @@
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
+import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 
 export namespace IPortal {
   export interface EstablishmentSummary {
     id: number
     organization_id: number
+    public_name: string
     lifecycle_status: string
     business_status: string
     published_revision_id: number | null
@@ -23,6 +25,7 @@ export namespace IPortal {
     website: string | null
     status: string
     role: string | null
+    allowed_actions: IOrganization.AllowedActions
     establishments: EstablishmentSummary[]
     totals: {
       establishments: number
@@ -35,6 +38,7 @@ export namespace IPortal {
       label: string
       completed: boolean
       href: string
+      available: boolean
     }>
   }
 
@@ -47,6 +51,17 @@ export namespace IPortal {
       pending_review: number
       complete: number
     }
+  }
+
+  export interface FeedbackTarget {
+    id: number
+    label: string
+    organization_id?: number
+  }
+
+  export interface FeedbackTargets {
+    organizations: FeedbackTarget[]
+    establishments: FeedbackTarget[]
   }
 }
 

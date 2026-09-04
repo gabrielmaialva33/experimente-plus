@@ -366,7 +366,7 @@ test.group('Operational portals', (group) => {
         organizationUpdate: false,
         establishmentUpdate: true,
         lifecycle: false,
-        analytics: true,
+        analytics: false,
       },
       {
         actor: analyst,
@@ -450,7 +450,27 @@ test.group('Operational portals', (group) => {
       assert.equal(benefitsProps.allowed_actions.benefit_offers.create, entry.establishmentUpdate)
       assert.equal(benefitsProps.allowed_actions.benefit_offers.update, entry.establishmentUpdate)
       assert.isTrue(benefitsProps.allowed_actions.benefit_offers.read)
+
+      const newEstablishmentResponse = await client
+        .get(`/portal/organizations/${scenario.organization.id}/establishments/new`)
+        .headers(tenantHeader(scenario.tenant.id))
+        .loginAs(entry.actor)
+
+      if (entry.establishmentUpdate) {
+        newEstablishmentResponse.assertStatus(200)
+        assert.include(newEstablishmentResponse.text(), 'portal/establishments/new')
+      } else {
+        newEstablishmentResponse.assertStatus(403)
+      }
     }
+
+    scenario.organization.status = 'pending_review'
+    await scenario.organization.save()
+    const unavailableOrganizationResponse = await client
+      .get(`/portal/organizations/${scenario.organization.id}/establishments/new`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    unavailableOrganizationResponse.assertStatus(400)
   })
 
   test('projects open moderation corrections back into the partner editor', async ({

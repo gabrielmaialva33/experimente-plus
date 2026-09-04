@@ -16,11 +16,11 @@ import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { Button } from '~/components/ui/button'
-import { resolveRouteMetadata } from '~/config/navigation'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { organizationRoleLabel, organizationStatusLabel } from '~/lib/labels'
 import { cn } from '~/lib/utils'
+import type { OrganizationAllowedActions } from '~/types'
 
 interface Completeness {
   score: number
@@ -30,12 +30,9 @@ interface Completeness {
 interface EstablishmentSummary {
   id: number
   public_name: string
-  slug: string | null
-  city_slug: string | null
   published_revision_id: number | null
   lifecycle_status: string
   business_status: string
-  revision_status: string | null
   completeness: Completeness | null
 }
 
@@ -44,6 +41,7 @@ interface OnboardingStep {
   label: string
   completed: boolean
   href: string
+  available: boolean
 }
 
 interface OrganizationSummary {
@@ -52,6 +50,7 @@ interface OrganizationSummary {
   trade_name: string
   status: string
   role: string | null
+  allowed_actions: OrganizationAllowedActions
   establishments: EstablishmentSummary[]
   totals: {
     establishments: number
@@ -104,8 +103,6 @@ function statusClassName(status: string): string {
 export default function PartnerPortalIndex({ overview, feedback_targets }: PortalIndexProps) {
   const { can } = useAuth()
   const canCreateOrganization = can('organizations.create')
-  const canReadOrganizations = can('organizations.read')
-  const canReadEstablishments = can('establishments.read')
   const canCreateFeedback = can('pilot_feedback.create')
   const stats = [
     {
@@ -194,9 +191,9 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
           <section className="space-y-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold tracking-[-0.02em]">Suas organizações</h2>
+                <h2 className="text-lg font-bold tracking-[-0.02em]">Organizações disponíveis</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  O acesso é definido pela sua participação ativa em cada organização.
+                  As informações e ações variam conforme o perfil de acesso em cada organização.
                 </p>
               </div>
               <p className="text-xs font-medium text-muted-foreground">
@@ -243,7 +240,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                             {organizationRoleLabel(organization.role)}
                           </p>
                         </div>
-                        {canReadOrganizations ? (
+                        {organization.allowed_actions.organizations.read ? (
                           <Button asChild variant="outline" size="sm">
                             <Link href={`/portal/organizations/${organization.id}`}>
                               Abrir
@@ -300,8 +297,6 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
 
                         <div className="mt-4 grid gap-2 sm:grid-cols-2">
                           {organization.onboarding.map((step) => {
-                            const capability = resolveRouteMetadata(step.href)?.capability
-                            const canOpenStep = !capability || can(capability)
                             const className = cn(
                               'flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               step.completed
@@ -319,7 +314,7 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                               </>
                             )
 
-                            return canOpenStep ? (
+                            return step.available ? (
                               <Link key={step.key} href={step.href} className={className}>
                                 {content}
                               </Link>
@@ -336,32 +331,33 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
                       </div>
                     </div>
 
-                    {canReadEstablishments && organization.establishments.length > 0 && (
-                      <div className="border-t border-border/70 bg-muted/20 px-5 py-4 sm:px-6">
-                        <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          Unidades recentes
-                        </p>
-                        <div className="space-y-1">
-                          {organization.establishments.slice(0, 3).map((establishment) => (
-                            <Link
-                              key={establishment.id}
-                              href={`/portal/establishments/${establishment.id}`}
-                              className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              <span className="flex min-w-0 items-center gap-2">
-                                <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                                <span className="truncate text-sm font-medium">
-                                  {establishment.public_name || `Unidade ${establishment.id}`}
+                    {organization.allowed_actions.establishments.read &&
+                      organization.establishments.length > 0 && (
+                        <div className="border-t border-border/70 bg-muted/20 px-5 py-4 sm:px-6">
+                          <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                            Unidades recentes
+                          </p>
+                          <div className="space-y-1">
+                            {organization.establishments.slice(0, 3).map((establishment) => (
+                              <Link
+                                key={establishment.id}
+                                href={`/portal/establishments/${establishment.id}`}
+                                className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                                  <span className="truncate text-sm font-medium">
+                                    {establishment.public_name || `Unidade ${establishment.id}`}
+                                  </span>
                                 </span>
-                              </span>
-                              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                                {establishment.completeness?.score ?? 0}%
-                              </span>
-                            </Link>
-                          ))}
+                                <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                                  {establishment.completeness?.score ?? 0}%
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </article>
                 )
               })}
