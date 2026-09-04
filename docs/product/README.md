@@ -72,11 +72,12 @@ Ações de descoberta são registradas
 - [`14-acesso-e-carteira.md`](14-acesso-e-carteira.md) — concessão de acesso e carteira com benefícios derivados.
 - [`15-apresentacao-e-resgate.md`](15-apresentacao-e-resgate.md) — QR temporário, validação do parceiro, resgate transacional, comprovante e históricos.
 - [`16-piloto-operacional.md`](16-piloto-operacional.md) — ambiente reproduzível, roteiro assistido, evidências e backlog para validação em campo.
+- [`17-aplicativo-movel-consumer-first.md`](17-aplicativo-movel-consumer-first.md) — jornadas, casos de uso, estados e decisões adiadas do primeiro aplicativo.
 - [`../architecture/decisions/`](../architecture/decisions/README.md) — ADRs aceitos que transformam o planejamento em contratos técnicos.
 
 ## Estado arquitetural
 
-Os marcos EP-00 a EP-11 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia, catálogo, analytics, portais operacionais, edições, ofertas, acesso, carteira derivada, apresentação e resgate possuem ADRs aceitos e implementação canônica com regressões. Checkout, cobrança e conciliação financeira permanecem cortes posteriores.
+Os marcos EP-00 a EP-12 foram concluídos. Tenant como operação, organização/unidade, publicação versionada, gates, autorização, mídia, catálogo, analytics, portais operacionais, edições, ofertas, acesso, carteira derivada, apresentação, resgate e contrato móvel consumer-first possuem ADRs aceitos e implementação canônica com regressões. Checkout, cobrança e conciliação financeira permanecem cortes posteriores.
 
 ## Regra de mudança
 

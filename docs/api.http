@@ -19,10 +19,10 @@
 ### - Sorting: ?sort_by=field&order=asc|desc
 ### - Search: ?search=term
 
-### Variables (replace with actual values)
+### Variables (safe placeholders; replace only when running legacy requests below)
 @baseUrl = http://localhost:3333
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc1MjE5MDY4NywiZXhwIjoxNzUyMTkxNTg3fQ.mN5_LyaxP1nZ46wWjRFVVB26E-0FD9vXJ7J5JlkE8AE
-@refreshToken = sample-opaque-refresh-token
+@token = replace-with-access-token
+@refreshToken = replace-with-opaque-refresh-token
 @passwordResetToken = sample-opaque-password-reset-token
 @tenantId = 1
 @userId = 3
@@ -34,6 +34,155 @@
 @moderatorToken = replace-with-platform-moderator-access-token
 @adminToken = replace-with-platform-admin-access-token
 @pilotFeedbackId = 1
+
+###############################################################################
+### MOBILE MVP — CONSUMER-FIRST FLOW
+###############################################################################
+### These requests use the deterministic local development seed documented in
+### README.md. They are not production credentials. Run `pnpm ace db:seed`, then
+### execute requests in order. REST clients that support named-response variables
+### fill tokens, access/offer ids and receipt codes automatically. Otherwise copy
+### the corresponding values from the previous response into safe local variables.
+### Private mobile responses use `private, no-store`, `noindex, nofollow` and
+### `no-referrer`. Authenticated throttling allows 100 requests/minute per user;
+### a 429 response includes `Retry-After` and must not be retried before that delay.
+
+### Consumer login — returns auth.token_type, expires_in and refresh_expires_in
+# @name mobileConsumerSignIn
+POST {{baseUrl}}/api/v1/sessions/sign-in
+Content-Type: application/json
+Accept: application/json
+
+{
+  "uid": "cliente@experimente.local",
+  "password": "experimente123"
+}
+
+### Rotate the single-use consumer refresh token
+# @name mobileConsumerRefresh
+POST {{baseUrl}}/api/v1/sessions/refresh
+Content-Type: application/json
+Accept: application/json
+
+{
+  "refresh_token": "{{mobileConsumerSignIn.response.body.$.auth.refresh_token}}"
+}
+
+### Bootstrap user, active operation and UI capabilities
+# @name mobileContext
+GET {{baseUrl}}/api/v1/me/context
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+Accept: application/json
+
+### Partial self-service profile update (email/password/admin fields are not writable)
+# @name mobileProfileUpdate
+PATCH {{baseUrl}}/api/v1/me
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "full_name": "Cliente Experimente"
+}
+
+### Public discovery — operation comes from trusted Host, city is a discovery dimension
+# @name mobileCatalogCities
+GET {{baseUrl}}/api/v1/catalog/cities
+Host: {{publicHost}}
+Accept: application/json
+
+### Public discovery filtered by the canonical `category` query parameter
+# @name mobileCatalogSearch
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?q=estacao&category={{catalogCategorySlug}}&page=1&per_page=20
+Host: {{publicHost}}
+Accept: application/json
+
+### Consumer wallet — empty passes is a valid 200 state
+# @name mobileWallet
+GET {{baseUrl}}/api/v1/me/wallet
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+x-tenant-id: {{mobileContext.response.body.$.active_operation.id}}
+Accept: application/json
+
+### Create a five-minute presentation from the first available wallet benefit
+# @name mobilePresentation
+POST {{baseUrl}}/api/v1/me/benefits/presentations
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+x-tenant-id: {{mobileContext.response.body.$.active_operation.id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "access_id": {{mobileWallet.response.body.$.passes[0].access.id}},
+  "offer_id": {{mobileWallet.response.body.$.passes[0].benefits[0].offer_id}}
+}
+
+### Partner login — use server capabilities before rendering validation actions
+# @name mobilePartnerSignIn
+POST {{baseUrl}}/api/v1/sessions/sign-in
+Content-Type: application/json
+Accept: application/json
+
+{
+  "uid": "partner@experimente.local",
+  "password": "experimente123"
+}
+
+### Bootstrap partner operation and capabilities from the token claim
+# @name mobilePartnerContext
+GET {{baseUrl}}/api/v1/me/context
+Authorization: Bearer {{mobilePartnerSignIn.response.body.$.auth.access_token}}
+Accept: application/json
+
+### Preview only; this request does not mutate redemption state
+# @name mobileRedemptionPreview
+POST {{baseUrl}}/api/v1/benefit-redemptions/preview
+Authorization: Bearer {{mobilePartnerSignIn.response.body.$.auth.access_token}}
+x-tenant-id: {{mobilePartnerContext.response.body.$.active_operation.id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "token": "{{mobilePresentation.response.body.$.token}}"
+}
+
+### Confirm redemption; retrying the same token returns the same receipt
+# @name mobileRedemption
+POST {{baseUrl}}/api/v1/benefit-redemptions
+Authorization: Bearer {{mobilePartnerSignIn.response.body.$.auth.access_token}}
+x-tenant-id: {{mobilePartnerContext.response.body.$.active_operation.id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "token": "{{mobilePresentation.response.body.$.token}}"
+}
+
+### Consumer history and receipt
+# @name mobileConsumerHistory
+GET {{baseUrl}}/api/v1/me/benefits/redemptions
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+x-tenant-id: {{mobileContext.response.body.$.active_operation.id}}
+Accept: application/json
+
+# @name mobileConsumerReceipt
+GET {{baseUrl}}/api/v1/me/benefits/redemptions/{{mobileRedemption.response.body.$.receipt_code}}
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+x-tenant-id: {{mobileContext.response.body.$.active_operation.id}}
+Accept: application/json
+
+### Partner policy-scoped history and receipt
+# @name mobilePartnerHistory
+GET {{baseUrl}}/api/v1/benefit-redemptions
+Authorization: Bearer {{mobilePartnerSignIn.response.body.$.auth.access_token}}
+x-tenant-id: {{mobilePartnerContext.response.body.$.active_operation.id}}
+Accept: application/json
+
+# @name mobilePartnerReceipt
+GET {{baseUrl}}/api/v1/benefit-redemptions/{{mobileRedemption.response.body.$.receipt_code}}
+Authorization: Bearer {{mobilePartnerSignIn.response.body.$.auth.access_token}}
+x-tenant-id: {{mobilePartnerContext.response.body.$.active_operation.id}}
+Accept: application/json
 
 ###############################################################################
 ### HEALTH ENDPOINTS
@@ -159,7 +308,7 @@ Content-Type: application/json
 
 {
   "current_password": "password123",
-  "confirmation": "DELETE"
+  "confirmation": "EXCLUIR MINHA CONTA"
 }
 
 ###############################################################################
@@ -693,7 +842,7 @@ Host: {{publicHost}}
 Accept: application/json
 
 ### Search Published Establishments
-GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?q=estacao&category_slug={{catalogCategorySlug}}&page=1&per_page=20
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?q=estacao&category={{catalogCategorySlug}}&page=1&per_page=20
 Host: {{publicHost}}
 Accept: application/json
 
@@ -876,8 +1025,11 @@ Accept: application/json
 #   "updated_at": "2024-01-01T00:00:00.000Z",
 #   "roles": [...],
 #   "auth": {
-#     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-#     "refresh_token": "opaque_random_refresh_token"
+#     "access_token": "<access-token>",
+#     "refresh_token": "<opaque-refresh-token>",
+#     "token_type": "Bearer",
+#     "expires_in": 900,
+#     "refresh_expires_in": 259200
 #   }
 # }
 

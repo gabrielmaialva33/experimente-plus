@@ -5,20 +5,21 @@ info:
   description: |
     ## Experimente+ API
 
-    API da plataforma regional Experimente+, construída com AdonisJS 7, React e Inertia. O contrato cobre a fundação compartilhada e os domínios operacionais já implementados: identidade, autorização, workspaces, geografia, taxonomia, organizações, unidades revisionadas, mídia, moderação, catálogo público, analytics e feedback privado do piloto.
+    API da plataforma regional Experimente+, construída com AdonisJS 7, React e Inertia. O contrato cobre a fundação compartilhada e os domínios operacionais já implementados: identidade, autorização, operações, geografia, taxonomia, organizações, unidades revisionadas, mídia, moderação, catálogo público, benefícios, analytics e feedback privado do piloto.
 
     ### Foundation capabilities
 
     - **Access JWTs**: Short-lived signed bearer tokens for API requests
     - **Opaque Refresh Tokens**: Rotated on every use and persisted only as HMAC hashes
     - **Global RBAC**: Roles, direct permissions, inheritance, and cache invalidation
-    - **Tenant Workspaces**: Verified active-tenant context, personal workspace onboarding, and workspace creation
+    - **Tenant Operations**: Verified active-operation context, membership-aware selection, and operation creation
     - **File Management**: Tenant-scoped upload, listing, and owner-aware deletion across multiple storage drivers
     - **Account Lifecycle**: Email verification, single-use password reset, and anonymized self-deletion
     - **Health Monitoring**: Public readiness and dependency checks
     - **Organization Workflows**: Tenant-safe memberships, invitations, claims and administrative review
     - **Revisioned Establishments**: Typed effective attributes, media composition, moderation and atomic publication
     - **Public Discovery**: Host-resolved city/category catalog, search and privacy-preserving analytics
+    - **Mobile Client**: Consumer-first context, profile, wallet, temporary benefit presentation and policy-scoped partner redemption
 
     ## Authentication
 
@@ -45,7 +46,7 @@ info:
 
     ### Response Format
     - **Success**: HTTP 2xx with JSON body
-    - **Errors**: HTTP 4xx/5xx with standardized error format
+    - **Errors**: HTTP 4xx/5xx with endpoint-specific documented envelopes; legacy formats are not yet globally uniform
     - **Timestamps**: ISO 8601 format
     - **Database Fields**: snake_case naming convention
 
@@ -518,6 +519,7 @@ components:
 
     AuthResponse:
       type: object
+      required: [auth]
       properties:
         id:
           type: integer
@@ -527,7 +529,7 @@ components:
           type: string
           format: email
         username:
-          type: string
+          type: [string, 'null']
         created_at:
           type: string
           format: date-time
@@ -546,16 +548,655 @@ components:
 
     AuthTokens:
       type: object
-      required: [access_token, refresh_token]
+      required: [access_token, refresh_token, token_type, expires_in, refresh_expires_in]
+      additionalProperties: false
       properties:
         access_token:
           type: string
           description: Short-lived JWT accepted by bearer-authenticated endpoints.
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+          example: '<access-token>'
         refresh_token:
           type: string
           description: Opaque one-time refresh credential rotated after every successful refresh.
-          example: 'D4m6j6pTW1u3Jf_Z0Q4K7rJch7Jv8k9xQ4Q6xk2MsGv...'
+          example: '<opaque-refresh-token>'
+        token_type:
+          type: string
+          const: Bearer
+          description: Authentication scheme used in the Authorization header.
+        expires_in:
+          type: integer
+          const: 900
+          description: Access-token lifetime in seconds.
+        refresh_expires_in:
+          type: integer
+          const: 259200
+          description: Refresh-token lifetime in seconds.
+
+    MobileUser:
+      type: object
+      required: [id, full_name, email, username, email_verified, email_verified_at]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: [string, 'null']
+        email_verified:
+          type: boolean
+        email_verified_at:
+          type: [string, 'null']
+          format: date-time
+
+    MobileOperation:
+      type: object
+      required: [id, name, slug]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        slug:
+          type: string
+
+    MobileOperationMembership:
+      type: object
+      required: [id, name, slug, role, is_current]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        slug:
+          type: string
+        role:
+          type: string
+          description: Membership role inside the operation.
+        is_current:
+          type: boolean
+
+    MobileCapabilities:
+      type: object
+      required: [consumer, partner, platform_access]
+      additionalProperties: false
+      properties:
+        consumer:
+          type: object
+          required: [wallet]
+          additionalProperties: false
+          properties:
+            wallet:
+              type: object
+              required: [read]
+              additionalProperties: false
+              properties:
+                read:
+                  type: boolean
+                  const: true
+        partner:
+          type: object
+          required: [enabled, redemptions]
+          additionalProperties: false
+          description: |
+            `enabled` means the actor has an active organization membership; it is not a
+            global role. Render redemption actions from `redemptions.read` and
+            `redemptions.validate`, because operation-wide platform staff may receive a
+            capability while `enabled` remains false.
+          properties:
+            enabled:
+              type: boolean
+            redemptions:
+              type: object
+              required: [read, validate]
+              additionalProperties: false
+              properties:
+                read:
+                  type: boolean
+                validate:
+                  type: boolean
+        platform_access:
+          type: [string, 'null']
+          enum: [platform_admin, platform_moderator, null]
+
+    MobileContext:
+      type: object
+      required: [user, active_operation, operations, capabilities]
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/MobileUser'
+        active_operation:
+          $ref: '#/components/schemas/MobileOperation'
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MobileOperationMembership'
+        capabilities:
+          $ref: '#/components/schemas/MobileCapabilities'
+
+    UpdateMobileProfileRequest:
+      type: object
+      additionalProperties: false
+      description: Partial self-service update. The runtime also strips unknown properties.
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        username:
+          type: string
+          minLength: 3
+          maxLength: 80
+
+    UpdateMobileProfileResponse:
+      type: object
+      required: [user]
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/MobileUser'
+
+    WalletSummary:
+      type: object
+      required: [passes, benefits, available, upcoming, redeemed]
+      additionalProperties: false
+      properties:
+        passes:
+          type: integer
+          minimum: 0
+        benefits:
+          type: integer
+          minimum: 0
+        available:
+          type: integer
+          minimum: 0
+        upcoming:
+          type: integer
+          minimum: 0
+        redeemed:
+          type: integer
+          minimum: 0
+
+    WalletLatestRedemption:
+      type: object
+      required: [id, receipt_code, redeemed_at]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        receipt_code:
+          type: string
+        redeemed_at:
+          type: string
+          format: date-time
+
+    WalletBenefit:
+      type: object
+      required:
+        [
+          key,
+          access_id,
+          offer_id,
+          availability,
+          title,
+          description,
+          benefit_type,
+          discount_percentage,
+          discount_amount_cents,
+          terms,
+          available_weekdays_mask,
+          daily_start_time,
+          daily_end_time,
+          reservation_required,
+          on_premise_only,
+          minimum_party_size,
+          max_redemptions_per_access,
+          redemption_count,
+          remaining_redemptions,
+          latest_redemption,
+          establishment,
+        ]
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        access_id:
+          type: integer
+          minimum: 1
+        offer_id:
+          type: integer
+          minimum: 1
+        availability:
+          type: string
+          enum: [available, upcoming, outside_schedule, paused, expired, revoked, redeemed]
+        title:
+          type: string
+        description:
+          type: string
+        benefit_type:
+          type: string
+          enum: [buy_one_get_one, percentage, fixed_amount, complimentary_item, custom]
+        discount_percentage:
+          type: [number, 'null']
+        discount_amount_cents:
+          type: [integer, 'null']
+        terms:
+          type: [string, 'null']
+        available_weekdays_mask:
+          type: integer
+        daily_start_time:
+          type: [string, 'null']
+        daily_end_time:
+          type: [string, 'null']
+        reservation_required:
+          type: boolean
+        on_premise_only:
+          type: boolean
+        minimum_party_size:
+          type: integer
+          minimum: 1
+        max_redemptions_per_access:
+          type: integer
+          minimum: 1
+        redemption_count:
+          type: integer
+          minimum: 0
+        remaining_redemptions:
+          type: integer
+          minimum: 0
+        latest_redemption:
+          oneOf:
+            - $ref: '#/components/schemas/WalletLatestRedemption'
+            - type: 'null'
+        establishment:
+          type: object
+          required: [id, public_name, slug]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            public_name:
+              type: string
+            slug:
+              type: [string, 'null']
+
+    WalletPass:
+      type: object
+      required: [access, edition, benefits]
+      additionalProperties: false
+      properties:
+        access:
+          type: object
+          required: [id, source, status, granted_at, availability]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            source:
+              type: string
+              enum: [manual, courtesy, payment, promo_code, migration]
+            status:
+              type: string
+              enum: [active, revoked]
+            granted_at:
+              type: string
+              format: date-time
+            availability:
+              type: string
+              enum: [available, upcoming, outside_schedule, paused, expired, revoked, redeemed]
+        edition:
+          type: object
+          required:
+            [
+              id,
+              name,
+              slug,
+              description,
+              price_cents,
+              currency,
+              usage_starts_at,
+              usage_ends_at,
+              status,
+              city,
+            ]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            name:
+              type: string
+            slug:
+              type: string
+            description:
+              type: [string, 'null']
+            price_cents:
+              type: integer
+              minimum: 0
+            currency:
+              type: string
+            usage_starts_at:
+              type: string
+              format: date-time
+            usage_ends_at:
+              type: string
+              format: date-time
+            status:
+              type: string
+              enum: [draft, published, paused, archived]
+            city:
+              type: object
+              required: [id, name, slug, state_code, timezone]
+              additionalProperties: false
+              properties:
+                id:
+                  type: integer
+                  minimum: 1
+                name:
+                  type: string
+                slug:
+                  type: string
+                state_code:
+                  type: string
+                timezone:
+                  type: string
+        benefits:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletBenefit'
+
+    Wallet:
+      type: object
+      required: [summary, passes]
+      additionalProperties: false
+      properties:
+        summary:
+          $ref: '#/components/schemas/WalletSummary'
+        passes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletPass'
+
+    BenefitSummary:
+      type: object
+      required:
+        [
+          access_id,
+          offer_id,
+          edition_id,
+          edition_name,
+          organization_id,
+          establishment_id,
+          establishment_name,
+          offer_title,
+          offer_description,
+          terms,
+          benefit_type,
+          reservation_required,
+          on_premise_only,
+          minimum_party_size,
+          max_redemptions_per_access,
+          redeemed_count,
+          remaining_redemptions,
+        ]
+      additionalProperties: false
+      properties:
+        access_id:
+          type: integer
+          minimum: 1
+        offer_id:
+          type: integer
+          minimum: 1
+        edition_id:
+          type: integer
+          minimum: 1
+        edition_name:
+          type: string
+        organization_id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+        establishment_name:
+          type: string
+        offer_title:
+          type: string
+        offer_description:
+          type: string
+        terms:
+          type: [string, 'null']
+        benefit_type:
+          type: string
+          enum: [buy_one_get_one, percentage, fixed_amount, complimentary_item, custom]
+        reservation_required:
+          type: boolean
+        on_premise_only:
+          type: boolean
+        minimum_party_size:
+          type: integer
+          minimum: 1
+        max_redemptions_per_access:
+          type: integer
+          minimum: 1
+        redeemed_count:
+          type: integer
+          minimum: 0
+        remaining_redemptions:
+          type: integer
+          minimum: 0
+
+    BenefitPresentationRequest:
+      type: object
+      required: [access_id, offer_id]
+      additionalProperties: false
+      properties:
+        access_id:
+          type: integer
+          minimum: 1
+        offer_id:
+          type: integer
+          minimum: 1
+
+    BenefitPresentation:
+      type: object
+      required:
+        [token, validation_url, qr_data_url, issued_at, expires_at, expires_in_seconds, benefit]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          description: Five-minute signed presentation token. Never log or persist the raw value.
+        validation_url:
+          type: string
+          format: uri
+          description: Partner validation URL using the server-selected canonical origin.
+        qr_data_url:
+          type: string
+          description: PNG QR code encoded as a data URL.
+          pattern: '^data:image/png;base64,'
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        expires_in_seconds:
+          type: integer
+          const: 300
+        benefit:
+          $ref: '#/components/schemas/BenefitSummary'
+
+    BenefitPresentationTokenRequest:
+      type: object
+      required: [token]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+
+    BenefitRedemptionPreview:
+      type: object
+      required: [token, expires_at, holder, benefit]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        holder:
+          type: object
+          required: [id, full_name, email]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            full_name:
+              type: string
+            email:
+              type: string
+              format: email
+        benefit:
+          $ref: '#/components/schemas/BenefitSummary'
+
+    BenefitRedemptionReceipt:
+      type: object
+      required:
+        [
+          id,
+          receipt_code,
+          redemption_number,
+          redeemed_at,
+          edition,
+          offer,
+          establishment,
+          holder,
+          redeemed_by,
+        ]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        receipt_code:
+          type: string
+        redemption_number:
+          type: integer
+          minimum: 1
+        redeemed_at:
+          type: string
+          format: date-time
+        edition:
+          type: object
+          required: [id, name]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            name:
+              type: string
+        offer:
+          type: object
+          required: [id, title, benefit_type, terms]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            title:
+              type: string
+            benefit_type:
+              type: string
+              enum: [buy_one_get_one, percentage, fixed_amount, complimentary_item, custom]
+            terms:
+              type: [string, 'null']
+        establishment:
+          type: object
+          required: [id, name]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            name:
+              type: string
+        holder:
+          type: object
+          required: [id, full_name, email]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            full_name:
+              type: string
+            email:
+              type: string
+              format: email
+        redeemed_by:
+          type: integer
+          minimum: 1
+
+    BenefitRedemptionHistory:
+      type: object
+      required: [redemptions, total]
+      additionalProperties: false
+      properties:
+        redemptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BenefitRedemptionReceipt'
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of returned records. This endpoint is not paginated.
+
+    ApiMessageError:
+      type: object
+      required: [status, message]
+      additionalProperties: false
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
+
+    ApiRateLimitError:
+      type: object
+      required: [errors]
+      additionalProperties: false
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [code, message, status]
+            additionalProperties: false
+            properties:
+              code:
+                type: string
+                const: E_TOO_MANY_REQUESTS
+              message:
+                type: string
+              status:
+                type: integer
+                const: 429
 
     RefreshTokenRequest:
       type: object
@@ -632,11 +1273,16 @@ components:
 
     Error:
       type: object
+      required: [errors]
+      additionalProperties: false
       properties:
         errors:
           type: array
+          minItems: 1
           items:
             type: object
+            required: [message]
+            additionalProperties: true
             properties:
               message:
                 type: string
@@ -2945,7 +3591,44 @@ components:
       schema:
         type: integer
         minimum: 1
-      description: Optional active workspace override. Membership and active status are always validated.
+      description: Optional active operation override. Membership and active status are always validated.
+
+  headers:
+    PrivateCacheControl:
+      description: Prevents storage in shared or device HTTP caches.
+      schema:
+        type: string
+        const: private, no-store
+
+    PrivateRobotsTag:
+      description: Prevents indexing of private API representations.
+      schema:
+        type: string
+        const: noindex, nofollow
+
+    PrivateReferrerPolicy:
+      description: Prevents a presentation token in a validation URL from leaking as a referrer.
+      schema:
+        type: string
+        const: no-referrer
+
+    RateLimitLimit:
+      description: Maximum authenticated requests allowed in the current one-minute window.
+      schema:
+        type: integer
+        const: 100
+
+    RateLimitRemaining:
+      description: Requests remaining in the current rate-limit window.
+      schema:
+        type: integer
+        minimum: 0
+
+    RetryAfter:
+      description: Seconds until another request may be attempted.
+      schema:
+        type: integer
+        minimum: 0
 
   responses:
     UnauthorizedError:
@@ -2957,6 +3640,16 @@ components:
           example:
             errors:
               - message: 'Unauthorized'
+
+    UnauthorizedDomainError:
+      description: Invalid or expired credential rejected by the application domain.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 401
+            message: Invalid or expired refresh token
 
     ForbiddenError:
       description: Insufficient permissions
@@ -2985,6 +3678,91 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+    PrivateBadRequestError:
+      description: The active operation or benefit state makes this request invalid.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 400
+            message: An active tenant is required for this operation
+
+    PrivateForbiddenError:
+      description: The active operation or organization policy denies access.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 403
+            message: The requested tenant is inactive or inaccessible
+
+    PrivateNotFoundError:
+      description: The resource is absent or intentionally hidden by a tenant or ownership boundary.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 404
+            message: Benefit not found
+
+    PrivateValidationError:
+      description: VineJS request validation failed.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    PrivateRateLimitError:
+      description: Authenticated API throttle exceeded (100 requests per minute per user).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
 tags:
   - name: Catalog
     description: Public regional discovery backed by the published catalog projection.
@@ -3002,6 +3780,8 @@ tags:
     description: File upload and management
   - name: Profile
     description: Current user profile operations
+  - name: Benefits
+    description: Private wallet, temporary presentation, policy-scoped redemption, history and receipts.
   - name: Permissions
     description: Permission management operations (admin only)
   - name: Organizations
@@ -4158,12 +4938,6 @@ paths:
       summary: List active public cities
       tags: [Catalog]
       security: []
-      parameters:
-        - in: query
-          name: region_slug
-          schema:
-            type: string
-          description: Optional active region slug
       responses:
         '200':
           description: Active cities for the resolved operation
@@ -5103,11 +5877,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [auth]
+                additionalProperties: false
                 properties:
                   auth:
                     $ref: '#/components/schemas/AuthTokens'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/UnauthorizedDomainError'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -5141,6 +5917,13 @@ paths:
       responses:
         '200':
           description: Profile retrieved successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
           content:
             application/json:
               schema:
@@ -5148,10 +5931,49 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
+    patch:
+      operationId: updateProfile
+      summary: Update the authenticated user's profile
+      description: Updates only `full_name` and `username`; administrative and credential fields are never writable here.
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMobileProfileRequest'
+      responses:
+        '200':
+          description: Allowlisted profile projection after the partial update
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateMobileProfileResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
     delete:
       operationId: deleteOwnAccount
       summary: Delete the authenticated account
-      description: Requires the current password and the literal confirmation DELETE. The user is anonymized and active API credentials are revoked while historical references remain intact.
+      description: Requires the current password and the literal confirmation EXCLUIR MINHA CONTA. The user is anonymized and active API credentials are revoked while historical references remain intact.
       tags:
         - Profile
       requestBody:
@@ -5167,7 +5989,7 @@ paths:
                   format: password
                 confirmation:
                   type: string
-                  const: DELETE
+                  const: EXCLUIR MINHA CONTA
       responses:
         '204':
           description: Account anonymized and credentials revoked
@@ -5177,6 +5999,384 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /api/v1/me/context:
+    get:
+      operationId: getMobileContext
+      summary: Get user, active operation and mobile capabilities
+      description: |
+        Returns a closed projection for bootstrapping a thin client. Tenant means an isolated
+        platform operation; city remains a public discovery dimension. The optional
+        `x-tenant-id` override is accepted only when the actor belongs to that active operation.
+
+        `partner.enabled` reflects active organization membership, not a global role. The client
+        must render read and validation actions from `partner.redemptions.read` and
+        `partner.redemptions.validate`; every endpoint still reauthorizes on the server.
+      tags: [Profile]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Current mobile context
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileContext'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/me/wallet:
+    get:
+      operationId: getBenefitWallet
+      summary: Get the consumer's derived benefit wallet
+      description: |
+        Returns passes and currently derived benefits for the active operation. Availability,
+        schedule and remaining uses are server projections; the client must not recalculate them.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Derived wallet, including an empty `passes` array when no access exists
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/me/benefits/presentations:
+    post:
+      operationId: createBenefitPresentation
+      summary: Create a temporary benefit presentation
+      description: |
+        Creates a signed presentation valid for five minutes after rechecking ownership,
+        availability, schedule and use limits. The server chooses the canonical validation origin;
+        clients cannot provide it. The token and validation URL are sensitive and must not be logged.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenefitPresentationRequest'
+      responses:
+        '201':
+          description: Temporary presentation and QR data URL
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitPresentation'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/me/benefits/redemptions:
+    get:
+      operationId: listMyBenefitRedemptions
+      summary: List the consumer's redemption history
+      description: Returns every redemption owned by the authenticated consumer in the active operation. This first contract is intentionally not paginated.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Consumer redemption history
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitRedemptionHistory'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/me/benefits/redemptions/{receiptCode}:
+    get:
+      operationId: getMyBenefitRedemptionReceipt
+      summary: Get one consumer redemption receipt
+      description: Returns a receipt only when it belongs to the authenticated consumer in the active operation; ownership mismatches are hidden as 404.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - name: receiptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Consumer redemption receipt
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitRedemptionReceipt'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/benefit-redemptions/preview:
+    post:
+      operationId: previewBenefitRedemption
+      summary: Preview a presented benefit before confirmation
+      description: |
+        Revalidates the temporary token and exposes holder details only to an actor allowed to
+        validate redemptions for the owning organization. Preview never creates a redemption.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenefitPresentationTokenRequest'
+      responses:
+        '200':
+          description: Revalidated holder and benefit projection
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitRedemptionPreview'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/benefit-redemptions:
+    post:
+      operationId: redeemPresentedBenefit
+      summary: Confirm a presented benefit
+      description: |
+        Revalidates all domain and organization rules inside a transaction. Repeating the same
+        valid token returns the original receipt, so a client may retry after an ambiguous network
+        failure without creating a second redemption.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenefitPresentationTokenRequest'
+      responses:
+        '200':
+          description: Existing or newly created immutable redemption receipt
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitRedemptionReceipt'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+    get:
+      operationId: listPartnerBenefitRedemptions
+      summary: List redemption history visible to the partner actor
+      description: |
+        Returns redemptions only for organizations where the actor has read capability. Platform
+        administrators may read the active operation; a platform moderator without an active
+        organization membership receives no partner access. This first contract is not paginated.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Policy-scoped partner redemption history
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitRedemptionHistory'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/benefit-redemptions/{receiptCode}:
+    get:
+      operationId: getPartnerBenefitRedemptionReceipt
+      summary: Get one redemption receipt visible to the partner actor
+      description: Returns a receipt only inside the active operation and owning organization policy boundary. Inaccessible receipts are hidden as 404.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+        - name: receiptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Policy-scoped partner redemption receipt
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitRedemptionReceipt'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/me/permissions:
     get:
@@ -5297,7 +6497,29 @@ paths:
         '200':
           description: Email verified successfully
         '400':
-          description: Invalid or expired token
+          description: The verification token expired or its email is already verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessageError'
+              examples:
+                expired:
+                  value:
+                    status: 400
+                    message: Verification token has expired. Please request a new one.
+                alreadyVerified:
+                  value:
+                    status: 400
+                    message: Email already verified
+        '404':
+          description: No user has the supplied verification token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessageError'
+              example:
+                status: 404
+                message: Invalid verification token
 
   /api/v1/resend-verification-email:
     post:
@@ -5341,6 +6563,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [tenant, auth]
+                additionalProperties: false
                 properties:
                   tenant:
                     $ref: '#/components/schemas/Tenant'
@@ -5411,9 +6635,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [tenant, auth]
+                additionalProperties: false
                 properties:
                   tenant:
-                    type: object
+                    $ref: '#/components/schemas/Tenant'
                   auth:
                     $ref: '#/components/schemas/AuthTokens'
         '400':

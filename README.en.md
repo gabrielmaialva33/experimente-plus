@@ -207,20 +207,28 @@ pnpm ace db:seed         # deterministic development data
 
 ## Configuration
 
-| Variable                                             | Purpose                                       |
-| ---------------------------------------------------- | --------------------------------------------- |
-| `APP_NAME`, `VITE_APP_NAME`, `APP_URL`               | application identity and URLs                 |
-| `APP_LOCALE`                                         | default locale (`pt` or `en`)                 |
-| `PUBLIC_TENANT_SLUG`                                 | public operation when the host cannot resolve |
-| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`        | independent API secrets                       |
-| `EMAIL_VERIFICATION_SECRET`, `PASSWORD_RESET_SECRET` | HMAC for single-use links                     |
-| `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_COOKIE_NAME`      | token identity and web cookie                 |
-| `REGISTRATION_WORKSPACE_MODE`                        | onboarding `none`, `personal`, or `operation` |
-| `DEMO_PAGES_ENABLED`                                 | internal visual reference pages               |
-| `DRIVE_DISK`                                         | `fs`, `s3`, `spaces`, `r2`, or `gcs`          |
+| Variable                                             | Purpose                                          |
+| ---------------------------------------------------- | ------------------------------------------------ |
+| `APP_NAME`, `VITE_APP_NAME`, `APP_URL`               | application identity and URLs                    |
+| `APP_LOCALE`                                         | default locale (`pt` or `en`)                    |
+| `PUBLIC_TENANT_SLUG`                                 | public operation when the host cannot resolve    |
+| `BENEFIT_PRESENTATION_BASE_URL`                      | canonical HTTP(S) origin for QR validation links |
+| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`        | independent API secrets                          |
+| `EMAIL_VERIFICATION_SECRET`, `PASSWORD_RESET_SECRET` | HMAC for single-use links                        |
+| `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_COOKIE_NAME`      | token identity and web cookie                    |
+| `REGISTRATION_WORKSPACE_MODE`                        | onboarding `none`, `personal`, or `operation`    |
+| `DEMO_PAGES_ENABLED`                                 | internal visual reference pages                  |
+| `DRIVE_DISK`                                         | `fs`, `s3`, `spaces`, `r2`, or `gcs`             |
 
 Optional secrets fall back to `APP_KEY` during development only. Production must use long,
 independent values stored outside the repository.
+
+The origin embedded in a QR code follows a closed precedence chain:
+`BENEFIT_PRESENTATION_BASE_URL`; then, only in production, `APP_URL`; and the trusted request
+protocol/host only during development or tests. Both production variables must contain only an
+absolute `http://` or `https://` origin, without credentials, path, query, or fragment. Production
+startup fails when no valid canonical origin is available, preventing `Host` or `X-Forwarded-Host`
+from controlling the validation link.
 
 > [!IMPORTANT]
 > The public resolver reads the **first hostname label**. On `experimente-plus.example.com` it looks
