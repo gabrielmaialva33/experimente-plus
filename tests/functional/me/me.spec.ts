@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import type { ApiResponse } from '@japa/api-client'
 
 import testUtils from '@adonisjs/core/services/test_utils'
 
@@ -8,6 +9,13 @@ import Permission from '#modules/permissions/models/permission'
 
 import IRole from '#modules/roles/interfaces/role_interface'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
+
+function assertPrivateResponse(response: ApiResponse): void {
+  response.assertHeader('cache-control', 'private, no-store')
+  response.assertHeader('pragma', 'no-cache')
+  response.assertHeader('x-robots-tag', 'noindex, nofollow')
+  response.assertHeader('referrer-policy', 'no-referrer')
+}
 
 test.group('Me endpoints', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
@@ -34,6 +42,7 @@ test.group('Me endpoints', (group) => {
     const response = await client.get('/api/v1/me').loginAs(user)
 
     response.assertStatus(200)
+    assertPrivateResponse(response)
     assert.equal(response.body().email, 'test@example.com')
     assert.equal(response.body().username, 'testuser')
     assert.isArray(response.body().roles)
@@ -81,6 +90,7 @@ test.group('Me endpoints', (group) => {
     const response = await client.get('/api/v1/me/permissions').loginAs(user)
 
     response.assertStatus(200)
+    assertPrivateResponse(response)
     assert.isNumber(response.body().total)
     assert.isArray(response.body().permissions)
     assert.isObject(response.body().grouped)
@@ -121,6 +131,7 @@ test.group('Me endpoints', (group) => {
     const response = await client.get('/api/v1/me/roles').loginAs(user)
 
     response.assertStatus(200)
+    assertPrivateResponse(response)
     assert.equal(response.body().total, 2)
     assert.isArray(response.body().roles)
 
@@ -128,12 +139,18 @@ test.group('Me endpoints', (group) => {
     assert.includeMembers(roleNames, ['User', 'Editor'])
   })
 
-  test('should require authentication for all /me endpoints', async ({ client }) => {
+  test('should return the canonical private JSON error for unauthenticated /me requests', async ({
+    client,
+    assert,
+  }) => {
     const endpoints = ['/api/v1/me', '/api/v1/me/permissions', '/api/v1/me/roles']
 
     for (const endpoint of endpoints) {
       const response = await client.get(endpoint)
       response.assertStatus(401)
+      response.assertBody({ errors: [{ message: 'Unauthorized access' }] })
+      assert.match(String(response.header('content-type')), /^application\/json\b/)
+      assertPrivateResponse(response)
     }
   })
 })

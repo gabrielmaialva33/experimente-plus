@@ -1,9 +1,17 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
+import type { ApiResponse } from '@japa/api-client'
 
 import RefreshToken from '#modules/auth/models/refresh_token'
 import User from '#modules/users/models/user'
+
+function assertPrivateResponse(response: ApiResponse): void {
+  response.assertHeader('cache-control', 'private, no-store')
+  response.assertHeader('pragma', 'no-cache')
+  response.assertHeader('x-robots-tag', 'noindex, nofollow')
+  response.assertHeader('referrer-policy', 'no-referrer')
+}
 
 test.group('Delete own account', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
@@ -33,6 +41,7 @@ test.group('Delete own account', (group) => {
     })
 
     response.assertStatus(204)
+    assertPrivateResponse(response)
 
     assert.isNull(await User.find(user.id))
     const rawUser = await db.from('users').where('id', user.id).firstOrFail()
@@ -76,5 +85,46 @@ test.group('Delete own account', (group) => {
     const persisted = await User.find(user.id)
     assert.isNotNull(persisted)
     assert.equal(persisted!.email, user.email)
+  })
+
+  test('reads deletion credentials only from the request body', async ({ client, assert }) => {
+    const user = await User.create({
+      full_name: 'Delete Body Source',
+      email: 'delete-body-source@example.com',
+      username: 'delete-body-source',
+      password: 'password123',
+    })
+
+    const queryOnly = await client
+      .delete('/api/v1/me')
+      .loginAs(user)
+      .qs({
+        current_password: 'password123',
+        confirmation: 'EXCLUIR MINHA CONTA',
+      })
+      .json({})
+    queryOnly.assertStatus(422)
+    queryOnly.assertBodyContains({
+      errors: [
+        { field: 'current_password', rule: 'required' },
+        { field: 'confirmation', rule: 'required' },
+      ],
+    })
+
+    const bodyWins = await client
+      .delete('/api/v1/me')
+      .loginAs(user)
+      .qs({
+        current_password: 'wrong-query-password',
+        confirmation: 'MANTER MINHA CONTA',
+      })
+      .json({
+        current_password: 'password123',
+        confirmation: 'EXCLUIR MINHA CONTA',
+      })
+    bodyWins.assertStatus(204)
+    assertPrivateResponse(bodyWins)
+
+    assert.isNull(await User.find(user.id))
   })
 })

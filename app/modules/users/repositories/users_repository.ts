@@ -2,6 +2,7 @@ import User from '#modules/users/models/user'
 
 import type IUser from '#modules/users/interfaces/user_interface'
 import LucidRepository from '#shared/lucid/lucid_repository'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 export default class UsersRepository
   extends LucidRepository<typeof User>
@@ -13,6 +14,18 @@ export default class UsersRepository
 
   async verifyCredentials(uid: string, password: string): Promise<User> {
     return this.model.verifyCredentials(uid, password)
+  }
+
+  async findActiveByIdForUpdate(
+    userId: number,
+    client: TransactionClientContract
+  ): Promise<User | null> {
+    return this.model
+      .query({ client })
+      .where('id', userId)
+      .where('is_deleted', false)
+      .forUpdate()
+      .first()
   }
 
   /**

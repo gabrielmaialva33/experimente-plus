@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuditLog from '#modules/audits/models/audit_log'
 import AuditRepository from '#modules/audits/repositories/audit_repository'
 
@@ -15,6 +16,10 @@ export interface AuditLogData {
   metadata?: Record<string, any>
 }
 
+export interface AuditWriteOptions {
+  client?: TransactionClientContract
+}
+
 @inject()
 export default class AuditService {
   constructor(private auditRepository: AuditRepository) {}
@@ -22,7 +27,11 @@ export default class AuditService {
   /**
    * Log permission check result
    */
-  async logPermissionCheck(data: AuditLogData, ctx?: HttpContext): Promise<AuditLog> {
+  async logPermissionCheck(
+    data: AuditLogData,
+    ctx?: HttpContext,
+    options: AuditWriteOptions = {}
+  ): Promise<AuditLog> {
     const auditData: Partial<AuditLog> = {
       user_id: data.userId || null,
       session_id: data.sessionId || null,
@@ -47,7 +56,10 @@ export default class AuditService {
       auditData.request_data = this.sanitizeRequestData(ctx.request.all())
     }
 
-    return await this.auditRepository.create(auditData)
+    return await this.auditRepository.create(
+      auditData,
+      options.client ? { client: options.client } : undefined
+    )
   }
 
   /**

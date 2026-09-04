@@ -1,5 +1,6 @@
 import type LucidRepositoryInterface from '#shared/lucid/lucid_repository_interface'
 import type User from '#modules/users/models/user'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 namespace IUser {
   export interface Repository extends LucidRepositoryInterface<typeof User> {
@@ -9,6 +10,8 @@ namespace IUser {
      * @param password
      */
     verifyCredentials(uid: string, password: string): Promise<User>
+
+    findActiveByIdForUpdate(userId: number, client: TransactionClientContract): Promise<User | null>
 
     findByIdWithPermissionsAndRoles(userId: number): Promise<User | null>
 
