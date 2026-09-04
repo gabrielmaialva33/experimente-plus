@@ -4,6 +4,11 @@ import { test } from '@japa/runner'
 import limiter from '@adonisjs/limiter/services/main'
 
 import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
+import { INVALID_BENEFIT_PRESENTATION_MESSAGE } from '#exceptions/invalid_benefit_presentation_exception'
+import {
+  BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH,
+  BENEFIT_PRESENTATION_TOKEN_PATTERN,
+} from '#modules/benefits/constants/benefit_redemption'
 import IRole from '#modules/roles/interfaces/role_interface'
 import { BENEFIT_PRESENTATION_BASE_URL_KEY } from '#shared/utils/benefit_presentation_origin'
 import env from '#start/env'
@@ -152,6 +157,46 @@ test.group('Benefits mobile API hardening', (group) => {
     assertPrivateMobileResponse(rejectedTenantOverride)
   })
 
+  test('hides malformed receipt codes on both consumer and partner endpoints', async ({
+    client,
+  }) => {
+    const scenario = await createBenefitFlowScenario({
+      suffix: 'malformed-receipt-api',
+      withRedemption: true,
+    })
+    const tenantHeader = String(scenario.tenant.id)
+    const requests = [
+      {
+        path: '/api/v1/me/benefits/redemptions',
+        actor: scenario.users.holder,
+      },
+      {
+        path: '/api/v1/benefit-redemptions',
+        actor: scenario.users.partner,
+      },
+    ]
+    const malformedCodes = [
+      'not-a-receipt',
+      `EXP-${'A'.repeat(15)}`,
+      `EXP-${'A'.repeat(17)}`,
+      `EXP-${'A'.repeat(15)}Z`,
+      `exp-${'a'.repeat(16)}`,
+    ]
+
+    for (const request of requests) {
+      for (const receiptCode of malformedCodes) {
+        const response = await client
+          .get(`${request.path}/${receiptCode}`)
+          .header('x-tenant-id', tenantHeader)
+          .loginAs(request.actor)
+
+        response.assertStatus(404)
+        response.assertBody({ status: 404, message: 'Redemption receipt not found' })
+        assertPrivateMobileResponse(response)
+      }
+    }
+  })
+
   test('uses the configured canonical origin in both JSON and Inertia presentations', async ({
     assert,
     cleanup,
@@ -191,6 +236,60 @@ test.group('Benefits mobile API hardening', (group) => {
     assert.equal(pageValidationUrl.origin, 'https://mobile.experimente.example')
     assert.equal(pageValidationUrl.pathname, '/portal/redemptions/validate')
     assert.equal(pageValidationUrl.searchParams.get('token'), pagePresentation.token)
+  })
+
+  test('bounds token input at HTTP entry and keeps cryptographic failures generic', async ({
+    assert,
+    client,
+  }) => {
+    const scenario = await createBenefitFlowScenario({ suffix: 'bounded-presentation-token' })
+    const tenantHeader = String(scenario.tenant.id)
+    const presentation = await client
+      .post('/api/v1/me/benefits/presentations')
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.holder)
+      .json({ access_id: scenario.access.id, offer_id: scenario.offer.id })
+
+    presentation.assertStatus(201)
+    assert.match(presentation.body().token, BENEFIT_PRESENTATION_TOKEN_PATTERN)
+    assert.isAtMost(presentation.body().token.length, BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH)
+
+    const oversizedToken = `${'A'.repeat(BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH - 43)}.${'A'.repeat(43)}`
+    for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
+      const oversized = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .json({ token: oversizedToken })
+
+      oversized.assertStatus(422)
+      oversized.assertBodyContains({ errors: [{ field: 'token', rule: 'maxLength' }] })
+      assertPrivateMobileResponse(oversized)
+    }
+
+    const malformed = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .json({ token: `payload!.${'A'.repeat(43)}` })
+    malformed.assertStatus(422)
+    malformed.assertBodyContains({ errors: [{ field: 'token', rule: 'regex' }] })
+    assertPrivateMobileResponse(malformed)
+
+    const issuedToken = presentation.body().token as string
+    const replacement = issuedToken.endsWith('A') ? 'B' : 'A'
+    const tamperedToken = `${issuedToken.slice(0, -1)}${replacement}`
+    for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
+      const tampered = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .json({ token: tamperedToken })
+
+      tampered.assertStatus(400)
+      tampered.assertBody({ status: 400, message: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+      assertPrivateMobileResponse(tampered)
+    }
   })
 
   test('enforces the authenticated API throttle on private benefit routes', async ({

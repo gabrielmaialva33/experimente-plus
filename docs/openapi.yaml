@@ -726,6 +726,13 @@ components:
           type: integer
           minimum: 0
 
+    BenefitReceiptCode:
+      type: string
+      minLength: 20
+      maxLength: 20
+      pattern: '^EXP-[0-9A-F]{16}$'
+      description: Canonical opaque redemption receipt code.
+
     WalletLatestRedemption:
       type: object
       required: [id, receipt_code, redeemed_at]
@@ -734,7 +741,7 @@ components:
         id:
           type: string
         receipt_code:
-          type: string
+          $ref: '#/components/schemas/BenefitReceiptCode'
         redeemed_at:
           type: string
           format: date-time
@@ -1016,8 +1023,7 @@ components:
       additionalProperties: false
       properties:
         token:
-          type: string
-          description: Five-minute signed presentation token. Never log or persist the raw value.
+          $ref: '#/components/schemas/BenefitPresentationToken'
         validation_url:
           type: string
           format: uri
@@ -1038,14 +1044,20 @@ components:
         benefit:
           $ref: '#/components/schemas/BenefitSummary'
 
+    BenefitPresentationToken:
+      type: string
+      minLength: 45
+      maxLength: 512
+      pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
+      description: Five-minute signed base64url payload.signature token. Inputs outside this transport grammar receive 422; invalid signatures, claims, or expiry receive a generic 400. Never log or persist the raw value.
+
     BenefitPresentationTokenRequest:
       type: object
       required: [token]
       additionalProperties: false
       properties:
         token:
-          type: string
-          minLength: 1
+          $ref: '#/components/schemas/BenefitPresentationToken'
 
     BenefitRedemptionPreview:
       type: object
@@ -1053,7 +1065,7 @@ components:
       additionalProperties: false
       properties:
         token:
-          type: string
+          $ref: '#/components/schemas/BenefitPresentationToken'
         expires_at:
           type: string
           format: date-time
@@ -1093,7 +1105,7 @@ components:
           type: integer
           minimum: 1
         receipt_code:
-          type: string
+          $ref: '#/components/schemas/BenefitReceiptCode'
         redemption_number:
           type: integer
           minimum: 1
@@ -3695,6 +3707,23 @@ components:
             status: 400
             message: An active tenant is required for this operation
 
+    PrivateInvalidBenefitPresentationError:
+      description: A structurally valid presentation token is invalid, tampered with, or expired.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 400
+            message: Esta apresentação é inválida ou expirou. Peça ao cliente para gerar uma nova apresentação e tente novamente.
+
     PrivateForbiddenError:
       description: The active operation or organization policy denies access.
       headers:
@@ -3728,6 +3757,23 @@ components:
           example:
             status: 404
             message: Benefit not found
+
+    PrivateRedemptionReceiptNotFoundError:
+      description: The receipt is absent, malformed, or intentionally hidden by a tenant, organization, or ownership boundary.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 404
+            message: Redemption receipt not found
 
     PrivateValidationError:
       description: VineJS request validation failed.
@@ -6173,8 +6219,9 @@ paths:
         - name: receiptCode
           in: path
           required: true
+          description: Canonical receipt code. Malformed values are hidden as 404 before persistence lookup.
           schema:
-            type: string
+            $ref: '#/components/schemas/BenefitReceiptCode'
       responses:
         '200':
           description: Consumer redemption receipt
@@ -6200,7 +6247,7 @@ paths:
         '403':
           $ref: '#/components/responses/PrivateForbiddenError'
         '404':
-          $ref: '#/components/responses/PrivateNotFoundError'
+          $ref: '#/components/responses/PrivateRedemptionReceiptNotFoundError'
         '429':
           $ref: '#/components/responses/PrivateRateLimitError'
 
@@ -6239,7 +6286,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BenefitRedemptionPreview'
         '400':
-          $ref: '#/components/responses/PrivateBadRequestError'
+          $ref: '#/components/responses/PrivateInvalidBenefitPresentationError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -6287,7 +6334,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BenefitRedemptionReceipt'
         '400':
-          $ref: '#/components/responses/PrivateBadRequestError'
+          $ref: '#/components/responses/PrivateInvalidBenefitPresentationError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -6347,8 +6394,9 @@ paths:
         - name: receiptCode
           in: path
           required: true
+          description: Canonical receipt code. Malformed values are hidden as 404 before persistence lookup.
           schema:
-            type: string
+            $ref: '#/components/schemas/BenefitReceiptCode'
       responses:
         '200':
           description: Policy-scoped partner redemption receipt
@@ -6374,7 +6422,7 @@ paths:
         '403':
           $ref: '#/components/responses/PrivateForbiddenError'
         '404':
-          $ref: '#/components/responses/PrivateNotFoundError'
+          $ref: '#/components/responses/PrivateRedemptionReceiptNotFoundError'
         '429':
           $ref: '#/components/responses/PrivateRateLimitError'
 

@@ -1,5 +1,11 @@
 import vine from '@vinejs/vine'
 
+import {
+  BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH,
+  BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH,
+  BENEFIT_PRESENTATION_TOKEN_PATTERN,
+} from '#modules/benefits/constants/benefit_redemption'
+
 export const benefitPresentationRequestValidator = vine.compile(
   vine.object({
     access_id: vine.number().min(1),
@@ -9,6 +15,11 @@ export const benefitPresentationRequestValidator = vine.compile(
 
 export const benefitPresentationTokenValidator = vine.compile(
   vine.object({
-    token: vine.string().trim().minLength(1),
+    token: vine
+      .string()
+      .trim()
+      .minLength(BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH)
+      .maxLength(BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH)
+      .regex(BENEFIT_PRESENTATION_TOKEN_PATTERN),
   })
 )

@@ -1,6 +1,11 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 import InvalidBenefitPresentationException from '#exceptions/invalid_benefit_presentation_exception'
+import {
+  BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH,
+  BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH,
+  BENEFIT_PRESENTATION_TOKEN_PATTERN,
+} from '#modules/benefits/constants/benefit_redemption'
 import type IBenefitRedemption from '#modules/benefits/interfaces/benefit_redemption_interface'
 import env from '#start/env'
 
@@ -30,7 +35,20 @@ export default class BenefitPresentationTokenService {
   }
 
   verify(token: string): IBenefitRedemption.PresentationClaims {
-    const [payload, signature, extra] = token.trim().split('.')
+    if (typeof token !== 'string') {
+      throw this.invalidToken()
+    }
+
+    const normalizedToken = token.trim()
+    if (
+      normalizedToken.length < BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH ||
+      normalizedToken.length > BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH ||
+      !BENEFIT_PRESENTATION_TOKEN_PATTERN.test(normalizedToken)
+    ) {
+      throw this.invalidToken()
+    }
+
+    const [payload, signature, extra] = normalizedToken.split('.')
     if (!payload || !signature || extra) {
       throw this.invalidToken()
     }

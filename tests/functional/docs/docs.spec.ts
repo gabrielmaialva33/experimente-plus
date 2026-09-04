@@ -9,7 +9,11 @@ const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'
 type HttpMethod = (typeof HTTP_METHODS)[number]
 
 type OpenApiSchema = {
+  $ref?: string
   const?: unknown
+  maxLength?: number
+  minLength?: number
+  pattern?: string
   properties?: Record<string, OpenApiSchema>
   required?: string[]
   type?: unknown
@@ -17,6 +21,7 @@ type OpenApiSchema = {
 
 type OpenApiParameter = {
   name?: string
+  schema?: OpenApiSchema
 }
 
 type OpenApiOperation = {
@@ -28,6 +33,7 @@ type OpenApiOperation = {
   responses?: Record<
     string,
     {
+      $ref?: string
       description?: string
       content?: Record<
         string,
@@ -229,6 +235,38 @@ test.group('Documentation', () => {
     assert.equal(schemas.AuthTokens?.properties?.refresh_expires_in?.const, 259200)
     assert.include(schemas.AuthResponse?.required ?? [], 'auth')
     assert.deepEqual(schemas.AuthResponse?.properties?.username?.type, ['string', 'null'])
+
+    assert.equal(schemas.BenefitPresentationToken?.minLength, 45)
+    assert.equal(schemas.BenefitPresentationToken?.maxLength, 512)
+    assert.equal(schemas.BenefitPresentationToken?.pattern, '^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$')
+    assert.equal(schemas.BenefitReceiptCode?.minLength, 20)
+    assert.equal(schemas.BenefitReceiptCode?.maxLength, 20)
+    assert.equal(schemas.BenefitReceiptCode?.pattern, '^EXP-[0-9A-F]{16}$')
+
+    for (const receiptPath of [
+      '/api/v1/me/benefits/redemptions/{receiptCode}',
+      '/api/v1/benefit-redemptions/{receiptCode}',
+    ]) {
+      const operation = operationAt(specification, receiptPath, 'get')
+      const receiptParameter = operation?.parameters?.find(
+        (parameter) => parameter.name === 'receiptCode'
+      )
+      assert.equal(receiptParameter?.schema?.$ref, '#/components/schemas/BenefitReceiptCode')
+      assert.equal(
+        operation?.responses?.['404']?.$ref,
+        '#/components/responses/PrivateRedemptionReceiptNotFoundError'
+      )
+    }
+
+    for (const tokenPath of [
+      '/api/v1/benefit-redemptions/preview',
+      '/api/v1/benefit-redemptions',
+    ]) {
+      assert.equal(
+        operationAt(specification, tokenPath, 'post')?.responses?.['400']?.$ref,
+        '#/components/responses/PrivateInvalidBenefitPresentationError'
+      )
+    }
 
     const refreshSchema = operationAt(specification, '/api/v1/sessions/refresh', 'post')
       ?.responses?.['200']?.content?.['application/json']?.schema
