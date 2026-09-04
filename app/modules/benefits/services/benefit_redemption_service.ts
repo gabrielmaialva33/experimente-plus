@@ -188,10 +188,8 @@ export default class BenefitRedemptionService {
     const claims = this.tokenService.verify(token)
     this.assertTenantClaim(tenantId, claims)
     const nonceHash = this.tokenService.hashNonce(claims.nonce)
-    let redemptionId = 0
-    let created = false
 
-    await db.transaction(async (client) => {
+    return db.transaction(async (client) => {
       const context = await this.resolveContext(
         tenantId,
         claims.access_id,
@@ -209,8 +207,7 @@ export default class BenefitRedemptionService {
 
       const existing = await this.repository.findByNonceHash(tenantId, nonceHash, client)
       if (existing) {
-        redemptionId = existing.id
-        return
+        return this.toReceipt(existing)
       }
 
       const redeemedCount = await this.repository.countForAccessOffer(
@@ -246,27 +243,24 @@ export default class BenefitRedemptionService {
         },
         client
       )
-      redemptionId = redemption.id
-      created = true
-    })
-
-    const redemption = await this.getByIdOrFail(tenantId, redemptionId)
-    if (created) {
-      await this.audit.log({
-        actorId: actor.id,
-        resource: 'benefit_redemptions',
-        action: 'redeem',
-        resourceId: redemption.id,
-        metadata: {
-          access_id: redemption.access_id,
-          offer_id: redemption.offer_id,
-          establishment_id: redemption.establishment_id,
-          receipt_code: redemption.receipt_code,
+      await this.audit.log(
+        {
+          actorId: actor.id,
+          resource: 'benefit_redemptions',
+          action: 'redeem',
+          resourceId: redemption.id,
+          metadata: {
+            access_id: redemption.access_id,
+            offer_id: redemption.offer_id,
+            establishment_id: redemption.establishment_id,
+            receipt_code: redemption.receipt_code,
+          },
         },
-      })
-    }
+        { client }
+      )
 
-    return this.toReceipt(redemption)
+      return this.toReceipt(redemption)
+    })
   }
 
   async holderHistory(
@@ -506,12 +500,6 @@ export default class BenefitRedemptionService {
       },
       redeemed_by: redemption.redeemed_by,
     }
-  }
-
-  private async getByIdOrFail(tenantId: number, id: number): Promise<BenefitRedemption> {
-    const redemption = await this.repository.findByIdForTenant(tenantId, id)
-    if (!redemption) throw new NotFoundException('Redemption receipt not found')
-    return redemption
   }
 
   private async getByReceiptOrFail(

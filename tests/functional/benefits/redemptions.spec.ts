@@ -15,6 +15,7 @@ import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
+import type BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import IRole from '#modules/roles/interfaces/role_interface'
@@ -253,6 +254,17 @@ async function cleanupCommittedFixture(fixture: Awaited<ReturnType<typeof create
   await db.from('users').whereIn('id', userIds).delete()
 }
 
+async function countRedemptionAudits(actorId: number): Promise<number> {
+  const result = await db
+    .from('audit_logs')
+    .where('user_id', actorId)
+    .where('resource', 'benefit_redemptions')
+    .where('action', 'redeem')
+    .count('* as total')
+
+  return Number(result[0].total)
+}
+
 test.group('Benefit redemptions', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
 
@@ -455,6 +467,62 @@ test.group('Benefit redemptions', (group) => {
       rows.map((row) => row.redemption_number),
       [1, 2]
     )
+  })
+
+  test('rolls back a new redemption when its audit cannot commit', async ({ assert, cleanup }) => {
+    const fixture = await createFixture('audit-rollback')
+    const service = await app.container.make(BenefitRedemptionService)
+    const presentation = await service.present(
+      fixture.scenario.tenant.id,
+      fixture.access.id,
+      fixture.offer.id,
+      fixture.consumer,
+      'http://localhost:3333'
+    )
+    const audit = Reflect.get(service, 'audit') as BenefitAuditService
+    const originalLogMethod = audit.log
+    const originalLog = originalLogMethod.bind(audit)
+    let failNext = true
+    audit.log = async (data, options) => {
+      await originalLog(data, options)
+      if (failNext) {
+        failNext = false
+        throw new Error('Simulated audit persistence failure')
+      }
+    }
+    cleanup(() => {
+      audit.log = originalLogMethod
+    })
+
+    await assert.rejects(
+      () => service.redeem(fixture.scenario.tenant.id, presentation.token, fixture.scenario.owner),
+      /Simulated audit persistence failure/
+    )
+
+    assert.lengthOf(
+      await BenefitRedemption.query().where('tenant_id', fixture.scenario.tenant.id),
+      0
+    )
+    assert.equal(await countRedemptionAudits(fixture.scenario.owner.id), 0)
+
+    const receipt = await service.redeem(
+      fixture.scenario.tenant.id,
+      presentation.token,
+      fixture.scenario.owner
+    )
+    assert.equal(await countRedemptionAudits(fixture.scenario.owner.id), 1)
+
+    const replayReceipt = await service.redeem(
+      fixture.scenario.tenant.id,
+      presentation.token,
+      fixture.scenario.owner
+    )
+    assert.equal(replayReceipt.id, receipt.id)
+    assert.lengthOf(
+      await BenefitRedemption.query().where('tenant_id', fixture.scenario.tenant.id),
+      1
+    )
+    assert.equal(await countRedemptionAudits(fixture.scenario.owner.id), 1)
   })
 
   test('projects redeemed benefits and keeps receipts private', async ({ assert }) => {
@@ -780,5 +848,38 @@ test.group('Benefit redemption concurrency', () => {
         .then((result) => Number(result[0].$extras.total)),
       1
     )
+    assert.equal(await countRedemptionAudits(fixture.scenario.owner.id), 1)
+  })
+
+  test('keeps concurrent confirmation of the same presentation idempotent', async ({
+    assert,
+    cleanup,
+  }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+    const fixture = await createFixture('concurrent-idempotent')
+    cleanup(() => cleanupCommittedFixture(fixture))
+    const service = await app.container.make(BenefitRedemptionService)
+    const presentation = await service.present(
+      fixture.scenario.tenant.id,
+      fixture.access.id,
+      fixture.offer.id,
+      fixture.consumer,
+      'http://localhost:3333'
+    )
+    const start = createBarrier(2)
+    const confirm = async () => {
+      await start()
+      return service.redeem(fixture.scenario.tenant.id, presentation.token, fixture.scenario.owner)
+    }
+
+    const receipts = await Promise.all([confirm(), confirm()])
+
+    assert.equal(receipts[0].id, receipts[1].id)
+    assert.equal(receipts[0].receipt_code, receipts[1].receipt_code)
+    assert.lengthOf(
+      await BenefitRedemption.query().where('tenant_id', fixture.scenario.tenant.id),
+      1
+    )
+    assert.equal(await countRedemptionAudits(fixture.scenario.owner.id), 1)
   })
 })
