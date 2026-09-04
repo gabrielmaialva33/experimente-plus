@@ -3,7 +3,6 @@ import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
 import {
   BaseModel,
-  beforeCreate,
   beforeFetch,
   beforeFind,
   beforePaginate,
@@ -137,13 +136,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
     ]
   ) {
     queries.forEach((query) => query.where('is_deleted', false))
-  }
-
-  @beforeCreate()
-  static async setUsername(user: User) {
-    if (!user.username) {
-      user.username = user.email.split('@')[0].trim().toLowerCase()
-    }
   }
 
   @beforeSave()
