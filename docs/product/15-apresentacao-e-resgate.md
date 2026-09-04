@@ -1,5 +1,7 @@
 # 15 — Apresentação e resgate
 
+**Estado:** implementado em 31 de agosto de 2026 e validado para o piloto em 4 de setembro de 2026.
+
 ## Objetivo
 
 Fechar o caminho demonstrável do Experimente+:

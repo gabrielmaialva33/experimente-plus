@@ -73,20 +73,37 @@ Resultados observados:
 
 Durante o smoke, o backoffice revelou uma projeção ausente de acessos que causava erro 500. A projeção foi corrigida e recebeu regressão funcional e de navegador.
 
+## QA de produto de 4 de setembro de 2026
+
+Uma segunda passagem foi executada em Chromium com banco PostgreSQL e Redis isolados, usando os perfis de administrador, parceiro e consumidor.
+
+Resultados da passagem visual:
+
+- carteira, Portal, editor de unidade e benefícios sem rolagem horizontal em `390 px`;
+- Portal e benefícios conferidos também em `768 px` e `1440 px`;
+- temas claro e escuro com hierarquia, contraste, estados e ações preservados;
+- navegação coerente nos perfis inspecionados: consumidor sem operação administrativa e parceiro sem Backoffice;
+- zero erros e zero avisos no console durante os fluxos inspecionados.
+
+Regressões automatizadas complementares confirmaram:
+
+- moderador sem vínculo organizacional ativo não recebe um Portal vazio;
+- apresentação expirada retorna ao formulário com orientação em português;
+- duas confirmações simultâneas e independentes respeitam o limite transacional.
+
 ## Evidência automatizada
 
 - `tests/browser/benefits/redemption_flow.spec.ts` cobre consumidor → parceiro → consumidor;
 - `tests/browser/benefits/admin_overview.spec.ts` cobre a projeção administrativa;
 - `tests/functional/benefits/api_contract.spec.ts` cobre o contrato HTTP e os limites de organização;
-- `tests/functional/benefits/redemptions.spec.ts` cobre expiração, replay, concorrência, privacidade e snapshots.
+- `tests/functional/web/auth.spec.ts` e `inertia/tests/config/navigation.test.ts` cobrem a composição de perfil e a navegação autorizada;
+- `tests/functional/benefits/redemptions.spec.ts` cobre expiração, replay, concorrência em conexões independentes, privacidade e snapshots.
 
 ## Backlog orientado por evidência
 
 ### P1 — antes do piloto em dispositivo real
 
-- eliminar os avisos de hidratação dos IDs internos do Radix no layout autenticado;
 - validar leitura do QR pela câmera nativa em Android e iOS;
-- validar carteira, Portal e comprovantes nas larguras móveis alvo;
 - confirmar linguagem e tempo de decisão com pelo menos um consumidor e um parceiro.
 
 ### P2 — depois das primeiras sessões assistidas

@@ -1,5 +1,7 @@
 # 13 — Benefícios controlados
 
+**Estado:** implementado e validado em 31 de agosto de 2026; permissões e experiência revisitadas em 4 de setembro de 2026.
+
 ## Objetivo
 
 Adicionar a primeira camada comercial utilizável pelo cliente sem desmontar o catálogo gratuito nem antecipar pagamento e QR Code.
@@ -50,18 +52,24 @@ Administrador publica a edição quando existe oferta ativa
 - termos ativos não são editados silenciosamente: a oferta precisa ser pausada;
 - preço da edição é referência comercial; checkout ainda não existe.
 
-## Fora deste corte
+## Fora do EP-09A
 
-- pedido e pagamento;
+Entregues posteriormente pelos cortes EP-10 e EP-11:
+
 - concessão de acesso;
 - carteira do consumidor;
 - benefício calculado na carteira;
-- QR Code;
-- resgate e antifraude;
+- apresentação por QR Code;
+- resgate transacional com proteções mínimas contra replay e uso acima do limite.
+
+Permanecem fora do escopo atual:
+
+- pedido e pagamento;
+- antifraude genérico;
 - reembolso;
 - exposição pública de benefícios.
 
-Esses itens serão implementados sobre a fundação de edição e oferta, em vez de duplicar regras em páginas ou integrações.
+Essa evolução preserva a fundação de edição e oferta, sem duplicar regras em páginas ou integrações.
 
 ## Definition of Done
 

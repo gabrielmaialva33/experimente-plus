@@ -22,6 +22,12 @@ EP-06 Catálogo público ✅
 EP-07 Analytics de descoberta ✅
   ↓
 EP-08 Portal mínimo e piloto ✅
+  ↓
+EP-09 Edições e ofertas controladas ✅
+  ↓
+EP-10 Acesso e carteira derivada ✅
+  ↓
+EP-11 Apresentação e resgate transacional ✅
 ```
 
 ## EP-00 — Decisões técnicas
@@ -230,8 +236,6 @@ Uma unidade só pode ser submetida quando possuir:
 
 **Estado:** concluído em 24 de agosto de 2026.
 
-**Estado:** próximo marco de implementação.
-
 ### Histórias
 
 - como Visitante, vejo cidades ativas;
@@ -293,6 +297,42 @@ Uma unidade só pode ser submetida quando possuir:
 - painel de métricas piloto;
 - feedback estruturado.
 
+## EP-09 — Edições e ofertas controladas
+
+**Estado:** concluído em 31 de agosto de 2026 e endurecido para o piloto em 4 de setembro de 2026.
+
+### Entregas
+
+- edições por cidade, validade e preço de referência;
+- ofertas vinculadas somente a unidades publicadas e compatíveis;
+- estados explícitos de ativação, pausa e arquivamento;
+- permissões separadas por ação e política de organização;
+- superfícies responsivas de operação e parceiro.
+
+## EP-10 — Acesso e carteira derivada
+
+**Estado:** concluído em 31 de agosto de 2026 e validado para o piloto em 4 de setembro de 2026.
+
+### Entregas
+
+- concessão e revogação auditável de acesso;
+- idempotência para referências externas;
+- carteira privada com disponibilidade calculada no servidor;
+- regras, horários, limites e histórico sem materializar benefícios por usuário;
+- separação entre acesso, pagamento futuro e utilização.
+
+## EP-11 — Apresentação e resgate transacional
+
+**Estado:** concluído em 31 de agosto de 2026 e validado para o piloto em 4 de setembro de 2026.
+
+### Entregas
+
+- apresentação assinada com validade de cinco minutos e QR Code;
+- conferência e confirmação autenticadas no Portal;
+- resgate imutável, comprovante comum e históricos privados;
+- proteção contra adulteração, expiração, replay, concorrência e IDOR;
+- fluxo reproduzível com dados fictícios e três perfis separados.
+
 ## Backlog posterior, sem compromisso de data
 
 ```text
@@ -304,7 +344,7 @@ Denúncias
 Experiências e eventos
 Campanhas patrocinadas
 Experimente+ Pro
-Benefícios e Pass
+Checkout, cobrança e assinatura do Pass
 Notificações
 Aplicativo/PWA offline
 Concierge IA
