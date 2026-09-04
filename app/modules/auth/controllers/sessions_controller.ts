@@ -1,3 +1,5 @@
+import { errors as authErrors } from '@adonisjs/auth'
+import { inject } from '@adonisjs/core'
 import { type HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 
@@ -11,14 +13,18 @@ import {
   signInValidator,
 } from '#modules/users/validators/users_validator'
 
+@inject()
 export default class SessionsController {
+  constructor(private signInService: SignInService) {}
+
   async signIn(ctx: HttpContext) {
     const { request, response } = ctx
-    const { uid, password } = await request.validateUsing(signInValidator)
+    const { uid, password } = await request.validateUsing(signInValidator, {
+      data: request.body(),
+    })
 
     try {
-      const service = await app.container.make(SignInService)
-      const { user, auth } = await service.run({ uid, password, ctx })
+      const { user, auth } = await this.signInService.run({ uid, password, ctx })
 
       if (!auth) {
         throw new Error('Authentication tokens were not issued')
@@ -26,18 +32,20 @@ export default class SessionsController {
 
       return response.json({ ...user.toJSON(), auth })
     } catch (error) {
-      return response.badRequest({
-        errors: [
-          {
-            message: error instanceof Error ? error.message : 'Invalid credentials',
-          },
-        ],
-      })
+      if (error instanceof authErrors.E_INVALID_CREDENTIALS) {
+        return response.badRequest({
+          errors: [{ message: 'Invalid user credentials' }],
+        })
+      }
+
+      throw error
     }
   }
 
   async signUp({ request, response }: HttpContext) {
-    const registration = await request.validateUsing(publicRegistrationValidator)
+    const registration = await request.validateUsing(publicRegistrationValidator, {
+      data: request.body(),
+    })
     const payload = {
       full_name: registration.full_name,
       email: registration.email,

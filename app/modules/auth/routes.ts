@@ -30,11 +30,11 @@ router
     router
       .post('/forgot-password', [PasswordResetController, 'forgot'])
       .as('session.forgotPassword')
-      .use(passwordResetRequestThrottle)
+      .use([privateResponseHeadersMiddleware, passwordResetRequestThrottle])
     router
       .post('/reset-password', [PasswordResetController, 'reset'])
       .as('session.resetPassword')
-      .use(passwordResetThrottle)
+      .use([privateResponseHeadersMiddleware, passwordResetThrottle])
     router
       .post('/refresh', [SessionsController, 'refresh'])
       .as('session.refresh')
@@ -64,18 +64,15 @@ router
 router
   .group(() => {
     router.get('/', [MeController, 'profile']).as('me.profile')
-    router
-      .patch('/', [MeController, 'update'])
-      .as('me.update')
-      .use([privateResponseHeadersMiddleware, apiThrottle])
+    router.patch('/', [MeController, 'update']).as('me.update')
     router
       .get('/context', [MeController, 'context'])
       .as('me.context')
-      .use([privateResponseHeadersMiddleware, apiThrottle, middleware.tenant({ required: true })])
+      .use(middleware.tenant({ required: true }))
     router.get('/permissions', [MeController, 'permissions']).as('me.permissions')
     router.get('/roles', [MeController, 'roles']).as('me.roles')
     router.delete('/', [MeController, 'delete']).as('me.delete')
   })
   .prefix('/api/v1/me')
-  .use(middleware.auth())
+  .use([middleware.auth(), privateResponseHeadersMiddleware, apiThrottle])
   .as('me')

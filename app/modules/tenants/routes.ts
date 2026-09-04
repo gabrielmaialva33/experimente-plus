@@ -12,18 +12,13 @@ router
     router
       .post('/', [TenantsController, 'create'])
       .as('tenants.create')
-      .use([
-        privateResponseHeadersMiddleware,
-        apiThrottle,
+      .use(
         middleware.permission({
           permissions: `${IPermission.Resources.TENANTS}.${IPermission.Actions.CREATE}`,
-        }),
-      ])
+        })
+      )
     router.get('/me', [TenantsController, 'me']).as('tenants.me')
-    router
-      .post('/switch', [TenantsController, 'switch'])
-      .as('tenants.switch')
-      .use([privateResponseHeadersMiddleware, apiThrottle])
+    router.post('/switch', [TenantsController, 'switch']).as('tenants.switch')
   })
-  .use(middleware.auth())
+  .use([middleware.auth(), privateResponseHeadersMiddleware, apiThrottle])
   .prefix('/api/v1/tenants')

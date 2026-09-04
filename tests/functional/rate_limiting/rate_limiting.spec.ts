@@ -113,6 +113,42 @@ test.group('Rate Limiting', (group) => {
     assert.isAbove(Number(retryAfter), 1700) // Allow some variance
   })
 
+  test('should derive the auth throttle identifier only from the request body', async ({
+    client,
+  }) => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await client
+        .post('/api/v1/sessions/sign-in')
+        .qs({ uid: `query-user-${attempt}@example.com`, password: 'query-password' })
+        .json({})
+      response.assertStatus(422)
+    }
+
+    const rateLimited = await client
+      .post('/api/v1/sessions/sign-in')
+      .qs({ uid: 'sixth-query-user@example.com', password: 'query-password' })
+      .json({})
+    rateLimited.assertStatus(429)
+  })
+
+  test('should derive the password reset throttle identifier only from the request body', async ({
+    client,
+  }) => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await client
+        .post('/api/v1/sessions/forgot-password')
+        .qs({ email: `query-reset-${attempt}@example.com` })
+        .json({})
+      response.assertStatus(422)
+    }
+
+    const rateLimited = await client
+      .post('/api/v1/sessions/forgot-password')
+      .qs({ email: 'sixth-query-reset@example.com' })
+      .json({})
+    rateLimited.assertStatus(429)
+  })
+
   test('should apply upload rate limit', async ({ client }) => {
     // Create a user with upload permission
     const userRole = await Role.firstOrCreate(

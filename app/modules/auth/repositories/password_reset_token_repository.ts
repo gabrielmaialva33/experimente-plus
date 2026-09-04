@@ -11,11 +11,23 @@ export default class PasswordResetTokenRepository extends LucidRepository<
     super(PasswordResetToken)
   }
 
-  async findByHashForUpdate(
+  async findOwnerByHash(tokenHash: string): Promise<number | null> {
+    const token = await this.model.query().where('token_hash', tokenHash).select('user_id').first()
+
+    return token?.user_id ?? null
+  }
+
+  async findByHashAndUserForUpdate(
     tokenHash: string,
+    userId: number,
     client: TransactionClientContract
   ): Promise<PasswordResetToken | null> {
-    return this.model.query({ client }).where('token_hash', tokenHash).forUpdate().first()
+    return this.model
+      .query({ client })
+      .where('token_hash', tokenHash)
+      .where('user_id', userId)
+      .forUpdate()
+      .first()
   }
 
   async consumeActiveForUser(

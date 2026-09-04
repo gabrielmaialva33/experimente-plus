@@ -40,6 +40,7 @@ export default class SignInService {
 
     try {
       const user = await this.usersRepository.verifyCredentials(uid, password)
+      const expectedPasswordHash = user.password
       await user.load('roles')
 
       const tenant = await user
@@ -52,7 +53,10 @@ export default class SignInService {
       const auth =
         options.issueApiTokens === false
           ? undefined
-          : await this.jwtAuthTokensService.run({ userId: user.id, tenantId: tenant?.id })
+          : await this.jwtAuthTokensService.startChain(
+              { userId: user.id, tenantId: tenant?.id },
+              { expectedPasswordHash }
+            )
 
       const isAdmin = user.roles.some((role) =>
         [IRole.Slugs.ADMIN, IRole.Slugs.ROOT].includes(role.slug)

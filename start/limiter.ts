@@ -1,4 +1,25 @@
+import { createHash } from 'node:crypto'
+
 import limiter from '@adonisjs/limiter/services/main'
+
+const MAX_THROTTLE_IDENTIFIER_LENGTH = 512
+
+function bodyIdentifierDigest(body: unknown, fields: readonly string[]): string {
+  const payload =
+    body && typeof body === 'object' && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : {}
+  const rawIdentifier = fields
+    .map((field) => payload[field])
+    .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+  const normalizedIdentifier = (rawIdentifier ?? 'unknown')
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase()
+    .slice(0, MAX_THROTTLE_IDENTIFIER_LENGTH)
+
+  return createHash('sha256').update(normalizedIdentifier).digest('hex')
+}
 
 /**
  * Global throttle for general API endpoints
@@ -30,13 +51,13 @@ export const throttle = limiter.define('global', async (ctx) => {
  * - Blocks for 30 minutes after exhausting attempts
  */
 export const authThrottle = limiter.define('auth', (ctx) => {
-  const uid = ctx.request.input('uid') || ctx.request.input('email') || 'unknown'
+  const identifier = bodyIdentifierDigest(ctx.request.body(), ['uid', 'email'])
 
   return limiter
     .allowRequests(5)
     .every('15 minutes')
     .blockFor('30 minutes')
-    .usingKey(`auth_${ctx.request.ip()}_${uid}`)
+    .usingKey(`auth_${ctx.request.ip()}_${identifier}`)
     .limitExceeded((error) => {
       const i18n = ctx.i18n
       if (i18n) {
@@ -48,15 +69,13 @@ export const authThrottle = limiter.define('auth', (ctx) => {
 })
 
 export const passwordResetRequestThrottle = limiter.define('password-reset-request', (ctx) => {
-  const email = String(ctx.request.input('email') ?? 'unknown')
-    .trim()
-    .toLowerCase()
+  const identifier = bodyIdentifierDigest(ctx.request.body(), ['email'])
 
   return limiter
     .allowRequests(5)
     .every('15 minutes')
     .blockFor('30 minutes')
-    .usingKey(`password_reset_request_${ctx.request.ip()}_${email}`)
+    .usingKey(`password_reset_request_${ctx.request.ip()}_${identifier}`)
     .limitExceeded((error) => {
       error.setMessage('Too many password reset requests. Please try again later.')
     })

@@ -89,12 +89,27 @@ e os controles de autenticação e armazenamento do
 [OWASP MASVS](https://mas.owasp.org/MASVS/).
 
 Refresh, criação de operação e troca de operação compartilham a mesma primitiva transacional de
-rotação. Ela bloqueia o registro da credencial, revalida usuário e contexto, revoga o pai e cria
-exatamente um filho com `rotated_from_id`. O cliente serializa **todas** essas operações: duas
+rotação. Toda mutação de credenciais usa `users.id FOR UPDATE` como mutex e sempre bloqueia o
+usuário antes dos registros de reset ou refresh. Depois ela relê e bloqueia a credencial,
+revalida usuário e contexto, revoga o pai e cria exatamente um filho com `rotated_from_id`. Login
+também compara, sob esse lock, o hash da senha com o snapshot acabado de verificar. Assim, reset de
+senha, logout, rotação e exclusão de conta não podem deixar uma nova cadeia renovável escapar da
+revogação nem adquirir locks em ordem invertida. O cliente serializa **todas** essas operações: duas
 requisições concorrentes com o mesmo refresh produzem um sucesso e um `401` genérico. Bearer e
 refresh de usuários diferentes também produzem o mesmo `401`, sem consumir a credencial alheia.
 Falha de permissão, tenant estrangeiro ou tenant inativo produz `403` antes da revogação. Na criação,
 tenant, membership owner e rotação pertencem à mesma transação e são revertidos em conjunto.
+
+Logout com um refresh revoga esse registro e todos os descendentes ligados por `rotated_from_id`,
+mesmo se o token apresentado já tiver sido consumido por uma rotação. A revogação permanece restrita
+a essa cadeia: outras sessões raiz do mesmo usuário continuam ativas. Reset, alteração de senha e
+exclusão de conta continuam invalidando todas as cadeias do usuário.
+
+Reset ou alteração administrativa de senha consome links de reset ativos, revoga refresh tokens e
+remove access tokens opacos persistidos na mesma transação. Access JWTs já assinados permanecem
+válidos somente até o TTL residual de, no máximo, quinze minutos; revogação imediata desses JWTs
+exigiria versionamento de credenciais ou denylist e fica como decisão de segurança posterior ao
+piloto.
 
 Refresh, logout, criação e troca aceitam credenciais somente em JSON cujo media type base seja
 `application/json`; parâmetros como `charset=utf-8` são permitidos, mas aliases JSON, form,

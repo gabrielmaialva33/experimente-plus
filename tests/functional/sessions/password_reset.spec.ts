@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import mail from '@adonisjs/mail/services/main'
+import type { ApiResponse } from '@japa/api-client'
 
 import PasswordResetToken from '#modules/auth/models/password_reset_token'
 import RefreshToken from '#modules/auth/models/refresh_token'
@@ -12,6 +13,13 @@ const account = {
   email: 'password-reset@example.com',
   username: 'password-reset-user',
   password: 'password123',
+}
+
+function assertPrivateResponse(response: ApiResponse): void {
+  response.assertHeader('cache-control', 'private, no-store')
+  response.assertHeader('pragma', 'no-cache')
+  response.assertHeader('x-robots-tag', 'noindex, nofollow')
+  response.assertHeader('referrer-policy', 'no-referrer')
 }
 
 test.group('Password reset', (group) => {
@@ -30,6 +38,7 @@ test.group('Password reset', (group) => {
       email: user.email,
     })
     forgot.assertStatus(202)
+    assertPrivateResponse(forgot)
     forgot.assertBodyContains({
       message: 'If an account exists for that email, a password reset link has been sent.',
     })
@@ -49,6 +58,7 @@ test.group('Password reset', (group) => {
       password_confirmation: 'new-password123',
     })
     reset.assertStatus(200)
+    assertPrivateResponse(reset)
 
     const oldLogin = await client.post('/api/v1/sessions/sign-in').json({
       uid: user.email,
@@ -146,9 +156,76 @@ test.group('Password reset', (group) => {
     })
 
     response.assertStatus(202)
+    assertPrivateResponse(response)
     response.assertBodyContains({
       message: 'If an account exists for that email, a password reset link has been sent.',
     })
     mails.assertSentCount(PasswordResetNotification, 0)
+  })
+
+  test('should read password reset secrets only from the request body', async ({ client }) => {
+    mail.restore()
+    const { mails } = mail.fake()
+    const user = await User.create({
+      ...account,
+      email: 'reset-body-only@example.com',
+      username: 'reset-body-only',
+    })
+
+    const queryOnlyForgot = await client
+      .post('/api/v1/sessions/forgot-password')
+      .qs({ email: user.email })
+      .json({})
+    queryOnlyForgot.assertStatus(422)
+    queryOnlyForgot.assertBodyContains({ errors: [{ field: 'email', rule: 'required' }] })
+    assertPrivateResponse(queryOnlyForgot)
+    mails.assertSentCount(PasswordResetNotification, 0)
+
+    const forgotBodyWins = await client
+      .post('/api/v1/sessions/forgot-password')
+      .qs({ email: 'query-attacker@example.com' })
+      .json({ email: user.email })
+    forgotBodyWins.assertStatus(202)
+    assertPrivateResponse(forgotBodyWins)
+    mails.assertSentCount(PasswordResetNotification, 1)
+    const token = (mails.sent()[0] as PasswordResetNotification).getResetToken()
+
+    const queryOnlyReset = await client
+      .post('/api/v1/sessions/reset-password')
+      .qs({
+        token,
+        password: 'query-password123',
+        password_confirmation: 'query-password123',
+      })
+      .json({})
+    queryOnlyReset.assertStatus(422)
+    queryOnlyReset.assertBodyContains({
+      errors: [
+        { field: 'token', rule: 'required' },
+        { field: 'password', rule: 'required' },
+      ],
+    })
+    assertPrivateResponse(queryOnlyReset)
+
+    const resetBodyWins = await client
+      .post('/api/v1/sessions/reset-password')
+      .qs({
+        token: 'query-token-cannot-win'.repeat(2),
+        password: 'query-password123',
+        password_confirmation: 'query-password123',
+      })
+      .json({
+        token,
+        password: 'body-password123',
+        password_confirmation: 'body-password123',
+      })
+    resetBodyWins.assertStatus(200)
+    assertPrivateResponse(resetBodyWins)
+
+    const signIn = await client.post('/api/v1/sessions/sign-in').json({
+      uid: user.email,
+      password: 'body-password123',
+    })
+    signIn.assertStatus(200)
   })
 })

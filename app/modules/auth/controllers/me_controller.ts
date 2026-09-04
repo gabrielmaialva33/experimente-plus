@@ -11,7 +11,6 @@ import CurrentUserContextService, {
 import UpdateProfileService from '#modules/users/services/update_profile_service'
 import { deleteOwnAccountValidator } from '#modules/users/validators/account_validator'
 import { updateProfileValidator } from '#modules/users/validators/profile_validator'
-import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 @inject()
 export default class MeController {
@@ -24,7 +23,6 @@ export default class MeController {
    * Get current user profile
    */
   async profile({ auth, response }: HttpContext) {
-    setPrivateResponseHeaders(response)
     const user = auth.user!
     const service = await app.container.make(GetUserService)
 
@@ -36,7 +34,6 @@ export default class MeController {
    * Get current user permissions
    */
   async permissions({ auth, response }: HttpContext) {
-    setPrivateResponseHeaders(response)
     const user = auth.user!
     const service = await app.container.make(GetUserPermissionsService)
 
@@ -48,7 +45,6 @@ export default class MeController {
    * Get current user roles
    */
   async roles({ auth, response }: HttpContext) {
-    setPrivateResponseHeaders(response)
     const user = auth.user!
     const service = await app.container.make(GetUserRolesService)
 
@@ -66,6 +62,7 @@ export default class MeController {
   async update({ auth, request, response }: HttpContext) {
     const user = auth.getUserOrFail()
     const payload = await request.validateUsing(updateProfileValidator, {
+      data: request.body(),
       meta: { userId: user.id },
     })
     const updatedUser = await this.updateProfileService.run(user.id, payload)
@@ -75,8 +72,12 @@ export default class MeController {
 
   async delete({ auth, request, response }: HttpContext) {
     const user = auth.getUserOrFail()
-    const { current_password: currentPassword, confirmation } =
-      await request.validateUsing(deleteOwnAccountValidator)
+    const { current_password: currentPassword, confirmation } = await request.validateUsing(
+      deleteOwnAccountValidator,
+      {
+        data: request.body(),
+      }
+    )
 
     await this.deleteOwnAccountService.run(user.id, { currentPassword, confirmation })
 

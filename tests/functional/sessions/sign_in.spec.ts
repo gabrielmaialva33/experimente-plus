@@ -53,13 +53,41 @@ test.group('Sessions sign in', (group) => {
     })
 
     response.assertStatus(400)
-    response.assertBodyContains({
+    response.assertBody({
       errors: [
         {
           message: 'Invalid user credentials',
         },
       ],
     })
+  })
+
+  test('should read credentials only from the request body', async ({ client }) => {
+    const user = await User.create({
+      full_name: 'Body Credentials',
+      email: 'body-credentials@example.com',
+      username: 'body-credentials',
+      password: 'password123',
+    })
+
+    const queryOnly = await client
+      .post('/api/v1/sessions/sign-in')
+      .qs({ uid: user.email, password: 'password123' })
+      .json({})
+    queryOnly.assertStatus(422)
+    queryOnly.assertBodyContains({
+      errors: [
+        { field: 'uid', rule: 'required' },
+        { field: 'password', rule: 'required' },
+      ],
+    })
+
+    const bodyWins = await client
+      .post('/api/v1/sessions/sign-in')
+      .qs({ uid: 'query-attacker@example.com', password: 'wrong-password' })
+      .json({ uid: user.email, password: 'password123' })
+    bodyWins.assertStatus(200)
+    bodyWins.assertBodyContains({ id: user.id, email: user.email })
   })
 
   test('should fail with invalid password', async ({ client }) => {

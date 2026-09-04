@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID } from 'node:crypto'
 
 import { inject } from '@adonisjs/core'
+import { errors as authErrors } from '@adonisjs/auth'
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { DateTime } from 'luxon'
@@ -9,7 +10,7 @@ import UnauthorizedException from '#exceptions/unauthorized_exception'
 import RefreshToken from '#modules/auth/models/refresh_token'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
 import { isCanonicalRefreshToken, REFRESH_TOKEN_BYTES } from '#modules/auth/utils/refresh_token'
-import User from '#modules/users/models/user'
+import UsersRepository from '#modules/users/repositories/users_repository'
 import {
   API_ACCESS_TOKEN_EXPIRES_IN,
   API_ACCESS_TOKEN_TTL_SECONDS,
@@ -34,6 +35,10 @@ type RefreshTokenIssueOptions = {
   rotatedFromId?: number
 }
 
+export type StartRefreshChainOptions = {
+  expectedPasswordHash: string
+}
+
 type RefreshRotationContext<T> = {
   tenantId?: number
   value: T
@@ -50,16 +55,32 @@ const INVALID_REFRESH_TOKEN_MESSAGE = 'Invalid or expired refresh token'
 export default class JwtAuthTokensService {
   constructor(
     private jwtService: JwtService,
-    private refreshTokenRepository: RefreshTokenRepository
+    private refreshTokenRepository: RefreshTokenRepository,
+    private usersRepository: UsersRepository
   ) {}
 
-  async run(payload: JwtContent): Promise<GenerateAuthTokensResponse> {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(payload),
-      this.issueRefreshToken(payload),
-    ])
+  /**
+   * Starts a renewable credential chain only while the password snapshot that
+   * was just verified is still current. The user row is the mutex shared by
+   * login, password changes, refresh rotation, logout, and account deletion.
+   */
+  async startChain(
+    payload: JwtContent,
+    options: StartRefreshChainOptions
+  ): Promise<GenerateAuthTokensResponse> {
+    return db.transaction(async (client) => {
+      const userId = Number(payload.userId)
+      const user = await this.usersRepository.findActiveByIdForUpdate(userId, client)
 
-    return this.toResponse(accessToken, refreshToken)
+      if (!user || user.password !== options.expectedPasswordHash) {
+        throw new authErrors.E_INVALID_CREDENTIALS('Invalid user credentials')
+      }
+
+      const accessToken = await this.generateAccessToken(payload)
+      const refreshToken = await this.issueRefreshToken(payload, { client })
+
+      return this.toResponse(accessToken, refreshToken)
+    })
   }
 
   /**
@@ -106,9 +127,23 @@ export default class JwtAuthTokensService {
     }
 
     const tokenHash = this.hashRefreshToken(refreshToken)
+    const ownerUserId = await this.refreshTokenRepository.findOwnerByHash(tokenHash)
+
+    if (ownerUserId === null || (expectedUserId !== undefined && ownerUserId !== expectedUserId)) {
+      throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
+    }
 
     return db.transaction(async (client) => {
-      const current = await this.refreshTokenRepository.findByHashForUpdate(tokenHash, client)
+      const user = await this.usersRepository.findActiveByIdForUpdate(ownerUserId, client)
+      if (!user) {
+        throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
+      }
+
+      const current = await this.refreshTokenRepository.findByHashAndUserForUpdate(
+        tokenHash,
+        ownerUserId,
+        client
+      )
       const now = DateTime.now()
 
       if (
@@ -117,11 +152,6 @@ export default class JwtAuthTokensService {
         current.expires_at.toMillis() <= now.toMillis() ||
         (expectedUserId !== undefined && current.user_id !== expectedUserId)
       ) {
-        throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
-      }
-
-      const user = await User.query({ client }).where('id', current.user_id).first()
-      if (!user) {
         throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
       }
 
@@ -155,16 +185,27 @@ export default class JwtAuthTokensService {
     }
 
     const tokenHash = this.hashRefreshToken(refreshToken)
+    const ownerUserId = await this.refreshTokenRepository.findOwnerByHash(tokenHash)
+    if (ownerUserId === null) {
+      return
+    }
 
     await db.transaction(async (client) => {
-      const current = await this.refreshTokenRepository.findByHashForUpdate(tokenHash, client)
-      if (!current || current.revoked_at) {
+      const user = await this.usersRepository.findActiveByIdForUpdate(ownerUserId, client)
+      if (!user) {
         return
       }
 
-      current.useTransaction(client)
-      current.revoked_at = DateTime.now()
-      await current.save()
+      const current = await this.refreshTokenRepository.findByHashAndUserForUpdate(
+        tokenHash,
+        ownerUserId,
+        client
+      )
+      if (!current) {
+        return
+      }
+
+      await this.refreshTokenRepository.revokeChainFrom(current.id, ownerUserId, client)
     })
   }
 

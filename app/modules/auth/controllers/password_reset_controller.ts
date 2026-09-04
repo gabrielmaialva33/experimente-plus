@@ -16,7 +16,9 @@ export default class PasswordResetController {
   ) {}
 
   async forgot({ request, response }: HttpContext) {
-    const { email } = await request.validateUsing(requestPasswordResetValidator)
+    const { email } = await request.validateUsing(requestPasswordResetValidator, {
+      data: request.body(),
+    })
     await this.requestPasswordResetService.run(email)
 
     return response.accepted({
@@ -25,7 +27,9 @@ export default class PasswordResetController {
   }
 
   async reset({ request, response }: HttpContext) {
-    const { token, password } = await request.validateUsing(resetPasswordValidator)
+    const { token, password } = await request.validateUsing(resetPasswordValidator, {
+      data: request.body(),
+    })
     await this.resetPasswordService.run(token, password)
 
     return response.ok({ message: 'Password reset successfully.' })

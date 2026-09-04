@@ -162,6 +162,7 @@ test.group('Tenants', (group) => {
     const response = await client.get('/api/v1/tenants/me').bearerToken(auth.access_token)
 
     response.assertStatus(200)
+    assertPrivateCredentialResponse(response)
     const body = response.body() as { data: Array<{ id: number; slug: string; role: string }> }
     assert.lengthOf(body.data, 2)
     assert.equal(body.data.find((tenant) => tenant.slug === 'alpha')?.role, 'owner')

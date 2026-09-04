@@ -236,6 +236,54 @@ test.group('Sessions sign up', (group) => {
     })
   })
 
+  test('should read registration fields only from the request body', async ({ client, assert }) => {
+    const queryRegistration = {
+      full_name: 'Query Registration',
+      email: 'query-registration@example.com',
+      username: 'query-registration',
+      password: 'password123',
+      password_confirmation: 'password123',
+      terms_accepted: true,
+    }
+    const queryOnly = await client.post('/api/v1/sessions/sign-up').qs(queryRegistration).json({})
+
+    queryOnly.assertStatus(422)
+    queryOnly.assertBodyContains({
+      errors: [
+        { field: 'full_name', rule: 'required' },
+        { field: 'email', rule: 'required' },
+        { field: 'password', rule: 'required' },
+        { field: 'terms_accepted', rule: 'required' },
+      ],
+    })
+
+    const bodyRegistration = {
+      full_name: 'Body Registration',
+      email: 'body-registration@example.com',
+      username: 'body-registration',
+      password: 'password123',
+      password_confirmation: 'password123',
+      terms_accepted: true,
+    }
+    const bodyWins = await client
+      .post('/api/v1/sessions/sign-up')
+      .qs({
+        ...queryRegistration,
+        email: 'conflicting-query@example.com',
+        username: 'conflicting-query',
+      })
+      .json(bodyRegistration)
+
+    bodyWins.assertStatus(201)
+    bodyWins.assertBodyContains({
+      full_name: bodyRegistration.full_name,
+      email: bodyRegistration.email,
+      username: bodyRegistration.username,
+    })
+    assert.isNull(await User.findBy('email', 'conflicting-query@example.com'))
+    assert.isNotNull(await User.findBy('email', bodyRegistration.email))
+  })
+
   test('should validate email format', async ({ client }) => {
     const response = await client
       .post('/api/v1/sessions/sign-up')

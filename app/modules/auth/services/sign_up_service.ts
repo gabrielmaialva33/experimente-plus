@@ -48,6 +48,7 @@ export default class SignUpService {
       createPersonalWorkspace: workspaceMode === 'personal',
       attachTenantId: publicOperation?.id,
     })
+    const expectedPasswordHash = user.password
     await user.load('roles')
 
     const activeTenant = await user
@@ -63,10 +64,13 @@ export default class SignUpService {
     const auth =
       options.issueApiTokens === false
         ? undefined
-        : await this.jwtAuthTokensService.run({
-            userId: user.id,
-            tenantId: activeTenant?.id,
-          })
+        : await this.jwtAuthTokensService.startChain(
+            {
+              userId: user.id,
+              tenantId: activeTenant?.id,
+            },
+            { expectedPasswordHash }
+          )
 
     if (auth) {
       const isAdmin = user.roles.some((role) =>

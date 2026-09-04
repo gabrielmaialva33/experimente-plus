@@ -5,6 +5,7 @@ import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/h
 import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 const MALFORMED_JSON_MESSAGE = 'Malformed JSON request body'
+const UNAUTHORIZED_ACCESS_MESSAGE = 'Unauthorized access'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
@@ -63,9 +64,8 @@ export default class HttpExceptionHandler extends ExceptionHandler {
           errors: validationError.messages || [],
         })
       }
-      ctx.session.flashAll()
-      ctx.session.flash('errors', validationError.messages || {})
-      return ctx.response.redirect().back()
+
+      return super.handle(error, ctx)
     }
 
     /**
@@ -109,9 +109,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       'code' in error &&
       error.code === 'E_UNAUTHORIZED_ACCESS'
     ) {
+      if (isApiRequest) {
+        return ctx.response.status(401).json({
+          errors: [{ message: UNAUTHORIZED_ACCESS_MESSAGE }],
+        })
+      }
+
       const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
 
-      if (!isApiRequest && !acceptsJson) {
+      if (!acceptsJson) {
         const authError = error as any
         ctx.session.flash('error', authError.message || 'Faça login para continuar.')
         return ctx.response.redirect().toPath('/login')

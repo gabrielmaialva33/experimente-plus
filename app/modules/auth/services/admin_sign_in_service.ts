@@ -31,6 +31,7 @@ export default class AdminSignInService {
 
     try {
       const user = await this.usersRepository.verifyCredentials(uid, password)
+      const expectedPasswordHash = user.password
 
       await user.load('roles')
 
@@ -45,7 +46,10 @@ export default class AdminSignInService {
       // Active tenant = the user's first tenant (N:N via user_tenants).
       const tenant = await user.related('tenants').query().first()
 
-      const auth = await this.jwtAuthTokensService.run({ userId: user.id, tenantId: tenant?.id })
+      const auth = await this.jwtAuthTokensService.startChain(
+        { userId: user.id, tenantId: tenant?.id },
+        { expectedPasswordHash }
+      )
       const userJson = user.toJSON()
 
       // Emit login succeeded event

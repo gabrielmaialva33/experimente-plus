@@ -19,7 +19,12 @@ export default class RequestPasswordResetService {
       return
     }
 
-    const { token, expiresAt } = await this.passwordResetTokenService.issue(user.id)
+    const issued = await this.passwordResetTokenService.issue(user.id)
+    if (!issued) {
+      return
+    }
+
+    const { token, expiresAt } = issued
 
     try {
       await mail.send(new PasswordResetNotification(user, token, expiresAt))
