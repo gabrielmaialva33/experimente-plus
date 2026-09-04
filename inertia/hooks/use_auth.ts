@@ -8,6 +8,7 @@ export function useAuth() {
   const tenants = auth?.tenants ?? []
   const activeTenantId = auth?.activeTenantId ?? null
   const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId) ?? null
+  const hasActiveOrganizationMembership = auth?.hasActiveOrganizationMembership ?? false
   const platformAccess = auth?.platformAccess ?? null
   const permissions = auth?.permissions ?? []
 
@@ -17,6 +18,7 @@ export function useAuth() {
     tenants,
     activeTenant,
     activeTenantId,
+    hasActiveOrganizationMembership,
     platformAccess,
     isPlatformStaff: platformAccess !== null,
     permissions,

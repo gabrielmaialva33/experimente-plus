@@ -48,6 +48,7 @@ interface PublicNavigationConfig {
 export interface NavigationAvailability {
   authenticated: boolean
   activeTenantId: number | null
+  hasActiveOrganizationMembership?: boolean
   platformAccess?: PlatformAccess | null
 }
 
@@ -118,7 +119,7 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
         icon: TicketPercent,
         requiresActiveTenant: true,
       },
-      { label: 'Portal', href: '/portal', icon: Store, requiresActiveTenant: true },
+      { label: 'Negócios', href: '/portal', icon: Store, requiresActiveTenant: true },
       { label: 'Sair', href: '/logout', icon: LogOut, method: 'post' },
     ],
     guest: [
@@ -129,7 +130,7 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
   },
   utility: {
     authenticated: [
-      { label: 'Portal', href: '/portal', icon: Store, requiresActiveTenant: true },
+      { label: 'Negócios', href: '/portal', icon: Store, requiresActiveTenant: true },
       { label: 'Sair', href: '/logout', icon: LogOut, method: 'post' },
     ],
     guest: [{ label: 'Entrar', href: '/login', icon: LogIn }],
@@ -679,7 +680,13 @@ export function publicNavigationItemsFor(
   const audience = availability.authenticated ? 'authenticated' : 'guest'
 
   return PUBLIC_NAVIGATION[placement][audience].filter(
-    (item) => !item.requiresActiveTenant || availability.activeTenantId !== null
+    (item) =>
+      (!item.requiresActiveTenant || availability.activeTenantId !== null) &&
+      !(
+        item.href === '/portal' &&
+        availability.platformAccess === 'platform_moderator' &&
+        !availability.hasActiveOrganizationMembership
+      )
   )
 }
 

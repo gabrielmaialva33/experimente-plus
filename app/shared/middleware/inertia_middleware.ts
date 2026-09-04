@@ -3,6 +3,7 @@ import app from '@adonisjs/core/services/app'
 import type { NextFn } from '@adonisjs/core/types/http'
 import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
+import OrganizationMember from '#modules/organizations/models/organization_member'
 import OrganizationPolicyService, {
   type PlatformAccess,
 } from '#modules/organizations/services/organization_policy_service'
@@ -174,6 +175,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     user: SharedUser | null
     tenants: SharedTenant[]
     activeTenantId: number | null
+    hasActiveOrganizationMembership: boolean
     platformAccess: PlatformAccess | null
     permissions: string[]
   }> {
@@ -181,6 +183,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       user: null,
       tenants: [] as SharedTenant[],
       activeTenantId: null,
+      hasActiveOrganizationMembership: false,
       platformAccess: null,
       permissions: [] as string[],
     }
@@ -221,11 +224,21 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       permissionService.getEffectivePermissionNames(user.id),
       organizationPolicy.resolvePlatformAccess(user),
     ])
+    const activeOrganizationMembership =
+      activeTenantId === null
+        ? null
+        : await OrganizationMember.query()
+            .where('tenant_id', activeTenantId)
+            .where('user_id', user.id)
+            .where('status', 'active')
+            .select('id')
+            .first()
 
     return {
       user: { id: user.id, full_name: user.full_name, email: user.email },
       tenants,
       activeTenantId,
+      hasActiveOrganizationMembership: activeOrganizationMembership !== null,
       platformAccess,
       permissions,
     }

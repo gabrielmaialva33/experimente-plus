@@ -9,6 +9,7 @@ const authState = vi.hoisted(() => ({
   tenants: [] as Array<{ id: number; name: string; role: string | null }>,
   activeTenant: null as { id: number; name: string; role: string | null } | null,
   activeTenantId: null as number | null,
+  hasActiveOrganizationMembership: false,
   platformAccess: null as 'platform_admin' | 'platform_moderator' | null,
   permissions: [] as string[],
 }))
@@ -42,6 +43,7 @@ describe('Header mobile navigation', () => {
     authState.tenants = []
     authState.activeTenant = null
     authState.activeTenantId = null
+    authState.hasActiveOrganizationMembership = false
     authState.platformAccess = null
     authState.permissions = []
   })
@@ -85,5 +87,20 @@ describe('Header mobile navigation', () => {
       'href',
       '/backoffice/benefits'
     )
+    expect(screen.queryByRole('link', { name: 'Negócios' })).not.toBeInTheDocument()
+  })
+
+  it('keeps organization membership available even when the user also moderates the platform', async () => {
+    authState.user = { id: 3, full_name: 'Moderadora Parceira', email: 'mp@example.test' }
+    authState.activeTenantId = 7
+    authState.activeTenant = { id: 7, name: 'Operação Norte', role: 'member' }
+    authState.tenants = [authState.activeTenant]
+    authState.platformAccess = 'platform_moderator'
+    authState.hasActiveOrganizationMembership = true
+
+    const { user } = render(<Header surface="consumer" />)
+    await user.click(screen.getByRole('button', { name: 'Abrir menu do usuário' }))
+
+    expect(screen.getByRole('link', { name: 'Negócios' })).toHaveAttribute('href', '/portal')
   })
 })

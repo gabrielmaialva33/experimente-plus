@@ -29,6 +29,7 @@ export interface AuthSharedProps {
   user: AuthUser | null
   tenants: TenantSummary[]
   activeTenantId: number | null
+  hasActiveOrganizationMembership: boolean
   platformAccess: PlatformAccess | null
   permissions: string[]
 }

@@ -11,7 +11,12 @@ export function PublicHeader() {
   const { url, props } = usePage()
   const auth = props.auth as AuthSharedProps | undefined
   const authenticated = Boolean(auth?.user)
-  const availability = { authenticated, activeTenantId: auth?.activeTenantId ?? null }
+  const availability = {
+    authenticated,
+    activeTenantId: auth?.activeTenantId ?? null,
+    hasActiveOrganizationMembership: auth?.hasActiveOrganizationMembership ?? false,
+    platformAccess: auth?.platformAccess ?? null,
+  }
   const navigation = publicNavigationItemsFor('header', availability)
   const utilityItems = publicNavigationItemsFor('utility', availability)
 

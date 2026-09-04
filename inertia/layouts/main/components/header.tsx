@@ -115,7 +115,7 @@ function TenantSwitcher() {
 }
 
 function UserMenu({ surface }: { surface: NavigationSurface }) {
-  const { user, activeTenantId, platformAccess, can } = useAuth()
+  const { user, activeTenantId, hasActiveOrganizationMembership, platformAccess, can } = useAuth()
 
   if (!user) {
     return (
@@ -178,11 +178,13 @@ function UserMenu({ surface }: { surface: NavigationSurface }) {
             </Link>
           </DropdownMenuItem>
         ) : null}
-        {activeTenantId !== null && surface !== 'portal' ? (
+        {activeTenantId !== null &&
+        (platformAccess !== 'platform_moderator' || hasActiveOrganizationMembership) &&
+        surface !== 'portal' ? (
           <DropdownMenuItem asChild>
             <Link href="/portal">
               <Store className="size-4" />
-              Portal do parceiro
+              Negócios
             </Link>
           </DropdownMenuItem>
         ) : null}

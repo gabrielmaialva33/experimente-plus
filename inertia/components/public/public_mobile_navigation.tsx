@@ -11,6 +11,8 @@ export function PublicMobileNavigation() {
   const items = publicNavigationItemsFor('mobile', {
     authenticated,
     activeTenantId: auth?.activeTenantId ?? null,
+    hasActiveOrganizationMembership: auth?.hasActiveOrganizationMembership ?? false,
+    platformAccess: auth?.platformAccess ?? null,
   })
 
   return (

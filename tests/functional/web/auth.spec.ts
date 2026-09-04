@@ -331,6 +331,13 @@ test.group('Web authentication', (group) => {
       .redirects(0)
     guestOnlyLogin.assertStatus(302)
     assert.equal(guestOnlyLogin.header('location'), '/portal')
+
+    const settings = await client.get('/settings').cookie(JWT_COOKIE_NAME, tokenCookie!.value)
+    settings.assertStatus(200)
+    assert.isTrue(
+      (parseInertiaPage(settings).props.auth as { hasActiveOrganizationMembership: boolean })
+        .hasActiveOrganizationMembership
+    )
   })
 
   test('should not treat a suspended organization membership as partner access', async ({
@@ -360,6 +367,57 @@ test.group('Web authentication', (group) => {
 
     login.assertStatus(302)
     assert.equal(login.header('location'), '/wallet')
+
+    const tokenCookie = login.cookie(JWT_COOKIE_NAME)
+    assert.exists(tokenCookie)
+    const settings = await client.get('/settings').cookie(JWT_COOKIE_NAME, tokenCookie!.value)
+    settings.assertStatus(200)
+    assert.isFalse(
+      (parseInertiaPage(settings).props.auth as { hasActiveOrganizationMembership: boolean })
+        .hasActiveOrganizationMembership
+    )
+  })
+
+  test('should share partner access for a platform moderator with an active organization membership', async ({
+    client,
+    assert,
+  }) => {
+    const { user, tenant } = await createUserWithOperation(
+      'Hybrid Moderator Partner',
+      IRole.Slugs.MODERATOR
+    )
+    const organization = await OrganizationFactory.apply('active')
+      .merge({ tenant_id: tenant.id, created_by: user.id })
+      .create()
+    await OrganizationMemberFactory.apply('owner')
+      .merge({
+        tenant_id: tenant.id,
+        organization_id: organization.id,
+        user_id: user.id,
+      })
+      .create()
+
+    const login = await client
+      .post('/login')
+      .withCsrfToken()
+      .redirects(0)
+      .json({ uid: user.email, password: 'password123' })
+
+    login.assertStatus(302)
+    assert.equal(login.header('location'), '/backoffice/moderation')
+
+    const tokenCookie = login.cookie(JWT_COOKIE_NAME)
+    assert.exists(tokenCookie)
+
+    const settings = await client.get('/settings').cookie(JWT_COOKIE_NAME, tokenCookie!.value)
+    settings.assertStatus(200)
+
+    const authProps = parseInertiaPage(settings).props.auth as {
+      platformAccess: string | null
+      hasActiveOrganizationMembership: boolean
+    }
+    assert.equal(authProps.platformAccess, 'platform_moderator')
+    assert.isTrue(authProps.hasActiveOrganizationMembership)
   })
 
   test('should share canonical platform access without requiring an active operation', async ({

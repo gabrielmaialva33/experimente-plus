@@ -14,6 +14,8 @@ const pageState = vi.hoisted(() => ({
   url: '/',
   user: null as null | { id: number; full_name: string; email: string },
   activeTenantId: null as number | null,
+  hasActiveOrganizationMembership: false,
+  platformAccess: null as 'platform_admin' | 'platform_moderator' | null,
 }))
 
 const inertia = vi.hoisted(() => ({ post: vi.fn() }))
@@ -40,6 +42,8 @@ vi.mock('@inertiajs/react', () => ({
         user: pageState.user,
         tenants: [],
         activeTenantId: pageState.activeTenantId,
+        hasActiveOrganizationMembership: pageState.hasActiveOrganizationMembership,
+        platformAccess: pageState.platformAccess,
         permissions: [],
       },
     },
@@ -54,6 +58,8 @@ afterEach(() => {
   pageState.url = '/'
   pageState.user = null
   pageState.activeTenantId = null
+  pageState.hasActiveOrganizationMembership = false
+  pageState.platformAccess = null
   inertia.post.mockReset()
 })
 
@@ -87,7 +93,10 @@ describe('public discovery experience', () => {
       'aria-current',
       'page'
     )
-    expect(within(header).getByRole('link', { name: 'Portal' })).toHaveAttribute('href', '/portal')
+    expect(within(header).getByRole('link', { name: 'Negócios' })).toHaveAttribute(
+      'href',
+      '/portal'
+    )
     expect(within(header).queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
     expect(within(header).queryByRole('link', { name: 'Para parceiros' })).not.toBeInTheDocument()
     expect(container.querySelectorAll('a[href="/wallet"]')).toHaveLength(1)
@@ -133,12 +142,26 @@ describe('public discovery experience', () => {
       'aria-current',
       'page'
     )
-    expect(within(navigation).getByRole('link', { name: 'Portal' })).toHaveAttribute(
+    expect(within(navigation).getByRole('link', { name: 'Negócios' })).toHaveAttribute(
       'href',
       '/portal'
     )
     expect(within(navigation).queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
     expect(within(navigation).getByRole('button', { name: 'Sair' })).toBeEnabled()
+  })
+
+  it('hides an empty partner Portal from moderators but preserves a real membership', () => {
+    pageState.user = { id: 9, full_name: 'Moderadora', email: 'moderadora@example.com' }
+    pageState.activeTenantId = 31
+    pageState.platformAccess = 'platform_moderator'
+
+    const view = render(<PublicMobileNavigation />)
+    expect(screen.queryByRole('link', { name: 'Negócios' })).not.toBeInTheDocument()
+
+    view.unmount()
+    pageState.hasActiveOrganizationMembership = true
+    render(<PublicMobileNavigation />)
+    expect(screen.getByRole('link', { name: 'Negócios' })).toHaveAttribute('href', '/portal')
   })
 
   it('keeps an authenticated account without an operation on valid public destinations', async () => {
@@ -158,9 +181,9 @@ describe('public discovery experience', () => {
       '/cidades'
     )
     expect(within(header).queryByRole('link', { name: 'Carteira' })).not.toBeInTheDocument()
-    expect(within(header).queryByRole('link', { name: 'Portal' })).not.toBeInTheDocument()
+    expect(within(header).queryByRole('link', { name: 'Negócios' })).not.toBeInTheDocument()
     expect(within(mobile).queryByRole('link', { name: 'Carteira' })).not.toBeInTheDocument()
-    expect(within(mobile).queryByRole('link', { name: 'Portal' })).not.toBeInTheDocument()
+    expect(within(mobile).queryByRole('link', { name: 'Negócios' })).not.toBeInTheDocument()
     expect(within(mobile).getAllByRole('link')).toHaveLength(1)
 
     await user.click(within(mobile).getByRole('button', { name: 'Sair' }))

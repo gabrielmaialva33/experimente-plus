@@ -150,6 +150,30 @@ describe('navigation configuration', () => {
     ).toEqual(['/cidades'])
   })
 
+  it('does not send a platform moderator without organization access to an empty Portal', () => {
+    const availability = {
+      authenticated: true,
+      activeTenantId: 12,
+      platformAccess: 'platform_moderator' as const,
+    }
+
+    expect(publicNavigationItemsFor('mobile', availability).map((item) => item.href)).toEqual([
+      '/cidades',
+      '/wallet',
+      '/logout',
+    ])
+    expect(publicNavigationItemsFor('utility', availability).map((item) => item.href)).toEqual([
+      '/logout',
+    ])
+
+    expect(
+      publicNavigationItemsFor('utility', {
+        ...availability,
+        hasActiveOrganizationMembership: true,
+      }).map((item) => item.href)
+    ).toEqual(['/portal', '/logout'])
+  })
+
   it('resolves the public legal documents as real destinations', () => {
     expect(resolveRouteMetadata('/termos')).toMatchObject({
       id: 'public-terms',
