@@ -78,7 +78,6 @@ const userPermissionNames = new Set([
   'files.read',
   'files.list',
   'files.delete.own',
-  'tenants.create',
   'tenants.read',
   'tenants.list',
   'organizations.create',

@@ -3,6 +3,7 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 
 import Permission from '#modules/permissions/models/permission'
+import PermissionRepository from '#modules/permissions/repositories/permission_repository'
 import { getDefaultPermissionNames } from '#modules/permissions/services/create_default_permissions_service'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
@@ -16,7 +17,6 @@ const userPermissionNames = [
   'files.delete.own',
   'files.list',
   'files.read',
-  'tenants.create',
   'tenants.list',
   'tenants.read',
   'organizations.create',
@@ -162,6 +162,23 @@ test.group('Database bootstrap', (group) => {
           updated_at: new Date(),
         })
       })
+    )
+  })
+
+  test('should keep runtime USER synchronization aligned with migration defaults', async ({
+    assert,
+  }) => {
+    const repository = new PermissionRepository()
+    const ids = await repository.findUserPermissionIds()
+    const permissions = await Permission.query().whereIn('id', ids)
+
+    assert.sameMembers(
+      permissions.map((permission) => permission.name),
+      userPermissionNames
+    )
+    assert.notInclude(
+      permissions.map((permission) => permission.name),
+      'tenants.create'
     )
   })
 })

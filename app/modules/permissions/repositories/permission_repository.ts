@@ -138,10 +138,10 @@ export default class PermissionRepository
   }
 
   /**
-   * The default USER role is intentionally narrow: it can enter the dashboard
-   * and work with files, but cannot enumerate or mutate platform users/roles.
-   * Own-profile operations use dedicated authenticated endpoints instead of
-   * global user-management permissions.
+   * The default USER role owns personal features plus the global half of
+   * organization-scoped Portal actions. Organization policies still constrain
+   * those actions to an active membership. It cannot create operations or
+   * administer platform users, roles, and permissions.
    */
   async findUserPermissionIds(trx?: TransactionClientContract): Promise<number[]> {
     const names = [
@@ -150,7 +150,6 @@ export default class PermissionRepository
       'files.read',
       'files.list',
       'files.delete.own',
-      'tenants.create',
       'tenants.read',
       'tenants.list',
       'organizations.create',
@@ -178,6 +177,13 @@ export default class PermissionRepository
       'establishments.list',
       'establishments.submit',
       'establishments.archive',
+      'benefit_editions.read',
+      'benefit_editions.list',
+      'benefit_offers.create',
+      'benefit_offers.read',
+      'benefit_offers.update',
+      'benefit_offers.list',
+      'benefit_offers.archive',
       'media.create',
       'media.read',
       'media.update',
