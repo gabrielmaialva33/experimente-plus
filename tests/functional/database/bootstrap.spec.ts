@@ -12,7 +12,6 @@ import User from '#modules/users/models/user'
 const userPermissionNames = [
   'analytics.read',
   'pilot_feedback.create',
-  'dashboard.read',
   'files.create',
   'files.delete.own',
   'files.list',
@@ -113,6 +112,16 @@ test.group('Database bootstrap', (group) => {
       moderatorPermissionNames
     )
 
+    const permissionRepository = new PermissionRepository()
+    const runtimeModeratorPermissionIds = await permissionRepository.findModeratorPermissionIds()
+    const runtimeModeratorPermissions = await Permission.query()
+      .whereIn('id', runtimeModeratorPermissionIds)
+      .orderBy('name', 'asc')
+    assert.sameMembers(
+      runtimeModeratorPermissions.map((permission) => permission.name),
+      moderatorPermissionNames
+    )
+
     const user = await Role.findByOrFail('slug', IRole.Slugs.USER)
     await user.load('permissions')
     assert.sameMembers(
@@ -179,6 +188,10 @@ test.group('Database bootstrap', (group) => {
     assert.notInclude(
       permissions.map((permission) => permission.name),
       'tenants.create'
+    )
+    assert.notInclude(
+      permissions.map((permission) => permission.name),
+      'dashboard.read'
     )
   })
 })

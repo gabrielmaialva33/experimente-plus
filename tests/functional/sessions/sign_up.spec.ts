@@ -293,7 +293,6 @@ test.group('Sessions sign up', (group) => {
     const permissions = await permissionService.getEffectivePermissionNames(user.id)
 
     assert.includeMembers(permissions, [
-      'dashboard.read',
       'files.create',
       'files.read',
       'files.list',
@@ -313,6 +312,10 @@ test.group('Sessions sign up', (group) => {
     assert.notInclude(permissions, 'roles.list')
     assert.notInclude(permissions, 'permissions.list')
     assert.notInclude(permissions, 'tenants.create')
+    assert.notInclude(permissions, 'dashboard.read')
+
+    const dashboard = await client.get('/dashboard').loginAs(user)
+    dashboard.assertStatus(403)
   })
 
   test('should assign default user role', async ({ client, assert }) => {

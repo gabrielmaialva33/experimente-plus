@@ -128,6 +128,12 @@ export default class PermissionRepository
       'establishments.approve',
       'establishments.reject',
       'establishments.request_changes',
+      'benefit_editions.read',
+      'benefit_editions.list',
+      'benefit_offers.read',
+      'benefit_offers.list',
+      'benefit_accesses.read',
+      'benefit_accesses.list',
       'media.read',
       'media.list',
       'media.approve',
@@ -145,7 +151,6 @@ export default class PermissionRepository
    */
   async findUserPermissionIds(trx?: TransactionClientContract): Promise<number[]> {
     const names = [
-      'dashboard.read',
       'files.create',
       'files.read',
       'files.list',

@@ -73,7 +73,6 @@ const defaultPermissions = [...globalPermissions, ...contextualPermissions]
 const defaultPermissionNames = defaultPermissions.map((permission) => permission.name)
 
 const userPermissionNames = new Set([
-  'dashboard.read',
   'files.create',
   'files.read',
   'files.list',
