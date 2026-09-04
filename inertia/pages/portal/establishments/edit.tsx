@@ -62,9 +62,9 @@ import {
   type JsonRecord,
 } from '~/lib/establishment_editor'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
-import { useAuth } from '~/hooks/use_auth'
 import { firstError } from '~/lib/form_errors'
 import { cn } from '~/lib/utils'
+import type { OrganizationAllowedActions } from '~/types'
 
 interface CompletenessIssue extends EditorIssue {}
 interface ReviewIssue extends EditorIssue {
@@ -88,6 +88,7 @@ interface EstablishmentEditorProps {
   effective_attributes: EffectiveAttribute[]
   review_issues?: ReviewIssue[]
   feedback_targets: FeedbackTargets
+  allowed_actions: OrganizationAllowedActions
 }
 
 function displayIssues(
@@ -130,11 +131,11 @@ export default function EstablishmentEditorPage({
   effective_attributes,
   review_issues = [],
   feedback_targets,
+  allowed_actions: allowedActions,
 }: EstablishmentEditorProps) {
   const { errors: pageErrors } = usePage().props as {
     errors?: Record<string, unknown>
   }
-  const { can } = useAuth()
   const revision = asRecord(establishment.revision)
   const address = asRecord(revision?.address)
   const establishmentId = Number(establishment.id)
@@ -142,10 +143,10 @@ export default function EstablishmentEditorPage({
   const revisionStatus = stringValue(revision, 'status', 'draft')
   const revisionVersion = numberValue(revision, 'version') ?? 1
   const contentStateEditable = ['draft', 'changes_requested'].includes(revisionStatus)
-  const editable = contentStateEditable && can('establishments.update')
-  const submitAllowed = contentStateEditable && can('establishments.submit')
-  const canManageBenefits = can('benefit_offers.list')
-  const canSendFeedback = can('pilot_feedback.create')
+  const editable = contentStateEditable && allowedActions.establishments.update
+  const submitAllowed = contentStateEditable && allowedActions.establishments.submit
+  const canManageBenefits = allowedActions.benefit_offers.list
+  const canSendFeedback = allowedActions.pilot_feedback.create
   const statusMeta = getRevisionStatusMeta(revisionStatus)
   const submitLabel =
     revisionStatus === 'changes_requested' ? 'Reenviar para moderação' : 'Enviar para moderação'

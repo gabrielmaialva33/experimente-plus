@@ -1,17 +1,29 @@
 import { Head, Link, router } from '@inertiajs/react'
-import { ArrowLeft, CheckCircle2, Loader2, MapPin, ScanLine, Store, UserRound } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  LockKeyhole,
+  MapPin,
+  ScanLine,
+  Store,
+  UserRound,
+} from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
+import type { OrganizationAllowedActions } from '~/types'
 import type { RedemptionPreview } from '~/types/benefit_redemption'
 
 interface PartnerValidationPageProps {
   token: string
   preview: RedemptionPreview | null
+  allowed_actions: OrganizationAllowedActions
 }
 
 function extractToken(input: string): string {
@@ -30,7 +42,12 @@ function extractToken(input: string): string {
   }
 }
 
-export default function PartnerValidationPage({ token, preview }: PartnerValidationPageProps) {
+export default function PartnerValidationPage({
+  token,
+  preview,
+  allowed_actions: allowedActions,
+}: PartnerValidationPageProps) {
+  const canValidate = allowedActions.redemptions.validate
   const [input, setInput] = useState(token)
   const [inspecting, setInspecting] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -82,38 +99,47 @@ export default function PartnerValidationPage({ token, preview }: PartnerValidat
           }
         />
 
-        <form
-          onSubmit={inspect}
-          className="rounded-lg border border-border bg-card p-5 sm:p-7"
-          aria-busy={inspecting}
-        >
-          <label htmlFor="presentation-token" className="text-sm font-semibold">
-            Link da apresentação
-          </label>
-          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-            <Input
-              id="presentation-token"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              autoComplete="off"
-              placeholder="Cole o link apresentado pelo cliente"
-              className="min-h-12 flex-1"
-              disabled={inspecting}
-            />
-            <Button
-              type="submit"
-              variant={preview ? 'outline' : 'primary'}
-              size="lg"
-              disabled={!input.trim() || inspecting}
-              aria-busy={inspecting}
-            >
-              {inspecting ? <Loader2 className="animate-spin" /> : <ScanLine />}
-              {inspecting ? 'Conferindo…' : 'Conferir'}
-            </Button>
-          </div>
-        </form>
+        {canValidate ? (
+          <form
+            onSubmit={inspect}
+            className="rounded-lg border border-border bg-card p-5 sm:p-7"
+            aria-busy={inspecting}
+          >
+            <label htmlFor="presentation-token" className="text-sm font-semibold">
+              Link da apresentação
+            </label>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <Input
+                id="presentation-token"
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                autoComplete="off"
+                placeholder="Cole o link apresentado pelo cliente"
+                className="min-h-12 flex-1"
+                disabled={inspecting}
+              />
+              <Button
+                type="submit"
+                variant={preview ? 'outline' : 'primary'}
+                size="lg"
+                disabled={!input.trim() || inspecting}
+                aria-busy={inspecting}
+              >
+                {inspecting ? <Loader2 className="animate-spin" /> : <ScanLine />}
+                {inspecting ? 'Conferindo…' : 'Conferir'}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <EmptyState
+            headingLevel={2}
+            icon={LockKeyhole}
+            title="Validação indisponível"
+            description="Seu acesso permite consultar utilizações, mas não confirmá-las."
+          />
+        )}
 
-        {preview ? (
+        {canValidate && preview ? (
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
             <div className="rounded-lg border border-border bg-card p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">

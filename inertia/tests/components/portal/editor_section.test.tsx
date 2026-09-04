@@ -1,6 +1,7 @@
+import { Store } from 'lucide-react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { EditorSaveBar } from '~/components/portal/editor_section'
+import { EditorSaveBar, EditorSection } from '~/components/portal/editor_section'
 import { render, screen } from '~/tests/test_utils'
 
 describe('EditorSaveBar', () => {
@@ -35,5 +36,31 @@ describe('EditorSaveBar', () => {
 
     expect(screen.queryByRole('button', { name: 'Descartar alterações' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Salvar etapa' })).toBeDisabled()
+  })
+})
+
+describe('EditorSection', () => {
+  it('shows a human field label instead of exposing the technical issue key', () => {
+    render(
+      <EditorSection
+        id="identity"
+        icon={Store}
+        title="Identidade"
+        description="Dados públicos"
+        issues={[
+          {
+            key: 'issue-1',
+            message: 'Revise este dado.',
+            field: 'public_name',
+            source: 'moderation',
+          },
+        ]}
+      >
+        <div>Conteúdo</div>
+      </EditorSection>
+    )
+
+    expect(screen.getByText(/Nome público/)).toBeVisible()
+    expect(screen.queryByText(/public_name/)).not.toBeInTheDocument()
   })
 })

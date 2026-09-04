@@ -91,14 +91,14 @@ describe('labels', () => {
     }
   })
 
-  it('covers every organization role and falls back to Membro', () => {
+  it('covers every organization role and distinguishes platform access', () => {
     for (const role of ORGANIZATION_ROLES) {
       expect(ORGANIZATION_ROLE_LABELS[role], role).toBeTruthy()
       expect(organizationRoleLabel(role)).not.toBe(role)
     }
 
-    expect(organizationRoleLabel(null)).toBe('Membro')
-    expect(organizationRoleLabel(undefined)).toBe('Membro')
+    expect(organizationRoleLabel(null)).toBe('Acesso da plataforma')
+    expect(organizationRoleLabel(undefined)).toBe('Acesso da plataforma')
     expect(organizationRoleLabel('member')).toBe('Membro')
   })
 
@@ -128,6 +128,7 @@ describe('labels', () => {
     }
 
     expect(pilotFeedbackContextLabel('general')).toBe('Geral')
+    expect(pilotFeedbackContextLabel('onboarding')).toBe('Primeiros passos')
     expect(pilotFeedbackContextLabel('organization')).toBe('Organização')
   })
 

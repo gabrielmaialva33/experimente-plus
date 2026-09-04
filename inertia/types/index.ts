@@ -1,4 +1,5 @@
 export * from './api'
+export * from './organization_authorization'
 
 /**
  * The authenticated user as shared with every Inertia page by the

@@ -4,12 +4,13 @@ import { ArrowRight, CheckCircle2, ReceiptText, ScanLine } from 'lucide-react'
 import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
-import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
+import type { OrganizationAllowedActions } from '~/types'
 import type { RedemptionHistory } from '~/types/benefit_redemption'
 
 interface PartnerRedemptionsPageProps {
   history: RedemptionHistory
+  allowed_actions: OrganizationAllowedActions
 }
 
 function formatDateTime(value: string): string {
@@ -20,9 +21,11 @@ function formatDateTime(value: string): string {
   }).format(new Date(value))
 }
 
-export default function PartnerRedemptionsPage({ history }: PartnerRedemptionsPageProps) {
-  const { can } = useAuth()
-  const canValidate = can('benefit_offers.update')
+export default function PartnerRedemptionsPage({
+  history,
+  allowed_actions: allowedActions,
+}: PartnerRedemptionsPageProps) {
+  const canValidate = allowedActions.redemptions.validate
 
   return (
     <MainLayout>

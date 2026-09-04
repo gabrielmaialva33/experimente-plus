@@ -30,7 +30,7 @@ export const ORGANIZATION_ROLE_LABELS: Record<string, string> = {
 }
 
 export function organizationRoleLabel(role: string | null | undefined): string {
-  return role ? (ORGANIZATION_ROLE_LABELS[role] ?? role) : 'Membro'
+  return role ? (ORGANIZATION_ROLE_LABELS[role] ?? role) : 'Acesso da plataforma'
 }
 
 export const OPERATION_ROLE_LABELS: Record<string, string> = {
@@ -143,7 +143,7 @@ export function permissionContextLabel(context: string): string {
 
 export const PILOT_FEEDBACK_CONTEXT_LABELS: Record<string, string> = {
   general: 'Geral',
-  onboarding: 'Onboarding',
+  onboarding: 'Primeiros passos',
   organization: 'Organização',
   establishment: 'Unidade',
   catalog: 'Catálogo',

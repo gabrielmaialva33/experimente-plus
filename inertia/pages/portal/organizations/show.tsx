@@ -22,9 +22,9 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
-import { useAuth } from '~/hooks/use_auth'
 import { firstError } from '~/lib/form_errors'
 import { organizationRoleLabel, organizationStatusLabel, revisionStatusLabel } from '~/lib/labels'
+import type { OrganizationAllowedActions } from '~/types'
 
 interface EstablishmentSummary {
   id: number
@@ -72,6 +72,7 @@ interface OrganizationPageProps {
     organizations: FeedbackTarget[]
     establishments: FeedbackTarget[]
   }
+  allowed_actions: OrganizationAllowedActions
   errors?: Record<string, unknown>
 }
 
@@ -99,9 +100,9 @@ function establishmentRevisionStatus(establishment: EstablishmentSummary): strin
 export default function PortalOrganizationPage({
   organization,
   feedback_targets,
+  allowed_actions: allowedActions,
   errors: pageErrors = {},
 }: OrganizationPageProps) {
-  const { can } = useAuth()
   const saveButtonRef = useRef<HTMLButtonElement>(null)
   const operationRef = useRef<OrganizationOperation | null>(null)
   const [operation, setOperation] = useState<OrganizationOperation | null>(null)
@@ -118,11 +119,11 @@ export default function PortalOrganizationPage({
     website: organization.website ?? '',
   })
   const statusEditable = editableStatuses.has(organization.status)
-  const editable = statusEditable && can('organizations.update')
-  const canSubmit = statusEditable && can('organizations.submit')
-  const canCreateEstablishment = can('establishments.create')
-  const canReadAnalytics = can('analytics.read')
-  const canCreateFeedback = can('pilot_feedback.create')
+  const editable = statusEditable && allowedActions.organizations.update
+  const canSubmit = statusEditable && allowedActions.organizations.submit
+  const canCreateEstablishment = allowedActions.establishments.create
+  const canReadAnalytics = allowedActions.analytics.read
+  const canCreateFeedback = allowedActions.pilot_feedback.create
   const formErrors = form.errors as Record<string, unknown>
   const busy = operation !== null || form.processing
   const guard = useUnsavedChangesGuard({

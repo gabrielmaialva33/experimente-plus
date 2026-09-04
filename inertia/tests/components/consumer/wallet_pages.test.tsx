@@ -183,6 +183,7 @@ describe('consumer wallet pages', () => {
         offer_id: 11,
         edition_id: 3,
         edition_name: 'Edição Norte do Paraná',
+        organization_id: 4,
         establishment_id: 5,
         establishment_name: 'Café Central',
         offer_title: 'Café cortesia',

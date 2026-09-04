@@ -221,8 +221,8 @@ export default function NewOrganizationPage() {
           <Alert>
             <AlertTitle>Como esses dados serão usados</AlertTitle>
             <AlertDescription>
-              O CNPJ será normalizado e validado no backend. Os dados legais permanecem privados e a
-              organização precisa ser aprovada antes da publicação das unidades.
+              O CNPJ será normalizado e validado com segurança. Os dados legais permanecem privados
+              e a organização precisa ser aprovada antes da publicação das unidades.
             </AlertDescription>
           </Alert>
 

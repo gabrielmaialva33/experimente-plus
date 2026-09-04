@@ -80,7 +80,7 @@ describe('PilotFeedbackForm', () => {
       'alert'
     )
     expect(screen.getByLabelText(/Mensagem/)).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByText('Contexto: Onboarding')).toBeInTheDocument()
+    expect(screen.getByText('Contexto: Primeiros passos')).toBeInTheDocument()
   })
 
   it('submits only once, resets the message after success and announces confirmation locally', () => {

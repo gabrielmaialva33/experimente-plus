@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
+import { editorIssueFieldLabel } from '~/lib/establishment_editor'
 import { cn } from '~/lib/utils'
 
 export interface EditorDisplayIssue {
@@ -106,7 +107,7 @@ export function EditorSection({
                       ) : (
                         <span className="font-semibold uppercase tracking-[0.12em]">Checklist</span>
                       )}
-                      {issue.field ? <span>· {issue.field}</span> : null}
+                      {issue.field ? <span>· {editorIssueFieldLabel(issue.field)}</span> : null}
                     </div>
                   </div>
                 </div>

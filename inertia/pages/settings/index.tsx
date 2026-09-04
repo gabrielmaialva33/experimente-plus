@@ -208,7 +208,8 @@ function AccountTab() {
   }
 
   const confirmationReady =
-    Boolean(form.data.current_password) && form.data.confirmation.trim().toUpperCase() === 'DELETE'
+    Boolean(form.data.current_password) &&
+    form.data.confirmation.trim().toUpperCase() === 'EXCLUIR MINHA CONTA'
 
   return (
     <Card className="max-w-3xl border-destructive/40">
@@ -252,7 +253,7 @@ function AccountTab() {
             htmlFor="settings-delete-confirmation"
             label="Confirmação de exclusão"
             required
-            hint="Digite DELETE para evitar uma exclusão acidental."
+            hint="Digite EXCLUIR MINHA CONTA para evitar uma exclusão acidental."
             error={firstError(form.errors.confirmation)}
           >
             <Input

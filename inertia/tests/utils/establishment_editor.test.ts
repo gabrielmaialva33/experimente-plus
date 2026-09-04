@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  editorIssueFieldLabel,
   editorSectionForField,
   getRevisionStatusMeta,
   groupEditorIssues,
@@ -25,6 +26,13 @@ describe('establishment editor utilities', () => {
     expect(editorSectionForField('hours')).toBe('hours')
     expect(editorSectionForField('media.cover')).toBe('media')
     expect(editorSectionForField('organization_id')).toBe('readiness')
+  })
+
+  it('presents technical issue fields with the shared human catalog and a section fallback', () => {
+    expect(editorIssueFieldLabel('public_name')).toBe('Nome público')
+    expect(editorIssueFieldLabel('address.coordinates')).toBe('Coordenadas no mapa')
+    expect(editorIssueFieldLabel('attributes.wifi')).toBe('Características')
+    expect(editorIssueFieldLabel('unknown_backend_field')).toBe('Ficha')
   })
 
   it('groups issues without losing their original payload', () => {

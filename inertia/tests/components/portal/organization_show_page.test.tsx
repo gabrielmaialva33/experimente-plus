@@ -127,6 +127,22 @@ const feedbackTargets = {
   establishments: [{ id: 8, label: 'Café Central — Centro', organization_id: 4 }],
 }
 
+const allowedActions = {
+  organizations: { read: true, update: true, submit: true },
+  establishments: {
+    read: true,
+    list: true,
+    create: true,
+    update: true,
+    submit: true,
+    archive: true,
+  },
+  benefit_offers: { read: true, list: true, create: true, update: true, archive: true },
+  redemptions: { read: true, validate: true },
+  analytics: { read: true },
+  pilot_feedback: { create: true },
+}
+
 describe('PortalOrganizationPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -148,7 +164,11 @@ describe('PortalOrganizationPage', () => {
     }
 
     render(
-      <PortalOrganizationPage organization={organization} feedback_targets={feedbackTargets} />
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
     )
 
     expect(screen.getByText('Informe uma URL válida.')).toHaveAttribute('role', 'alert')
@@ -163,7 +183,11 @@ describe('PortalOrganizationPage', () => {
     formState.current.isDirty = true
 
     render(
-      <PortalOrganizationPage organization={organization} feedback_targets={feedbackTargets} />
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
     )
 
     const save = screen.getByRole('button', { name: 'Salvar dados' })
@@ -180,7 +204,11 @@ describe('PortalOrganizationPage', () => {
 
   it('confirms submission and prevents duplicate workflow transitions', () => {
     render(
-      <PortalOrganizationPage organization={organization} feedback_targets={feedbackTargets} />
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar para análise' }))
@@ -197,10 +225,20 @@ describe('PortalOrganizationPage', () => {
   })
 
   it('keeps a read-only organization view honest about unavailable actions', () => {
-    authState.permissions = []
+    const readOnlyActions = {
+      ...allowedActions,
+      organizations: { ...allowedActions.organizations, update: false, submit: false },
+      establishments: { ...allowedActions.establishments, create: false },
+      analytics: { read: false },
+      pilot_feedback: { create: false },
+    }
 
     render(
-      <PortalOrganizationPage organization={organization} feedback_targets={feedbackTargets} />
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={readOnlyActions}
+      />
     )
 
     expect(screen.getByLabelText(/Razão social/)).toBeDisabled()

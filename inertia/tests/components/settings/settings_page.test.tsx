@@ -113,7 +113,7 @@ describe('SettingsPage', () => {
     expect(deleteButton).toBeDisabled()
 
     await user.type(screen.getByLabelText(/Senha atual/), 'secret-password')
-    await user.type(screen.getByLabelText(/Confirmação de exclusão/), 'DELETE')
+    await user.type(screen.getByLabelText(/Confirmação de exclusão/), 'EXCLUIR MINHA CONTA')
     expect(deleteButton).toBeEnabled()
     await user.click(deleteButton)
 

@@ -24,9 +24,9 @@ import {
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
+import type { OrganizationAllowedActions } from '~/types'
 
 interface EditionCity {
   id: number
@@ -79,6 +79,7 @@ interface EstablishmentBenefitsProps {
   establishment: EstablishmentSummary
   editions: BenefitEdition[]
   offers: BenefitOffer[]
+  allowed_actions: OrganizationAllowedActions
   errors?: Record<string, string>
 }
 
@@ -192,13 +193,14 @@ export default function EstablishmentBenefitsPage({
   establishment,
   editions,
   offers,
+  allowed_actions: allowedActions,
   errors = {},
 }: EstablishmentBenefitsProps) {
-  const { can } = useAuth()
-  const canCreate = can('benefit_offers.create')
-  const canUpdate = can('benefit_offers.update')
-  const canArchive = can('benefit_offers.archive')
-  const canReadRedemptions = can('benefit_offers.read')
+  const canCreate = allowedActions.benefit_offers.create
+  const canUpdate = allowedActions.benefit_offers.update
+  const canArchive = allowedActions.benefit_offers.archive
+  const canReadRedemptions = allowedActions.redemptions.read
+  const canValidateRedemptions = allowedActions.redemptions.validate
   const canManageOffers = canCreate || canUpdate
   const [form, setForm] = useState<OfferFormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -372,9 +374,9 @@ export default function EstablishmentBenefitsPage({
           }
         />
 
-        {canUpdate || canReadRedemptions ? (
+        {canValidateRedemptions || canReadRedemptions ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            {canUpdate ? (
+            {canValidateRedemptions ? (
               <Button asChild variant="outline" size="lg" className="min-h-11">
                 <Link href="/portal/redemptions/validate">Validar benefício</Link>
               </Button>

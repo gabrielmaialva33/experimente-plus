@@ -177,7 +177,7 @@ export function AddressSection({ form, editable, busy, issues, onSubmit }: Addre
             <div className="mb-4">
               <p className="text-sm font-semibold">Coordenadas</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Informe valores decimais. O backend valida o par e impede coordenadas incompletas.
+                Informe valores decimais. O sistema valida o par e impede coordenadas incompletas.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">

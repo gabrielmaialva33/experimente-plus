@@ -245,6 +245,21 @@ export const MODERATION_ISSUE_FIELD_GROUPS: ModerationIssueFieldGroup[] = [
   },
 ]
 
+const MODERATION_ISSUE_FIELD_LABELS = new Map(
+  MODERATION_ISSUE_FIELD_GROUPS.flatMap((group) =>
+    group.options.map((option) => [option.value, option.label] as const)
+  )
+)
+
+export function editorIssueFieldLabel(field: string): string {
+  const normalizedField = field.trim()
+  const exactLabel = MODERATION_ISSUE_FIELD_LABELS.get(normalizedField)
+  if (exactLabel) return exactLabel
+
+  const section = editorSectionForField(normalizedField)
+  return MODERATION_ISSUE_FIELD_GROUPS.find((group) => group.section === section)?.label ?? 'Ficha'
+}
+
 export function editorSectionForIssue(issue: Pick<EditorIssue, 'field'>): EditorIssueGroupId {
   return editorSectionForField(issue.field)
 }
