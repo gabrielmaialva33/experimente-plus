@@ -62,7 +62,8 @@ services:
       - '${PORT:-3333}:3333'
     environment:
       TZ: ${TZ:-UTC}
-      NODE_ENV: production
+      # This compose file is the local stack. The VPS override pins production.
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3333
       HOST: 0.0.0.0
       LOG_LEVEL: ${LOG_LEVEL:-info}

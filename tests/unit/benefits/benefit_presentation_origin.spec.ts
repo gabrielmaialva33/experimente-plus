@@ -49,6 +49,13 @@ test.group('Benefit presentation origin', () => {
       }),
       'http://localhost:3333'
     )
+    assert.equal(
+      resolveBenefitPresentationOrigin({
+        environment: 'development',
+        configuredBaseUrl: 'http://localhost:3333',
+      }),
+      'http://localhost:3333'
+    )
   })
 
   test('falls back to the canonical APP_URL in production and ignores the request host', ({
@@ -90,6 +97,27 @@ test.group('Benefit presentation origin', () => {
         new RegExp(APP_URL_KEY)
       )
     }
+  })
+
+  test('requires HTTPS for configured and fallback origins in production', ({ assert }) => {
+    assert.throws(
+      () =>
+        assertBenefitPresentationOriginConfiguration({
+          environment: 'production',
+          configuredBaseUrl: 'http://benefits.experimente.example',
+          appUrl: 'https://experimente.example',
+        }),
+      new RegExp(`${BENEFIT_PRESENTATION_BASE_URL_KEY}.*HTTPS.*production`)
+    )
+
+    assert.throws(
+      () =>
+        assertBenefitPresentationOriginConfiguration({
+          environment: 'production',
+          appUrl: 'http://experimente.example',
+        }),
+      new RegExp(`${APP_URL_KEY}.*HTTPS.*production`)
+    )
   })
 
   test('rejects anything other than an unambiguous absolute HTTP(S) origin', ({ assert }) => {

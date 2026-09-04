@@ -10,7 +10,15 @@ interface BenefitPresentationOriginOptions {
   requestOrigin?: string
 }
 
-export function normalizeHttpOrigin(value: string, source: string): string {
+interface NormalizeHttpOriginOptions {
+  requireHttps?: boolean
+}
+
+export function normalizeHttpOrigin(
+  value: string,
+  source: string,
+  options: NormalizeHttpOriginOptions = {}
+): string {
   const candidate = value.trim()
   let url: URL
 
@@ -30,6 +38,10 @@ export function normalizeHttpOrigin(value: string, source: string): string {
     )
   }
 
+  if (options.requireHttps && url.protocol !== 'https:') {
+    throw new Error(`${source} must use HTTPS in production`)
+  }
+
   return url.origin
 }
 
@@ -38,8 +50,11 @@ export function configuredBenefitPresentationOrigin({
   configuredBaseUrl,
   appUrl,
 }: BenefitPresentationOriginOptions): string | undefined {
+  const normalizeConfiguredOrigin = (value: string, source: string) =>
+    normalizeHttpOrigin(value, source, { requireHttps: environment === 'production' })
+
   if (configuredBaseUrl?.trim()) {
-    return normalizeHttpOrigin(configuredBaseUrl, BENEFIT_PRESENTATION_BASE_URL_KEY)
+    return normalizeConfiguredOrigin(configuredBaseUrl, BENEFIT_PRESENTATION_BASE_URL_KEY)
   }
 
   if (environment !== 'production') return undefined
@@ -50,7 +65,7 @@ export function configuredBenefitPresentationOrigin({
     )
   }
 
-  return normalizeHttpOrigin(appUrl, APP_URL_KEY)
+  return normalizeConfiguredOrigin(appUrl, APP_URL_KEY)
 }
 
 export function assertBenefitPresentationOriginConfiguration(
