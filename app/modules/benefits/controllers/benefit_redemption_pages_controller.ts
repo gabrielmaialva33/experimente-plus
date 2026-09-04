@@ -76,13 +76,11 @@ export default class BenefitRedemptionPagesController {
   async partnerHistory({ auth, inertia, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
-    const [history, allowedActions] = await Promise.all([
-      this.redemptionService.partnerHistory(tenant!.id, actor),
-      this.resourceAuthorization.forActor(tenant!.id, actor),
-    ])
+    const authorization = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
+    const history = await this.redemptionService.partnerHistory(tenant!.id, actor, authorization)
     return inertia.render('portal/redemptions/index', {
       history,
-      allowed_actions: allowedActions,
+      allowed_actions: authorization.allowed_actions,
     })
   }
 

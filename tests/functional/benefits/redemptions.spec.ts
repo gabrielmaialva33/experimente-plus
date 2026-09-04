@@ -269,6 +269,47 @@ test.group('Benefit redemptions', (group) => {
       fixture.admin
     )
     assert.equal(platformPreview.benefit.organization_id, fixture.scenario.organization.id)
+    const platformRoot = await createUser({
+      prefix: 'redemption-platform-root',
+      tenant: fixture.scenario.tenant,
+      globalRole: IRole.Slugs.ROOT,
+    })
+    const platformRootPreview = await service.preview(
+      fixture.scenario.tenant.id,
+      presentation.token,
+      platformRoot
+    )
+    assert.equal(platformRootPreview.benefit.organization_id, fixture.scenario.organization.id)
+
+    const organizationAdmin = await createUser({
+      prefix: 'redemption-organization-admin',
+      tenant: fixture.scenario.tenant,
+    })
+    const editor = await createUser({
+      prefix: 'redemption-editor',
+      tenant: fixture.scenario.tenant,
+    })
+    await addOrganizationMember({
+      tenant: fixture.scenario.tenant,
+      organization: fixture.scenario.organization,
+      user: organizationAdmin,
+      role: 'admin',
+    })
+    await addOrganizationMember({
+      tenant: fixture.scenario.tenant,
+      organization: fixture.scenario.organization,
+      user: editor,
+      role: 'editor',
+    })
+
+    for (const actor of [organizationAdmin, editor]) {
+      const authorizedPreview = await service.preview(
+        fixture.scenario.tenant.id,
+        presentation.token,
+        actor
+      )
+      assert.equal(authorizedPreview.benefit.organization_id, fixture.scenario.organization.id)
+    }
 
     const analyst = await createUser({
       prefix: 'redemption-analyst',
@@ -284,6 +325,16 @@ test.group('Benefit redemptions', (group) => {
       service.preview(fixture.scenario.tenant.id, presentation.token, analyst)
     )
     assert.exists(analystAttempt)
+
+    const moderator = await createUser({
+      prefix: 'redemption-platform-moderator',
+      tenant: fixture.scenario.tenant,
+      globalRole: IRole.Slugs.MODERATOR,
+    })
+    const moderatorAttempt = await captureFailure(() =>
+      service.preview(fixture.scenario.tenant.id, presentation.token, moderator)
+    )
+    assert.exists(moderatorAttempt)
 
     const outsiderAttempt = await captureFailure(() =>
       service.preview(fixture.scenario.tenant.id, presentation.token, fixture.outsider)
@@ -386,33 +437,92 @@ test.group('Benefit redemptions', (group) => {
     assert.equal(holderHistory.redemptions[0].receipt_code, receipt.receipt_code)
     assert.equal(holderHistory.redemptions[0].offer.terms, originalTerms)
 
-    const partnerHistory = await service.partnerHistory(
-      fixture.scenario.tenant.id,
-      fixture.scenario.owner
-    )
-    assert.equal(partnerHistory.total, 1)
-
+    const organizationAdmin = await createUser({
+      prefix: 'redemption-history-organization-admin',
+      tenant: fixture.scenario.tenant,
+    })
+    const editor = await createUser({
+      prefix: 'redemption-history-editor',
+      tenant: fixture.scenario.tenant,
+    })
     const analyst = await createUser({
       prefix: 'redemption-history-analyst',
       tenant: fixture.scenario.tenant,
     })
-    await addOrganizationMember({
+    const members = [
+      { actor: fixture.scenario.owner, role: 'owner' as const },
+      { actor: organizationAdmin, role: 'admin' as const },
+      { actor: editor, role: 'editor' as const },
+      { actor: analyst, role: 'analyst' as const },
+    ]
+
+    for (const member of members.slice(1)) {
+      await addOrganizationMember({
+        tenant: fixture.scenario.tenant,
+        organization: fixture.scenario.organization,
+        user: member.actor,
+        role: member.role,
+      })
+    }
+
+    for (const { actor } of members) {
+      const history = await service.partnerHistory(fixture.scenario.tenant.id, actor)
+      assert.equal(history.total, 1)
+      const organizationReceipt = await service.partnerReceipt(
+        fixture.scenario.tenant.id,
+        receipt.receipt_code,
+        actor
+      )
+      assert.equal(organizationReceipt.receipt_code, receipt.receipt_code)
+    }
+
+    const platformRoot = await createUser({
+      prefix: 'redemption-history-platform-root',
       tenant: fixture.scenario.tenant,
-      organization: fixture.scenario.organization,
-      user: analyst,
-      role: 'analyst',
+      globalRole: IRole.Slugs.ROOT,
     })
-    const analystHistory = await service.partnerHistory(fixture.scenario.tenant.id, analyst)
-    assert.equal(analystHistory.total, 1)
+    for (const actor of [fixture.admin, platformRoot]) {
+      const platformHistory = await service.partnerHistory(fixture.scenario.tenant.id, actor)
+      assert.equal(platformHistory.total, 1)
+      const platformReceipt = await service.partnerReceipt(
+        fixture.scenario.tenant.id,
+        receipt.receipt_code,
+        actor
+      )
+      assert.equal(platformReceipt.receipt_code, receipt.receipt_code)
+    }
 
-    const platformHistory = await service.partnerHistory(fixture.scenario.tenant.id, fixture.admin)
-    assert.equal(platformHistory.total, 1)
+    const moderator = await createUser({
+      prefix: 'redemption-history-platform-moderator',
+      tenant: fixture.scenario.tenant,
+      globalRole: IRole.Slugs.MODERATOR,
+    })
+    for (const actor of [fixture.outsider, moderator]) {
+      assert.exists(
+        await captureFailure(() => service.partnerHistory(fixture.scenario.tenant.id, actor))
+      )
+      assert.exists(
+        await captureFailure(() =>
+          service.partnerReceipt(fixture.scenario.tenant.id, receipt.receipt_code, actor)
+        )
+      )
+    }
 
-    const outsiderHistory = await service.partnerHistory(
-      fixture.scenario.tenant.id,
-      fixture.outsider
+    const foreignFixture = await createFixture('history-cross-tenant')
+    assert.exists(
+      await captureFailure(() =>
+        service.partnerHistory(fixture.scenario.tenant.id, foreignFixture.scenario.owner)
+      )
     )
-    assert.equal(outsiderHistory.total, 0)
+    assert.exists(
+      await captureFailure(() =>
+        service.partnerReceipt(
+          foreignFixture.scenario.tenant.id,
+          receipt.receipt_code,
+          foreignFixture.scenario.owner
+        )
+      )
+    )
 
     const foreignReceipt = await captureFailure(() =>
       service.holderReceipt(fixture.scenario.tenant.id, receipt.receipt_code, fixture.outsider)

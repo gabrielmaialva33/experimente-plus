@@ -6,6 +6,7 @@ import { DateTime } from 'luxon'
 import QRCode from 'qrcode'
 
 import BadRequestException from '#exceptions/bad_request_exception'
+import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IBenefitAccess from '#modules/benefits/interfaces/benefit_access_interface'
 import type IBenefitRedemption from '#modules/benefits/interfaces/benefit_redemption_interface'
@@ -19,8 +20,10 @@ import BenefitPresentationTokenService from '#modules/benefits/services/benefit_
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import City from '#modules/geography/models/city'
-import OrganizationMember from '#modules/organizations/models/organization_member'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
+import OrganizationResourceAuthorizationService, {
+  type OrganizationActorAuthorizationContext,
+} from '#modules/organizations/services/organization_resource_authorization_service'
 import type User from '#modules/users/models/user'
 import UserModel from '#modules/users/models/user'
 
@@ -40,6 +43,7 @@ export default class BenefitRedemptionService {
     private repository: BenefitRedemptionRepository,
     private tokenService: BenefitPresentationTokenService,
     private organizationPolicy: OrganizationPolicyService,
+    private resourceAuthorization: OrganizationResourceAuthorizationService,
     private audit: BenefitAuditService
   ) {}
 
@@ -150,7 +154,7 @@ export default class BenefitRedemptionService {
     this.assertTenantClaim(tenantId, claims)
     const context = await this.resolveContext(tenantId, claims.access_id, claims.offer_id)
     this.assertClaims(context, claims)
-    await this.organizationPolicy.authorizeManageEstablishments(
+    await this.organizationPolicy.authorizeValidateRedemptions(
       actor,
       tenantId,
       context.establishment.organization_id
@@ -195,7 +199,7 @@ export default class BenefitRedemptionService {
         true
       )
       this.assertClaims(context, claims)
-      await this.organizationPolicy.authorizeManageEstablishments(
+      await this.organizationPolicy.authorizeValidateRedemptions(
         actor,
         tenantId,
         context.establishment.organization_id,
@@ -277,9 +281,12 @@ export default class BenefitRedemptionService {
 
   async partnerHistory(
     tenantId: number,
-    actor: User
+    actor: User,
+    authorizationContext?: OrganizationActorAuthorizationContext
   ): Promise<IBenefitRedemption.HistoryProjection> {
-    if (await this.organizationPolicy.isPlatformAdmin(actor)) {
+    const authorization =
+      authorizationContext ?? (await this.resourceAuthorization.forActorContext(tenantId, actor))
+    if (authorization.access_snapshot.platform_access === 'platform_admin') {
       const redemptions = await this.repository.listForTenant(tenantId)
       return {
         redemptions: redemptions.map((redemption) => this.toReceipt(redemption)),
@@ -287,12 +294,13 @@ export default class BenefitRedemptionService {
       }
     }
 
-    const memberships = await OrganizationMember.query()
-      .where('tenant_id', tenantId)
-      .where('user_id', actor.id)
-      .where('status', 'active')
-      .select('organization_id')
-    const organizationIds = memberships.map((membership) => membership.organization_id)
+    const organizationIds = authorization.access_snapshot.organization_accesses
+      .filter((access) => access.capabilities.read_redemptions)
+      .map((access) => access.organization_id)
+    if (organizationIds.length === 0) {
+      throw new ForbiddenException('An active organization membership is required')
+    }
+
     const redemptions = await this.repository.listForOrganizations(tenantId, organizationIds)
 
     return {
@@ -319,7 +327,11 @@ export default class BenefitRedemptionService {
     actor: User
   ): Promise<IBenefitRedemption.ReceiptProjection> {
     const redemption = await this.getByReceiptOrFail(tenantId, receiptCode)
-    await this.organizationPolicy.authorizeRead(actor, tenantId, redemption.organization_id)
+    await this.organizationPolicy.authorizeReadRedemptions(
+      actor,
+      tenantId,
+      redemption.organization_id
+    )
     return this.toReceipt(redemption)
   }
 
