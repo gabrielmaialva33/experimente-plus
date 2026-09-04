@@ -152,8 +152,8 @@ Métricas de organização exigem:
 - autenticação;
 - tenant ativo;
 - permission `analytics.read`;
-- membership ativa na organização;
-- papel `owner`, `admin` ou `analyst`.
+- membership ativa na organização com papel `owner`, `admin` ou `analyst`; ou
+- papel global Root ou Administrador da plataforma na operação ativa.
 
 `editor` não recebe métricas por padrão. Administradores e Root podem consultar buscas sem resultado da operação. Moderador não recebe analytics global automaticamente.
 

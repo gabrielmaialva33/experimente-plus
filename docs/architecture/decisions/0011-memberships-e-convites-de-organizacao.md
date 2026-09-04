@@ -60,7 +60,7 @@ removed
 | Convidar editor/analyst        |   sim |                   sim |              não |     não |
 | Alterar papel de owner/admin   |   sim |                   não |              não |     não |
 | Remover membros                |   sim | apenas editor/analyst |              não |     não |
-| Ver analytics                  |   sim |                   sim |              sim |     sim |
+| Ver analytics                  |   sim |                   sim |   não (ADR-0017) |     sim |
 
 Policies de domínio, e não apenas permissions globais, aplicam essa matriz.
 

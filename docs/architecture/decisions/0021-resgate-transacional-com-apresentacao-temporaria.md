@@ -70,6 +70,24 @@ Consumidor e parceiro recebem projeções do mesmo registro. O consumidor acessa
 
 Os termos essenciais são copiados para o resgate para que alterações futuras da oferta não modifiquem o comprovante emitido.
 
+### Autorização de utilização
+
+Permissions globais continuam sendo a primeira barreira das rotas, mas não substituem a policy da organização. Para histórico, comprovante e validação, a matriz de domínio é:
+
+| Acesso do ator                               |      Histórico da organização |    Comprovante da organização | Visualizar e confirmar utilização |
+| -------------------------------------------- | ----------------------------: | ----------------------------: | --------------------------------: |
+| Membership `owner` ativa                     |                           sim |                           sim |                               sim |
+| Membership `admin` ativa                     |                           sim |                           sim |                               sim |
+| Membership `editor` ativa                    |                           sim |                           sim |                               sim |
+| Membership `analyst` ativa                   |                           sim |                           sim |                               não |
+| Root ou Administrador da plataforma          | sim, em toda a operação ativa | sim, em toda a operação ativa |                               sim |
+| Moderador da plataforma sem membership ativa |                           não |                           não |                               não |
+| Usuário sem membership ativa                 |                           não |                           não |                               não |
+
+Um Moderador que também possui membership ativa recebe somente as capacidades dessa membership naquela organização. Toda consulta continua restrita ao `tenant_id` da operação ativa; uma membership em outra operação não concede leitura.
+
+Páginas que combinam histórico e ações reutilizam um único snapshot de autorização do request. Assim, o conjunto de organizações consultado e os `allowed_actions` exibidos vêm da mesma decisão, sem reler memberships ou ampliar acesso no frontend.
+
 ## Consequências
 
 ### Positivas
@@ -108,5 +126,9 @@ Os termos essenciais são copiados para o resgate para que alterações futuras 
 - horário, status e limite são reavaliados no momento da confirmação;
 - consumidor acessa somente seus comprovantes;
 - parceiro acessa somente histórico das próprias unidades;
+- owner, admin, editor e analyst com membership ativa leem histórico e comprovante da organização;
+- analyst não visualiza nem confirma utilização;
+- Root e Administrador da plataforma acessam histórico e validação sem membership local;
+- Moderador sem membership e usuário de outra operação não acessam histórico nem comprovante;
 - carteira deixa de apresentar benefício esgotado;
 - migration sobe e reverte em banco limpo.
