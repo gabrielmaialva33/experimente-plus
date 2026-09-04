@@ -2,6 +2,8 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import { adminThrottle } from '#start/limiter'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
+import IRole from '#modules/roles/interfaces/role_interface'
+import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const PermissionsController = () =>
   import('#modules/permissions/controllers/permissions_controller')
@@ -67,6 +69,7 @@ router
 
     router
       .get('/users/:id/permissions', [PermissionsController, 'getUserPermissions'])
+      .where('id', router.matchers.number())
       .as('permission.userPermissions')
       .use(
         middleware.permission({
@@ -76,6 +79,7 @@ router
 
     router
       .post('/users/:id/permissions/check', [PermissionsController, 'checkUserPermissions'])
+      .where('id', router.matchers.number())
       .as('permission.checkUser')
       .use(
         middleware.permission({
@@ -83,5 +87,12 @@ router
         })
       )
   })
-  .use([middleware.auth(), adminThrottle])
+  .use([
+    middleware.auth(),
+    privateResponseHeadersMiddleware,
+    adminThrottle,
+    middleware.acl({
+      role_slugs: [IRole.Slugs.ROOT, IRole.Slugs.ADMIN],
+    }),
+  ])
   .prefix('/api/v1/admin')

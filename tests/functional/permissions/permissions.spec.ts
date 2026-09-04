@@ -133,7 +133,7 @@ test.group('Permissions', (group) => {
     const response = await client
       .get('/api/v1/admin/permissions')
       .bearerToken(token)
-      .qs({ page: 1, perPage: 3 })
+      .qs({ page: 1, per_page: 3 })
 
     response.assertStatus(200)
     assert.equal(response.body().meta.per_page, 3)
@@ -176,11 +176,11 @@ test.group('Permissions', (group) => {
 
     // Create test role and permissions
     const testRole = await Role.firstOrCreate(
-      { slug: IRole.Slugs.EDITOR },
+      { slug: IRole.Slugs.MODERATOR },
       {
-        name: 'Editor',
-        slug: IRole.Slugs.EDITOR,
-        description: 'Test editor role',
+        name: 'Moderator',
+        slug: IRole.Slugs.MODERATOR,
+        description: 'Test moderator role',
       }
     )
 
@@ -242,11 +242,11 @@ test.group('Permissions', (group) => {
     })
 
     const userRole = await Role.firstOrCreate(
-      { slug: IRole.Slugs.USER },
+      { slug: IRole.Slugs.ADMIN },
       {
-        name: 'User',
-        slug: IRole.Slugs.USER,
-        description: 'Regular user',
+        name: 'Admin',
+        slug: IRole.Slugs.ADMIN,
+        description: 'Platform administrator',
       }
     )
 
@@ -330,7 +330,7 @@ test.group('Permissions', (group) => {
     })
   })
 
-  test('permission middleware should block unauthorized access', async ({ client }) => {
+  test('admin ACL should block regular users', async ({ client }) => {
     // Clear Redis cache to ensure test isolation
     const redis = await import('@adonisjs/redis/services/main')
     await redis.default.flushdb()
@@ -369,7 +369,7 @@ test.group('Permissions', (group) => {
 
     response.assertStatus(403)
     response.assertBodyContains({
-      message: 'Insufficient permissions. Required: permissions.list',
+      message: 'Permission denied',
     })
   })
 })

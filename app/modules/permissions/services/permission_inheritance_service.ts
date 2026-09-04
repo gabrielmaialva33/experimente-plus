@@ -66,29 +66,13 @@ export default class PermissionInheritanceService {
   getParentRoles(roleSlug: string): string[] {
     const parents: string[] = []
 
-    Object.entries(IRole.ROLE_HIERARCHY).forEach(([parent, children]) => {
-      if (children.includes(roleSlug)) {
+    Object.keys(IRole.ROLE_HIERARCHY).forEach((parent) => {
+      if (IRole.dominates(parent, roleSlug)) {
         parents.push(parent)
       }
     })
 
     return parents
-  }
-
-  /**
-   * Sync inherited permissions for a role
-   * This method ensures role hierarchy is maintained
-   */
-  async syncInheritedPermissions(roleSlug: string): Promise<void> {
-    const role = await this.rolesRepository.findBySlug(roleSlug)
-    if (!role) {
-      return
-    }
-
-    const effectivePermissions = await this.getEffectivePermissions(roleSlug)
-    const permissionIds = effectivePermissions.map((p) => p.id)
-
-    await this.rolesRepository.syncPermissions(role, permissionIds)
   }
 
   /**
@@ -111,7 +95,11 @@ export default class PermissionInheritanceService {
    * Get all child roles for a given role
    */
   private getChildRoles(roleSlug: string): string[] {
-    return IRole.ROLE_HIERARCHY[roleSlug] || []
+    if (!IRole.isCanonicalSlug(roleSlug)) {
+      return []
+    }
+
+    return [...IRole.ROLE_HIERARCHY[roleSlug]]
   }
 
   /**

@@ -110,6 +110,7 @@ namespace IPermission {
   }
 
   export interface PermissionData {
+    /** @deprecated The runtime derives this projection from resource/action/context. */
     name?: string
     description?: string
     resource: string

@@ -2,7 +2,10 @@ import type { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 
 import {
+  checkUserPermissionsValidator,
   createPermissionValidator,
+  listPermissionsValidator,
+  permissionUserIdParamValidator,
   syncRolePermissionsValidator,
   syncUserPermissionsValidator,
 } from '#modules/permissions/validators/permission_validators'
@@ -18,7 +21,12 @@ export default class PermissionsController {
    * List all permissions with pagination
    */
   async list({ request }: HttpContext) {
-    const { page = 1, perPage = 10, resource, action } = request.qs()
+    const {
+      page = 1,
+      per_page: perPage = 10,
+      resource,
+      action,
+    } = await request.validateUsing(listPermissionsValidator, { data: request.qs() })
 
     const service = await app.container.make(ListPermissionsService)
     return await service.handle(page, perPage, resource, action)
@@ -27,11 +35,11 @@ export default class PermissionsController {
   /**
    * Create a new permission
    */
-  async create({ request, response }: HttpContext) {
-    const data = await request.validateUsing(createPermissionValidator)
+  async create({ auth, request, response }: HttpContext) {
+    const data = await request.validateUsing(createPermissionValidator, { data: request.body() })
 
     const service = await app.container.make(CreatePermissionService)
-    const permission = await service.handle(data)
+    const permission = await service.handle({ actorUserId: auth.getUserOrFail().id, data })
 
     return response.status(201).json(permission)
   }
@@ -39,13 +47,18 @@ export default class PermissionsController {
   /**
    * Sync permissions for a role
    */
-  async syncRolePermissions({ request, response }: HttpContext) {
+  async syncRolePermissions({ auth, request, response }: HttpContext) {
     const { role_id: roleId, permission_ids: permissionIds } = await request.validateUsing(
-      syncRolePermissionsValidator
+      syncRolePermissionsValidator,
+      { data: request.body() }
     )
 
     const service = await app.container.make(SyncRolePermissionsService)
-    await service.handle(roleId, permissionIds)
+    await service.handle({
+      actorUserId: auth.getUserOrFail().id,
+      roleId,
+      permissionIds,
+    })
 
     return response.json({ message: 'Permissions synced successfully' })
   }
@@ -53,13 +66,18 @@ export default class PermissionsController {
   /**
    * Attach permissions to a role (without removing existing ones)
    */
-  async attachRolePermissions({ request, response }: HttpContext) {
+  async attachRolePermissions({ auth, request, response }: HttpContext) {
     const { role_id: roleId, permission_ids: permissionIds } = await request.validateUsing(
-      syncRolePermissionsValidator
+      syncRolePermissionsValidator,
+      { data: request.body() }
     )
 
     const service = await app.container.make(SyncRolePermissionsService)
-    await service.attachPermissions(roleId, permissionIds)
+    await service.attachPermissions({
+      actorUserId: auth.getUserOrFail().id,
+      roleId,
+      permissionIds,
+    })
 
     return response.json({ message: 'Permissions attached successfully' })
   }
@@ -67,13 +85,18 @@ export default class PermissionsController {
   /**
    * Detach permissions from a role
    */
-  async detachRolePermissions({ request, response }: HttpContext) {
+  async detachRolePermissions({ auth, request, response }: HttpContext) {
     const { role_id: roleId, permission_ids: permissionIds } = await request.validateUsing(
-      syncRolePermissionsValidator
+      syncRolePermissionsValidator,
+      { data: request.body() }
     )
 
     const service = await app.container.make(SyncRolePermissionsService)
-    await service.detachPermissions(roleId, permissionIds)
+    await service.detachPermissions({
+      actorUserId: auth.getUserOrFail().id,
+      roleId,
+      permissionIds,
+    })
 
     return response.json({ message: 'Permissions detached successfully' })
   }
@@ -81,11 +104,17 @@ export default class PermissionsController {
   /**
    * Sync permissions for a user
    */
-  async syncUserPermissions({ request, response }: HttpContext) {
-    const data = await request.validateUsing(syncUserPermissionsValidator)
+  async syncUserPermissions({ auth, request, response }: HttpContext) {
+    const data = await request.validateUsing(syncUserPermissionsValidator, {
+      data: request.body(),
+    })
 
     const service = await app.container.make(SyncUserPermissionsService)
-    await service.handle(data.user_id, data.permissions)
+    await service.handle({
+      actorUserId: auth.getUserOrFail().id,
+      userId: data.user_id,
+      permissions: data.permissions,
+    })
 
     return response.json({ message: 'User permissions synced successfully' })
   }
@@ -93,8 +122,10 @@ export default class PermissionsController {
   /**
    * Get user permissions
    */
-  async getUserPermissions({ params }: HttpContext) {
-    const userId = params.id
+  async getUserPermissions({ request, params }: HttpContext) {
+    const { id: userId } = await request.validateUsing(permissionUserIdParamValidator, {
+      data: params,
+    })
 
     const service = await app.container.make(CheckUserPermissionService)
     const permissions = await service.getUserPermissions(userId)
@@ -106,11 +137,13 @@ export default class PermissionsController {
    * Check if user has specific permissions
    */
   async checkUserPermissions({ request, params }: HttpContext) {
-    const userId = params.id
-    const { permissions, require_all: requireAll = false } = request.only([
-      'permissions',
-      'require_all',
-    ])
+    const { id: userId } = await request.validateUsing(permissionUserIdParamValidator, {
+      data: params,
+    })
+    const { permissions, require_all: requireAll = false } = await request.validateUsing(
+      checkUserPermissionsValidator,
+      { data: request.body() }
+    )
 
     const service = await app.container.make(CheckUserPermissionService)
     const hasPermission = await service.handle(userId, permissions, requireAll)

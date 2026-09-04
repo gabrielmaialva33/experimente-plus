@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto'
+
 import { inject } from '@adonisjs/core'
+import logger from '@adonisjs/core/services/logger'
 
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import PermissionInheritanceService from '#modules/permissions/services/permission_inheritance_service'
@@ -8,6 +11,28 @@ import UsersRepository from '#modules/users/repositories/users_repository'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import OwnershipService from '#shared/services/ownership_service'
+
+const CACHE_EPOCH_RETRY_LIMIT = 3
+const DEFAULT_COORDINATION_TIMINGS = {
+  redisOperation: 750,
+  databaseLoad: 2_500,
+  ownerBuild: 4_500,
+  lockLease: 5_000,
+  lockWait: 5_500,
+  totalBuild: 10_500,
+  poll: 50,
+} as const
+const inFlightPermissionBuilds = new Map<number, Promise<Permission[]>>()
+
+export type PermissionCoordinationTimings = {
+  redisOperation: number
+  databaseLoad: number
+  ownerBuild: number
+  lockLease: number
+  lockWait: number
+  totalBuild: number
+  poll: number
+}
 
 @inject()
 export default class PermissionService {
@@ -29,15 +54,24 @@ export default class PermissionService {
       context,
       resource_id: resourceId,
     } = data
+    const userPermissions = await this.getEffectivePermissions(userId)
 
     // Handle single permission
     if (typeof permission === 'string') {
-      return await this.checkSinglePermission(userId, permission, context, resourceId)
+      return await this.checkSinglePermission(
+        userId,
+        userPermissions,
+        permission,
+        context,
+        resourceId
+      )
     }
 
     // Handle multiple permissions
     const results = await Promise.all(
-      permission.map((p) => this.checkSinglePermission(userId, p, context, resourceId))
+      permission.map((item) =>
+        this.checkSinglePermission(userId, userPermissions, item, context, resourceId)
+      )
     )
 
     return requireAll ? results.every(Boolean) : results.some(Boolean)
@@ -54,10 +88,23 @@ export default class PermissionService {
       resourceId?: number
     }>
   ): Promise<Array<{ userId: number; permission: string; granted: boolean }>> {
+    const permissionsByUser = new Map<number, Permission[]>()
+    await Promise.all(
+      [...new Set(checks.map((check) => check.userId))].map(async (userId) => {
+        permissionsByUser.set(userId, await this.getEffectivePermissions(userId))
+      })
+    )
+
     const results = await Promise.all(
       checks.map(async (check) => {
+        const userPermissions = permissionsByUser.get(check.userId)
+        if (!userPermissions) {
+          throw new Error('Effective permission snapshot is missing for batch user')
+        }
+
         const granted = await this.checkSinglePermission(
           check.userId,
+          userPermissions,
           check.permission,
           check.context,
           check.resourceId
@@ -78,7 +125,7 @@ export default class PermissionService {
    * Pre-warm cache for multiple users
    */
   async preWarmCache(userIds: number[]): Promise<void> {
-    await Promise.all(userIds.map((userId) => this.cacheService.warmUpUserCache(userId)))
+    await Promise.all(userIds.map((userId) => this.getEffectivePermissions(userId)))
   }
 
   /**
@@ -86,14 +133,203 @@ export default class PermissionService {
    * The same cached path is shared by middleware and Inertia UI capabilities.
    */
   async getEffectivePermissions(userId: number): Promise<Permission[]> {
-    const cachedPermissions = await this.cacheService.getCachedUserPermissions(userId)
-    if (cachedPermissions) {
-      return cachedPermissions
+    const timings = this.coordinationTimings()
+    const snapshot = await this.withDeadline(
+      () => this.cacheService.getUserPermissionsSnapshot(userId),
+      timings.redisOperation,
+      'Timed out reading the ACL permission cache'
+    )
+    if (snapshot.permissions) {
+      return snapshot.permissions
     }
 
-    const permissions = await this.loadUserPermissionsOptimized(userId)
-    await this.cacheService.cacheUserPermissions(userId, permissions)
-    return permissions
+    const existingBuild = inFlightPermissionBuilds.get(userId)
+    if (existingBuild) {
+      await existingBuild
+
+      // A local build may have published immediately before an ACL epoch bump.
+      // Re-read the current generation instead of returning its now-stale value
+      // to a caller that already observed a miss in the newer generation.
+      const completedSnapshot = await this.withDeadline(
+        () => this.cacheService.getUserPermissionsSnapshot(userId),
+        timings.redisOperation,
+        'Timed out validating the completed ACL permission cache build'
+      )
+      if (completedSnapshot.permissions) {
+        return completedSnapshot.permissions
+      }
+
+      if (inFlightPermissionBuilds.get(userId) === existingBuild) {
+        inFlightPermissionBuilds.delete(userId)
+      }
+      return this.getEffectivePermissions(userId)
+    }
+
+    const build = this.withDeadline(
+      () => this.buildUserPermissionsWithDistributedLock(userId),
+      timings.totalBuild,
+      'Timed out building the ACL permission cache'
+    )
+    inFlightPermissionBuilds.set(userId, build)
+
+    try {
+      return await build
+    } finally {
+      if (inFlightPermissionBuilds.get(userId) === build) {
+        inFlightPermissionBuilds.delete(userId)
+      }
+    }
+  }
+
+  private async buildUserPermissionsWithDistributedLock(userId: number): Promise<Permission[]> {
+    const timings = this.coordinationTimings()
+    const deadline = this.currentTimeMilliseconds() + timings.lockWait
+
+    while (true) {
+      const token = randomUUID()
+      const acquired = await this.withDeadline(
+        () => this.cacheService.tryAcquireUserPermissionBuildLock(userId, token, timings.lockLease),
+        timings.redisOperation,
+        'Timed out acquiring the ACL permission cache build lock'
+      )
+
+      if (acquired) {
+        try {
+          return await this.withDeadline(
+            () => this.loadAndPublishUserPermissions(userId),
+            timings.ownerBuild,
+            'Timed out loading the ACL permission snapshot'
+          )
+        } finally {
+          await this.releaseBuildLockSafely(userId, token)
+        }
+      }
+
+      const snapshot = await this.withDeadline(
+        () => this.cacheService.getUserPermissionsSnapshot(userId),
+        timings.redisOperation,
+        'Timed out reading the ACL permission cache while waiting for its build lock'
+      )
+      if (snapshot.permissions) {
+        return snapshot.permissions
+      }
+
+      const remaining = deadline - this.currentTimeMilliseconds()
+      if (remaining <= 0) {
+        throw new Error('Timed out waiting for the ACL permission cache build lock')
+      }
+
+      await this.waitForBuildRetry(Math.min(timings.poll, remaining))
+    }
+  }
+
+  private async releaseBuildLockSafely(userId: number, token: string): Promise<void> {
+    const timings = this.coordinationTimings()
+    try {
+      await this.withDeadline(
+        () => this.cacheService.releaseUserPermissionBuildLock(userId, token),
+        timings.redisOperation,
+        'Timed out releasing the ACL permission cache build lock'
+      )
+    } catch (error) {
+      // Release is ownership-checked and the lease has a TTL. Once the CAS has
+      // succeeded, a cleanup failure cannot make the permission result stale.
+      logger.warn({ err: error, user_id: userId }, 'ACL permission build lock release failed')
+    }
+  }
+
+  private async loadAndPublishUserPermissions(userId: number): Promise<Permission[]> {
+    for (let attempt = 0; attempt < CACHE_EPOCH_RETRY_LIMIT; attempt++) {
+      const timings = this.coordinationTimings()
+      const snapshot = await this.withDeadline(
+        () => this.cacheService.getUserPermissionsSnapshot(userId),
+        timings.redisOperation,
+        'Timed out reading the ACL permission cache during its build'
+      )
+      if (snapshot.permissions) {
+        return snapshot.permissions
+      }
+
+      const permissions = await this.withDeadline(
+        () => this.loadUserPermissionsOptimized(userId),
+        timings.databaseLoad,
+        'Timed out loading effective permissions from the database'
+      )
+      const published = await this.withDeadline(
+        () =>
+          this.cacheService.cacheUserPermissionsIfEpochUnchanged(
+            userId,
+            snapshot.epoch,
+            permissions
+          ),
+        timings.redisOperation,
+        'Timed out publishing the ACL permission cache'
+      )
+
+      if (published) {
+        return permissions
+      }
+    }
+
+    // Repeated ACL changes can keep invalidating the database snapshot. Never
+    // authorize with a result that Redis refused to publish for the current epoch.
+    throw new Error('ACL cache epoch changed too frequently while resolving permissions')
+  }
+
+  protected currentTimeMilliseconds(): number {
+    return Date.now()
+  }
+
+  protected coordinationTimings(): PermissionCoordinationTimings {
+    return DEFAULT_COORDINATION_TIMINGS
+  }
+
+  protected async waitForBuildRetry(delayMilliseconds: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMilliseconds)
+    })
+  }
+
+  private withDeadline<T>(
+    operation: () => Promise<T>,
+    timeoutMilliseconds: number,
+    timeoutMessage: string
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      let settled = false
+      const timeout = setTimeout(() => {
+        settled = true
+        reject(new Error(timeoutMessage))
+      }, timeoutMilliseconds)
+
+      let operationPromise: Promise<T>
+      try {
+        operationPromise = operation()
+      } catch (error) {
+        clearTimeout(timeout)
+        reject(error)
+        return
+      }
+
+      void operationPromise.then(
+        (value) => {
+          if (settled) {
+            return
+          }
+          settled = true
+          clearTimeout(timeout)
+          resolve(value)
+        },
+        (error: unknown) => {
+          if (settled) {
+            return
+          }
+          settled = true
+          clearTimeout(timeout)
+          reject(error)
+        }
+      )
+    })
   }
 
   async getEffectivePermissionNames(userId: number): Promise<string[]> {
@@ -155,6 +391,7 @@ export default class PermissionService {
    */
   private async checkSinglePermission(
     userId: number,
+    userPermissions: Permission[],
     permission: string,
     context?: string,
     resourceId?: number
@@ -165,7 +402,6 @@ export default class PermissionService {
     const action = parts[1]
     const permissionContext = parts[2] || context || 'any'
 
-    const userPermissions = await this.getEffectivePermissions(userId)
     const hasPermission = this.checkPermissionInList(
       userPermissions,
       resource,

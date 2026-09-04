@@ -13,6 +13,8 @@ interface PermissionOptions {
   resourceIdParam?: string
 }
 
+const POSTGRES_INTEGER_MAX = 2_147_483_647
+
 export default class PermissionMiddleware {
   async handle(ctx: HttpContext, next: NextFn, options: PermissionOptions) {
     const { auth, i18n, params } = ctx
@@ -26,7 +28,10 @@ export default class PermissionMiddleware {
     // Get resource ID if specified
     let resourceId: number | undefined
     if (options.resourceIdParam) {
-      resourceId = Number.parseInt(params[options.resourceIdParam])
+      const candidate = Number(params[options.resourceIdParam])
+      if (Number.isInteger(candidate) && candidate >= 1 && candidate <= POSTGRES_INTEGER_MAX) {
+        resourceId = candidate
+      }
     }
 
     const hasPermission = await permissionService.checkUserPermission({

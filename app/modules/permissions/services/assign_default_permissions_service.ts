@@ -1,7 +1,9 @@
 import { inject } from '@adonisjs/core'
+import db from '@adonisjs/lucid/services/db'
 import { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import CreateDefaultPermissionsService from '#modules/permissions/services/create_default_permissions_service'
+import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import SyncRolePermissionsService from '#modules/permissions/services/sync_role_permissions_service'
 import RolesRepository from '#modules/roles/repositories/roles_repository'
 import PermissionRepository from '#modules/permissions/repositories/permission_repository'
@@ -14,10 +16,24 @@ export default class AssignDefaultPermissionsService {
     private createDefaultPermissionsService: CreateDefaultPermissionsService,
     private syncRolePermissionsService: SyncRolePermissionsService,
     private rolesRepository: RolesRepository,
-    private permissionRepository: PermissionRepository
+    private permissionRepository: PermissionRepository,
+    private permissionCacheService: PermissionCacheService
   ) {}
 
-  async run(trx?: TransactionClientContract): Promise<void> {
+  async run(): Promise<void> {
+    await this.withTransaction(async (client) => {
+      await this.syncWithinTransaction(client)
+    })
+    await this.permissionCacheService.bumpEpochAfterCommittedMutation()
+  }
+
+  protected async withTransaction<T>(
+    callback: (client: TransactionClientContract) => Promise<T>
+  ): Promise<T> {
+    return db.transaction(callback)
+  }
+
+  private async syncWithinTransaction(trx: TransactionClientContract): Promise<void> {
     // First, create all default permissions
     await this.createDefaultPermissionsService.run(trx)
 
@@ -46,7 +62,7 @@ export default class AssignDefaultPermissionsService {
     const rootRole = await this.rolesRepository.findBy('slug', IRole.Slugs.ROOT, { client: trx })
     if (rootRole) {
       const permissionIds = await this.permissionRepository.findAllIds(trx)
-      await this.syncRolePermissionsService.handle(rootRole.id, permissionIds, trx)
+      await this.syncRolePermissionsService.syncSystemPermissions(rootRole.id, permissionIds, trx)
     }
   }
 
@@ -54,7 +70,7 @@ export default class AssignDefaultPermissionsService {
     const adminRole = await this.rolesRepository.findBy('slug', IRole.Slugs.ADMIN, { client: trx })
     if (adminRole) {
       const permissionIds = await this.permissionRepository.findAdminPermissionIds(trx)
-      await this.syncRolePermissionsService.handle(adminRole.id, permissionIds, trx)
+      await this.syncRolePermissionsService.syncSystemPermissions(adminRole.id, permissionIds, trx)
     }
   }
 
@@ -64,7 +80,11 @@ export default class AssignDefaultPermissionsService {
     })
     if (moderatorRole) {
       const permissionIds = await this.permissionRepository.findModeratorPermissionIds(trx)
-      await this.syncRolePermissionsService.handle(moderatorRole.id, permissionIds, trx)
+      await this.syncRolePermissionsService.syncSystemPermissions(
+        moderatorRole.id,
+        permissionIds,
+        trx
+      )
     }
   }
 
@@ -72,7 +92,7 @@ export default class AssignDefaultPermissionsService {
     const userRole = await this.rolesRepository.findBy('slug', IRole.Slugs.USER, { client: trx })
     if (userRole) {
       const permissionIds = await this.permissionRepository.findUserPermissionIds(trx)
-      await this.syncRolePermissionsService.handle(userRole.id, permissionIds, trx)
+      await this.syncRolePermissionsService.syncSystemPermissions(userRole.id, permissionIds, trx)
     }
   }
 
@@ -80,7 +100,7 @@ export default class AssignDefaultPermissionsService {
     const guestRole = await this.rolesRepository.findBy('slug', IRole.Slugs.GUEST, { client: trx })
     if (guestRole) {
       const permissionIds = await this.permissionRepository.findGuestPermissionIds(trx)
-      await this.syncRolePermissionsService.handle(guestRole.id, permissionIds, trx)
+      await this.syncRolePermissionsService.syncSystemPermissions(guestRole.id, permissionIds, trx)
     }
   }
 }

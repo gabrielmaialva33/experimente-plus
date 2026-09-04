@@ -8,6 +8,7 @@ import {
 } from '@adonisjs/lucid/orm'
 import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 
+import { canonicalPermissionName } from '#modules/permissions/permission_name'
 import User from '#modules/users/models/user'
 import Role from '#modules/roles/models/role'
 
@@ -70,8 +71,11 @@ export default class Permission extends BaseModel {
   @beforeCreate()
   static async generateName(permission: Permission) {
     if (!permission.name) {
-      const context = permission.context || 'any'
-      permission.name = `${permission.resource}.${permission.action}.${context}`
+      permission.name = canonicalPermissionName(
+        permission.resource,
+        permission.action,
+        permission.context
+      )
     }
   }
 
