@@ -67,6 +67,7 @@ test.group('CatalogService', () => {
       q: '  café  ',
       category: 'Categoria-Inexistente',
       open_now: true,
+      attributes: [],
       page: 3,
       per_page: 12,
       sort: 'recent',
@@ -87,6 +88,7 @@ test.group('CatalogService', () => {
       q: 'café',
       category: 'categoria-inexistente',
       open_now: true,
+      attributes: [],
       sort: 'recent',
     })
     assert.deepEqual(result.sponsored_results, [])
@@ -160,6 +162,7 @@ test.group('CatalogService', () => {
     const result = await service.search('piloto.experimente.test', 'cornelio-procopio', {
       q: '',
       open_now: false,
+      attributes: [],
       page: 4,
       per_page: 10,
       sort: 'name',
@@ -246,6 +249,7 @@ test.group('CatalogService', () => {
       q: '',
       category: 'cinemas',
       open_now: false,
+      attributes: [],
       page: 1,
       per_page: 20,
       sort: 'relevance',

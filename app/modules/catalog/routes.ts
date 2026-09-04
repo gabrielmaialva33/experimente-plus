@@ -11,6 +11,9 @@ router
       .get('/cities/:citySlug/categories', [CatalogController, 'categories'])
       .as('catalog.city.categories')
     router
+      .get('/cities/:citySlug/filters', [CatalogController, 'filters'])
+      .as('catalog.city.filters')
+    router
       .get('/cities/:citySlug/establishments', [CatalogController, 'index'])
       .as('catalog.city.establishments')
     router

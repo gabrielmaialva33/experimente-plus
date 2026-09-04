@@ -3057,10 +3057,43 @@ components:
           type: [string, 'null']
           format: uri-reference
 
+    CatalogFilterAttribute:
+      type: object
+      additionalProperties: false
+      required: [key, name, description, establishments_count]
+      properties:
+        key:
+          type: string
+          minLength: 2
+          maxLength: 80
+          pattern: '^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$'
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        establishments_count:
+          type: integer
+          minimum: 1
+
+    CatalogFilters:
+      type: object
+      additionalProperties: false
+      required: [city, category, attributes]
+      properties:
+        city:
+          $ref: '#/components/schemas/CatalogSearchCityContext'
+        category:
+          type: 'null'
+          description: Reserved for a future category-scoped facet projection.
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogFilterAttribute'
+
     CatalogSearchQuery:
       type: object
       additionalProperties: false
-      required: [q, category, open_now, sort]
+      required: [q, category, open_now, attributes, sort]
       properties:
         q:
           type: [string, 'null']
@@ -3071,6 +3104,15 @@ components:
           pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
         open_now:
           type: boolean
+        attributes:
+          type: array
+          description: The applied attribute filter, deduplicated and sorted so an equivalent filter always echoes the same value.
+          maxItems: 12
+          items:
+            type: string
+            minLength: 2
+            maxLength: 80
+            pattern: '^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$'
         sort:
           type: string
           enum: [relevance, name, recent]
@@ -5201,6 +5243,34 @@ paths:
         '404':
           description: Public operation or active city not found
 
+  /api/v1/catalog/cities/{citySlug}/filters:
+    get:
+      operationId: getCatalogFilters
+      summary: List the filter facets available in a city
+      description: |
+        Projects the public boolean attributes actually present in the discoverable
+        catalog of a city, so a client can render a filter without hardcoding the
+        taxonomy. An attribute with no published establishment never appears, and
+        private or non-boolean definitions are never projected.
+      tags: [Catalog]
+      security: []
+      parameters:
+        - name: citySlug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+      responses:
+        '200':
+          description: Filter facets for the city
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogFilters'
+        '404':
+          description: Public operation or active city not found
+
   /api/v1/catalog/cities/{citySlug}/establishments:
     get:
       operationId: searchCatalogEstablishments
@@ -5247,6 +5317,16 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: attributes
+          in: query
+          description: |
+            Public boolean attribute keys, comma separated. Semantics are conjunctive:
+            an establishment must declare every requested attribute as true. Keys come
+            from the city filter facets and are taxonomy identifiers, not public slugs.
+          schema:
+            type: string
+            maxLength: 1024
+            example: accepts_reservations,pet_friendly
         - name: page
           in: query
           schema:

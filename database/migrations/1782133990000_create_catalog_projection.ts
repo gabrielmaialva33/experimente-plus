@@ -49,6 +49,7 @@ export default class extends BaseSchema {
       table.jsonb('categories').notNullable()
       table.specificType('category_ids', 'integer[]').notNullable()
       table.specificType('category_slugs', 'text[]').notNullable()
+      table.specificType('attribute_slugs', 'text[]').notNullable()
       table.jsonb('public_attributes').notNullable()
       table.jsonb('weekly_hours').notNullable()
       table.jsonb('special_days').notNullable()
@@ -244,6 +245,12 @@ export default class extends BaseSchema {
       `)
 
       await db.rawQuery(`
+        CREATE INDEX catalog_establishments_attribute_slugs_index
+        ON catalog_establishments
+        USING GIN (attribute_slugs)
+      `)
+
+      await db.rawQuery(`
         CREATE OR REPLACE FUNCTION catalog_normalize_text(value text)
         RETURNS text
         LANGUAGE sql
@@ -345,6 +352,7 @@ export default class extends BaseSchema {
           active_category_count integer := 0;
           attribute_items jsonb := '[]'::jsonb;
           attribute_search_text text := '';
+          attribute_slugs_value text[] := ARRAY[]::text[];
           weekly_items jsonb := '[]'::jsonb;
           special_items jsonb := '[]'::jsonb;
           media_items jsonb := '[]'::jsonb;
@@ -561,8 +569,15 @@ export default class extends BaseSchema {
                 ' '
               ),
               ''
+            ),
+            coalesce(
+              array_agg(definition.key ORDER BY definition.key ASC) FILTER (
+                WHERE definition.data_type = 'boolean'
+                  AND attribute_value.value_boolean IS TRUE
+              ),
+              ARRAY[]::text[]
             )
-          INTO attribute_items, attribute_search_text
+          INTO attribute_items, attribute_search_text, attribute_slugs_value
           FROM establishment_revision_attribute_values attribute_value
           JOIN category_attribute_definitions definition
             ON definition.id = attribute_value.attribute_definition_id
@@ -754,6 +769,7 @@ export default class extends BaseSchema {
             categories,
             category_ids,
             category_slugs,
+            attribute_slugs,
             public_attributes,
             weekly_hours,
             special_days,
@@ -809,6 +825,7 @@ export default class extends BaseSchema {
             category_items,
             category_ids_value,
             category_slugs_value,
+            attribute_slugs_value,
             attribute_items,
             weekly_items,
             special_items,
@@ -853,6 +870,7 @@ export default class extends BaseSchema {
             categories = EXCLUDED.categories,
             category_ids = EXCLUDED.category_ids,
             category_slugs = EXCLUDED.category_slugs,
+            attribute_slugs = EXCLUDED.attribute_slugs,
             public_attributes = EXCLUDED.public_attributes,
             weekly_hours = EXCLUDED.weekly_hours,
             special_days = EXCLUDED.special_days,

@@ -350,6 +350,55 @@ export default class CatalogSearchRepository {
     return row ? this.normalizeRow(row) : null
   }
 
+  /**
+   * Lists the public boolean attributes actually present in the discoverable
+   * projection of a city, so a client can render a filter without hardcoding
+   * the taxonomy. Attributes with no published establishment never appear.
+   */
+  async listFilterAttributes(
+    tenantId: number,
+    cityId: number
+  ): Promise<ICatalog.FilterAttributeRow[]> {
+    const result = await db.rawQuery<{ rows: ICatalog.FilterAttributeRow[] }>(
+      `
+        WITH used AS (
+          SELECT
+            attribute_key AS key,
+            count(*)::integer AS establishments_count
+          FROM catalog_establishments projection
+          CROSS JOIN LATERAL unnest(projection.attribute_slugs) AS attribute_key
+          WHERE projection.tenant_id = ?
+            AND projection.city_id = ?
+            AND projection.is_discoverable = true
+          GROUP BY attribute_key
+        ),
+        labels AS (
+          SELECT DISTINCT ON (definition.key)
+            definition.key,
+            definition.name,
+            definition.description
+          FROM category_attribute_definitions definition
+          WHERE definition.tenant_id = ?
+            AND definition.is_active = true
+            AND definition.is_public = true
+            AND definition.data_type = 'boolean'
+          ORDER BY definition.key ASC, definition.sort_order ASC, definition.name ASC
+        )
+        SELECT
+          labels.key,
+          labels.name,
+          labels.description,
+          used.establishments_count
+        FROM used
+        JOIN labels ON labels.key = used.key
+        ORDER BY used.establishments_count DESC, labels.name ASC
+      `,
+      [tenantId, cityId, tenantId]
+    )
+
+    return result.rows
+  }
+
   async refresh(tenantId: number, establishmentId: number): Promise<void> {
     await db.rawQuery('SELECT catalog_refresh_establishment(?, ?)', [tenantId, establishmentId])
   }
@@ -380,7 +429,8 @@ export default class CatalogSearchRepository {
           SELECT
             catalog_normalize_text(?) AS query_text,
             ?::text AS category_slug,
-            ?::boolean AS open_now
+            ?::boolean AS open_now,
+            string_to_array(nullif(?::text, ''), ',') AS attribute_slugs
         ),
         requested_category AS (
           SELECT category.id
@@ -504,6 +554,10 @@ export default class CatalogSearchRepository {
                 projection.special_days
               )
             )
+            AND (
+              input.attribute_slugs IS NULL
+              OR projection.attribute_slugs @> input.attribute_slugs
+            )
         ),
         totals AS (
           SELECT count(*)::integer AS total_count
@@ -546,6 +600,7 @@ export default class CatalogSearchRepository {
         options.query.q,
         options.query.category ?? null,
         options.query.open_now,
+        options.query.attributes.join(','),
         options.tenantId,
         options.tenantId,
         options.tenantId,

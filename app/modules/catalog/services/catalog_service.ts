@@ -97,6 +97,7 @@ export default class CatalogService {
       ...query,
       q: query.q.trim(),
       category: query.category ? this.requireSlug(query.category) : undefined,
+      attributes: this.normalizeAttributes(query.attributes),
     }
     // The requested page stays in the cache identity, while the repository
     // canonicalizes the response to the last available page in the same query.
@@ -109,6 +110,7 @@ export default class CatalogService {
       normalizedQuery.q,
       normalizedQuery.category ?? null,
       normalizedQuery.open_now,
+      normalizedQuery.attributes.join(','),
       normalizedQuery.page,
       normalizedQuery.per_page,
       normalizedQuery.sort,
@@ -148,6 +150,7 @@ export default class CatalogService {
             q: normalizedQuery.q || null,
             category: normalizedQuery.category,
             open_now: normalizedQuery.open_now,
+            attributes: normalizedQuery.attributes,
             sort: normalizedQuery.sort,
           },
           sponsored_results: [],
@@ -211,6 +214,7 @@ export default class CatalogService {
           q: normalizedQuery.q || null,
           category: normalizedQuery.category ?? null,
           open_now: normalizedQuery.open_now,
+          attributes: normalizedQuery.attributes,
           sort: normalizedQuery.sort,
         },
         sponsored_results: sponsoredRows.flatMap((row) => {
@@ -307,6 +311,48 @@ export default class CatalogService {
     })
   }
 
+  /**
+   * Sorted and deduplicated so an equivalent filter always produces the same
+   * cache identity, regardless of the order the client sent the attributes in.
+   */
+  private normalizeAttributes(attributes: string[] | undefined): string[] {
+    if (!attributes || attributes.length === 0) {
+      return []
+    }
+
+    const keys = attributes
+      .map((attribute) => attribute.trim())
+      .filter((attribute) => /^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$/.test(attribute))
+
+    return [...new Set(keys)].sort()
+  }
+
+  async filters(hostname: string | null, citySlug: string): Promise<ICatalog.FiltersProjection> {
+    const { tenantId, city } = await this.resolveCity(hostname, citySlug)
+    const projectionVersion = await this.catalogRepository.getProjectionVersion(tenantId)
+    const cacheKey = this.cacheService.key(['filters', tenantId, projectionVersion, city.slug])
+
+    return this.cacheService.remember(cacheKey, 300, async () => {
+      const attributes = await this.catalogRepository.listFilterAttributes(tenantId, city.id)
+
+      return {
+        city: {
+          slug: city.slug,
+          name: city.name,
+          state_code: city.state_code,
+          timezone: city.timezone,
+        },
+        category: null,
+        attributes: attributes.map((attribute) => ({
+          key: attribute.key,
+          name: attribute.name,
+          description: attribute.description,
+          establishments_count: Number(attribute.establishments_count),
+        })),
+      }
+    })
+  }
+
   private async resolveCity(hostname: string | null, citySlug: string) {
     const tenant = await this.operationResolver.resolve(hostname)
     const normalizedSlug = this.requireSlug(citySlug)
@@ -365,6 +411,7 @@ export default class CatalogService {
     if (query.q) parameters.set('q', query.q)
     if (query.category) parameters.set('category', query.category)
     if (query.open_now) parameters.set('open_now', 'true')
+    if (query.attributes.length > 0) parameters.set('attributes', query.attributes.join(','))
     if (query.sort !== 'relevance') parameters.set('sort', query.sort)
     if (query.per_page !== 20) parameters.set('per_page', String(query.per_page))
     parameters.set('page', String(page))

@@ -1,5 +1,6 @@
 export const CATALOG_SORTS = ['relevance', 'name', 'recent'] as const
 export const CATALOG_MAX_PAGE_SIZE = 50
+export const CATALOG_MAX_ATTRIBUTE_FILTERS = 12
 export const CATALOG_DEFAULT_PAGE_SIZE = 20
 export const CATALOG_PROJECTION_VERSION = 1
 
@@ -12,6 +13,7 @@ export namespace ICatalog {
     q: string
     category?: string
     open_now: boolean
+    attributes: string[]
     page: number
     per_page: number
     sort: Sort
@@ -97,6 +99,26 @@ export namespace ICatalog {
       name: string
       icon: string | null
     }
+  }
+
+  export interface FilterAttributeRow {
+    key: string
+    name: string
+    description: string | null
+    establishments_count: number
+  }
+
+  export interface FilterAttributeProjection {
+    key: string
+    name: string
+    description: string | null
+    establishments_count: number
+  }
+
+  export interface FiltersProjection {
+    city: Pick<CityProjection, 'slug' | 'name' | 'state_code' | 'timezone'>
+    category: CategoryIdentityProjection | null
+    attributes: FilterAttributeProjection[]
   }
 
   export interface AddressProjection {
@@ -262,6 +284,7 @@ export namespace ICatalog {
       q: string | null
       category: string | null
       open_now: boolean
+      attributes: string[]
       sort: Sort
     }
     sponsored_results: SearchItemProjection[]

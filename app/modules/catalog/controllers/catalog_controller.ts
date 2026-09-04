@@ -32,6 +32,7 @@ export default class CatalogController {
       q: payload.q ?? '',
       category: payload.category,
       open_now: payload.open_now ?? catalogDefaults.open_now,
+      attributes: payload.attributes ?? catalogDefaults.attributes,
       page: payload.page ?? catalogDefaults.page,
       per_page: payload.per_page ?? catalogDefaults.per_page,
       sort: payload.sort ?? catalogDefaults.sort,
@@ -39,6 +40,12 @@ export default class CatalogController {
 
     this.publicCache(response, 60)
     return response.ok(result)
+  }
+
+  async filters({ params, request, response }: HttpContext) {
+    const filters = await this.catalogService.filters(request.hostname(), String(params.citySlug))
+    this.publicCache(response, 300)
+    return response.ok(filters)
   }
 
   async show({ params, request, response }: HttpContext) {

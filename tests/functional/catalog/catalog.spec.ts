@@ -1020,4 +1020,64 @@ test.group('Public catalog', (group) => {
     const media = await EstablishmentRevisionMedia.findOrFail(mediaId)
     assert.equal(media.moderation_status, 'rejected')
   })
+
+  test('filters by public boolean attributes and projects the available facets', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('catalog-attributes')
+    await createPublishedEstablishment(client, scenario, 'Bistrô das Reservas')
+    await createPublishedEstablishment(client, scenario, 'Cantina das Reservas')
+
+    const attributeKey = scenario.inheritedBoolean.key
+
+    const matching = await client
+      .get(`/api/v1/catalog/cities/${scenario.city.slug}/establishments?attributes=${attributeKey}`)
+      .headers(publicHeaders(scenario))
+    matching.assertStatus(200)
+    assert.equal(matching.body().meta.total, 2)
+    assert.deepEqual(matching.body().query.attributes, [attributeKey])
+
+    // Containment is an AND: an attribute nobody declares empties the result.
+    const conjunction = await client
+      .get(
+        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?attributes=${attributeKey},atributo_ausente`
+      )
+      .headers(publicHeaders(scenario))
+    conjunction.assertStatus(200)
+    assert.equal(conjunction.body().meta.total, 0)
+
+    // Order must not change the cache identity nor the echoed filter.
+    const reordered = await client
+      .get(
+        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?attributes=atributo_ausente,${attributeKey}`
+      )
+      .headers(publicHeaders(scenario))
+    reordered.assertStatus(200)
+    assert.deepEqual(reordered.body().query.attributes, conjunction.body().query.attributes)
+
+    const filters = await client
+      .get(`/api/v1/catalog/cities/${scenario.city.slug}/filters`)
+      .headers(publicHeaders(scenario))
+    filters.assertStatus(200)
+    assert.equal(filters.body().city.slug, scenario.city.slug)
+    const facet = filters
+      .body()
+      .attributes.find((item: { key: string }) => item.key === attributeKey)
+    assert.exists(facet, 'the published boolean attribute must appear as a facet')
+    assert.equal(facet.establishments_count, 2)
+    // A private or non-boolean definition never becomes a public facet.
+    assert.notExists(
+      filters
+        .body()
+        .attributes.find((item: { key: string }) => item.key === scenario.selectDefinition.key)
+    )
+
+    const malformed = await client
+      .get(
+        `/api/v1/catalog/cities/${scenario.city.slug}/establishments?attributes=n%C3%A3o%20vale!`
+      )
+      .headers(publicHeaders(scenario))
+    malformed.assertStatus(422)
+  })
 })
