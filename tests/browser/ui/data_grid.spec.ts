@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import { TenantFactory } from '#database/factories/tenant_factory'
 import { UserFactory } from '#database/factories/user_factory'
+import { gotoAppPage } from '#tests/browser/helpers/navigation'
 import type { Page } from 'playwright'
 
 /**
@@ -14,7 +15,7 @@ async function signIn(page: Page) {
   const tenant = await TenantFactory.create()
   await user.related('tenants').attach({ [tenant.id]: { role: 'member' } })
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' })
+  await gotoAppPage(page, '/login')
   await page.fill('input[name="uid"]', user.email)
   await page.fill('input[name="password"]', 'password123')
   await page.click('button[type="submit"]:has-text("Entrar")')
@@ -25,7 +26,7 @@ test.group('Data grid', () => {
   test('should render the grid with every column', async ({ browserContext, assert }) => {
     const page = await browserContext.newPage()
     await signIn(page)
-    await page.goto('/data-grid-demo')
+    await gotoAppPage(page, '/data-grid-demo')
 
     await page.locator('table').waitFor()
 
@@ -44,7 +45,7 @@ test.group('Data grid', () => {
   }) => {
     const page = await browserContext.newPage()
     await signIn(page)
-    await page.goto('/data-grid-demo')
+    await gotoAppPage(page, '/data-grid-demo')
     await page.locator('table').waitFor()
 
     /**
@@ -70,7 +71,7 @@ test.group('Data grid', () => {
   test('should expose resize handles on resizable columns', async ({ browserContext, assert }) => {
     const page = await browserContext.newPage()
     await signIn(page)
-    await page.goto('/data-grid-demo')
+    await gotoAppPage(page, '/data-grid-demo')
     await page.locator('table').waitFor()
 
     const handles = page.locator('div.cursor-col-resize')
@@ -91,7 +92,7 @@ test.group('Data grid', () => {
   test('should hide a column through the visibility menu', async ({ browserContext, assert }) => {
     const page = await browserContext.newPage()
     await signIn(page)
-    await page.goto('/data-grid-demo')
+    await gotoAppPage(page, '/data-grid-demo')
     await page.locator('table').waitFor()
 
     assert.equal(await page.locator('th:has-text("Region")').count(), 1)
@@ -106,7 +107,7 @@ test.group('Data grid', () => {
   test('should switch between column and row drag modes', async ({ browserContext, assert }) => {
     const page = await browserContext.newPage()
     await signIn(page)
-    await page.goto('/data-grid-demo')
+    await gotoAppPage(page, '/data-grid-demo')
     await page.locator('table').waitFor()
 
     // Both modes mount a different grid component; a crash in either one only
@@ -123,7 +124,7 @@ test.group('Data grid', () => {
   test('should paginate to the next page', async ({ browserContext, assert }) => {
     const page = await browserContext.newPage()
     await signIn(page)
-    await page.goto('/data-grid-demo')
+    await gotoAppPage(page, '/data-grid-demo')
     await page.locator('table').waitFor()
 
     await page.locator('td:has-text("api-gateway")').first().waitFor()

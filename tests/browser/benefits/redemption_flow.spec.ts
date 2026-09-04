@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import type { BrowserContext, Page } from 'playwright'
 
 import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
+import { gotoAppPage } from '#tests/browser/helpers/navigation'
 
 type PresentationPagePayload = {
   props: {
@@ -18,7 +19,7 @@ async function signIn(
   password: string,
   expectedLanding: '/wallet' | '/portal'
 ) {
-  await page.goto('/login')
+  await gotoAppPage(page, '/login')
   await page.fill('input[name="uid"]', email)
   await page.fill('input[name="password"]', password)
   await page.getByRole('button', { name: 'Entrar' }).click()
@@ -44,7 +45,7 @@ test.group('Benefit redemption browser flow', () => {
     const holderPage = await browserContext.newPage()
     await holderPage.setViewportSize({ width: 390, height: 844 })
     await signIn(holderPage, scenario.users.holder.email, password, '/wallet')
-    await holderPage.goto('/carteira')
+    await gotoAppPage(holderPage, '/carteira')
 
     await holderPage.getByRole('heading', { name: 'Minha carteira' }).waitFor()
     await holderPage.keyboard.press('Tab')
@@ -104,7 +105,7 @@ test.group('Benefit redemption browser flow', () => {
 
     const partnerPage = await browserContext.newPage()
     await signIn(partnerPage, scenario.users.partner.email, password, '/portal')
-    await partnerPage.goto(payload.props.presentation.validation_url)
+    await gotoAppPage(partnerPage, payload.props.presentation.validation_url)
 
     await partnerPage.getByRole('heading', { name: 'Validar benefício' }).waitFor()
     await partnerPage.getByText('Apresentação válida', { exact: true }).waitFor()
@@ -131,7 +132,7 @@ test.group('Benefit redemption browser flow', () => {
 
     const holderHistoryPage = await browserContext.newPage()
     await signIn(holderHistoryPage, scenario.users.holder.email, password, '/wallet')
-    await holderHistoryPage.goto('/wallet/history')
+    await gotoAppPage(holderHistoryPage, '/wallet/history')
 
     await holderHistoryPage.getByRole('heading', { name: 'Utilizações' }).waitFor()
     await holderHistoryPage.getByText('1 utilização', { exact: true }).waitFor()

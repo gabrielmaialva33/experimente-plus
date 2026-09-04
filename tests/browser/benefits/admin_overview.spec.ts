@@ -2,9 +2,10 @@ import { test } from '@japa/runner'
 import type { Page } from 'playwright'
 
 import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
+import { gotoAppPage } from '#tests/browser/helpers/navigation'
 
 async function signIn(page: Page, email: string, password: string) {
-  await page.goto('/login')
+  await gotoAppPage(page, '/login')
   await page.fill('input[name="uid"]', email)
   await page.fill('input[name="password"]', password)
   await page.getByRole('button', { name: 'Entrar' }).click()
@@ -17,7 +18,7 @@ test.group('Benefit administration browser flow', () => {
     const page = await browserContext.newPage()
 
     await signIn(page, scenario.users.admin.email, scenario.credentials.password)
-    await page.goto('/backoffice/benefits')
+    await gotoAppPage(page, '/backoffice/benefits')
 
     await page.getByRole('heading', { name: 'Edições e benefícios' }).waitFor()
     const edition = page.locator('article').filter({ hasText: scenario.edition.name })

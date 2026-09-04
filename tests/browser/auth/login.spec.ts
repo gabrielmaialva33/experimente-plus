@@ -1,5 +1,9 @@
 import { test } from '@japa/runner'
+import mail from '@adonisjs/mail/services/main'
+
 import { TenantFactory, UserFactory } from '#database/factories/index'
+import VerifyEmailNotification from '#modules/auth/services/verify_email_notification'
+import { gotoAppPage } from '#tests/browser/helpers/navigation'
 
 async function createConsumer(password = 'password123') {
   const user = await UserFactory.merge({ password }).create()
@@ -11,7 +15,7 @@ async function createConsumer(password = 'password123') {
 test.group('Auth login', () => {
   test('should display the localized login page correctly', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     await page.getByRole('heading', { name: 'Entrar' }).waitFor()
     await page.locator('input[name="uid"]').waitFor()
@@ -30,7 +34,7 @@ test.group('Auth login', () => {
 
   test('should reveal and hide the password accessibly', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     const password = page.locator('input[name="password"]')
     await password.waitFor()
@@ -43,7 +47,7 @@ test.group('Auth login', () => {
   test('should login successfully with valid credentials', async ({ browserContext }) => {
     const user = await createConsumer()
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     await page.fill('input[name="uid"]', user.email)
     await page.fill('input[name="password"]', 'password123')
@@ -54,7 +58,7 @@ test.group('Auth login', () => {
 
   test('should show error with invalid credentials', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     await page.fill('input[name="uid"]', 'invalid@example.com')
     await page.fill('input[name="password"]', 'wrongpassword')
@@ -68,7 +72,7 @@ test.group('Auth login', () => {
 
   test('should keep required empty fields on the login page', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     await page.getByRole('button', { name: 'Entrar' }).click()
     await page.waitForURL('/login')
@@ -78,7 +82,7 @@ test.group('Auth login', () => {
 
   test('should navigate to password recovery', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     await page.getByRole('link', { name: 'Esqueceu a senha?' }).click()
     await page.waitForURL('**/forgot-password')
@@ -87,7 +91,7 @@ test.group('Auth login', () => {
 
   test('should navigate to register page', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
 
     await page.getByRole('link', { name: 'Criar conta' }).click()
     await page.waitForURL('/register')
@@ -106,7 +110,7 @@ test.group('Auth login', () => {
   }) => {
     const page = await browserContext.newPage()
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/register')
+    await gotoAppPage(page, '/register')
 
     await page.keyboard.press('Tab')
     const skipLinkFocused = await page.evaluate(
@@ -190,10 +194,15 @@ test.group('Auth login', () => {
 
   test('should expose one deterministic registration submission state', async ({
     browserContext,
+    cleanup,
   }) => {
+    mail.restore()
+    const { mails } = mail.fake()
+    cleanup(() => mail.restore())
+
     const page = await browserContext.newPage()
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/register')
+    await gotoAppPage(page, '/register')
 
     const unique = Date.now()
     await page.fill('input[name="full_name"]', 'Cadastro Loading')
@@ -228,6 +237,7 @@ test.group('Auth login', () => {
     }
 
     await page.waitForURL('**/wallet', { timeout: 15000 })
+    mails.assertSentCount(VerifyEmailNotification, 1)
     if (submissionCount !== 1) {
       throw new Error(`O cadastro deve enviar uma requisição; recebeu ${submissionCount}`)
     }
@@ -237,19 +247,19 @@ test.group('Auth login', () => {
     const user = await createConsumer()
     const page = await browserContext.newPage()
 
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
     await page.fill('input[name="uid"]', user.email)
     await page.fill('input[name="password"]', 'password123')
     await page.getByRole('button', { name: 'Entrar' }).click()
     await page.waitForURL('**/wallet', { timeout: 30000 })
 
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
     await page.waitForURL('**/wallet', { timeout: 30000 })
   })
 
   test('should expose a loading state while submitting', async ({ browserContext }) => {
     const page = await browserContext.newPage()
-    await page.goto('/login')
+    await gotoAppPage(page, '/login')
     await page.fill('input[name="uid"]', 'test@example.com')
     await page.fill('input[name="password"]', 'password')
 
