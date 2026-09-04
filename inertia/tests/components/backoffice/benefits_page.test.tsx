@@ -72,4 +72,20 @@ describe('BenefitsBackofficePage', () => {
     expect(screen.getByLabelText('Nome da edição')).toHaveValue(edition.name)
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled()
   })
+
+  it('renders editions read-only for moderators without exposing mutations', () => {
+    mocks.permissions = ['benefit_editions.list', 'benefit_accesses.list']
+
+    render(<BenefitsBackofficePage editions={[edition]} cities={[edition.city]} />)
+
+    expect(screen.getByRole('heading', { name: edition.name })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Acessos' })).toHaveAttribute(
+      'href',
+      '/backoffice/accesses'
+    )
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Publicar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Arquivar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Criar edição' })).not.toBeInTheDocument()
+  })
 })

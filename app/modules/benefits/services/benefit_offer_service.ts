@@ -51,6 +51,46 @@ export default class BenefitOfferService {
     return this.offerRepository.listForEstablishment(tenantId, establishment.id)
   }
 
+  async listForPortalEstablishment(
+    tenantId: number,
+    establishmentId: number,
+    actor: User
+  ): Promise<IBenefit.PortalOffer[]> {
+    const offers = await this.listForEstablishment(tenantId, establishmentId, actor)
+
+    return offers.map((offer) => ({
+      id: offer.id,
+      edition_id: offer.edition_id,
+      title: offer.title,
+      description: offer.description,
+      benefit_type: offer.benefit_type,
+      discount_percentage: offer.discount_percentage,
+      discount_amount_cents: offer.discount_amount_cents,
+      terms: offer.terms,
+      available_weekdays_mask: offer.available_weekdays_mask,
+      daily_start_time: offer.daily_start_time,
+      daily_end_time: offer.daily_end_time,
+      reservation_required: offer.reservation_required,
+      on_premise_only: offer.on_premise_only,
+      minimum_party_size: offer.minimum_party_size,
+      max_redemptions_per_access: offer.max_redemptions_per_access,
+      status: offer.status,
+      edition: {
+        id: offer.edition.id,
+        name: offer.edition.name,
+        status: offer.edition.status,
+        currency: offer.edition.currency,
+        usage_starts_at: offer.edition.usage_starts_at.toISO()!,
+        usage_ends_at: offer.edition.usage_ends_at.toISO()!,
+        city: {
+          id: offer.edition.city.id,
+          name: offer.edition.city.name,
+          state_code: offer.edition.city.state_code,
+        },
+      },
+    }))
+  }
+
   async show(tenantId: number, id: number, actor: User): Promise<BenefitOffer> {
     const offer = await this.getOrFail(tenantId, id)
     await this.organizationPolicy.authorizeRead(

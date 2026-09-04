@@ -25,7 +25,7 @@ export default class BenefitAccessService {
   ) {}
 
   async list(tenantId: number, actor: User): Promise<BenefitAccess[]> {
-    await this.organizationPolicy.requirePlatformAdmin(actor)
+    await this.organizationPolicy.requirePlatformModerator(actor)
     return this.accessRepository.listForTenant(tenantId)
   }
 

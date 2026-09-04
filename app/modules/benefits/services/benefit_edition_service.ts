@@ -30,9 +30,29 @@ export default class BenefitEditionService {
     return this.editionRepository.listForTenant(tenantId)
   }
 
-  async listAvailable(tenantId: number): Promise<BenefitEdition[]> {
-    const editions = await this.editionRepository.listForTenant(tenantId)
-    return editions.filter((edition) => edition.status !== 'archived')
+  async listAvailable(tenantId: number): Promise<IBenefit.AvailableEdition[]> {
+    const editions = await this.editionRepository.listAvailableForTenant(tenantId)
+
+    return editions.map((edition) => ({
+      id: edition.id,
+      city_id: edition.city_id,
+      name: edition.name,
+      slug: edition.slug,
+      description: edition.description,
+      price_cents: edition.price_cents,
+      currency: edition.currency,
+      sales_starts_at: edition.sales_starts_at?.toISO() ?? null,
+      sales_ends_at: edition.sales_ends_at?.toISO() ?? null,
+      usage_starts_at: edition.usage_starts_at.toISO()!,
+      usage_ends_at: edition.usage_ends_at.toISO()!,
+      status: edition.status,
+      published_at: edition.published_at?.toISO() ?? null,
+      city: {
+        id: edition.city.id,
+        name: edition.city.name,
+        state_code: edition.city.state_code,
+      },
+    }))
   }
 
   async show(tenantId: number, id: number, actor: User): Promise<BenefitEdition> {

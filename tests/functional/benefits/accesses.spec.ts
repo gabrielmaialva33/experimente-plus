@@ -572,6 +572,39 @@ test.group('Benefit access and wallet', (group) => {
     assert.include(wallet.text(), 'wallet/index')
   })
 
+  test('lets moderators inspect access history while keeping grants admin-only', async ({
+    client,
+    assert,
+  }) => {
+    const { scenario } = await createBaseFixture('moderator-read')
+    const moderator = await createUser({
+      prefix: 'access-moderator-read',
+      tenant: scenario.tenant,
+      globalRole: IRole.Slugs.MODERATOR,
+      tenantRole: 'member',
+    })
+
+    const backoffice = await client
+      .get('/backoffice/accesses')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(moderator)
+    backoffice.assertStatus(200)
+    assert.include(backoffice.text(), 'backoffice/benefits/accesses')
+
+    const api = await client
+      .get('/api/v1/admin/benefit-accesses')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(moderator)
+    api.assertStatus(200)
+
+    const grantAttempt = await client
+      .post('/backoffice/accesses')
+      .withCsrfToken()
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .loginAs(moderator)
+    grantAttempt.assertStatus(403)
+  })
+
   test('enforces the user and tenant relationship at the database boundary', async ({ assert }) => {
     const { scenario, admin } = await createBaseFixture('database')
     const outsider = await User.create({

@@ -11,7 +11,9 @@ import {
 } from '#modules/benefits/validators/benefit_validator'
 import Establishment from '#modules/establishments/models/establishment'
 import City from '#modules/geography/models/city'
-import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
+import OrganizationResourceAuthorizationService, {
+  projectEstablishmentBenefitAllowedActions,
+} from '#modules/organizations/services/organization_resource_authorization_service'
 
 @inject()
 export default class BenefitPagesController {
@@ -74,7 +76,11 @@ export default class BenefitPagesController {
     this.setPrivateHeaders(response)
     const establishmentId = Number(params.establishmentId)
     const actor = auth.getUserOrFail()
-    const offers = await this.offerService.listForEstablishment(tenant!.id, establishmentId, actor)
+    const offers = await this.offerService.listForPortalEstablishment(
+      tenant!.id,
+      establishmentId,
+      actor
+    )
     const establishment = await Establishment.query()
       .where('tenant_id', tenant!.id)
       .where('id', establishmentId)
@@ -83,11 +89,16 @@ export default class BenefitPagesController {
     const cityId = establishment.published_revision?.city_id ?? null
     const availableEditions = await this.editionService.listAvailable(tenant!.id)
     const editions = availableEditions.filter((edition) => edition.city_id === cityId)
-    const allowedActions = await this.resourceAuthorization.forOrganization(
+    const organizationActions = await this.resourceAuthorization.forOrganization(
       tenant!.id,
       establishment.organization_id,
       actor
     )
+    const allowedActions = projectEstablishmentBenefitAllowedActions(organizationActions, {
+      lifecycle_status: establishment.lifecycle_status,
+      business_status: establishment.business_status,
+      published_revision_id: establishment.published_revision_id,
+    })
 
     return inertia.render('portal/establishments/benefits', {
       establishment: {

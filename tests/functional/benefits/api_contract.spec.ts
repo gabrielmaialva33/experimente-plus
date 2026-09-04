@@ -107,7 +107,6 @@ test.group('Benefits API contract', (group) => {
   })
 
   test('keeps holder data and partner operations behind organization boundaries', async ({
-    assert,
     client,
   }) => {
     const scenario = await createBenefitFlowScenario({ suffix: 'api-boundaries' })
@@ -138,9 +137,7 @@ test.group('Benefits API contract', (group) => {
       .get('/api/v1/benefit-redemptions')
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.outsider)
-    foreignPartnerHistory.assertStatus(200)
-    assert.equal(foreignPartnerHistory.body().total, 0)
-    assert.deepEqual(foreignPartnerHistory.body().redemptions, [])
+    foreignPartnerHistory.assertStatus(403)
   })
 
   test('renders the administrative edition projection with offers and accesses', async ({
