@@ -2,9 +2,10 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import {
   apiThrottle,
-  authThrottle,
   passwordResetRequestThrottle,
   passwordResetThrottle,
+  signInThrottle,
+  signUpThrottle,
 } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
@@ -22,11 +23,11 @@ router
     router
       .post('/sign-in', [SessionsController, 'signIn'])
       .as('session.signIn')
-      .use([privateResponseHeadersMiddleware, authThrottle])
+      .use([privateResponseHeadersMiddleware, signInThrottle])
     router
       .post('/sign-up', [SessionsController, 'signUp'])
       .as('session.signUp')
-      .use([privateResponseHeadersMiddleware, authThrottle])
+      .use([privateResponseHeadersMiddleware, signUpThrottle])
     router
       .post('/forgot-password', [PasswordResetController, 'forgot'])
       .as('session.forgotPassword')

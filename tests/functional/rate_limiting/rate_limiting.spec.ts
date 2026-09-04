@@ -131,6 +131,24 @@ test.group('Rate Limiting', (group) => {
     rateLimited.assertStatus(429)
   })
 
+  test('should ignore unknown fields when deriving the sign-up throttle identifier', async ({
+    client,
+  }) => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await client.post('/api/v1/sessions/sign-up').json({
+        email: 'same-registration@example.com',
+        uid: `ignored-${attempt}@example.com`,
+      })
+      response.assertStatus(422)
+    }
+
+    const rateLimited = await client.post('/api/v1/sessions/sign-up').json({
+      email: 'same-registration@example.com',
+      uid: 'ignored-sixth@example.com',
+    })
+    rateLimited.assertStatus(429)
+  })
+
   test('should derive the password reset throttle identifier only from the request body', async ({
     client,
   }) => {

@@ -50,23 +50,28 @@ export const throttle = limiter.define('global', async (ctx) => {
  * - 5 attempts per 15 minutes by IP + email combination
  * - Blocks for 30 minutes after exhausting attempts
  */
-export const authThrottle = limiter.define('auth', (ctx) => {
-  const identifier = bodyIdentifierDigest(ctx.request.body(), ['uid', 'email'])
+function defineAuthenticationThrottle(name: string, field: 'uid' | 'email') {
+  return limiter.define(name, (ctx) => {
+    const identifier = bodyIdentifierDigest(ctx.request.body(), [field])
 
-  return limiter
-    .allowRequests(5)
-    .every('15 minutes')
-    .blockFor('30 minutes')
-    .usingKey(`auth_${ctx.request.ip()}_${identifier}`)
-    .limitExceeded((error) => {
-      const i18n = ctx.i18n
-      if (i18n) {
-        error.setMessage(i18n.t('errors.too_many_auth_attempts'))
-      } else {
-        error.setMessage('Too many authentication attempts. Please try again later.')
-      }
-    })
-})
+    return limiter
+      .allowRequests(5)
+      .every('15 minutes')
+      .blockFor('30 minutes')
+      .usingKey(`${name}_${ctx.request.ip()}_${identifier}`)
+      .limitExceeded((error) => {
+        const i18n = ctx.i18n
+        if (i18n) {
+          error.setMessage(i18n.t('errors.too_many_auth_attempts'))
+        } else {
+          error.setMessage('Too many authentication attempts. Please try again later.')
+        }
+      })
+  })
+}
+
+export const signInThrottle = defineAuthenticationThrottle('auth-sign-in', 'uid')
+export const signUpThrottle = defineAuthenticationThrottle('auth-sign-up', 'email')
 
 export const passwordResetRequestThrottle = limiter.define('password-reset-request', (ctx) => {
   const identifier = bodyIdentifierDigest(ctx.request.body(), ['email'])
