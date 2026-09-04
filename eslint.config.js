@@ -9,6 +9,7 @@ export default [
       'build/**',
       'node_modules/**',
       '.winx/**',
+      '.playwright-cli/**',
       '.DS_Store',
       'coverage/**',
       'database/schema.ts',

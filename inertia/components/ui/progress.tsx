@@ -67,7 +67,7 @@ function ProgressCircle({
   return (
     <div
       data-slot="progress-circle"
-      className={cn('relative inline-flex items-center justify-center', className)}
+      className={cn('relative inline-flex shrink-0 items-center justify-center', className)}
       style={{ width: size, height: size }}
       {...props}
     >
