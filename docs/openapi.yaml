@@ -26,7 +26,7 @@ info:
     1. **Login**: POST to `/api/v1/sessions/sign-in` with your credentials
     2. **Get Tokens**: Extract `access_token` and `refresh_token` from `auth`
     3. **Use Access Token**: Include `Authorization: Bearer <access_token>`
-    4. **Rotate Tokens**: POST the opaque refresh token to `/api/v1/sessions/refresh`
+    4. **Rotate Tokens**: POST the opaque refresh token to `/api/v1/sessions/refresh`; creating or switching an authenticated operation also consumes the current refresh token
 
     ### Token Management
 
@@ -34,12 +34,13 @@ info:
     - **Web Cookie Lifetime**: 1 hour
     - **Refresh Token Lifetime**: 3 days
     - **Access Token Format**: JWT with `token_use=access`
-    - **Refresh Token Format**: Opaque random value; it is not a JWT
+    - **Refresh Token Format**: 32 random bytes encoded as 43 canonical unpadded base64url characters; it is not a JWT and whitespace is never normalized
+    - **Rotation Serialization**: Refresh, operation creation, and operation switching share one single-use token chain and must be serialized by clients
 
     ## API Conventions
 
     ### Request Format
-    - **Content-Type**: `application/json` for all requests (except file uploads)
+    - **Content-Type**: `application/json` for all requests (except file uploads). Credential-bearing session mutations and tenant creation/switching require this exact base media type; parameters such as `charset=utf-8` are accepted, while JSON-family aliases, forms, multipart, text, and binary bodies are rejected with `422`. Syntactically malformed canonical JSON returns the sanitized `400` response without echoing request data.
     - **Pagination**: Use `?page=1&per_page=10` query parameters
     - **Sorting**: Use `?sort_by=field&order=asc` or `?sort_by=field&order=desc`
     - **Searching**: Use `?search=term` for text search
@@ -556,9 +557,7 @@ components:
           description: Short-lived JWT accepted by bearer-authenticated endpoints.
           example: '<access-token>'
         refresh_token:
-          type: string
-          description: Opaque one-time refresh credential rotated after every successful refresh.
-          example: '<opaque-refresh-token>'
+          $ref: '#/components/schemas/RefreshToken'
         token_type:
           type: string
           const: Bearer
@@ -1221,14 +1220,46 @@ components:
                 type: integer
                 const: 429
 
+    RefreshToken:
+      type: string
+      minLength: 43
+      maxLength: 43
+      pattern: '^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$'
+      description: Canonical, unpadded base64url encoding of 32 random bytes. Whitespace is part of the credential and is never normalized.
+      example: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
     RefreshTokenRequest:
       type: object
       required: [refresh_token]
+      description: Unknown request properties are accepted and discarded. The opaque credential itself is never trimmed or normalized.
       properties:
         refresh_token:
+          $ref: '#/components/schemas/RefreshToken'
+
+    CreateTenantRequest:
+      type: object
+      required: [name, refresh_token]
+      description: Unknown request properties are accepted and discarded before the operation is created.
+      properties:
+        name:
           type: string
-          minLength: 32
-          description: Opaque refresh token returned by sign-in, sign-up, tenant switch, or refresh.
+          minLength: 2
+          maxLength: 120
+          example: Acme Workspace
+        refresh_token:
+          $ref: '#/components/schemas/RefreshToken'
+
+    SwitchTenantRequest:
+      type: object
+      required: [tenant_id, refresh_token]
+      description: Unknown request properties are accepted and discarded before the active operation is changed.
+      properties:
+        tenant_id:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        refresh_token:
+          $ref: '#/components/schemas/RefreshToken'
 
     PasswordResetRequest:
       type: object
@@ -1250,6 +1281,7 @@ components:
     Tenant:
       type: object
       required: [id, name, slug, role]
+      additionalProperties: false
       properties:
         id:
           type: integer
@@ -3635,6 +3667,24 @@ components:
         type: string
         const: no-referrer
 
+    PrivatePragma:
+      description: Legacy cache directive for clients and intermediaries that do not fully honor Cache-Control.
+      schema:
+        type: string
+        const: no-cache
+
+    AuthRateLimitLimit:
+      description: Maximum authentication attempts allowed in the current fifteen-minute window.
+      schema:
+        type: integer
+        const: 5
+
+    GuestRateLimitLimit:
+      description: Maximum unauthenticated API requests allowed in the current one-minute window per IP address.
+      schema:
+        type: integer
+        const: 10
+
     RateLimitLimit:
       description: Maximum authenticated requests allowed in the current one-minute window.
       schema:
@@ -3664,15 +3714,91 @@ components:
             errors:
               - message: 'Unauthorized'
 
-    UnauthorizedDomainError:
-      description: Invalid or expired credential rejected by the application domain.
+    PrivateSessionMutationUnauthorizedError:
+      description: The bearer credential is absent or invalid, or the submitted refresh credential is invalid, expired, revoked, replayed, or belongs to another user. Refresh failures intentionally share one generic message.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/Error'
+              - $ref: '#/components/schemas/ApiMessageError'
+          examples:
+            refreshCredential:
+              value:
+                status: 401
+                message: Invalid or expired refresh token
+
+    PrivateMalformedJsonError:
+      description: The request declared `application/json`, but its body is not syntactically valid JSON. The response never echoes request contents or credentials.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiMessageError'
           example:
-            status: 401
-            message: Invalid or expired refresh token
+            status: 400
+            message: Malformed JSON request body
+
+    PrivateAuthRateLimitError:
+      description: Authentication throttle exceeded (5 attempts per 15 minutes for the IP and login identifier).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/AuthRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
+    PrivateGuestRateLimitError:
+      description: Unauthenticated API throttle exceeded (10 requests per minute per IP address).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/GuestRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
 
     ForbiddenError:
       description: Insufficient permissions
@@ -3710,6 +3836,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
       content:
         application/json:
           schema:
@@ -3727,6 +3855,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
       content:
         application/json:
           schema:
@@ -3752,6 +3882,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
       content:
         application/json:
           schema:
@@ -3769,6 +3901,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
       content:
         application/json:
           schema:
@@ -3786,6 +3920,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
       content:
         application/json:
           schema:
@@ -3803,6 +3939,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
       content:
         application/json:
           schema:
@@ -3817,6 +3955,8 @@ components:
           $ref: '#/components/headers/PrivateRobotsTag'
         Referrer-Policy:
           $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
         X-RateLimit-Limit:
           $ref: '#/components/headers/RateLimitLimit'
         X-RateLimit-Remaining:
@@ -5847,21 +5987,53 @@ paths:
       responses:
         '200':
           description: Login successful
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AuthRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Invalid credentials
+          description: Invalid credentials, or a syntactically malformed JSON request body.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors:
-                  - message: 'Invalid credentials'
+                oneOf:
+                  - $ref: '#/components/schemas/Error'
+                  - $ref: '#/components/schemas/ApiMessageError'
+              examples:
+                invalidCredentials:
+                  value:
+                    errors:
+                      - message: Invalid credentials
+                malformedJson:
+                  value:
+                    status: 400
+                    message: Malformed JSON request body
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAuthRateLimitError'
 
   /api/v1/sessions/forgot-password:
     post:
@@ -5938,6 +6110,19 @@ paths:
       responses:
         '200':
           description: Token pair rotated successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/GuestRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
@@ -5947,10 +6132,14 @@ paths:
                 properties:
                   auth:
                     $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/PrivateMalformedJsonError'
         '401':
-          $ref: '#/components/responses/UnauthorizedDomainError'
+          $ref: '#/components/responses/PrivateSessionMutationUnauthorizedError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateGuestRateLimitError'
 
   /api/v1/sessions/logout:
     post:
@@ -5969,8 +6158,25 @@ paths:
       responses:
         '204':
           description: Refresh token revoked
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/GuestRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+        '400':
+          $ref: '#/components/responses/PrivateMalformedJsonError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateGuestRateLimitError'
 
   /api/v1/me:
     get:
@@ -6538,12 +6744,29 @@ paths:
       responses:
         '201':
           description: Registration successful
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AuthRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/PrivateMalformedJsonError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAuthRateLimitError'
 
   /api/v1/verify-email:
     get:
@@ -6607,7 +6830,7 @@ paths:
     post:
       operationId: createTenant
       summary: Create a workspace
-      description: Creates an active workspace, adds the authenticated user as owner, and returns a token pair carrying the new tenant id. Requires `tenants.create`.
+      description: Atomically consumes a refresh credential bound to the bearer user, creates an active workspace, adds that user as owner, and returns one child token pair carrying the new tenant id. Requires `tenants.create`. A failed validation, permission check, credential check, or transaction does not persist the workspace or consume the refresh credential. Clients must serialize this operation with every other refresh-token rotation.
       tags:
         - Tenants
       requestBody:
@@ -6615,17 +6838,23 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                  minLength: 2
-                  maxLength: 120
-                  example: Acme Workspace
+              $ref: '#/components/schemas/CreateTenantRequest'
       responses:
         '201':
           description: Workspace created
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
@@ -6637,12 +6866,16 @@ paths:
                     $ref: '#/components/schemas/Tenant'
                   auth:
                     $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/PrivateMalformedJsonError'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/PrivateSessionMutationUnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/tenants/me:
     get:
@@ -6681,7 +6914,7 @@ paths:
     post:
       operationId: switchTenant
       summary: Switch the active API tenant
-      description: Validates active membership and issues a fresh access/refresh pair carrying the selected tenant.
+      description: Atomically validates active membership, consumes a refresh credential bound to the bearer user, and issues exactly one child access/refresh pair carrying the selected tenant. An inaccessible or inactive target returns `403` without consuming the credential. Clients must serialize this operation with every other refresh-token rotation.
       tags:
         - Tenants
       requestBody:
@@ -6689,15 +6922,23 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [tenant_id]
-              properties:
-                tenant_id:
-                  type: integer
-                  minimum: 1
+              $ref: '#/components/schemas/SwitchTenantRequest'
       responses:
         '200':
           description: Active tenant switched
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
@@ -6710,9 +6951,15 @@ paths:
                   auth:
                     $ref: '#/components/schemas/AuthTokens'
         '400':
-          description: Invalid tenant id
+          $ref: '#/components/responses/PrivateMalformedJsonError'
+        '401':
+          $ref: '#/components/responses/PrivateSessionMutationUnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/users:
     get:

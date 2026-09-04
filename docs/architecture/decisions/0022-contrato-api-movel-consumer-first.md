@@ -50,8 +50,9 @@ O catálogo resolve a operação pelo hostname confiável e não aceita `tenant_
 privadas usam o tenant assinado no access token ou `x-tenant-id`; qualquer override é revalidado
 contra um vínculo ou acesso ativo do ator à operação selecionada.
 
-O aplicativo pode trocar de cidade sem trocar de operação. Trocar a operação autenticada usa o
-contrato de tenant e recebe um novo par de tokens.
+O aplicativo pode trocar de cidade sem trocar de operação. Criar ou trocar a operação autenticada
+exige simultaneamente o access token bearer e o refresh token corrente do mesmo usuário. A operação
+consome o refresh e recebe um único par filho já vinculado ao tenant resultante.
 
 ### 3. Capabilities controlam composição, policies controlam acesso
 
@@ -86,6 +87,19 @@ rotação e encerra a sessão quando a renovação retornar `401`. Essa estraté
 proteção indicada para clientes públicos na [RFC 9700](https://datatracker.ietf.org/doc/html/rfc9700)
 e os controles de autenticação e armazenamento do
 [OWASP MASVS](https://mas.owasp.org/MASVS/).
+
+Refresh, criação de operação e troca de operação compartilham a mesma primitiva transacional de
+rotação. Ela bloqueia o registro da credencial, revalida usuário e contexto, revoga o pai e cria
+exatamente um filho com `rotated_from_id`. O cliente serializa **todas** essas operações: duas
+requisições concorrentes com o mesmo refresh produzem um sucesso e um `401` genérico. Bearer e
+refresh de usuários diferentes também produzem o mesmo `401`, sem consumir a credencial alheia.
+Falha de permissão, tenant estrangeiro ou tenant inativo produz `403` antes da revogação. Na criação,
+tenant, membership owner e rotação pertencem à mesma transação e são revertidos em conjunto.
+
+Refresh, logout, criação e troca aceitam credenciais somente em JSON cujo media type base seja
+`application/json`; parâmetros como `charset=utf-8` são permitidos, mas aliases JSON, form,
+multipart, texto e binário resultam em `422`. JSON canônico sintaticamente inválido resulta em `400`
+sanitizado, sem ecoar corpo ou credencial e sem consumir o refresh token.
 
 Uma PWA exige estratégia de sessão própria, adequada ao modelo de ameaças da web. Em particular, o
 refresh token não pode ser persistido em `localStorage`, `sessionStorage`, IndexedDB ou qualquer
@@ -123,17 +137,21 @@ O token aparece na query string da URL aberta pela câmera. Por isso:
 ### 6. Respostas privadas e contenção de abuso
 
 Contexto, atualização de perfil, carteira, apresentação, preview, confirmação, históricos e
-comprovantes retornam:
+comprovantes, além das cinco respostas que emitem credenciais — login, cadastro, refresh, criação e
+troca de operação — retornam:
 
 ```text
 Cache-Control: private, no-store
+Pragma: no-cache
 X-Robots-Tag: noindex, nofollow
 Referrer-Policy: no-referrer
 ```
 
-As mesmas rotas usam o throttle autenticado de 100 requisições por minuto por usuário. Uma resposta
-`429` informa `Retry-After` e headers de limite. O cliente deve respeitar esse intervalo e não criar
-loops automáticos.
+Login e cadastro permitem cinco tentativas por quinze minutos por IP e identificador. Refresh e
+logout, que não recebem bearer, permitem dez requisições por minuto por IP. As demais rotas privadas
+autenticadas permitem cem requisições por minuto por usuário. Uma resposta `429` informa
+`Retry-After` e headers de limite; o cliente deve respeitar esse intervalo e não criar loops
+automáticos.
 
 Os envelopes existentes continuam explícitos no OpenAPI, mesmo não sendo globalmente uniformes:
 
@@ -165,7 +183,7 @@ com o contrato do aplicativo.
 
 ### Custos
 
-- o aplicativo precisa coordenar rotação de refresh token entre requisições concorrentes;
+- o aplicativo precisa coordenar refresh, criação e troca de operação em uma única fila de rotação;
 - históricos ainda são listas integrais e exigirão paginação antes de grande volume;
 - o QR depende de conectividade para todas as revalidações;
 - os formatos de erro legados exigem um adaptador simples no cliente.
@@ -182,7 +200,9 @@ com o contrato do aplicativo.
 
 ## Cenários obrigatórios
 
-- login, cadastro, refresh e troca de operação expõem os mesmos metadados de token;
+- login, cadastro, refresh, criação e troca de operação expõem os mesmos metadados de token;
+- criação e troca exigem bearer e refresh do mesmo usuário, rejeitam replay e nunca abrem uma cadeia
+  renovável apenas a partir de um access token;
 - contexto não serializa campos internos de usuário ou organização;
 - consumidor não recebe capacidades parceiras inventadas;
 - owner/editor validam, analyst somente lê e Moderador sem membership de organização não recebe
@@ -195,7 +215,7 @@ com o contrato do aplicativo.
 - apresentação inválida ou expirada orienta geração de novo código;
 - retry da confirmação retorna o mesmo comprovante;
 - recibos respeitam tenant, titular e organização, ocultando IDOR com `404` quando aplicável;
-- todas as respostas privadas possuem os três headers;
+- todas as respostas privadas possuem os quatro headers;
 - throttle retorna `429` recuperável;
 - parser OpenAPI, unicidade de `operationId` e paridade seletiva com o router permanecem verdes;
 - proxy de produção não persiste query strings de validação nos access logs.

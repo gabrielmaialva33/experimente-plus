@@ -70,10 +70,12 @@ exploração pública e nunca recalcula `open_now`.
    não persiste o refresh token em armazenamento acessível a JavaScript.
 3. Carrega `/api/v1/me/context`.
 4. Monta as áreas a partir da operação ativa e das capabilities.
+5. Para criar ou trocar uma operação, envia o bearer e o refresh corrente do mesmo usuário e
+   substitui atomicamente o par local pelo par devolvido.
 
 **Alternativas:** `401` no refresh encerra a sessão local; `403` no override remove a seleção
-inacessível e recarrega o contexto; ausência de operação ativa mostra orientação operacional, sem
-chamar cidade de tenant.
+inacessível e recarrega o contexto sem descartar o refresh ainda válido; ausência de operação ativa
+mostra orientação operacional, sem chamar cidade de tenant.
 
 ### UC-M03 — Consultar e apresentar um benefício
 
@@ -172,7 +174,12 @@ Exclusão permanece uma ação separada e destrutiva, protegida por senha atual 
 ## Regras de sessão e segurança no dispositivo
 
 - access token dura quinze minutos; refresh token dura três dias e gira a cada uso;
-- refresh simultâneo é serializado pelo cliente para não reutilizar a credencial anterior;
+- refresh, criação de operação e troca de operação passam pela mesma fila serial do cliente para não
+  reutilizar a credencial anterior;
+- refresh, logout, criação e troca enviam corpo com media type base `application/json`; aliases,
+  form e multipart não são fallback, e JSON malformado recebe `400` sanitizado sem consumir o token;
+- criação e troca nunca funcionam apenas com access token: exigem o refresh corrente pertencente ao
+  mesmo usuário;
 - no app instalado/nativo, credenciais persistentes ficam somente no Keychain/Keystore;
 - na PWA, o refresh token não é persistido em `localStorage`, `sessionStorage`, IndexedDB ou outro
   armazenamento acessível a JavaScript; a estratégia de sessão web própria permanece adiada;
@@ -188,7 +195,9 @@ O token do QR aparece na query string do link de validação. Além dos headers 
 ## Contrato de retry
 
 - GETs podem ser repetidos com backoff e preservação de contexto;
-- refresh usa o novo token devolvido e invalida imediatamente o anterior;
+- refresh, criação e troca de operação usam o novo par devolvido e invalidam imediatamente o refresh
+  anterior;
+- `403` de permissão, tenant estrangeiro ou tenant inativo não consome o refresh corrente;
 - apresentação expirada gera um novo token, nunca altera o vencimento localmente;
 - preview pode ser repetido enquanto o token for válido;
 - confirmação pode repetir o mesmo token depois de timeout, pois o resgate é idempotente por nonce;

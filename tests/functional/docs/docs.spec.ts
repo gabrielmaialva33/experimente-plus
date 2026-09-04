@@ -17,10 +17,16 @@ type OpenApiSchema = {
   maximum?: number
   minLength?: number
   minimum?: number
+  oneOf?: OpenApiSchema[]
   pattern?: string
   properties?: Record<string, OpenApiSchema>
   required?: string[]
   type?: unknown
+}
+
+type OpenApiHeader = {
+  $ref?: string
+  schema?: OpenApiSchema
 }
 
 type OpenApiParameter = {
@@ -31,6 +37,7 @@ type OpenApiParameter = {
 type OpenApiResponse = {
   $ref?: string
   description?: string
+  headers?: Record<string, OpenApiHeader>
   content?: Record<
     string,
     {
@@ -56,6 +63,7 @@ type OpenApiDocument = {
   openapi?: string
   paths?: Record<string, OpenApiPathItem>
   components?: {
+    headers?: Record<string, OpenApiHeader>
     responses?: Record<string, OpenApiResponse>
     schemas?: Record<string, OpenApiSchema>
   }
@@ -70,6 +78,11 @@ const MOBILE_OPERATIONS: ReadonlyArray<{
     method: 'post',
     runtimePath: '/api/v1/sessions/sign-in',
     openApiPath: '/api/v1/sessions/sign-in',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/sessions/sign-up',
+    openApiPath: '/api/v1/sessions/sign-up',
   },
   {
     method: 'post',
@@ -142,6 +155,16 @@ const MOBILE_OPERATIONS: ReadonlyArray<{
     method: 'get',
     runtimePath: '/api/v1/benefit-redemptions/:receiptCode',
     openApiPath: '/api/v1/benefit-redemptions/{receiptCode}',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/tenants',
+    openApiPath: '/api/v1/tenants',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/tenants/switch',
+    openApiPath: '/api/v1/tenants/switch',
   },
 ]
 
@@ -237,8 +260,36 @@ test.group('Documentation', () => {
     assert.equal(schemas.AuthTokens?.properties?.token_type?.const, 'Bearer')
     assert.equal(schemas.AuthTokens?.properties?.expires_in?.const, 900)
     assert.equal(schemas.AuthTokens?.properties?.refresh_expires_in?.const, 259200)
+    assert.equal(
+      schemas.AuthTokens?.properties?.refresh_token?.$ref,
+      '#/components/schemas/RefreshToken'
+    )
     assert.include(schemas.AuthResponse?.required ?? [], 'auth')
     assert.deepEqual(schemas.AuthResponse?.properties?.username?.type, ['string', 'null'])
+
+    assert.equal(schemas.RefreshToken?.minLength, 43)
+    assert.equal(schemas.RefreshToken?.maxLength, 43)
+    assert.equal(schemas.RefreshToken?.pattern, '^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$')
+    assert.include(schemas.RefreshToken?.description ?? '', 'never normalized')
+
+    for (const requestSchema of [
+      schemas.RefreshTokenRequest,
+      schemas.CreateTenantRequest,
+      schemas.SwitchTenantRequest,
+    ]) {
+      assert.isUndefined(requestSchema?.additionalProperties)
+      assert.include(requestSchema?.description ?? '', 'accepted and discarded')
+      assert.include(requestSchema?.required ?? [], 'refresh_token')
+      assert.equal(
+        requestSchema?.properties?.refresh_token?.$ref,
+        '#/components/schemas/RefreshToken'
+      )
+    }
+    assert.sameMembers(schemas.CreateTenantRequest?.required ?? [], ['name', 'refresh_token'])
+    assert.sameMembers(schemas.SwitchTenantRequest?.required ?? [], ['tenant_id', 'refresh_token'])
+    assert.equal(schemas.SwitchTenantRequest?.properties?.tenant_id?.minimum, 1)
+    assert.equal(schemas.SwitchTenantRequest?.properties?.tenant_id?.maximum, 2_147_483_647)
+    assert.isFalse(schemas.Tenant?.additionalProperties)
 
     assert.equal(schemas.BenefitPresentationToken?.minLength, 46)
     assert.equal(schemas.BenefitPresentationToken?.maxLength, 512)
@@ -346,6 +397,148 @@ test.group('Documentation', () => {
     const refreshSchema = operationAt(specification, '/api/v1/sessions/refresh', 'post')
       ?.responses?.['200']?.content?.['application/json']?.schema
     assert.include(refreshSchema?.required ?? [], 'auth')
+
+    assert.equal(specification.components?.headers?.PrivatePragma?.schema?.const, 'no-cache')
+    assert.equal(specification.components?.headers?.GuestRateLimitLimit?.schema?.const, 10)
+
+    const privateHeaderRefs = {
+      'Cache-Control': '#/components/headers/PrivateCacheControl',
+      'Pragma': '#/components/headers/PrivatePragma',
+      'X-Robots-Tag': '#/components/headers/PrivateRobotsTag',
+      'Referrer-Policy': '#/components/headers/PrivateReferrerPolicy',
+    }
+    const malformedJsonResponse = specification.components?.responses?.PrivateMalformedJsonError
+    for (const [header, reference] of Object.entries(privateHeaderRefs)) {
+      assert.equal(malformedJsonResponse?.headers?.[header]?.$ref, reference)
+    }
+    assert.equal(
+      malformedJsonResponse?.content?.['application/json']?.schema?.$ref,
+      '#/components/schemas/ApiMessageError'
+    )
+    assert.deepEqual(malformedJsonResponse?.content?.['application/json']?.example, {
+      status: 400,
+      message: 'Malformed JSON request body',
+    })
+
+    for (const path of [
+      '/api/v1/sessions/sign-up',
+      '/api/v1/sessions/refresh',
+      '/api/v1/sessions/logout',
+      '/api/v1/tenants',
+      '/api/v1/tenants/switch',
+    ]) {
+      assert.equal(
+        operationAt(specification, path, 'post')?.responses?.['400']?.$ref,
+        '#/components/responses/PrivateMalformedJsonError'
+      )
+    }
+
+    const signInBadRequest = operationAt(specification, '/api/v1/sessions/sign-in', 'post')
+      ?.responses?.['400']
+    for (const [header, reference] of Object.entries(privateHeaderRefs)) {
+      assert.equal(signInBadRequest?.headers?.[header]?.$ref, reference)
+    }
+    assert.deepEqual(
+      signInBadRequest?.content?.['application/json']?.schema?.oneOf?.map((schema) => schema.$ref),
+      ['#/components/schemas/Error', '#/components/schemas/ApiMessageError']
+    )
+    assert.deepEqual(
+      signInBadRequest?.content?.['application/json']?.examples?.invalidCredentials?.value,
+      { errors: [{ message: 'Invalid credentials' }] }
+    )
+    assert.deepEqual(
+      signInBadRequest?.content?.['application/json']?.examples?.malformedJson?.value,
+      { status: 400, message: 'Malformed JSON request body' }
+    )
+
+    const tokenIssuers = [
+      { path: '/api/v1/sessions/sign-in', status: '200', rateLimit: 'AuthRateLimitLimit' },
+      { path: '/api/v1/sessions/sign-up', status: '201', rateLimit: 'AuthRateLimitLimit' },
+      { path: '/api/v1/sessions/refresh', status: '200', rateLimit: 'GuestRateLimitLimit' },
+      { path: '/api/v1/tenants', status: '201', rateLimit: 'RateLimitLimit' },
+      { path: '/api/v1/tenants/switch', status: '200', rateLimit: 'RateLimitLimit' },
+    ]
+    for (const issuer of tokenIssuers) {
+      const response = operationAt(specification, issuer.path, 'post')?.responses?.[issuer.status]
+      assert.equal(
+        response?.headers?.['Cache-Control']?.$ref,
+        '#/components/headers/PrivateCacheControl'
+      )
+      assert.equal(response?.headers?.Pragma?.$ref, '#/components/headers/PrivatePragma')
+      assert.equal(
+        response?.headers?.['X-Robots-Tag']?.$ref,
+        '#/components/headers/PrivateRobotsTag'
+      )
+      assert.equal(
+        response?.headers?.['Referrer-Policy']?.$ref,
+        '#/components/headers/PrivateReferrerPolicy'
+      )
+      assert.equal(
+        response?.headers?.['X-RateLimit-Limit']?.$ref,
+        `#/components/headers/${issuer.rateLimit}`
+      )
+    }
+
+    const rotatingRequests = [
+      {
+        path: '/api/v1/sessions/refresh',
+        schema: 'RefreshTokenRequest',
+        rateLimitResponse: 'PrivateGuestRateLimitError',
+      },
+      {
+        path: '/api/v1/tenants',
+        schema: 'CreateTenantRequest',
+        rateLimitResponse: 'PrivateRateLimitError',
+      },
+      {
+        path: '/api/v1/tenants/switch',
+        schema: 'SwitchTenantRequest',
+        rateLimitResponse: 'PrivateRateLimitError',
+      },
+    ]
+    for (const rotatingRequest of rotatingRequests) {
+      const operation = operationAt(specification, rotatingRequest.path, 'post')
+      assert.equal(
+        operation?.requestBody?.content?.['application/json']?.schema?.$ref,
+        `#/components/schemas/${rotatingRequest.schema}`
+      )
+      assert.equal(
+        operation?.responses?.['401']?.$ref,
+        '#/components/responses/PrivateSessionMutationUnauthorizedError'
+      )
+      assert.equal(
+        operation?.responses?.['422']?.$ref,
+        '#/components/responses/PrivateValidationError'
+      )
+      assert.equal(
+        operation?.responses?.['429']?.$ref,
+        `#/components/responses/${rotatingRequest.rateLimitResponse}`
+      )
+    }
+
+    const logout = operationAt(specification, '/api/v1/sessions/logout', 'post')
+    assert.equal(
+      logout?.responses?.['204']?.headers?.['X-RateLimit-Limit']?.$ref,
+      '#/components/headers/GuestRateLimitLimit'
+    )
+    assert.equal(
+      logout?.responses?.['429']?.$ref,
+      '#/components/responses/PrivateGuestRateLimitError'
+    )
+
+    for (const tenantPath of ['/api/v1/tenants', '/api/v1/tenants/switch']) {
+      assert.equal(
+        operationAt(specification, tenantPath, 'post')?.responses?.['403']?.$ref,
+        '#/components/responses/PrivateForbiddenError'
+      )
+    }
+
+    for (const authPath of ['/api/v1/sessions/sign-in', '/api/v1/sessions/sign-up']) {
+      assert.equal(
+        operationAt(specification, authPath, 'post')?.responses?.['429']?.$ref,
+        '#/components/responses/PrivateAuthRateLimitError'
+      )
+    }
 
     for (const tokenEnvelope of [
       { path: '/api/v1/tenants', status: '201' },

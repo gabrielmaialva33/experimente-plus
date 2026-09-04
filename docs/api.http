@@ -13,6 +13,9 @@
 ###
 ### API Conventions:
 ### - Content-Type: application/json (except file uploads)
+### - Refresh/logout and operation create/switch require this exact base media type;
+###   charset parameters are valid, but form, multipart and JSON-family aliases return 422.
+### - Malformed canonical JSON returns a sanitized 400 and never echoes request credentials.
 ### - Timestamps: ISO 8601 format
 ### - Database fields: snake_case naming
 ### - Pagination: ?page=1&per_page=10
@@ -43,9 +46,10 @@
 ### execute requests in order. REST clients that support named-response variables
 ### fill tokens, access/offer ids and receipt codes automatically. Otherwise copy
 ### the corresponding values from the previous response into safe local variables.
-### Private mobile responses use `private, no-store`, `noindex, nofollow` and
-### `no-referrer`. Authenticated throttling allows 100 requests/minute per user;
-### a 429 response includes `Retry-After` and must not be retried before that delay.
+### Private mobile responses use `private, no-store`, `Pragma: no-cache`,
+### `noindex, nofollow` and `no-referrer`. Sign-in/up allow 5 attempts per 15 minutes;
+### unauthenticated refresh/logout allow 10 requests/minute per IP; authenticated private API
+### routes allow 100 requests/minute per user. A 429 includes `Retry-After`; wait before retrying.
 
 ### Consumer login — returns auth.token_type, expires_in and refresh_expires_in
 # @name mobileConsumerSignIn
@@ -266,6 +270,7 @@ Content-Type: application/json
 }
 
 ### Rotate Refresh Token
+# A refresh token is a canonical 43-character base64url credential and is never trimmed.
 POST {{baseUrl}}/api/v1/sessions/refresh
 Content-Type: application/json
 
@@ -316,13 +321,16 @@ Content-Type: application/json
 ###############################################################################
 
 ### Create Workspace
-# Requires tenants.create and returns a fresh tenant-scoped token pair.
+# Requires tenants.create plus the current refresh credential. Creation and rotation commit
+# atomically; on success replace BOTH local credentials with the returned pair.
+# @name createTenantSession
 POST {{baseUrl}}/api/v1/tenants
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "Acme Workspace"
+  "name": "Acme Workspace",
+  "refresh_token": "{{refreshToken}}"
 }
 
 ### List My Tenant Memberships
@@ -331,12 +339,16 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ### Switch Active Tenant and Receive a Fresh Token Pair
+# The bearer and refresh credentials must belong to the same user. A foreign/inactive target
+# returns 403 without consuming the refresh token. Serialize this with every other rotation.
+# @name switchTenantSession
 POST {{baseUrl}}/api/v1/tenants/switch
-Authorization: Bearer {{token}}
+Authorization: Bearer {{createTenantSession.response.body.$.auth.access_token}}
 Content-Type: application/json
 
 {
-  "tenant_id": {{tenantId}}
+  "tenant_id": {{tenantId}},
+  "refresh_token": "{{createTenantSession.response.body.$.auth.refresh_token}}"
 }
 
 ###############################################################################
