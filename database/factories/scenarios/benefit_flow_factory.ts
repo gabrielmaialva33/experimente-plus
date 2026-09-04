@@ -214,7 +214,6 @@ export async function createBenefitFlowScenario(options: BenefitFlowScenarioOpti
         organization_id: organization.id,
         user_id: holder.id,
         redeemed_by: partner.id,
-        receipt_code: `EXP-${suffix.toUpperCase()}-01`,
         presentation_nonce_hash: createHash('sha256')
           .update(`factory-redemption-${tenant.id}-${suffix}`)
           .digest('hex'),

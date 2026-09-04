@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 
 import factory from '@adonisjs/lucid/factories'
 import { DateTime } from 'luxon'
@@ -142,7 +142,7 @@ export const BenefitAccessFactory = factory
 export const BenefitRedemptionFactory = factory
   .define(BenefitRedemption, ({ faker }) => {
     const nonce = randomUUID()
-    const receipt = `EXP-${faker.string.alphanumeric(16).toUpperCase()}`
+    const receipt = `EXP-${randomBytes(8).toString('hex').toUpperCase()}`
 
     return {
       tenant_id: 1,

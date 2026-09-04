@@ -35,6 +35,7 @@ test.group('Domain factories', (group) => {
     assert.equal(scenario.offer.max_redemptions_per_access, 2)
     assert.equal(scenario.access.status, 'active')
     assert.equal(scenario.redemption?.redemption_number, 1)
+    assert.match(scenario.redemption!.receipt_code, /^EXP-[0-9A-F]{16}$/)
     assert.equal(scenario.redemption?.offer_terms_snapshot, scenario.offer.terms)
     assert.equal(scenario.credentials.password, 'password123')
 
