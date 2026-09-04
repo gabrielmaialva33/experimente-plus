@@ -11,6 +11,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '~/components/ui/card'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts'
+import { fileCategoryLabel } from '~/lib/file_presentation'
 
 interface FileRow {
   id: number
@@ -153,14 +154,16 @@ export default function FilesPage({ files }: FilesPageProps) {
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-sm font-medium">{file.client_name}</p>
                           <Badge variant="secondary" appearance="light" size="sm">
-                            {file.file_category}
+                            {fileCategoryLabel(file.file_category)}
                           </Badge>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span>{formatFileSize(file.file_size)}</span>
-                          <span>{file.file_type}</span>
                           <span>Enviado por {file.owner.full_name}</span>
                           <span>{formatDate(file.created_at)}</span>
+                          <span className="break-all text-[0.68rem]">
+                            Formato técnico: {file.file_type}
+                          </span>
                         </div>
                       </div>
 
