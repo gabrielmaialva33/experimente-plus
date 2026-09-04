@@ -36,6 +36,16 @@ namespace IOrganization {
     manage_establishments: boolean
     manage_establishment_lifecycle: boolean
     read_analytics: boolean
+    read_redemptions: boolean
+    validate_redemptions: boolean
+  }
+
+  export interface ActorAccessSnapshot {
+    readonly platform_access: Exclude<AccessSource, 'membership'> | null
+    readonly organization_accesses: ReadonlyArray<{
+      readonly organization_id: number
+      readonly capabilities: PolicyCapabilities
+    }>
   }
 
   /**

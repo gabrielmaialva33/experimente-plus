@@ -414,7 +414,7 @@ test.group('Discovery analytics', (group) => {
       .get(`/api/v1/organizations/${scenario.organization.id}/analytics`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(editor)
-    editorDashboard.assertStatus(200)
+    editorDashboard.assertStatus(403)
 
     const outsider = await createUser({
       prefix: 'analytics-outsider',

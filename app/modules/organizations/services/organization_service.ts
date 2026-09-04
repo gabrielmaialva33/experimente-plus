@@ -32,6 +32,20 @@ export default class OrganizationService {
     return this.organizationRepository.listForUser(tenantId, actor.id)
   }
 
+  async listFromAccessSnapshot(
+    tenantId: number,
+    snapshot: IOrganization.ActorAccessSnapshot
+  ): Promise<Organization[]> {
+    if (snapshot.platform_access !== null) {
+      return this.organizationRepository.listForTenant(tenantId)
+    }
+
+    return this.organizationRepository.listByIdsForTenant(
+      tenantId,
+      snapshot.organization_accesses.map((access) => access.organization_id)
+    )
+  }
+
   async show(tenantId: number, id: number, actor: User): Promise<Organization> {
     const organization = await this.getOrFail(tenantId, id)
     await this.policy.authorizeRead(actor, tenantId, id)

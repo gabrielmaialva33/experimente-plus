@@ -17,6 +17,8 @@ const readOnly = {
   manage_establishments: false,
   manage_establishment_lifecycle: false,
   read_analytics: false,
+  read_redemptions: false,
+  validate_redemptions: false,
 }
 
 const matrix: MatrixCase[] = [
@@ -31,6 +33,8 @@ const matrix: MatrixCase[] = [
       manage_establishments: true,
       manage_establishment_lifecycle: true,
       read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     },
   },
   {
@@ -44,6 +48,8 @@ const matrix: MatrixCase[] = [
       manage_establishments: true,
       manage_establishment_lifecycle: true,
       read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     },
   },
   {
@@ -53,7 +59,8 @@ const matrix: MatrixCase[] = [
     expected: {
       ...readOnly,
       manage_establishments: true,
-      read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     },
   },
   {
@@ -63,6 +70,7 @@ const matrix: MatrixCase[] = [
     expected: {
       ...readOnly,
       read_analytics: true,
+      read_redemptions: true,
     },
   },
   {
@@ -76,6 +84,8 @@ const matrix: MatrixCase[] = [
       manage_establishments: true,
       manage_establishment_lifecycle: true,
       read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     },
   },
   {
@@ -88,7 +98,7 @@ const matrix: MatrixCase[] = [
 
 test.group('Organization policy matrix', () => {
   for (const entry of matrix) {
-    test(`projects ${entry.label} capabilities from ADR-0011`, ({ assert }) => {
+    test(`projects ${entry.label} capabilities from the applicable domain ADRs`, ({ assert }) => {
       const actual = organizationPolicyCapabilitiesFor(entry.source, entry.role)
 
       assert.deepEqual(actual, {
@@ -106,5 +116,7 @@ test.group('Organization policy matrix', () => {
     assert.isFalse(actual.update_organization)
     assert.isFalse(actual.manage_establishments)
     assert.isFalse(actual.read_analytics)
+    assert.isFalse(actual.read_redemptions)
+    assert.isFalse(actual.validate_redemptions)
   })
 })

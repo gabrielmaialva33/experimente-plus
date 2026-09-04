@@ -1,7 +1,6 @@
 import { inject } from '@adonisjs/core'
 
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import OrganizationPolicyService, {
   organizationPolicyCapabilitiesFor,
 } from '#modules/organizations/services/organization_policy_service'
@@ -10,6 +9,12 @@ import PermissionService from '#modules/permissions/services/permission_service'
 import type User from '#modules/users/models/user'
 
 type PolicyFlag = Exclude<keyof IOrganization.PolicyCapabilities, 'source' | 'role'>
+
+export interface OrganizationActorAuthorizationContext {
+  access_snapshot: IOrganization.ActorAccessSnapshot
+  permission_names: ReadonlySet<string>
+  allowed_actions: IOrganization.AllowedActions
+}
 
 const permissionName = (resource: IPermission.Resources, action: IPermission.Actions) =>
   `${resource}.${action}`
@@ -90,9 +95,13 @@ export function projectOrganizationAllowedActions(
       ),
     },
     redemptions: {
-      read: allows('read', IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.READ),
+      read: allows(
+        'read_redemptions',
+        IPermission.Resources.BENEFIT_OFFERS,
+        IPermission.Actions.READ
+      ),
       validate: allows(
-        'manage_establishments',
+        'validate_redemptions',
         IPermission.Resources.BENEFIT_OFFERS,
         IPermission.Actions.UPDATE
       ),
@@ -106,11 +115,46 @@ export function projectOrganizationAllowedActions(
   }
 }
 
+function capabilitiesForActor(
+  snapshot: IOrganization.ActorAccessSnapshot
+): IOrganization.PolicyCapabilities[] {
+  if (snapshot.platform_access === 'platform_admin') {
+    return [organizationPolicyCapabilitiesFor('platform_admin', null)]
+  }
+
+  if (snapshot.organization_accesses.length > 0) {
+    return snapshot.organization_accesses.map((access) => access.capabilities)
+  }
+
+  return snapshot.platform_access === 'platform_moderator'
+    ? [organizationPolicyCapabilitiesFor('platform_moderator', null)]
+    : []
+}
+
+function capabilitiesForOrganization(
+  snapshot: IOrganization.ActorAccessSnapshot,
+  organizationId: number
+): IOrganization.PolicyCapabilities[] {
+  if (snapshot.platform_access === 'platform_admin') {
+    return [organizationPolicyCapabilitiesFor('platform_admin', null)]
+  }
+
+  const membershipAccess = snapshot.organization_accesses.find(
+    (access) => access.organization_id === organizationId
+  )
+  if (membershipAccess) {
+    return [membershipAccess.capabilities]
+  }
+
+  return snapshot.platform_access === 'platform_moderator'
+    ? [organizationPolicyCapabilitiesFor('platform_moderator', null)]
+    : []
+}
+
 @inject()
 export default class OrganizationResourceAuthorizationService {
   constructor(
     private organizationPolicy: OrganizationPolicyService,
-    private memberRepository: OrganizationMemberRepository,
     private permissionService: PermissionService
   ) {}
 
@@ -119,10 +163,8 @@ export default class OrganizationResourceAuthorizationService {
     organizationId: number,
     actor: User
   ): Promise<IOrganization.AllowedActions> {
-    const [decision, permissions] = await Promise.all([
-      this.organizationPolicy.resolveAccess(actor, tenantId, organizationId),
-      this.permissionService.getEffectivePermissionNames(actor.id),
-    ])
+    const decision = await this.organizationPolicy.resolveAccess(actor, tenantId, organizationId)
+    const permissions = await this.permissionService.getEffectivePermissionNames(actor.id)
 
     return projectOrganizationAllowedActions([decision.capabilities], new Set(permissions))
   }
@@ -132,17 +174,36 @@ export default class OrganizationResourceAuthorizationService {
    * used only by cross-organization Portal pages such as redemption history.
    */
   async forActor(tenantId: number, actor: User): Promise<IOrganization.AllowedActions> {
-    const [isPlatformAdmin, memberships, permissions] = await Promise.all([
-      this.organizationPolicy.isPlatformAdmin(actor),
-      this.memberRepository.listActiveByUser(tenantId, actor.id),
-      this.permissionService.getEffectivePermissionNames(actor.id),
-    ])
-    const capabilities = isPlatformAdmin
-      ? [organizationPolicyCapabilitiesFor('platform_admin', null)]
-      : memberships.map((membership) =>
-          organizationPolicyCapabilitiesFor('membership', membership.role)
-        )
+    const context = await this.forActorContext(tenantId, actor)
+    return context.allowed_actions
+  }
 
-    return projectOrganizationAllowedActions(capabilities, new Set(permissions))
+  async forActorContext(
+    tenantId: number,
+    actor: User
+  ): Promise<OrganizationActorAuthorizationContext> {
+    const accessSnapshot = await this.organizationPolicy.resolveActorAccess(actor, tenantId)
+    const permissions = await this.permissionService.getEffectivePermissionNames(actor.id)
+    const permissionNames = new Set(permissions)
+    const allowedActions = projectOrganizationAllowedActions(
+      capabilitiesForActor(accessSnapshot),
+      permissionNames
+    )
+
+    return {
+      access_snapshot: accessSnapshot,
+      permission_names: permissionNames,
+      allowed_actions: allowedActions,
+    }
+  }
+
+  forOrganizationFromContext(
+    organizationId: number,
+    context: OrganizationActorAuthorizationContext
+  ): IOrganization.AllowedActions {
+    return projectOrganizationAllowedActions(
+      capabilitiesForOrganization(context.access_snapshot, organizationId),
+      context.permission_names
+    )
   }
 }

@@ -17,9 +17,10 @@ export interface OrganizationPolicyDecision {
 }
 
 /**
- * The canonical organization-role matrix from ADR-0011. Keeping this mapping
- * pure makes the exact policy independently testable and lets page projections
- * reuse the same decisions as service authorization.
+ * Canonical organization capabilities. ADR-0011 defines the membership base;
+ * specialized contracts narrow it where required (ADR-0017 for analytics and
+ * ADR-0021 for benefit redemptions). Keeping the mapping pure makes the exact
+ * policy independently testable and reusable by page projections.
  */
 export function organizationPolicyCapabilitiesFor(
   source: IOrganization.AccessSource,
@@ -34,6 +35,8 @@ export function organizationPolicyCapabilitiesFor(
     manage_establishments: false,
     manage_establishment_lifecycle: false,
     read_analytics: false,
+    read_redemptions: false,
+    validate_redemptions: false,
   } satisfies IOrganization.PolicyCapabilities
 
   if (source === 'platform_admin') {
@@ -44,6 +47,8 @@ export function organizationPolicyCapabilitiesFor(
       manage_establishments: true,
       manage_establishment_lifecycle: true,
       read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     }
   }
 
@@ -59,6 +64,8 @@ export function organizationPolicyCapabilitiesFor(
       manage_establishments: true,
       manage_establishment_lifecycle: true,
       read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     }
   }
 
@@ -66,7 +73,8 @@ export function organizationPolicyCapabilitiesFor(
     return {
       ...readOnly,
       manage_establishments: true,
-      read_analytics: true,
+      read_redemptions: true,
+      validate_redemptions: true,
     }
   }
 
@@ -74,6 +82,7 @@ export function organizationPolicyCapabilitiesFor(
     return {
       ...readOnly,
       read_analytics: true,
+      read_redemptions: true,
     }
   }
 
@@ -104,6 +113,33 @@ export default class OrganizationPolicyService {
   async requirePlatformAdmin(actor: User): Promise<void> {
     if (!(await this.isPlatformAdmin(actor))) {
       throw new ForbiddenException('Platform administrator permission is required')
+    }
+  }
+
+  /**
+   * Resolves the actor's organization access once for cross-organization reads.
+   * Platform administrators are tenant-wide, while every other actor is scoped
+   * to active memberships. Callers may reuse this immutable request snapshot.
+   */
+  async resolveActorAccess(
+    actor: User,
+    tenantId: number
+  ): Promise<IOrganization.ActorAccessSnapshot> {
+    const platformAccess = await this.platformAccess(actor)
+    if (platformAccess === 'platform_admin') {
+      return {
+        platform_access: platformAccess,
+        organization_accesses: [],
+      }
+    }
+
+    const memberships = await this.memberRepository.listActiveByUser(tenantId, actor.id)
+    return {
+      platform_access: platformAccess,
+      organization_accesses: memberships.map((membership) => ({
+        organization_id: membership.organization_id,
+        capabilities: organizationPolicyCapabilitiesFor('membership', membership.role),
+      })),
     }
   }
 
@@ -225,6 +261,34 @@ export default class OrganizationPolicyService {
     const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
     if (!decision.capabilities.read_analytics) {
       throw new ForbiddenException('This organization role cannot read analytics')
+    }
+
+    return decision.membership
+  }
+
+  async authorizeReadRedemptions(
+    actor: User,
+    tenantId: number,
+    organizationId: number,
+    client?: TransactionClientContract
+  ): Promise<OrganizationMember | null> {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.read_redemptions) {
+      throw new NotFoundException('Organization redemption not found')
+    }
+
+    return decision.membership
+  }
+
+  async authorizeValidateRedemptions(
+    actor: User,
+    tenantId: number,
+    organizationId: number,
+    client?: TransactionClientContract
+  ): Promise<OrganizationMember | null> {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.validate_redemptions) {
+      throw new ForbiddenException('This organization role cannot validate redemptions')
     }
 
     return decision.membership

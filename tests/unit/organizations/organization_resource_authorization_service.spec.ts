@@ -23,7 +23,7 @@ const portalPermissions = new Set([
 ])
 
 test.group('Organization resource action projection', () => {
-  test('keeps editors scoped to establishment content and analytics', ({ assert }) => {
+  test('keeps editors scoped to establishment content and benefit validation', ({ assert }) => {
     const actions = projectOrganizationAllowedActions(
       [organizationPolicyCapabilitiesFor('membership', 'editor')],
       portalPermissions
@@ -43,7 +43,7 @@ test.group('Organization resource action projection', () => {
       archive: true,
     })
     assert.deepEqual(actions.redemptions, { read: true, validate: true })
-    assert.isTrue(actions.analytics.read)
+    assert.isFalse(actions.analytics.read)
   })
 
   test('keeps analysts read-only while preserving organization analytics', ({ assert }) => {
@@ -89,5 +89,17 @@ test.group('Organization resource action projection', () => {
     assert.isTrue(actions.establishments.update)
     assert.isTrue(actions.redemptions.validate)
     assert.isTrue(actions.analytics.read)
+  })
+
+  test('does not project redemption or analytics actions for platform moderation alone', ({
+    assert,
+  }) => {
+    const actions = projectOrganizationAllowedActions(
+      [organizationPolicyCapabilitiesFor('platform_moderator', null)],
+      portalPermissions
+    )
+
+    assert.deepEqual(actions.redemptions, { read: false, validate: false })
+    assert.isFalse(actions.analytics.read)
   })
 })

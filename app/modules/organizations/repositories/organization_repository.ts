@@ -29,6 +29,19 @@ export default class OrganizationRepository {
     return query
   }
 
+  async listByIdsForTenant(tenantId: number, ids: readonly number[]): Promise<Organization[]> {
+    const scopedIds = [...new Set(ids)]
+    if (scopedIds.length === 0) {
+      return []
+    }
+
+    return Organization.query()
+      .where('tenant_id', tenantId)
+      .whereIn('id', scopedIds)
+      .orderBy('trade_name', 'asc')
+      .orderBy('id', 'asc')
+  }
+
   async findByIdForTenant(
     tenantId: number,
     id: number,
