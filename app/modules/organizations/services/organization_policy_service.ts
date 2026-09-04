@@ -135,24 +135,29 @@ export default class OrganizationPolicyService {
 
   /**
    * Resolves the actor's organization access once for cross-organization reads.
-   * Platform administrators are tenant-wide, while every other actor is scoped
-   * to active memberships. Callers may reuse this immutable request snapshot.
+   * The snapshot always preserves active membership identity. Platform
+   * administrators remain tenant-wide and therefore expose no scoped
+   * organization accesses. Callers may reuse this immutable request snapshot.
    */
   async resolveActorAccess(
     actor: User,
     tenantId: number
   ): Promise<IOrganization.ActorAccessSnapshot> {
     const platformAccess = await this.resolvePlatformAccess(actor)
+    const memberships = await this.memberRepository.listActiveByUser(tenantId, actor.id)
+    const hasActiveOrganizationMembership = memberships.length > 0
+
     if (platformAccess === 'platform_admin') {
       return {
         platform_access: platformAccess,
+        has_active_organization_membership: hasActiveOrganizationMembership,
         organization_accesses: [],
       }
     }
 
-    const memberships = await this.memberRepository.listActiveByUser(tenantId, actor.id)
     return {
       platform_access: platformAccess,
+      has_active_organization_membership: hasActiveOrganizationMembership,
       organization_accesses: memberships.map((membership) => ({
         organization_id: membership.organization_id,
         capabilities: organizationPolicyCapabilitiesFor('membership', membership.role),

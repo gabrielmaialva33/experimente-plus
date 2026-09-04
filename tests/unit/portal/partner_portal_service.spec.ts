@@ -70,6 +70,7 @@ test.group('Partner Portal overview batching', () => {
     const authorization = {
       access_snapshot: {
         platform_access: null,
+        has_active_organization_membership: true,
         organization_accesses: [
           { organization_id: 10, capabilities: { role: 'analyst' } },
           { organization_id: 11, capabilities: { role: 'editor' } },

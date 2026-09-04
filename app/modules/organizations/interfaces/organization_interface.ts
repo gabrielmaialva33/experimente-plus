@@ -42,6 +42,7 @@ namespace IOrganization {
 
   export interface ActorAccessSnapshot {
     readonly platform_access: Exclude<AccessSource, 'membership'> | null
+    readonly has_active_organization_membership: boolean
     readonly organization_accesses: ReadonlyArray<{
       readonly organization_id: number
       readonly capabilities: PolicyCapabilities

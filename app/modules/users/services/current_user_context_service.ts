@@ -2,9 +2,9 @@ import { inject } from '@adonisjs/core'
 
 import ForbiddenException from '#exceptions/forbidden_exception'
 import type ICurrentUserContext from '#modules/users/interfaces/current_user_context_interface'
-import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
-import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
+import OrganizationResourceAuthorizationService, {
+  type OrganizationActorAuthorizationContext,
+} from '#modules/organizations/services/organization_resource_authorization_service'
 import type User from '#modules/users/models/user'
 
 export function projectCurrentUser(user: User): ICurrentUserContext.UserProjection {
@@ -19,12 +19,11 @@ export function projectCurrentUser(user: User): ICurrentUserContext.UserProjecti
 }
 
 export function projectMobileCapabilities(
-  actions: IOrganization.AllowedActions,
-  platformAccess: ICurrentUserContext.PlatformAccess,
-  hasActiveOrganizationMembership: boolean
+  authorization: OrganizationActorAuthorizationContext
 ): ICurrentUserContext.CapabilitiesProjection {
-  const redemptionRead = actions.redemptions.read
-  const redemptionValidate = actions.redemptions.validate
+  const redemptionRead = authorization.allowed_actions.redemptions.read
+  const redemptionValidate = authorization.allowed_actions.redemptions.validate
+  const accessSnapshot = authorization.access_snapshot
 
   return {
     consumer: {
@@ -33,13 +32,13 @@ export function projectMobileCapabilities(
       },
     },
     partner: {
-      enabled: hasActiveOrganizationMembership,
+      enabled: accessSnapshot.has_active_organization_membership,
       redemptions: {
         read: redemptionRead,
         validate: redemptionValidate,
       },
     },
-    platform_access: platformAccess,
+    platform_access: accessSnapshot.platform_access,
   }
 }
 
@@ -49,10 +48,7 @@ export function projectMobileCapabilities(
  */
 @inject()
 export default class CurrentUserContextService {
-  constructor(
-    private resourceAuthorization: OrganizationResourceAuthorizationService,
-    private organizationMemberRepository: OrganizationMemberRepository
-  ) {}
+  constructor(private resourceAuthorization: OrganizationResourceAuthorizationService) {}
 
   async run(actor: User, activeOperationId: number): Promise<ICurrentUserContext.Projection> {
     const operationRecords = await actor
@@ -67,10 +63,6 @@ export default class CurrentUserContextService {
     }
 
     const authorization = await this.resourceAuthorization.forActorContext(activeOperationId, actor)
-    const hasActiveOrganizationMembership = await this.organizationMemberRepository.hasActiveByUser(
-      activeOperationId,
-      actor.id
-    )
 
     return {
       user: projectCurrentUser(actor),
@@ -86,11 +78,7 @@ export default class CurrentUserContextService {
         role: operation.$extras.pivot_role as string,
         is_current: operation.id === activeOperationId,
       })),
-      capabilities: projectMobileCapabilities(
-        authorization.allowed_actions,
-        authorization.access_snapshot.platform_access,
-        hasActiveOrganizationMembership
-      ),
+      capabilities: projectMobileCapabilities(authorization),
     }
   }
 }

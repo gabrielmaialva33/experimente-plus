@@ -1,7 +1,13 @@
 import { test } from '@japa/runner'
 
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import { organizationPolicyCapabilitiesFor } from '#modules/organizations/services/organization_policy_service'
+import type OrganizationMember from '#modules/organizations/models/organization_member'
+import type OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
+import OrganizationPolicyService, {
+  organizationPolicyCapabilitiesFor,
+  type PlatformAccess,
+} from '#modules/organizations/services/organization_policy_service'
+import type User from '#modules/users/models/user'
 
 type MatrixCase = {
   label: string
@@ -96,6 +102,37 @@ const matrix: MatrixCase[] = [
   },
 ]
 
+class PolicyWithPlatformAccess extends OrganizationPolicyService {
+  constructor(
+    repository: OrganizationMemberRepository,
+    private platformAccess: PlatformAccess | null
+  ) {
+    super(repository)
+  }
+
+  override async resolvePlatformAccess(_actor: User): Promise<PlatformAccess | null> {
+    return this.platformAccess
+  }
+}
+
+async function resolveSnapshot(
+  platformAccess: PlatformAccess | null,
+  memberships: OrganizationMember[]
+) {
+  const calls: Array<{ tenantId: number; userId: number }> = []
+  const repository = {
+    async listActiveByUser(tenantId: number, userId: number) {
+      calls.push({ tenantId, userId })
+      return memberships
+    },
+  } as unknown as OrganizationMemberRepository
+  const service = new PolicyWithPlatformAccess(repository, platformAccess)
+
+  const snapshot = await service.resolveActorAccess({ id: 41 } as User, 7)
+
+  return { calls, snapshot }
+}
+
 test.group('Organization policy matrix', () => {
   for (const entry of matrix) {
     test(`projects ${entry.label} capabilities from the applicable domain ADRs`, ({ assert }) => {
@@ -118,5 +155,50 @@ test.group('Organization policy matrix', () => {
     assert.isFalse(actual.read_analytics)
     assert.isFalse(actual.read_redemptions)
     assert.isFalse(actual.validate_redemptions)
+  })
+})
+
+test.group('Organization actor access snapshot', () => {
+  test('preserves active membership identity without scoping platform admins', async ({
+    assert,
+  }) => {
+    const membership = { organization_id: 23, role: 'analyst' } as OrganizationMember
+    const { calls, snapshot } = await resolveSnapshot('platform_admin', [membership])
+
+    assert.deepEqual(calls, [{ tenantId: 7, userId: 41 }])
+    assert.deepEqual(snapshot, {
+      platform_access: 'platform_admin',
+      has_active_organization_membership: true,
+      organization_accesses: [],
+    })
+  })
+
+  test('keeps platform administration separate from absent partner identity', async ({
+    assert,
+  }) => {
+    const { calls, snapshot } = await resolveSnapshot('platform_admin', [])
+
+    assert.deepEqual(calls, [{ tenantId: 7, userId: 41 }])
+    assert.deepEqual(snapshot, {
+      platform_access: 'platform_admin',
+      has_active_organization_membership: false,
+      organization_accesses: [],
+    })
+  })
+
+  test('uses the same active membership list for a moderator hybrid snapshot', async ({
+    assert,
+  }) => {
+    const membership = { organization_id: 23, role: 'editor' } as OrganizationMember
+    const { calls, snapshot } = await resolveSnapshot('platform_moderator', [membership])
+
+    assert.deepEqual(calls, [{ tenantId: 7, userId: 41 }])
+    assert.isTrue(snapshot.has_active_organization_membership)
+    assert.deepEqual(snapshot.organization_accesses, [
+      {
+        organization_id: 23,
+        capabilities: organizationPolicyCapabilitiesFor('membership', 'editor'),
+      },
+    ])
   })
 })

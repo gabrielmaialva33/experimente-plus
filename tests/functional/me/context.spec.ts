@@ -104,6 +104,40 @@ test.group('Authenticated mobile context', (group) => {
     }
   })
 
+  test('ignores suspended and removed memberships in partner identity and authority', async ({
+    client,
+    assert,
+  }) => {
+    const operation = await createOperation('mobile-inactive-memberships')
+    const organization = await createOrganization({ tenant: operation, owner: null })
+
+    for (const status of ['suspended', 'removed'] as const) {
+      const actor = await createUser({
+        prefix: `mobile-${status}-member`,
+        tenant: operation,
+      })
+      await addOrganizationMember({
+        tenant: operation,
+        organization,
+        user: actor,
+        role: 'editor',
+        status,
+      })
+
+      const response = await client.get('/api/v1/me/context').loginAs(actor)
+
+      response.assertStatus(200)
+      assert.deepEqual(response.body().capabilities, {
+        consumer: { wallet: { read: true } },
+        partner: {
+          enabled: false,
+          redemptions: { read: false, validate: false },
+        },
+        platform_access: null,
+      })
+    }
+  })
+
   test('does not infer partner access from moderation and preserves hybrid membership', async ({
     client,
     assert,
@@ -214,7 +248,10 @@ test.group('Authenticated mobile context', (group) => {
     await actor.related('tenants').attach({ [operationB.id]: { role: 'owner' } })
 
     const tokensService = await app.container.make(JwtAuthTokensService)
-    const tokens = await tokensService.run({ userId: actor.id, tenantId: operationA.id })
+    const tokens = await tokensService.startChain(
+      { userId: actor.id, tenantId: operationA.id },
+      { expectedPasswordHash: actor.password }
+    )
 
     const selected = await client.get('/api/v1/me/context').bearerToken(tokens.access_token)
     selected.assertStatus(200)
