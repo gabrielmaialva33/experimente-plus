@@ -92,6 +92,12 @@ test.group('Database bootstrap', (group) => {
   test('should keep migration defaults aligned with the runtime permission catalog', async ({
     assert,
   }) => {
+    const roles = await Role.query().orderBy('slug', 'asc')
+    assert.sameMembers(
+      roles.map((role) => role.slug),
+      [...IRole.CANONICAL_SLUGS]
+    )
+
     const permissions = await Permission.query().orderBy('name', 'asc')
     const actualPermissionNames = permissions.map((permission) => permission.name)
     const expectedPermissionNames = [...getDefaultPermissionNames()].sort()

@@ -11,6 +11,12 @@ export default class extends BaseSchema {
 
       table.string('email', 254).notNullable().unique()
       table.string('username', 80).nullable().unique()
+      table.check('email = lower(email)', [], 'users_email_lowercase_check')
+      table.check(
+        "username IS NULL OR (username = lower(username) AND username ~ '^[a-z0-9][a-z0-9._-]*$')",
+        [],
+        'users_username_canonical_check'
+      )
       table.string('password').notNullable()
 
       table.boolean('is_deleted').defaultTo(false)

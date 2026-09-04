@@ -17,11 +17,6 @@ const defaultRoles = [
     description: 'Platform moderator for organization and claim review workflows.',
   },
   {
-    name: 'Editor',
-    slug: 'editor',
-    description: 'Content-oriented role that inherits the standard user capabilities.',
-  },
-  {
     name: 'User',
     slug: 'user',
     description: 'Default authenticated application user.',
