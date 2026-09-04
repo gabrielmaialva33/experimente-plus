@@ -17,9 +17,9 @@ export const benefitPresentationTokenValidator = vine.compile(
   vine.object({
     token: vine
       .string()
+      .maxLength(BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH)
       .trim()
       .minLength(BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH)
-      .maxLength(BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH)
       .regex(BENEFIT_PRESENTATION_TOKEN_PATTERN),
   })
 )

@@ -39,23 +39,30 @@ export default class BenefitPresentationTokenService {
       throw this.invalidToken()
     }
 
-    const normalizedToken = token.trim()
     if (
-      normalizedToken.length < BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH ||
-      normalizedToken.length > BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH ||
-      !BENEFIT_PRESENTATION_TOKEN_PATTERN.test(normalizedToken)
+      token.length < BENEFIT_PRESENTATION_TOKEN_MIN_LENGTH ||
+      token.length > BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH ||
+      !BENEFIT_PRESENTATION_TOKEN_PATTERN.test(token)
     ) {
       throw this.invalidToken()
     }
 
-    const [payload, signature, extra] = normalizedToken.split('.')
+    const [payload, signature, extra] = token.split('.')
     if (!payload || !signature || extra) {
       throw this.invalidToken()
     }
 
+    const payloadBuffer = Buffer.from(payload, 'base64url')
+    const providedBuffer = Buffer.from(signature, 'base64url')
+    if (
+      payloadBuffer.toString('base64url') !== payload ||
+      providedBuffer.toString('base64url') !== signature
+    ) {
+      throw this.invalidToken()
+    }
+
     const expected = this.sign(payload)
-    const providedBuffer = Buffer.from(signature)
-    const expectedBuffer = Buffer.from(expected)
+    const expectedBuffer = Buffer.from(expected, 'base64url')
     if (
       providedBuffer.length !== expectedBuffer.length ||
       !timingSafeEqual(providedBuffer, expectedBuffer)
@@ -65,7 +72,7 @@ export default class BenefitPresentationTokenService {
 
     let claims: IBenefitRedemption.PresentationClaims
     try {
-      claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+      claims = JSON.parse(payloadBuffer.toString('utf8'))
     } catch {
       throw this.invalidToken()
     }

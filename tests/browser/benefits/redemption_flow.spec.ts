@@ -117,7 +117,7 @@ test.group('Benefit redemption browser flow', () => {
     await confirmationDialog
       .getByRole('button', { name: 'Confirmar utilização', exact: true })
       .click()
-    await partnerPage.waitForURL(/\/portal\/redemptions\/EXP-[A-F0-9]+$/, {
+    await partnerPage.waitForURL(/\/portal\/redemptions\/EXP-[A-F0-9]{16}$/, {
       timeout: 30_000,
     })
     await partnerPage.getByText('Utilização confirmada', { exact: true }).waitFor()

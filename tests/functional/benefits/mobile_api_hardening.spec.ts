@@ -24,9 +24,9 @@ function assertPrivateMobileResponse(response: ApiResponse): void {
   response.assertHeader('referrer-policy', 'no-referrer')
 }
 
-function parsePresentationPage(response: ApiResponse): {
-  token: string
-  validation_url: string
+function parseInertiaPage(response: ApiResponse): {
+  component: string
+  props: Record<string, unknown>
 } {
   const match = response
     .text()
@@ -35,14 +35,18 @@ function parsePresentationPage(response: ApiResponse): {
     throw new Error('The response does not contain an Inertia page payload')
   }
 
-  const page = JSON.parse(match[1]) as {
-    component: string
-    props: { presentation: { token: string; validation_url: string } }
-  }
+  return JSON.parse(match[1])
+}
+
+function parsePresentationPage(response: ApiResponse): {
+  token: string
+  validation_url: string
+} {
+  const page = parseInertiaPage(response)
   if (page.component !== 'wallet/present') {
     throw new Error(`Unexpected Inertia component: ${page.component}`)
   }
-  return page.props.presentation
+  return page.props.presentation as { token: string; validation_url: string }
 }
 
 test.group('Benefits mobile API hardening', (group) => {
@@ -254,6 +258,57 @@ test.group('Benefits mobile API hardening', (group) => {
     assert.match(presentation.body().token, BENEFIT_PRESENTATION_TOKEN_PATTERN)
     assert.isAtMost(presentation.body().token.length, BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH)
 
+    const issuedToken = presentation.body().token as string
+    const extraInput = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .json({ token: issuedToken, ignored_transport_metadata: true })
+    extraInput.assertStatus(200)
+    assertPrivateMobileResponse(extraInput)
+    assert.notProperty(extraInput.body(), 'ignored_transport_metadata')
+
+    const bodyWinsOverQuery = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .qs({ token: 'query-must-not-override-the-body' })
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .json({ token: issuedToken })
+    bodyWinsOverQuery.assertStatus(200)
+    assert.equal(bodyWinsOverQuery.body().token, issuedToken)
+    assertPrivateMobileResponse(bodyWinsOverQuery)
+
+    const queryOnly = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .qs({ token: issuedToken })
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .json({})
+    queryOnly.assertStatus(422)
+    queryOnly.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+    assertPrivateMobileResponse(queryOnly)
+
+    const signature = 'A'.repeat(43)
+    const nonCanonicalTokens = [
+      { token: `A.${signature}`, rule: 'minLength' },
+      { token: `AAAAA.${signature}`, rule: 'regex' },
+      { token: `AR.${signature}`, rule: 'regex' },
+      { token: `AQ.${'A'.repeat(42)}B`, rule: 'regex' },
+    ]
+    for (const { token, rule } of nonCanonicalTokens) {
+      for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
+        const nonCanonical = await client
+          .post(path)
+          .header('x-tenant-id', tenantHeader)
+          .loginAs(scenario.users.partner)
+          .json({ token })
+
+        nonCanonical.assertStatus(422)
+        nonCanonical.assertBodyContains({ errors: [{ field: 'token', rule }] })
+        assertPrivateMobileResponse(nonCanonical)
+      }
+    }
+
     const oversizedToken = `${'A'.repeat(BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH - 43)}.${'A'.repeat(43)}`
     for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
       const oversized = await client
@@ -267,6 +322,47 @@ test.group('Benefits mobile API hardening', (group) => {
       assertPrivateMobileResponse(oversized)
     }
 
+    const rawOversizedPaddedToken = `${' '.repeat(
+      BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH - issuedToken.length + 1
+    )}${issuedToken}`
+    assert.lengthOf(rawOversizedPaddedToken, BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH + 1)
+    for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
+      const oversizedAfterTrim = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .json({ token: rawOversizedPaddedToken })
+
+      oversizedAfterTrim.assertStatus(422)
+      oversizedAfterTrim.assertBodyContains({
+        errors: [{ field: 'token', rule: 'maxLength' }],
+      })
+      assertPrivateMobileResponse(oversizedAfterTrim)
+    }
+    const oversizedUrlEncoded = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .accept('json')
+      .form({ token: rawOversizedPaddedToken })
+    oversizedUrlEncoded.assertStatus(422)
+    oversizedUrlEncoded.assertBodyContains({
+      errors: [{ field: 'token', rule: 'maxLength' }],
+    })
+    assertPrivateMobileResponse(oversizedUrlEncoded)
+
+    const duplicateUrlEncoded = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .accept('json')
+      .unsafeForm(
+        `token=${encodeURIComponent(issuedToken)}&token=${encodeURIComponent(issuedToken)}`
+      )
+    duplicateUrlEncoded.assertStatus(422)
+    duplicateUrlEncoded.assertBodyContains({ errors: [{ field: 'token', rule: 'string' }] })
+    assertPrivateMobileResponse(duplicateUrlEncoded)
+
     const malformed = await client
       .post('/api/v1/benefit-redemptions/preview')
       .header('x-tenant-id', tenantHeader)
@@ -276,9 +372,50 @@ test.group('Benefits mobile API hardening', (group) => {
     malformed.assertBodyContains({ errors: [{ field: 'token', rule: 'regex' }] })
     assertPrivateMobileResponse(malformed)
 
-    const issuedToken = presentation.body().token as string
-    const replacement = issuedToken.endsWith('A') ? 'B' : 'A'
-    const tamperedToken = `${issuedToken.slice(0, -1)}${replacement}`
+    const paddedToken = ` ${issuedToken} `
+    const paddedApi = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .json({ token: paddedToken })
+    paddedApi.assertStatus(200)
+    assertPrivateMobileResponse(paddedApi)
+    assert.equal(paddedApi.body().token, issuedToken)
+
+    const paddedWeb = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(paddedToken)}`)
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+    paddedWeb.assertStatus(200)
+    assert.notInclude(paddedWeb.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
+    assert.include(paddedWeb.text(), 'Apresentação válida')
+    const paddedWebPage = parseInertiaPage(paddedWeb)
+    assert.equal(paddedWebPage.component, 'portal/redemptions/validate')
+    assert.equal(paddedWebPage.props.token, issuedToken)
+
+    const oversizedWebQuery = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(rawOversizedPaddedToken)}`)
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+    oversizedWebQuery.assertStatus(200)
+    assert.include(oversizedWebQuery.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
+    assert.notInclude(oversizedWebQuery.text(), 'Apresentação válida')
+
+    const oversizedWebPost = await client
+      .post('/portal/redemptions')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .header('referer', '/')
+      .accept('html')
+      .redirects(0)
+      .form({ token: rawOversizedPaddedToken })
+    oversizedWebPost.assertStatus(302)
+    oversizedWebPost.assertHeader('location', '/')
+
+    const signatureStart = issuedToken.indexOf('.') + 1
+    const replacement = issuedToken[signatureStart] === 'A' ? 'B' : 'A'
+    const tamperedToken = `${issuedToken.slice(0, signatureStart)}${replacement}${issuedToken.slice(signatureStart + 1)}`
     for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
       const tampered = await client
         .post(path)

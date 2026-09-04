@@ -92,7 +92,7 @@ const walletWithBenefit: BenefitWallet = {
 
 const receipt: RedemptionReceipt = {
   id: 20,
-  receipt_code: 'EXP-ABC-123',
+  receipt_code: 'EXP-0123456789ABCDEF',
   redemption_number: 1,
   redeemed_at: '2026-09-03T15:30:00.000Z',
   edition: { id: 3, name: 'Edição Norte do Paraná' },
@@ -156,7 +156,7 @@ describe('consumer wallet pages', () => {
     expect(card).not.toBeNull()
     expect(within(card!).getByRole('link', { name: 'Ver comprovante' })).toHaveAttribute(
       'href',
-      '/wallet/redemptions/EXP-ABC-123'
+      '/wallet/redemptions/EXP-0123456789ABCDEF'
     )
     expect(within(card!).getAllByRole('link')).toHaveLength(1)
   })
@@ -166,7 +166,7 @@ describe('consumer wallet pages', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Comprovante' })).toBeVisible()
     expect(screen.getByText('Utilização confirmada')).toBeVisible()
-    expect(screen.getByText('EXP-ABC-123')).toBeVisible()
+    expect(screen.getByText('EXP-0123456789ABCDEF')).toBeVisible()
     expect(screen.getByText('Válido de segunda a sexta.')).toBeVisible()
   })
 

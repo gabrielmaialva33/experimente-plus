@@ -6,7 +6,10 @@ import InvalidBenefitPresentationException, {
 } from '#exceptions/invalid_benefit_presentation_exception'
 import BenefitPresentationOriginService from '#modules/benefits/services/benefit_presentation_origin_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
-import { benefitPresentationTokenValidator } from '#modules/benefits/validators/benefit_redemption_validator'
+import {
+  normalizeBenefitPresentationTokenQuery,
+  validateBenefitPresentationTokenInput,
+} from '#modules/benefits/utils/benefit_presentation_token_input'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
@@ -50,11 +53,12 @@ export default class BenefitRedemptionPagesController {
   async validate({ auth, inertia, request, response, session, tenant }: HttpContext) {
     setPrivateResponseHeaders(response)
     const input = request.input('token')
-    const token = typeof input === 'string' ? input.trim() : ''
     const actor = auth.getUserOrFail()
+    let token = ''
     let preview: Awaited<ReturnType<BenefitRedemptionService['preview']>> | null = null
 
     try {
+      token = normalizeBenefitPresentationTokenQuery(input)
       preview = token ? await this.redemptionService.preview(tenant!.id, token, actor) : null
     } catch (error) {
       if (!(error instanceof InvalidBenefitPresentationException)) {
@@ -81,7 +85,7 @@ export default class BenefitRedemptionPagesController {
   }
 
   async redeem({ auth, request, response, session, tenant }: HttpContext) {
-    const payload = await request.validateUsing(benefitPresentationTokenValidator)
+    const payload = await validateBenefitPresentationTokenInput(request)
     let receipt: Awaited<ReturnType<BenefitRedemptionService['redeem']>>
 
     try {

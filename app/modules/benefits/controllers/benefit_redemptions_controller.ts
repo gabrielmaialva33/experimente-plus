@@ -3,10 +3,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import BenefitPresentationOriginService from '#modules/benefits/services/benefit_presentation_origin_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
-import {
-  benefitPresentationRequestValidator,
-  benefitPresentationTokenValidator,
-} from '#modules/benefits/validators/benefit_redemption_validator'
+import { validateBenefitPresentationTokenInput } from '#modules/benefits/utils/benefit_presentation_token_input'
+import { benefitPresentationRequestValidator } from '#modules/benefits/validators/benefit_redemption_validator'
 
 @inject()
 export default class BenefitRedemptionsController {
@@ -29,7 +27,7 @@ export default class BenefitRedemptionsController {
   }
 
   async preview({ auth, request, response, tenant }: HttpContext) {
-    const payload = await request.validateUsing(benefitPresentationTokenValidator)
+    const payload = await validateBenefitPresentationTokenInput(request)
     const preview = await this.redemptionService.preview(
       tenant!.id,
       payload.token,
@@ -39,7 +37,7 @@ export default class BenefitRedemptionsController {
   }
 
   async store({ auth, request, response, tenant }: HttpContext) {
-    const payload = await request.validateUsing(benefitPresentationTokenValidator)
+    const payload = await validateBenefitPresentationTokenInput(request)
     const receipt = await this.redemptionService.redeem(
       tenant!.id,
       payload.token,
