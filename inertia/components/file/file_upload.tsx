@@ -7,6 +7,7 @@ import { Button } from '~/components/ui/button'
 import { Alert, AlertIcon, AlertTitle, AlertContent, AlertDescription } from '~/components/ui/alert'
 import { cn } from '~/lib/utils'
 import { useApi } from '~/hooks/use_api'
+import { fileCategoryLabel } from '~/lib/file_presentation'
 import type { FileUploadResponse } from '~/types'
 
 const ACCEPTED_FILE_TYPES: Record<string, string[]> = {
@@ -194,7 +195,10 @@ export function FileUpload() {
                   <strong>Arquivo:</strong> {uploadedFile.clientName}
                 </p>
                 <p>
-                  <strong>Tipo:</strong> {uploadedFile.fileType}
+                  <strong>Categoria:</strong> {fileCategoryLabel(uploadedFile.fileCategory)}
+                </p>
+                <p className="break-all">
+                  <strong>Formato técnico:</strong> {uploadedFile.fileType}
                 </p>
                 <p>
                   <strong>Tamanho:</strong> {formatFileSize(uploadedFile.size)}
