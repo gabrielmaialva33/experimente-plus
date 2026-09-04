@@ -6,6 +6,7 @@ import {
   passwordResetRequestThrottle,
   passwordResetThrottle,
 } from '#start/limiter'
+import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const SessionsController = () => import('#modules/auth/controllers/sessions_controller')
 const PasswordResetController = () => import('#modules/auth/controllers/password_reset_controller')
@@ -51,6 +52,14 @@ router
 router
   .group(() => {
     router.get('/', [MeController, 'profile']).as('me.profile')
+    router
+      .patch('/', [MeController, 'update'])
+      .as('me.update')
+      .use([privateResponseHeadersMiddleware, apiThrottle])
+    router
+      .get('/context', [MeController, 'context'])
+      .as('me.context')
+      .use([privateResponseHeadersMiddleware, apiThrottle, middleware.tenant({ required: true })])
     router.get('/permissions', [MeController, 'permissions']).as('me.permissions')
     router.get('/roles', [MeController, 'roles']).as('me.roles')
     router.delete('/', [MeController, 'delete']).as('me.delete')

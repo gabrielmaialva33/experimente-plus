@@ -4,8 +4,8 @@ import app from '@adonisjs/core/services/app'
 import AuthEventService from '#modules/auth/services/auth_event_service'
 import DeleteOwnAccountService from '#modules/users/services/delete_own_account_service'
 import { deleteOwnAccountValidator } from '#modules/users/validators/account_validator'
-import UpdateProfileService from '#modules/web/services/update_profile_service'
-import { updateProfileValidator } from '#modules/web/validators/settings_validator'
+import UpdateProfileService from '#modules/users/services/update_profile_service'
+import { updateProfileValidator } from '#modules/users/validators/profile_validator'
 
 export default class InertiaSettingsController {
   async index({ inertia, auth }: HttpContext) {

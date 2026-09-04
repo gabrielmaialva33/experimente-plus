@@ -4,6 +4,17 @@ import type IOrganization from '#modules/organizations/interfaces/organization_i
 import OrganizationMember from '#modules/organizations/models/organization_member'
 
 export default class OrganizationMemberRepository {
+  async hasActiveByUser(tenantId: number, userId: number): Promise<boolean> {
+    const membership = await OrganizationMember.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', userId)
+      .where('status', 'active')
+      .select('id')
+      .first()
+
+    return membership !== null
+  }
+
   async listActiveByUser(tenantId: number, userId: number): Promise<OrganizationMember[]> {
     return OrganizationMember.query()
       .where('tenant_id', tenantId)
