@@ -1,7 +1,14 @@
 import testUtils from '@adonisjs/core/services/test_utils'
+import type { ApiResponse } from '@japa/api-client'
 import { test } from '@japa/runner'
 
 import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
+
+function assertPrivateMobileResponse(response: ApiResponse): void {
+  response.assertHeader('cache-control', 'private, no-store')
+  response.assertHeader('x-robots-tag', 'noindex, nofollow')
+  response.assertHeader('referrer-policy', 'no-referrer')
+}
 
 test.group('Benefits API contract', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
@@ -18,6 +25,7 @@ test.group('Benefits API contract', (group) => {
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.holder)
     walletBefore.assertStatus(200)
+    assertPrivateMobileResponse(walletBefore)
     assert.equal(walletBefore.body().summary.passes, 1)
     assert.equal(walletBefore.body().summary.benefits, 1)
     assert.equal(walletBefore.body().summary.available, 1)
@@ -31,6 +39,7 @@ test.group('Benefits API contract', (group) => {
       .loginAs(scenario.users.holder)
       .json({ access_id: scenario.access.id, offer_id: scenario.offer.id })
     presented.assertStatus(201)
+    assertPrivateMobileResponse(presented)
     assert.isAbove(presented.body().token.length, 40)
     assert.match(
       presented.body().validation_url,
@@ -46,6 +55,7 @@ test.group('Benefits API contract', (group) => {
       .loginAs(scenario.users.partner)
       .json({ token: presented.body().token })
     previewed.assertStatus(200)
+    assertPrivateMobileResponse(previewed)
     assert.equal(previewed.body().holder.id, scenario.users.holder.id)
     assert.equal(previewed.body().benefit.offer_id, scenario.offer.id)
 
@@ -55,6 +65,7 @@ test.group('Benefits API contract', (group) => {
       .loginAs(scenario.users.partner)
       .json({ token: presented.body().token })
     redeemed.assertStatus(200)
+    assertPrivateMobileResponse(redeemed)
     assert.equal(redeemed.body().redemption_number, 1)
     assert.equal(redeemed.body().offer.id, scenario.offer.id)
     assert.equal(redeemed.body().offer.terms, scenario.offer.terms)
@@ -74,6 +85,7 @@ test.group('Benefits API contract', (group) => {
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.holder)
     holderHistory.assertStatus(200)
+    assertPrivateMobileResponse(holderHistory)
     assert.equal(holderHistory.body().total, 1)
     assert.equal(holderHistory.body().redemptions[0].receipt_code, redeemed.body().receipt_code)
 
@@ -82,6 +94,7 @@ test.group('Benefits API contract', (group) => {
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.holder)
     holderReceipt.assertStatus(200)
+    assertPrivateMobileResponse(holderReceipt)
     assert.equal(holderReceipt.body().id, redeemed.body().id)
 
     const partnerHistory = await client
@@ -89,8 +102,17 @@ test.group('Benefits API contract', (group) => {
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.partner)
     partnerHistory.assertStatus(200)
+    assertPrivateMobileResponse(partnerHistory)
     assert.equal(partnerHistory.body().total, 1)
     assert.equal(partnerHistory.body().redemptions[0].receipt_code, redeemed.body().receipt_code)
+
+    const partnerReceipt = await client
+      .get(`/api/v1/benefit-redemptions/${redeemed.body().receipt_code}`)
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+    partnerReceipt.assertStatus(200)
+    assertPrivateMobileResponse(partnerReceipt)
+    assert.equal(partnerReceipt.body().id, redeemed.body().id)
 
     const walletAfter = await client
       .get('/api/v1/me/wallet')

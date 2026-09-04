@@ -4,20 +4,23 @@ import type { HttpContext } from '@adonisjs/core/http'
 import InvalidBenefitPresentationException, {
   INVALID_BENEFIT_PRESENTATION_MESSAGE,
 } from '#exceptions/invalid_benefit_presentation_exception'
+import BenefitPresentationOriginService from '#modules/benefits/services/benefit_presentation_origin_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import { benefitPresentationTokenValidator } from '#modules/benefits/validators/benefit_redemption_validator'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
+import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 @inject()
 export default class BenefitRedemptionPagesController {
   constructor(
     private redemptionService: BenefitRedemptionService,
-    private resourceAuthorization: OrganizationResourceAuthorizationService
+    private resourceAuthorization: OrganizationResourceAuthorizationService,
+    private presentationOrigin: BenefitPresentationOriginService
   ) {}
 
   async present({ auth, inertia, params, request, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
-    const origin = `${request.protocol()}://${request.host()}`
+    setPrivateResponseHeaders(response)
+    const origin = this.presentationOrigin.resolve(request)
     const presentation = await this.redemptionService.present(
       tenant!.id,
       Number(params.accessId),
@@ -29,13 +32,13 @@ export default class BenefitRedemptionPagesController {
   }
 
   async walletHistory({ auth, inertia, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
+    setPrivateResponseHeaders(response)
     const history = await this.redemptionService.holderHistory(tenant!.id, auth.getUserOrFail())
     return inertia.render('wallet/redemptions', { history })
   }
 
   async walletReceipt({ auth, inertia, params, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
+    setPrivateResponseHeaders(response)
     const receipt = await this.redemptionService.holderReceipt(
       tenant!.id,
       String(params.receiptCode),
@@ -45,7 +48,7 @@ export default class BenefitRedemptionPagesController {
   }
 
   async validate({ auth, inertia, request, response, session, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
+    setPrivateResponseHeaders(response)
     const input = request.input('token')
     const token = typeof input === 'string' ? input.trim() : ''
     const actor = auth.getUserOrFail()
@@ -97,7 +100,7 @@ export default class BenefitRedemptionPagesController {
   }
 
   async partnerHistory({ auth, inertia, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
+    setPrivateResponseHeaders(response)
     const actor = auth.getUserOrFail()
     const authorization = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
     const history = await this.redemptionService.partnerHistory(tenant!.id, actor, authorization)
@@ -108,18 +111,12 @@ export default class BenefitRedemptionPagesController {
   }
 
   async partnerReceipt({ auth, inertia, params, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
+    setPrivateResponseHeaders(response)
     const receipt = await this.redemptionService.partnerReceipt(
       tenant!.id,
       String(params.receiptCode),
       auth.getUserOrFail()
     )
     return inertia.render('portal/redemptions/receipt', { receipt })
-  }
-
-  private setPrivateHeaders(response: HttpContext['response']): void {
-    response.header('X-Robots-Tag', 'noindex, nofollow')
-    response.header('Cache-Control', 'private, no-store')
-    response.header('Referrer-Policy', 'no-referrer')
   }
 }

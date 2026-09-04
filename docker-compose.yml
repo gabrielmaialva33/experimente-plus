@@ -69,6 +69,7 @@ services:
       APP_LOCALE: ${APP_LOCALE:-pt}
       APP_NAME: ${APP_NAME:-Experimente+}
       APP_URL: ${APP_URL:-http://localhost:3333}
+      BENEFIT_PRESENTATION_BASE_URL: ${BENEFIT_PRESENTATION_BASE_URL:-}
       APP_SOURCE_URL: ${APP_SOURCE_URL:-https://github.com/gabrielmaialva33/experimente-plus}
       PUBLIC_TENANT_SLUG: ${PUBLIC_TENANT_SLUG:-development}
       # Development fallbacks only. Override every secret outside disposable environments.

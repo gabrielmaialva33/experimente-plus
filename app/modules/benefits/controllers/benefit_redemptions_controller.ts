@@ -1,6 +1,7 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import BenefitPresentationOriginService from '#modules/benefits/services/benefit_presentation_origin_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import {
   benefitPresentationRequestValidator,
@@ -9,11 +10,14 @@ import {
 
 @inject()
 export default class BenefitRedemptionsController {
-  constructor(private redemptionService: BenefitRedemptionService) {}
+  constructor(
+    private redemptionService: BenefitRedemptionService,
+    private presentationOrigin: BenefitPresentationOriginService
+  ) {}
 
   async present({ auth, request, response, tenant }: HttpContext) {
     const payload = await request.validateUsing(benefitPresentationRequestValidator)
-    const origin = `${request.protocol()}://${request.host()}`
+    const origin = this.presentationOrigin.resolve(request)
     const presentation = await this.redemptionService.present(
       tenant!.id,
       payload.access_id,
@@ -61,5 +65,14 @@ export default class BenefitRedemptionsController {
   async partnerHistory({ auth, response, tenant }: HttpContext) {
     const history = await this.redemptionService.partnerHistory(tenant!.id, auth.getUserOrFail())
     return response.ok(history)
+  }
+
+  async partnerReceipt({ auth, params, response, tenant }: HttpContext) {
+    const receipt = await this.redemptionService.partnerReceipt(
+      tenant!.id,
+      String(params.receiptCode),
+      auth.getUserOrFail()
+    )
+    return response.ok(receipt)
   }
 }

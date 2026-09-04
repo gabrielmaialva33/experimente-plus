@@ -1,7 +1,9 @@
 import router from '@adonisjs/core/services/router'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
+import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 import { middleware } from '#start/kernel'
+import { apiThrottle } from '#start/limiter'
 
 const BenefitEditionsController = () =>
   import('#modules/benefits/controllers/benefit_editions_controller')
@@ -71,7 +73,7 @@ router
 
 router
   .get('/api/v1/me/wallet', [BenefitWalletController, 'show'])
-  .use(middleware.auth())
+  .use([middleware.auth(), privateResponseHeadersMiddleware, apiThrottle])
   .use(middleware.tenant({ required: true }))
 
 router
@@ -206,7 +208,7 @@ router
     router.get('/redemptions/:receiptCode', [BenefitRedemptionsController, 'myReceipt'])
   })
   .prefix('/api/v1/me/benefits')
-  .use(middleware.auth())
+  .use([middleware.auth(), privateResponseHeadersMiddleware, apiThrottle])
   .use(middleware.tenant({ required: true }))
 
 router
@@ -220,9 +222,12 @@ router
     router
       .get('/', [BenefitRedemptionsController, 'partnerHistory'])
       .use(permission(IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.READ))
+    router
+      .get('/:receiptCode', [BenefitRedemptionsController, 'partnerReceipt'])
+      .use(permission(IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.READ))
   })
   .prefix('/api/v1/benefit-redemptions')
-  .use(middleware.auth())
+  .use([middleware.auth(), privateResponseHeadersMiddleware, apiThrottle])
   .use(middleware.tenant({ required: true }))
 
 router

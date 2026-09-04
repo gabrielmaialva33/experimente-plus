@@ -11,7 +11,25 @@
 
 import { Env } from '@adonisjs/core/env'
 
-export default await Env.create(new URL('../', import.meta.url), {
+import {
+  assertBenefitPresentationOriginConfiguration,
+  BENEFIT_PRESENTATION_BASE_URL_KEY,
+  normalizeHttpOrigin,
+} from '#shared/utils/benefit_presentation_origin'
+
+function benefitPresentationBaseUrl(key: string, value?: string): string | undefined {
+  if (!value) return undefined
+
+  try {
+    return normalizeHttpOrigin(value, BENEFIT_PRESENTATION_BASE_URL_KEY)
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : `Invalid environment variable "${key}"`
+    )
+  }
+}
+
+const env = await Env.create(new URL('../', import.meta.url), {
   NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
   PORT: Env.schema.number(),
   HOST: Env.schema.string({ format: 'host' }),
@@ -21,6 +39,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_NAME: Env.schema.string.optional(),
   APP_URL: Env.schema.string.optional(),
   APP_SOURCE_URL: Env.schema.string.optional(),
+  BENEFIT_PRESENTATION_BASE_URL: benefitPresentationBaseUrl,
   TRUST_PROXY: Env.schema.string.optional(),
   PUBLIC_TENANT_SLUG: Env.schema.string.optional(),
   APP_KEY: Env.schema.string(),
@@ -132,3 +151,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   MAILGUN_DOMAIN: Env.schema.string.optional(),
   MAILGUN_BASE_URL: Env.schema.string.optional(),
 })
+
+assertBenefitPresentationOriginConfiguration({
+  environment: env.get('NODE_ENV'),
+  configuredBaseUrl: env.get('BENEFIT_PRESENTATION_BASE_URL'),
+  appUrl: env.get('APP_URL'),
+})
+
+export default env

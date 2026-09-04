@@ -3,6 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import BenefitAccessService from '#modules/benefits/services/benefit_access_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
+import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 @inject()
 export default class BenefitWalletController {
@@ -12,7 +13,6 @@ export default class BenefitWalletController {
   ) {}
 
   async show({ auth, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
     const baseWallet = await this.accessService.wallet(tenant!.id, actor)
     const wallet = await this.redemptionService.decorateWallet(tenant!.id, actor.id, baseWallet)
@@ -20,15 +20,10 @@ export default class BenefitWalletController {
   }
 
   async page({ auth, inertia, response, tenant }: HttpContext) {
-    this.setPrivateHeaders(response)
+    setPrivateResponseHeaders(response)
     const actor = auth.getUserOrFail()
     const baseWallet = await this.accessService.wallet(tenant!.id, actor)
     const wallet = await this.redemptionService.decorateWallet(tenant!.id, actor.id, baseWallet)
     return inertia.render('wallet/index', { wallet })
-  }
-
-  private setPrivateHeaders(response: HttpContext['response']): void {
-    response.header('X-Robots-Tag', 'noindex, nofollow')
-    response.header('Cache-Control', 'private, no-store')
   }
 }
