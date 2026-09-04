@@ -161,9 +161,16 @@ describe('navigation configuration', () => {
     NAVIGATION_ITEMS.filter((item) => item.capability).forEach((item) => {
       expect(metadataById.get(item.id)?.capability).toBe(item.capability)
     })
+    NAVIGATION_ITEMS.filter((item) => item.capabilitiesAnyOf).forEach((item) => {
+      expect(metadataById.get(item.id)?.capabilitiesAnyOf).toEqual(item.capabilitiesAnyOf)
+    })
 
     expect(resolveRouteMetadata('/portal/redemptions')?.capability).toBe('benefit_offers.read')
     expect(resolveRouteMetadata('/backoffice/moderation')?.capability).toBe('establishments.list')
+    expect(resolveRouteMetadata('/backoffice/benefits')?.capabilitiesAnyOf).toEqual([
+      'benefit_editions.create',
+      'benefit_editions.update',
+    ])
   })
 
   it('does not expose the conditional UI demo route in central navigation', () => {

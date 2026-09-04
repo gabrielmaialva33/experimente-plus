@@ -17,6 +17,7 @@ import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Button } from '~/components/ui/button'
 import {
+  hasNavigationCapability,
   navigationItemsForSurface,
   resolveRouteMetadata,
   SURFACE_LABELS,
@@ -30,7 +31,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
-import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '~/components/ui/sheet'
 import { useAuth } from '~/hooks/use_auth'
 import { operationRoleLabel } from '~/lib/labels'
 import { SidebarNav } from './sidebar'
@@ -119,7 +127,7 @@ function UserMenu({ surface }: { surface: NavigationSurface }) {
 
   const firstBackofficeDestination = navigationItemsForSurface('backoffice', 'sidebar', {
     activeTenantId,
-  }).find((item) => !item.capability || can(item.capability))
+  }).find((item) => hasNavigationCapability(item, can))
   const BackofficeIcon = firstBackofficeDestination?.icon
 
   return (
@@ -224,8 +232,16 @@ export function Header({ surface }: { surface: NavigationSurface }) {
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="w-[304px] gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
+              closeLabel="Fechar navegação"
+              className="w-[304px] gap-0 px-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
             >
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navegação principal</SheetTitle>
+                <SheetDescription>
+                  Acesse as áreas disponíveis no{' '}
+                  {SURFACE_LABELS[surface].toLocaleLowerCase('pt-BR')}.
+                </SheetDescription>
+              </SheetHeader>
               <div className="flex h-[72px] items-center border-b border-border/70 px-5">
                 <AppBrand onNavigate={() => setMobileOpen(false)} />
               </div>

@@ -63,6 +63,8 @@ export interface RouteMetadata {
   breadcrumbs: readonly NavigationBreadcrumb[]
   /** Permission required by the page route; navigation visibility remains a client-side convenience. */
   capability?: string
+  /** Any one of these permissions grants access when a page route accepts multiple capabilities. */
+  capabilitiesAnyOf?: readonly string[]
   /** Allows a route to provide a surface fallback for descendants without dedicated metadata. */
   includeChildren?: boolean
 }
@@ -76,6 +78,8 @@ export interface NavigationItem {
   section: string
   placements: readonly NavigationPlacement[]
   capability?: string
+  /** Any one of these permissions makes the destination available. */
+  capabilitiesAnyOf?: readonly string[]
   /** The destination is guarded by tenant middleware and needs an active operation. */
   requiresActiveTenant?: boolean
   developmentOnly?: boolean
@@ -364,7 +368,7 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     surface: 'backoffice',
     title: 'Edições e benefícios',
     description: 'Edições comerciais, ofertas vinculadas e publicação.',
-    capability: 'benefit_editions.create',
+    capabilitiesAnyOf: ['benefit_editions.create', 'benefit_editions.update'],
     breadcrumbs: [{ label: 'Edições e benefícios' }],
     includeChildren: true,
   },
@@ -537,7 +541,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     surface: 'backoffice',
     section: 'Operação',
     placements: ['sidebar'],
-    capability: 'benefit_editions.create',
+    capabilitiesAnyOf: ['benefit_editions.create', 'benefit_editions.update'],
     requiresActiveTenant: true,
   },
   {
@@ -661,6 +665,15 @@ export function navigationItemsForSurface(
       (!placement || item.placements.includes(placement)) &&
       (!availability || !item.requiresActiveTenant || availability.activeTenantId !== null)
   )
+}
+
+export function hasNavigationCapability(
+  item: Pick<NavigationItem, 'capability' | 'capabilitiesAnyOf'>,
+  can: (capability: string) => boolean
+): boolean {
+  if (item.capability) return can(item.capability)
+  if (item.capabilitiesAnyOf?.length) return item.capabilitiesAnyOf.some(can)
+  return true
 }
 
 export function publicNavigationItemsFor(

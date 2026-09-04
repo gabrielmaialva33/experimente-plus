@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react'
 import { AppBrand } from '~/components/app_brand'
 import { Button } from '~/components/ui/button'
 import {
+  hasNavigationCapability,
   isNavigationItemActive,
   navigationItemsForSurface,
   SURFACE_LABELS,
@@ -50,7 +51,7 @@ export function SidebarNav({
   const visibleItems = navigationItemsForSurface(surface, 'sidebar', { activeTenantId }).filter(
     (item) => {
       if (item.developmentOnly && !application.demoPagesEnabled) return false
-      return !item.capability || can(item.capability)
+      return hasNavigationCapability(item, can)
     }
   )
   const visibleSections = visibleItems.reduce<NavigationSection[]>((sections, item) => {

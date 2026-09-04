@@ -36,40 +36,50 @@ export function MetricCard({
   tone = 'primary',
   className,
 }: MetricCardProps) {
-  return (
+  const card = (
     <Card
       className={cn(
-        'group overflow-hidden border-border/70 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md',
-        className
+        'h-full overflow-hidden border-border bg-card shadow-none',
+        href && 'transition-colors group-hover:border-primary/40',
+        !href && className
       )}
     >
-      <CardContent className="relative flex min-h-32 items-start justify-between gap-4 p-5">
+      <CardContent className="flex min-h-32 items-start justify-between gap-4 p-5">
         <div className="min-w-0">
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
           <p className="mt-2 text-3xl font-bold tracking-[-0.04em] tabular-nums">{value}</p>
           {helper && <div className="mt-1.5 text-xs text-muted-foreground">{helper}</div>}
           {href && (
-            <Link
-              href={href}
-              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline hover:underline-offset-4"
-            >
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:underline group-hover:underline-offset-4">
               {linkLabel}
               <ArrowUpRight className="size-3" />
-            </Link>
+            </span>
           )}
         </div>
 
         <span
           className={cn(
-            'flex size-11 shrink-0 items-center justify-center rounded-2xl ring-1 transition-transform duration-200 group-hover:scale-105',
+            'flex size-11 shrink-0 items-center justify-center rounded-md ring-1',
             toneStyles[tone]
           )}
         >
-          <Icon className="size-5" />
+          <Icon aria-hidden="true" className="size-5" />
         </span>
-
-        <span className="pointer-events-none absolute -bottom-10 -end-8 size-24 rounded-full bg-primary/[0.035] transition-transform duration-300 group-hover:scale-125" />
       </CardContent>
     </Card>
+  )
+
+  if (!href) return card
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        className
+      )}
+    >
+      {card}
+    </Link>
   )
 }

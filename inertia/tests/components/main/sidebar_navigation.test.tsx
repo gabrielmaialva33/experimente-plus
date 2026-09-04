@@ -62,6 +62,19 @@ describe('SidebarNav', () => {
     expect(screen.queryByText('Edições e benefícios')).not.toBeInTheDocument()
   })
 
+  it('shows the edition workspace to update-only operators', () => {
+    mocks.url = '/backoffice/benefits'
+    mocks.activeTenantId = 7
+    mocks.permissions = ['benefit_editions.update']
+
+    render(<SidebarNav surface="backoffice" />)
+
+    expect(screen.getByRole('link', { name: 'Edições e benefícios' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+  })
+
   it('hides operation-bound destinations without an active operation', () => {
     mocks.url = '/users'
     mocks.activeTenantId = null
