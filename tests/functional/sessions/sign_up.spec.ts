@@ -42,6 +42,9 @@ test.group('Sessions sign up', (group) => {
       auth: {
         access_token: response.body().auth?.access_token,
         refresh_token: response.body().auth?.refresh_token,
+        token_type: 'Bearer',
+        expires_in: 900,
+        refresh_expires_in: 259200,
       },
       email: userData.email,
       username: userData.username,

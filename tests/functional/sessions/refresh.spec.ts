@@ -46,12 +46,14 @@ test.group('Session refresh tokens', (group) => {
     assert.equal(payload.token_use, 'access')
     assert.equal(payload.userId, user.id)
     assert.isString(payload.jti)
+    assert.equal(payload.exp! - payload.iat!, 900)
     assert.isNull(jwt.decode(refreshToken))
 
     const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
     assert.lengthOf(stored.token_hash, 64)
     assert.notEqual(stored.token_hash, refreshToken)
     assert.isNull(stored.revoked_at)
+    assert.approximately(stored.expires_at.diffNow('seconds').seconds, 259200, 5)
   })
 
   test('should reject an opaque refresh token as bearer authentication', async ({ client }) => {
@@ -71,6 +73,13 @@ test.group('Session refresh tokens', (group) => {
       refresh_token: refreshToken,
     })
     response.assertStatus(200)
+    response.assertBodyContains({
+      auth: {
+        token_type: 'Bearer',
+        expires_in: 900,
+        refresh_expires_in: 259200,
+      },
+    })
 
     const rotatedAccessToken = response.body().auth.access_token as string
     const rotatedRefreshToken = response.body().auth.refresh_token as string

@@ -32,6 +32,11 @@ test.group('Tenants', (group) => {
     response.assertStatus(201)
     assert.equal(response.body().tenant.name, 'Creator Workspace')
     assert.equal(response.body().tenant.role, 'owner')
+    assert.deepInclude(response.body().auth, {
+      token_type: 'Bearer',
+      expires_in: 900,
+      refresh_expires_in: 259200,
+    })
 
     const tenant = await Tenant.findOrFail(response.body().tenant.id)
     const members = await tenant.related('users').query()
@@ -122,6 +127,11 @@ test.group('Tenants', (group) => {
     }
     assert.equal(body.tenant.id, tenantB.id)
     assert.equal(body.tenant.role, 'member')
+    assert.deepInclude(body.auth, {
+      token_type: 'Bearer',
+      expires_in: 900,
+      refresh_expires_in: 259200,
+    })
 
     const payload = jwt.verify(
       body.auth.access_token,

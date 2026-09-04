@@ -47,6 +47,11 @@ test.group('SignInService', (group) => {
     assert.exists(result.auth)
     assert.isString(result.auth!.access_token)
     assert.isString(result.auth!.refresh_token)
+    assert.deepInclude(result.auth!, {
+      token_type: 'Bearer',
+      expires_in: 900,
+      refresh_expires_in: 259200,
+    })
     assert.equal(result.user.id, user.id)
     assert.equal(result.user.email, user.email)
     assert.equal(result.user.full_name, user.full_name)

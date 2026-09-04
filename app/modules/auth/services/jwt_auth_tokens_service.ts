@@ -10,10 +10,11 @@ import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_rep
 import User from '#modules/users/models/user'
 import {
   API_ACCESS_TOKEN_EXPIRES_IN,
+  API_ACCESS_TOKEN_TTL_SECONDS,
   JWT_AUDIENCE,
   JWT_ISSUER,
   REFRESH_TOKEN_BYTES,
-  REFRESH_TOKEN_TTL_DAYS,
+  REFRESH_TOKEN_TTL_SECONDS,
 } from '#shared/jwt/constants'
 import JwtService from '#shared/jwt/jwt_service'
 import type { JwtContent } from '#shared/jwt/types'
@@ -22,6 +23,9 @@ import env from '#start/env'
 export type GenerateAuthTokensResponse = {
   access_token: string
   refresh_token: string
+  token_type: 'Bearer'
+  expires_in: number
+  refresh_expires_in: number
 }
 
 type RefreshTokenIssueOptions = {
@@ -42,7 +46,7 @@ export default class JwtAuthTokensService {
       this.issueRefreshToken(payload),
     ])
 
-    return { access_token: accessToken, refresh_token: refreshToken }
+    return this.toResponse(accessToken, refreshToken)
   }
 
   /**
@@ -81,10 +85,7 @@ export default class JwtAuthTokensService {
         rotatedFromId: current.id,
       })
 
-      return {
-        access_token: accessToken,
-        refresh_token: rotatedRefreshToken,
-      }
+      return this.toResponse(accessToken, rotatedRefreshToken)
     })
   }
 
@@ -131,7 +132,7 @@ export default class JwtAuthTokensService {
         user_id: Number(payload.userId),
         tenant_id: payload.tenantId ?? null,
         token_hash: this.hashRefreshToken(token),
-        expires_at: DateTime.now().plus({ days: REFRESH_TOKEN_TTL_DAYS }),
+        expires_at: DateTime.now().plus({ seconds: REFRESH_TOKEN_TTL_SECONDS }),
         revoked_at: null,
         rotated_from_id: options.rotatedFromId ?? null,
       },
@@ -145,5 +146,15 @@ export default class JwtAuthTokensService {
     return createHmac('sha256', env.get('REFRESH_TOKEN_SECRET', env.get('APP_KEY')))
       .update(token)
       .digest('hex')
+  }
+
+  private toResponse(accessToken: string, refreshToken: string): GenerateAuthTokensResponse {
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: 'Bearer',
+      expires_in: API_ACCESS_TOKEN_TTL_SECONDS,
+      refresh_expires_in: REFRESH_TOKEN_TTL_SECONDS,
+    }
   }
 }
