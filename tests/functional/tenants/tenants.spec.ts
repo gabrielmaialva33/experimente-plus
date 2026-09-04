@@ -11,7 +11,7 @@ import env from '#start/env'
 test.group('Tenants', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
 
-  test('POST / creates an owned workspace and returns tenant-scoped tokens', async ({
+  test('POST / lets a platform administrator create an operation and returns scoped tokens', async ({
     client,
     assert,
   }) => {
@@ -21,8 +21,8 @@ test.group('Tenants', (group) => {
       username: 'workspace-creator',
       password: 'password123',
     })
-    const userRole = await Role.findByOrFail('slug', IRole.Slugs.USER)
-    await user.related('roles').attach([userRole.id])
+    const adminRole = await Role.findByOrFail('slug', IRole.Slugs.ADMIN)
+    await user.related('roles').attach([adminRole.id])
 
     const response = await client
       .post('/api/v1/tenants')
@@ -44,6 +44,28 @@ test.group('Tenants', (group) => {
       env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY'))
     ) as { tenantId?: number }
     assert.equal(payload.tenantId, tenant.id)
+  })
+
+  test('POST / denies the default user role permission to create operations', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.create({
+      full_name: 'Consumer without operation creation',
+      email: 'consumer-no-operation@example.com',
+      username: 'consumer-no-operation',
+      password: 'password123',
+    })
+    const userRole = await Role.findByOrFail('slug', IRole.Slugs.USER)
+    await user.related('roles').attach([userRole.id])
+
+    const response = await client
+      .post('/api/v1/tenants')
+      .json({ name: 'Unauthorized operation' })
+      .loginAs(user)
+
+    response.assertStatus(403)
+    assert.isNull(await Tenant.findBy('name', 'Unauthorized operation'))
   })
 
   test('GET /me lists tenants the user belongs to with pivot role', async ({ client, assert }) => {

@@ -24,8 +24,8 @@ export default class DeleteOwnAccountService {
   ) {}
 
   async run(userId: number, payload: DeleteOwnAccountPayload): Promise<void> {
-    if (payload.confirmation.trim().toUpperCase() !== 'DELETE') {
-      throw new BadRequestException('Digite DELETE para confirmar a exclusão da conta')
+    if (payload.confirmation.trim().toUpperCase() !== 'EXCLUIR MINHA CONTA') {
+      throw new BadRequestException('Digite EXCLUIR MINHA CONTA para confirmar a exclusão da conta')
     }
 
     try {

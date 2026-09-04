@@ -29,7 +29,7 @@ test.group('Delete own account', (group) => {
 
     const response = await client.delete('/api/v1/me').bearerToken(accessToken).json({
       current_password: 'password123',
-      confirmation: 'DELETE',
+      confirmation: 'EXCLUIR MINHA CONTA',
     })
 
     response.assertStatus(204)
@@ -66,8 +66,8 @@ test.group('Delete own account', (group) => {
     })
 
     for (const payload of [
-      { current_password: 'wrong-password', confirmation: 'DELETE' },
-      { current_password: 'password123', confirmation: 'KEEP' },
+      { current_password: 'wrong-password', confirmation: 'EXCLUIR MINHA CONTA' },
+      { current_password: 'password123', confirmation: 'MANTER MINHA CONTA' },
     ]) {
       const response = await client.delete('/api/v1/me').loginAs(user).json(payload)
       response.assertStatus(400)

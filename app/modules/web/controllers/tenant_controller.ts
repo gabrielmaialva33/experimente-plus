@@ -21,7 +21,7 @@ export default class InertiaTenantController {
     const tenant = await this.createTenantService.run(user.id, payload)
 
     await auth.use('jwt').generate(user, { tenantId: tenant.id })
-    session.flash('success', 'Workspace created successfully.')
+    session.flash('success', 'Operação criada com sucesso.')
 
     return response.redirect().toPath('/settings?tab=operations')
   }

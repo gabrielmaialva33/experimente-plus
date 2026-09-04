@@ -298,7 +298,6 @@ test.group('Sessions sign up', (group) => {
       'files.read',
       'files.list',
       'files.delete.own',
-      'tenants.create',
       'tenants.read',
       'tenants.list',
       'establishments.create',
@@ -313,6 +312,7 @@ test.group('Sessions sign up', (group) => {
     assert.notInclude(permissions, 'users.delete')
     assert.notInclude(permissions, 'roles.list')
     assert.notInclude(permissions, 'permissions.list')
+    assert.notInclude(permissions, 'tenants.create')
   })
 
   test('should assign default user role', async ({ client, assert }) => {
