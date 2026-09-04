@@ -1,4 +1,9 @@
 import vine from '@vinejs/vine'
+import { USERNAME_PATTERN } from '#modules/users/utils/user_identity'
+
+function clearBlankOptionalString(value: unknown) {
+  return typeof value === 'string' && value.trim().length === 0 ? null : value
+}
 
 /**
  * Canonical self-service profile boundary shared by the API and Inertia form.
@@ -15,9 +20,12 @@ export const updateProfileValidator = vine.withMetaData<{ userId: number }>().co
       .requiredWhen((field) => Object.hasOwn(field.data, 'full_name')),
     username: vine
       .string()
+      .parse(clearBlankOptionalString)
       .trim()
+      .toLowerCase()
       .minLength(3)
       .maxLength(80)
+      .regex(USERNAME_PATTERN)
       .unique(async (db, value, field) => {
         const user = await db
           .from('users')
@@ -26,7 +34,7 @@ export const updateProfileValidator = vine.withMetaData<{ userId: number }>().co
           .first()
         return !user
       })
-      .optional()
-      .requiredWhen((field) => Object.hasOwn(field.data, 'username')),
+      .nullable()
+      .optional(),
   })
 )

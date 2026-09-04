@@ -6,7 +6,7 @@ import { mapUserUniqueConstraintError } from '#modules/users/utils/user_unique_c
 
 export type UpdateProfilePayload = {
   full_name?: string
-  username?: string
+  username?: string | null
 }
 
 /** Updates only the authenticated user's allowlisted self-service fields. */

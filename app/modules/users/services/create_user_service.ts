@@ -30,7 +30,16 @@ export default class CreateUserService {
 
     try {
       return await db.transaction(async (client) => {
-        const user = await this.usersRepository.create(payload, { client })
+        const user = await this.usersRepository.create(
+          {
+            ...payload,
+            // Lucid does not hydrate database defaults back into a freshly
+            // created model. Set the nullable attribute explicitly so every
+            // immediate HTTP projection serializes the stable `null` contract.
+            username: payload.username ?? null,
+          },
+          { client }
+        )
         const defaultRole = await this.rolesRepository.findBy('slug', IRole.Slugs.USER, { client })
 
         if (defaultRole) {

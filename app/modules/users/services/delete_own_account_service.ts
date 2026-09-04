@@ -7,6 +7,8 @@ import { DateTime } from 'luxon'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import CredentialInvalidationService from '#modules/auth/services/credential_invalidation_service'
+import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
+import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
 import UsersRepository from '#modules/users/repositories/users_repository'
 
 export type DeleteOwnAccountPayload = {
@@ -18,7 +20,9 @@ export type DeleteOwnAccountPayload = {
 export default class DeleteOwnAccountService {
   constructor(
     private usersRepository: UsersRepository,
-    private credentialInvalidationService: CredentialInvalidationService
+    private credentialInvalidationService: CredentialInvalidationService,
+    private activeRootGuardService: ActiveRootGuardService,
+    private permissionCacheService: PermissionCacheService
   ) {}
 
   async run(userId: number, payload: DeleteOwnAccountPayload): Promise<void> {
@@ -54,6 +58,8 @@ export default class DeleteOwnAccountService {
         throw new BadRequestException('A senha atual está incorreta')
       }
 
+      await this.activeRootGuardService.assertCanRemove(userId, client)
+
       const now = DateTime.now()
       const tombstone = `${user.id}-${randomUUID()}`
 
@@ -75,5 +81,7 @@ export default class DeleteOwnAccountService {
       await client.from('user_roles').where('user_id', userId).delete()
       await client.from('user_permissions').where('user_id', userId).delete()
     })
+
+    await this.permissionCacheService.bumpEpochAfterCommittedMutation()
   }
 }

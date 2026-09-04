@@ -32,7 +32,29 @@ test.group('Users list', (group) => {
     await role.related('permissions').sync(permissions.map((p) => p.id))
   }
 
-  test('should list users with authentication', async ({ client }) => {
+  async function createListUser() {
+    const role = await Role.firstOrCreate(
+      { slug: IRole.Slugs.USER },
+      {
+        name: 'User',
+        slug: IRole.Slugs.USER,
+        description: 'Regular user role',
+      }
+    )
+    const user = await User.create({
+      full_name: 'List Contract User',
+      email: 'list-contract@example.com',
+      username: 'list-contract',
+      password: 'password123',
+    })
+
+    await user.related('roles').attach([role.id])
+    await assignPermissions(role, [IPermission.Actions.LIST])
+
+    return user
+  }
+
+  test('should list users with an exact serialized contract', async ({ client, assert }) => {
     const userRole = await Role.firstOrCreate(
       { slug: IRole.Slugs.USER },
       {
@@ -67,8 +89,44 @@ test.group('Users list', (group) => {
       },
     })
     // Check that the response contains users
-    response.assert!.isArray(response.body().data)
-    response.assert!.isAtLeast(response.body().data.length, 1)
+    const body = response.body()
+    response.assert!.isArray(body.data)
+    response.assert!.isAtLeast(body.data.length, 1)
+    assert.sameMembers(Object.keys(body), ['meta', 'data'])
+    assert.sameMembers(Object.keys(body.meta), [
+      'total',
+      'per_page',
+      'current_page',
+      'last_page',
+      'first_page',
+      'first_page_url',
+      'last_page_url',
+      'next_page_url',
+      'previous_page_url',
+    ])
+
+    const serializedUser = body.data.find((item: { id: number }) => item.id === user.id)
+    assert.exists(serializedUser)
+    assert.sameMembers(Object.keys(serializedUser), [
+      'id',
+      'full_name',
+      'email',
+      'username',
+      'email_verified',
+      'email_verified_at',
+      'created_at',
+      'updated_at',
+      'roles',
+    ])
+    assert.lengthOf(serializedUser.roles, 1)
+    assert.sameMembers(Object.keys(serializedUser.roles[0]), [
+      'id',
+      'name',
+      'description',
+      'slug',
+      'created_at',
+      'updated_at',
+    ])
   })
 
   test('should fail without authentication', async ({ client }) => {
@@ -112,7 +170,10 @@ test.group('Users list', (group) => {
       })
     }
 
-    const response = await client.get('/api/v1/users').qs({ page: 2, limit: 10 }).loginAs(authUser)
+    const response = await client
+      .get('/api/v1/users')
+      .qs({ page: 2, per_page: 10 })
+      .loginAs(authUser)
 
     response.assertStatus(200)
     response.assertBodyContains({
@@ -126,6 +187,67 @@ test.group('Users list', (group) => {
     // Check that pagination is working - should have some data on page 2
     assert.isArray(data)
     assert.isAtLeast(data.length, 1)
+  })
+
+  test('should use canonical defaults and ignore pagination fields from the request body', async ({
+    client,
+    assert,
+  }) => {
+    const user = await createListUser()
+
+    const response = await client
+      .get('/api/v1/users')
+      .unsafeJson({
+        page: 2,
+        per_page: 1,
+        sort_by: 'email',
+        order: 'desc',
+      })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    response.assertBodyContains({
+      meta: {
+        per_page: 10,
+        current_page: 1,
+      },
+    })
+
+    const ids = response.body().data.map((item: { id: number }) => item.id)
+    assert.deepEqual(
+      ids,
+      [...ids].sort((left, right) => left - right)
+    )
+  })
+
+  test('should enforce the canonical pagination cap', async ({ client }) => {
+    const user = await createListUser()
+
+    const capped = await client.get('/api/v1/users').qs({ page: 1, per_page: 100 }).loginAs(user)
+    capped.assertStatus(200)
+    capped.assertBodyContains({ meta: { current_page: 1, per_page: 100 } })
+
+    const aboveCap = await client.get('/api/v1/users').qs({ page: 1, per_page: 101 }).loginAs(user)
+    aboveCap.assertStatus(422)
+  })
+
+  test('should reject malformed, overflowing, unknown, and unsafe list query values', async ({
+    client,
+  }) => {
+    const user = await createListUser()
+    const invalidQueries = [
+      { page: '1.0' },
+      { page: '1e2' },
+      { page: '2147483648' },
+      { sort_by: 'password' },
+      { order: 'sideways' },
+      { perPage: '25' },
+    ]
+
+    for (const query of invalidQueries) {
+      const response = await client.get('/api/v1/users').qs(query).loginAs(user)
+      response.assertStatus(422)
+    }
   })
 
   test('should filter users by search query', async ({ client, assert }) => {
@@ -180,6 +302,59 @@ test.group('Users list', (group) => {
         },
       ],
     })
+  })
+
+  test('should treat PostgreSQL ILIKE metacharacters as literal search text', async ({
+    client,
+    assert,
+  }) => {
+    const authUser = await createListUser()
+    const cases = [
+      {
+        search: '100%',
+        targetName: 'Literal 100% Match',
+        decoyName: 'Literal 100X Match',
+        suffix: 'percent',
+      },
+      {
+        search: 'Code_A',
+        targetName: 'Literal Code_A Match',
+        decoyName: 'Literal CodeXA Match',
+        suffix: 'underscore',
+      },
+      {
+        search: 'Path\\Segment',
+        targetName: 'Literal Path\\Segment Match',
+        decoyName: 'Literal PathXSegment Match',
+        suffix: 'backslash',
+      },
+    ]
+
+    for (const testCase of cases) {
+      const target = await User.create({
+        full_name: testCase.targetName,
+        email: `literal-${testCase.suffix}@example.com`,
+        username: `literal-${testCase.suffix}`,
+        password: 'password123',
+      })
+      await User.create({
+        full_name: testCase.decoyName,
+        email: `decoy-${testCase.suffix}@example.com`,
+        username: `decoy-${testCase.suffix}`,
+        password: 'password123',
+      })
+
+      const response = await client
+        .get('/api/v1/users')
+        .qs({ search: testCase.search })
+        .loginAs(authUser)
+
+      response.assertStatus(200)
+      assert.deepEqual(
+        response.body().data.map((item: { id: number }) => item.id),
+        [target.id]
+      )
+    }
   })
 
   test('should sort users by different fields', async ({ client }) => {

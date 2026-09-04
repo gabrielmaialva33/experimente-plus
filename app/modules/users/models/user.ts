@@ -19,6 +19,7 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 import Role from '#modules/roles/models/role'
 import Permission from '#modules/permissions/models/permission'
 import Tenant from '#modules/tenants/models/tenant'
+import { canonicalizeEmail, canonicalizeUsername } from '#modules/users/utils/user_identity'
 
 const AuthFinder = withAuthFinder(() => hash.use('argon'), {
   uids: ['email', 'username'],
@@ -100,6 +101,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
    */
   @manyToMany(() => Role, {
     pivotTable: 'user_roles',
+    pivotTimestamps: true,
   })
   declare roles: ManyToMany<typeof Role>
 
@@ -122,6 +124,17 @@ export default class User extends compose(BaseModel, AuthFinder) {
    * Hooks
    * ------------------------------------------------------
    */
+  @beforeSave()
+  static canonicalizeIdentity(user: User) {
+    if (user.$dirty.email) {
+      user.email = canonicalizeEmail(user.email)
+    }
+
+    if (user.$dirty.username && user.username !== null) {
+      user.username = canonicalizeUsername(user.username)
+    }
+  }
+
   @beforeFind()
   @beforeFetch()
   static async softDeletes(query: model.ModelQueryBuilderContract<typeof User>) {

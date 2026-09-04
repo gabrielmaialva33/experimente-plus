@@ -8,16 +8,23 @@ import CreateUserService from '#modules/users/services/create_user_service'
 import EditUserService from '#modules/users/services/edit_user_service'
 import DeleteUserService from '#modules/users/services/delete_user_service'
 
-import { createUserValidator, editUserValidator } from '#modules/users/validators/users_validator'
+import {
+  createUserValidator,
+  editUserValidator,
+  listUsersValidator,
+  userIdParamValidator,
+} from '#modules/users/validators/users_validator'
 
 @inject()
 export default class UsersController {
   async paginate({ request, response }: HttpContext) {
-    const page = request.input('page', 1)
-    const perPage = request.input('per_page', 10)
-    const sortBy = request.input('sort_by', 'id')
-    const direction = request.input('order', 'asc')
-    const search = request.input('search', undefined)
+    const {
+      page = 1,
+      per_page: perPage = 10,
+      sort_by: sortBy = 'id',
+      order: direction = 'asc',
+      search,
+    } = await request.validateUsing(listUsersValidator, { data: request.qs() })
 
     const service = await app.container.make(PaginateUserService)
     const users = await service.run({
@@ -31,8 +38,8 @@ export default class UsersController {
     return response.json(users)
   }
 
-  async get({ params, response }: HttpContext) {
-    const userId = +params.id
+  async get({ params, request, response }: HttpContext) {
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
 
     const service = await app.container.make(GetUserService)
 
@@ -46,7 +53,9 @@ export default class UsersController {
   }
 
   async create({ request, response }: HttpContext) {
-    const payload = await createUserValidator.validate(request.all())
+    const payload = await request.validateUsing(createUserValidator, {
+      data: request.body(),
+    })
 
     const service = await app.container.make(CreateUserService)
 
@@ -54,21 +63,26 @@ export default class UsersController {
     return response.created(user)
   }
 
-  async update({ params, request, response }: HttpContext) {
-    const userId = +params.id
-    const payload = await editUserValidator.validate(request.all(), { meta: { userId } })
+  async update({ auth, params, request, response }: HttpContext) {
+    const actor = auth.getUserOrFail()
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
+    const payload = await request.validateUsing(editUserValidator, {
+      data: request.body(),
+      meta: { userId },
+    })
 
     const service = await app.container.make(EditUserService)
 
-    const user = await service.run(userId, payload)
+    const user = await service.run(actor.id, userId, payload)
     return response.json(user)
   }
 
-  async delete({ params, response }: HttpContext) {
-    const userId = +params.id
+  async delete({ auth, params, request, response }: HttpContext) {
+    const actor = auth.getUserOrFail()
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
 
     const service = await app.container.make(DeleteUserService)
-    await service.run(userId)
+    await service.run(actor.id, userId)
 
     return response.noContent()
   }

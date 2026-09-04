@@ -10,6 +10,13 @@ interface PaginateUsersOptions extends PaginateOptions<typeof User> {
   search?: string
 }
 
+const LIKE_ESCAPE_CHARACTER = '\\'
+
+/** Treat user input as text instead of PostgreSQL LIKE pattern syntax. */
+export function escapeUserSearchPattern(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&')
+}
+
 @inject()
 export default class PaginateUserService {
   constructor(private userRepository: UsersRepository) {}
@@ -19,8 +26,13 @@ export default class PaginateUserService {
 
     const modifyQuery = (query: ModelQueryBuilderContract<typeof User>) => {
       if (search) {
+        const searchPattern = `%${escapeUserSearchPattern(search)}%`
+
         query.where((builder: ModelQueryBuilderContract<typeof User>) => {
-          builder.where('full_name', 'like', `%${search}%`).orWhere('email', 'like', `%${search}%`)
+          builder
+            .whereRaw('?? ILIKE ? ESCAPE ?', ['full_name', searchPattern, LIKE_ESCAPE_CHARACTER])
+            .orWhereRaw('?? ILIKE ? ESCAPE ?', ['email', searchPattern, LIKE_ESCAPE_CHARACTER])
+            .orWhereRaw('?? ILIKE ? ESCAPE ?', ['username', searchPattern, LIKE_ESCAPE_CHARACTER])
         })
       }
     }

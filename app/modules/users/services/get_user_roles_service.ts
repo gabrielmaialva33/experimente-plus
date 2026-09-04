@@ -21,7 +21,7 @@ export default class GetUserRolesService {
     }
 
     await user.load('roles', (query) => {
-      query.select('id', 'name', 'description', 'created_at', 'updated_at')
+      query.select('id', 'name', 'description', 'slug', 'created_at', 'updated_at')
       query.orderBy('name')
     })
 
@@ -29,6 +29,7 @@ export default class GetUserRolesService {
       id: role.id,
       name: role.name,
       description: role.description,
+      slug: role.slug,
       created_at: role.created_at,
       updated_at: role.updated_at,
       assigned_at: role.$extras.pivot_created_at,

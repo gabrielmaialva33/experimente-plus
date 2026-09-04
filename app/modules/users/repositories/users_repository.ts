@@ -3,6 +3,11 @@ import User from '#modules/users/models/user'
 import type IUser from '#modules/users/interfaces/user_interface'
 import LucidRepository from '#shared/lucid/lucid_repository'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import { canonicalizeLoginIdentifier } from '#modules/users/utils/user_identity'
+
+export function orderUserIdsForLock(userIds: number[]): number[] {
+  return [...new Set(userIds)].sort((left, right) => left - right)
+}
 
 export default class UsersRepository
   extends LucidRepository<typeof User>
@@ -13,7 +18,7 @@ export default class UsersRepository
   }
 
   async verifyCredentials(uid: string, password: string): Promise<User> {
-    return this.model.verifyCredentials(uid, password)
+    return this.model.verifyCredentials(canonicalizeLoginIdentifier(uid), password)
   }
 
   async findActiveByIdForUpdate(
@@ -26,6 +31,22 @@ export default class UsersRepository
       .where('is_deleted', false)
       .forUpdate()
       .first()
+  }
+
+  /**
+   * Lock active users in primary-key order. Administrative mutations use one
+   * ordered query for actor and target so concurrent cross-user operations do
+   * not acquire the same rows in opposite orders.
+   */
+  async lockActiveByIds(userIds: number[], client: TransactionClientContract): Promise<User[]> {
+    const orderedIds = orderUserIdsForLock(userIds)
+
+    return this.model
+      .query({ client })
+      .whereIn('id', orderedIds)
+      .where('is_deleted', false)
+      .orderBy('id', 'asc')
+      .forUpdate()
   }
 
   /**
@@ -128,66 +149,17 @@ export default class UsersRepository
   }
 
   /**
-   * Find a user by the HMAC of the email verification token stored in metadata,
-   * ignoring soft-deleted records. Raw tokens are never persisted.
+   * Resolve the active owner of an email verification token HMAC. The caller
+   * must lock the owner row and revalidate the hash before consuming it.
    */
-  async findByEmailVerificationTokenHash(tokenHash: string): Promise<User | null> {
-    return this.model
+  async findOwnerByEmailVerificationTokenHash(tokenHash: string): Promise<number | null> {
+    const user = await this.model
       .query()
       .whereRaw("metadata->>'email_verification_token_hash' = ?", [tokenHash])
       .where('is_deleted', false)
+      .select('id')
       .first()
-  }
 
-  /**
-   * Replace the user's direct permissions with the given pivot data.
-   */
-  async syncPermissions(user: User, syncData: IUser.PermissionPivotMap): Promise<void> {
-    await user.related('permissions').sync(syncData)
-  }
-
-  /**
-   * Return the pivot row for a user/permission pair, or null when not attached.
-   */
-  async findPermissionPivot(
-    user: User,
-    permissionId: number
-  ): Promise<Record<string, unknown> | null> {
-    return user.related('permissions').pivotQuery().where('permission_id', permissionId).first()
-  }
-
-  /**
-   * Update the pivot row for an already attached permission.
-   */
-  async updatePermissionPivot(
-    user: User,
-    permissionId: number,
-    pivotData: IUser.PermissionPivotData
-  ): Promise<void> {
-    await user
-      .related('permissions')
-      .pivotQuery()
-      .where('permission_id', permissionId)
-      .update(pivotData)
-  }
-
-  /**
-   * Attach a single permission to the user with the given pivot data.
-   */
-  async attachPermission(
-    user: User,
-    permissionId: number,
-    pivotData: IUser.PermissionPivotData
-  ): Promise<void> {
-    await user.related('permissions').attach({
-      [permissionId]: pivotData,
-    })
-  }
-
-  /**
-   * Detach the given permissions from the user.
-   */
-  async detachPermissions(user: User, permissionIds: number[]): Promise<void> {
-    await user.related('permissions').detach(permissionIds)
+    return user?.id ?? null
   }
 }

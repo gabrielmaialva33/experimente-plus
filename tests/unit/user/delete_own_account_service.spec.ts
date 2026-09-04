@@ -1,7 +1,9 @@
 import { test } from '@japa/runner'
 
 import type CredentialInvalidationService from '#modules/auth/services/credential_invalidation_service'
+import type PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import type UsersRepository from '#modules/users/repositories/users_repository'
+import type ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
 import DeleteOwnAccountService from '#modules/users/services/delete_own_account_service'
 
 test.group('DeleteOwnAccountService', () => {
@@ -14,7 +16,19 @@ test.group('DeleteOwnAccountService', () => {
       },
     } as unknown as UsersRepository
     const credentialInvalidationService = {} as CredentialInvalidationService
-    const service = new DeleteOwnAccountService(usersRepository, credentialInvalidationService)
+    const activeRootGuardService = {} as ActiveRootGuardService
+    let cacheBumps = 0
+    const permissionCacheService = {
+      async bumpEpochAfterCommittedMutation() {
+        cacheBumps++
+      },
+    } as PermissionCacheService
+    const service = new DeleteOwnAccountService(
+      usersRepository,
+      credentialInvalidationService,
+      activeRootGuardService,
+      permissionCacheService
+    )
 
     let failure: unknown
     try {
@@ -27,5 +41,6 @@ test.group('DeleteOwnAccountService', () => {
     }
 
     assert.strictEqual(failure, unexpectedFailure)
+    assert.equal(cacheBumps, 0)
   })
 })

@@ -86,6 +86,19 @@ test.group('Me endpoints', (group) => {
         granted: true,
       },
     })
+    const rolePermission = await Permission.firstOrCreate(
+      {
+        resource: IPermission.Resources.USERS,
+        action: IPermission.Actions.LIST,
+      },
+      {
+        name: 'users.list',
+        resource: IPermission.Resources.USERS,
+        action: IPermission.Actions.LIST,
+        description: null,
+      }
+    )
+    await role.related('permissions').attach([rolePermission.id])
 
     const response = await client.get('/api/v1/me/permissions').loginAs(user)
 
@@ -98,6 +111,30 @@ test.group('Me endpoints', (group) => {
     // Check if permission exists in response
     const hasUsersRead = response.body().permissions.some((p: any) => p.name === 'users.read')
     assert.isTrue(hasUsersRead)
+    assert.deepEqual(Object.keys(response.body()).sort(), ['grouped', 'permissions', 'total'])
+
+    const direct = response.body().permissions.find((item: any) => item.id === permission.id)
+    const inherited = response.body().permissions.find((item: any) => item.id === rolePermission.id)
+    assert.deepEqual(Object.keys(direct).sort(), [
+      'action',
+      'description',
+      'expires_at',
+      'granted',
+      'id',
+      'name',
+      'resource',
+      'source',
+    ])
+    assert.equal(direct.source, 'direct')
+    assert.deepEqual(Object.keys(inherited).sort(), [
+      'action',
+      'description',
+      'id',
+      'name',
+      'resource',
+      'source',
+    ])
+    assert.equal(inherited.source, 'role')
   })
 
   test('GET /me/roles should return user roles', async ({ client, assert }) => {
@@ -117,16 +154,16 @@ test.group('Me endpoints', (group) => {
         description: 'Regular user',
       }
     )
-    const editorRole = await Role.firstOrCreate(
-      { slug: IRole.Slugs.EDITOR },
+    const moderatorRole = await Role.firstOrCreate(
+      { slug: IRole.Slugs.MODERATOR },
       {
-        name: 'Editor',
-        slug: IRole.Slugs.EDITOR,
-        description: 'Content editor',
+        name: 'Moderator',
+        slug: IRole.Slugs.MODERATOR,
+        description: 'Platform moderator',
       }
     )
 
-    await user.related('roles').sync([userRole.id, editorRole.id])
+    await user.related('roles').sync([userRole.id, moderatorRole.id])
 
     const response = await client.get('/api/v1/me/roles').loginAs(user)
 
@@ -134,9 +171,22 @@ test.group('Me endpoints', (group) => {
     assertPrivateResponse(response)
     assert.equal(response.body().total, 2)
     assert.isArray(response.body().roles)
+    assert.deepEqual(Object.keys(response.body()).sort(), ['roles', 'total'])
 
     const roleNames = response.body().roles.map((r: any) => r.name)
-    assert.includeMembers(roleNames, ['User', 'Editor'])
+    assert.includeMembers(roleNames, ['User', 'Moderator'])
+    for (const role of response.body().roles) {
+      assert.deepEqual(Object.keys(role).sort(), [
+        'assigned_at',
+        'created_at',
+        'description',
+        'id',
+        'name',
+        'slug',
+        'updated_at',
+      ])
+      assert.match(role.assigned_at, /^\d{4}-\d{2}-\d{2}T/)
+    }
   })
 
   test('should return the canonical private JSON error for unauthenticated /me requests', async ({

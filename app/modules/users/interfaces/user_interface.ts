@@ -13,6 +13,8 @@ namespace IUser {
 
     findActiveByIdForUpdate(userId: number, client: TransactionClientContract): Promise<User | null>
 
+    lockActiveByIds(userIds: number[], client: TransactionClientContract): Promise<User[]>
+
     findByIdWithPermissionsAndRoles(userId: number): Promise<User | null>
 
     findByIdWithPermissionsAndRolesOrFail(userId: number): Promise<User>
@@ -29,25 +31,7 @@ namespace IUser {
 
     countForTenant(tenantId: number): Promise<number>
 
-    findByEmailVerificationTokenHash(tokenHash: string): Promise<User | null>
-
-    syncPermissions(user: User, syncData: PermissionPivotMap): Promise<void>
-
-    findPermissionPivot(user: User, permissionId: number): Promise<Record<string, unknown> | null>
-
-    updatePermissionPivot(
-      user: User,
-      permissionId: number,
-      pivotData: PermissionPivotData
-    ): Promise<void>
-
-    attachPermission(
-      user: User,
-      permissionId: number,
-      pivotData: PermissionPivotData
-    ): Promise<void>
-
-    detachPermissions(user: User, permissionIds: number[]): Promise<void>
+    findOwnerByEmailVerificationTokenHash(tokenHash: string): Promise<number | null>
   }
 
   export interface PermissionPivotData {

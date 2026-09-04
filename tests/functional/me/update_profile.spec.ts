@@ -1,25 +1,50 @@
 import { randomUUID } from 'node:crypto'
 
 import { test } from '@japa/runner'
+import app from '@adonisjs/core/services/app'
 import testUtils from '@adonisjs/core/services/test_utils'
 import limiter from '@adonisjs/limiter/services/main'
 import db from '@adonisjs/lucid/services/db'
 
 import User from '#modules/users/models/user'
+import UsersRepository from '#modules/users/repositories/users_repository'
+import UpdateProfileService from '#modules/users/services/update_profile_service'
 
-function createBarrier(participants: number): () => Promise<void> {
+type Barrier = {
+  wait: () => Promise<void>
+  release: () => void
+}
+
+function createBarrier(participants: number): Barrier {
   let arrivals = 0
-  let release: () => void
+  let release!: () => void
   const gate = new Promise<void>((resolve) => {
     release = resolve
   })
 
-  return async () => {
-    arrivals += 1
-    if (arrivals === participants) {
-      release()
-    }
-    await gate
+  return {
+    wait: async () => {
+      arrivals += 1
+      if (arrivals === participants) {
+        release()
+      }
+      await gate
+    },
+    release,
+  }
+}
+
+class BarrierUpdateProfileService extends UpdateProfileService {
+  constructor(
+    usersRepository: UsersRepository,
+    private readonly barrier: Barrier
+  ) {
+    super(usersRepository)
+  }
+
+  override async run(...args: Parameters<UpdateProfileService['run']>) {
+    await this.barrier.wait()
+    return super.run(...args)
   }
 }
 
@@ -131,9 +156,24 @@ test.group('Update own profile', (group) => {
       errors: [{ field: 'username', rule: 'database.unique' }],
     })
 
+    const canonical = await client
+      .patch('/api/v1/me')
+      .loginAs(actor)
+      .json({ username: '  Profile.Canonical  ' })
+    canonical.assertStatus(200)
+    canonical.assertBodyContains({ user: { username: 'profile.canonical' } })
+
+    const ambiguous = await client
+      .patch('/api/v1/me')
+      .header('Accept', 'application/json')
+      .loginAs(actor)
+      .json({ username: 'another@example.com' })
+    ambiguous.assertStatus(422)
+    ambiguous.assertBodyContains({ errors: [{ field: 'username', rule: 'regex' }] })
+
     await actor.refresh()
     assert.equal(actor.full_name, 'Profile Actor')
-    assert.equal(actor.username, 'profile-actor')
+    assert.equal(actor.username, 'profile.canonical')
   })
 
   test('reads profile changes only from the request body', async ({ client, assert }) => {
@@ -167,6 +207,95 @@ test.group('Update own profile', (group) => {
     await actor.refresh()
     assert.equal(actor.full_name, 'Body Name')
     assert.equal(actor.username, 'profile-body-source')
+  })
+
+  test('clears a username from explicit null, empty, or whitespace-only profile input', async ({
+    client,
+    assert,
+  }) => {
+    const clearValues: Array<string | null> = [null, '', '   ']
+
+    for (const [index, username] of clearValues.entries()) {
+      const actor = await User.create({
+        full_name: `Clear Profile Username ${index}`,
+        email: `clear-profile-username-${index}@example.com`,
+        username: `clear-profile-username-${index}`,
+        password: 'password123',
+      })
+
+      const response = await client.patch('/api/v1/me').loginAs(actor).json({ username })
+
+      response.assertStatus(200)
+      response.assertBodyContains({ user: { username: null } })
+      await actor.refresh()
+      assert.isNull(actor.username)
+    }
+  })
+
+  test('allows the settings form to clear an existing username with an empty input', async ({
+    client,
+    assert,
+  }) => {
+    const actor = await User.create({
+      full_name: 'Settings Profile With Username',
+      email: 'settings-profile-with-username@example.com',
+      username: 'settings-profile-with-username',
+      password: 'password123',
+    })
+
+    const response = await client
+      .post('/settings/profile')
+      .withCsrfToken()
+      .redirects(0)
+      .loginAs(actor)
+      .form({
+        full_name: 'Updated Settings Profile',
+        username: '',
+      })
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/settings')
+
+    await actor.refresh()
+    assert.equal(actor.full_name, 'Updated Settings Profile')
+    assert.isNull(actor.username)
+  })
+
+  test('reads settings profile changes only from the request body', async ({ client, assert }) => {
+    const actor = await User.create({
+      full_name: 'Settings Body Source',
+      email: 'settings-body-source@example.com',
+      username: 'settings-body-source',
+      password: 'password123',
+    })
+
+    const queryOnly = await client
+      .post('/settings/profile')
+      .withCsrfToken()
+      .redirects(0)
+      .loginAs(actor)
+      .qs({ full_name: 'Query Name', username: 'query-username' })
+      .form({})
+
+    queryOnly.assertStatus(302)
+    queryOnly.assertHeader('location', '/settings')
+    await actor.refresh()
+    assert.equal(actor.full_name, 'Settings Body Source')
+    assert.equal(actor.username, 'settings-body-source')
+
+    const bodyWins = await client
+      .post('/settings/profile')
+      .withCsrfToken()
+      .redirects(0)
+      .loginAs(actor)
+      .qs({ full_name: 'Conflicting Query Name', username: 'conflicting-query-username' })
+      .form({ full_name: 'Body Name', username: 'body-username' })
+
+    bodyWins.assertStatus(302)
+    bodyWins.assertHeader('location', '/settings')
+    await actor.refresh()
+    assert.equal(actor.full_name, 'Body Name')
+    assert.equal(actor.username, 'body-username')
   })
 
   test('accepts database field limits and rejects values one character over them', async ({
@@ -294,9 +423,18 @@ test.group('Update own profile concurrency', (group) => {
         .delete()
     })
 
-    const start = createBarrier(actors.length)
+    const updateBarrier = createBarrier(actors.length)
+    const updateProfileService = new BarrierUpdateProfileService(
+      new UsersRepository(),
+      updateBarrier
+    )
+    app.container.swap(UpdateProfileService, () => updateProfileService)
+    cleanup(() => {
+      updateBarrier.release()
+      app.container.restore(UpdateProfileService)
+    })
+
     const update = async (actor: User) => {
-      await start()
       return client.patch('/api/v1/me').loginAs(actor).json({ username: contestedUsername })
     }
     const responses = await Promise.all(actors.map(update))
@@ -310,7 +448,13 @@ test.group('Update own profile concurrency', (group) => {
     assert.notEqual(winnerIndex, -1)
     assert.notEqual(loserIndex, -1)
     responses[loserIndex].assertBodyContains({
-      errors: [{ field: 'username', rule: 'database.unique' }],
+      errors: [
+        {
+          field: 'username',
+          rule: 'database.unique',
+          message: 'The username has already been taken',
+        },
+      ],
     })
 
     const claimedBy = await User.query().where('username', contestedUsername)
