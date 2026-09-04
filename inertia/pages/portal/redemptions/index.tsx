@@ -36,7 +36,7 @@ export default function PartnerRedemptionsPage({
           eyebrow="Portal do parceiro"
           icon={ReceiptText}
           title="Utilizações"
-          description="Consulte os comprovantes emitidos pelas unidades que você administra."
+          description="Consulte os comprovantes emitidos pelas unidades às quais você tem acesso."
           actions={
             canValidate ? (
               <Button asChild size="lg">

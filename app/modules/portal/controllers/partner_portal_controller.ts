@@ -5,6 +5,7 @@ import EstablishmentAddressService from '#modules/establishments/services/establ
 import EstablishmentAttributesService from '#modules/establishments/services/establishment_attributes_service'
 import EstablishmentCategoriesService from '#modules/establishments/services/establishment_categories_service'
 import EstablishmentHoursService from '#modules/establishments/services/establishment_hours_service'
+import EstablishmentRevisionCloneService from '#modules/establishments/services/establishment_revision_clone_service'
 import EstablishmentService from '#modules/establishments/services/establishment_service'
 import EstablishmentSubmissionService from '#modules/establishments/services/establishment_submission_service'
 import {
@@ -15,6 +16,7 @@ import {
   replaceEstablishmentHoursValidator,
   updateEstablishmentRevisionValidator,
 } from '#modules/establishments/validators/establishment_validator'
+import { createEstablishmentRevisionValidator } from '#modules/establishments/validators/establishment_review_validator'
 import OrganizationService from '#modules/organizations/services/organization_service'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import OrganizationWorkflowService from '#modules/organizations/services/organization_workflow_service'
@@ -38,6 +40,7 @@ export default class PartnerPortalController {
     private attributesService: EstablishmentAttributesService,
     private categoriesService: EstablishmentCategoriesService,
     private hoursService: EstablishmentHoursService,
+    private revisionCloneService: EstablishmentRevisionCloneService,
     private submissionService: EstablishmentSubmissionService,
     private feedbackService: PilotFeedbackService
   ) {}
@@ -49,7 +52,11 @@ export default class PartnerPortalController {
     const overview = await this.portalService.overview(tenant!.id, actor, authorizationContext)
     const feedbackTargets = this.portalService.feedbackTargetsFromOverview(overview)
 
-    return inertia.render('portal/index', { overview, feedback_targets: feedbackTargets })
+    return inertia.render('portal/index', {
+      overview,
+      feedback_targets: feedbackTargets,
+      allowed_actions: authorizationContext.allowed_actions,
+    })
   }
 
   async newOrganization({ inertia, response }: HttpContext) {
@@ -73,8 +80,13 @@ export default class PartnerPortalController {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
     const organizationId = Number(params.organizationId)
-    const organization = await this.portalService.organization(tenant!.id, organizationId, actor)
-    const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
+    const organization = await this.portalService.organization(
+      tenant!.id,
+      organizationId,
+      authorizationContext
+    )
+    const feedbackTargets = this.portalService.feedbackTargetsFromOrganization(organization)
 
     return inertia.render('portal/organizations/show', {
       organization,
@@ -111,15 +123,17 @@ export default class PartnerPortalController {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
     const organizationId = Number(params.organizationId)
-    await this.establishmentService.authorizeCreateForOrganization(
+    const organization = await this.establishmentService.authorizeCreateForOrganization(
       tenant!.id,
       organizationId,
       actor
     )
-    const organization = await this.portalService.organization(tenant!.id, organizationId, actor)
     const options = await this.portalService.creationOptions(tenant!.id)
 
-    return inertia.render('portal/establishments/new', { organization, ...options })
+    return inertia.render('portal/establishments/new', {
+      organization: { id: organization.id, trade_name: organization.trade_name },
+      ...options,
+    })
   }
 
   async createEstablishment({ auth, request, response, session, params, tenant }: HttpContext) {
@@ -140,24 +154,16 @@ export default class PartnerPortalController {
   async establishment({ auth, inertia, params, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
     const editor = await this.portalService.establishmentEditor(
       tenant!.id,
       Number(params.establishmentId),
-      actor
-    )
-    const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
-    const organizationId = Number((editor.establishment as Record<string, unknown>).organization_id)
-    const allowedActions = await this.resourceAuthorization.forOrganization(
-      tenant!.id,
-      organizationId,
-      actor
+      authorizationContext
     )
 
     return inertia.render('portal/establishments/edit', {
       ...editor,
       tenant_id: tenant!.id,
-      feedback_targets: feedbackTargets,
-      allowed_actions: allowedActions,
     })
   }
 
@@ -242,13 +248,33 @@ export default class PartnerPortalController {
     )
 
     if (!result.submitted) {
-      const message = result.gate.blocking_issues.map((issue) => issue.message).join(' ')
-      session.flash('errors', { submission: message || 'A ficha ainda não está pronta.' })
+      session.flash('errors', {
+        submission:
+          'A ficha ainda não está pronta. Revise as pendências indicadas antes de enviar.',
+      })
       return response.redirect().back()
     }
 
     session.flash('success', 'Ficha enviada para moderação.')
     return response.redirect().back()
+  }
+
+  async createRevision({ auth, request, response, session, params, tenant }: HttpContext) {
+    const payload = await request.validateUsing(createEstablishmentRevisionValidator)
+    await this.revisionCloneService.create(
+      tenant!.id,
+      Number(params.establishmentId),
+      auth.getUserOrFail(),
+      payload
+    )
+
+    session.flash(
+      'success',
+      payload.source === 'latest_terminal'
+        ? 'Nova revisão criada. Continue os ajustes no novo rascunho.'
+        : 'Nova revisão criada. A publicação atual continua disponível.'
+    )
+    return response.redirect().toPath(`/portal/establishments/${Number(params.establishmentId)}`)
   }
 
   private setPrivateHeaders(response: HttpContext['response']): void {

@@ -2,6 +2,11 @@ import type IEstablishment from '#modules/establishments/interfaces/establishmen
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 
 export namespace IPortal {
+  export interface RejectionContext {
+    version: number
+    notes: string | null
+  }
+
   export interface EstablishmentSummary {
     id: number
     organization_id: number

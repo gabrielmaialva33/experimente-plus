@@ -20,6 +20,9 @@ import {
 import EffectiveAttributesForm, {
   type EffectiveAttribute,
 } from '~/components/portal/effective_attributes_form'
+import EstablishmentRevisionAction, {
+  type EstablishmentRevisionCreationSource,
+} from '~/components/portal/establishment_revision_action'
 import {
   AddressSection,
   CategoriesSection,
@@ -55,6 +58,7 @@ import {
   localizeCompletenessIssue,
   numberValue,
   relationId,
+  revisionPresentationStatus,
   stringValue,
   type EditorIssue,
   type EditorIssueGroupId,
@@ -79,6 +83,14 @@ interface Completeness {
   warnings: CompletenessIssue[]
 }
 
+export interface RejectionContext {
+  version: number
+  notes: string | null
+}
+
+const READ_ONLY_ACCESS_DESCRIPTION =
+  'Você pode consultar esta ficha, mas seu acesso não permite editar ou enviar esta revisão para moderação.'
+
 interface EstablishmentEditorProps {
   tenant_id: number
   establishment: JsonRecord
@@ -87,8 +99,84 @@ interface EstablishmentEditorProps {
   categories: JsonRecord[]
   effective_attributes: EffectiveAttribute[]
   review_issues?: ReviewIssue[]
+  rejection_context?: RejectionContext | null
   feedback_targets: FeedbackTargets
   allowed_actions: OrganizationAllowedActions
+  revision_creation_source: EstablishmentRevisionCreationSource | null
+}
+
+export function RejectionContextNotice({ context }: { context: RejectionContext }) {
+  return (
+    <section
+      aria-labelledby="rejection-context-title"
+      className="rounded-lg border border-destructive/25 bg-destructive/10 p-4"
+    >
+      <div className="flex items-start gap-3">
+        <AlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id="rejection-context-title" className="font-semibold">
+              Motivo da rejeição
+            </h2>
+            <Badge variant="outline">Revisão {context.version}</Badge>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {context.notes ??
+              'A revisão foi rejeitada. Consulte a equipe da plataforma antes de tentar novamente.'}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Use este retorno como referência ao preparar a nova revisão.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export function RevisionReadOnlyNotice({
+  presentationStatus,
+  revisionStatus,
+}: {
+  presentationStatus: string
+  revisionStatus: string
+}) {
+  const statusMeta = getRevisionStatusMeta(presentationStatus)
+  const accessIsReadOnly = revisionStatus === 'draft' || revisionStatus === 'changes_requested'
+  const published = presentationStatus === 'published'
+  const rejected = presentationStatus === 'rejected'
+  const title = accessIsReadOnly
+    ? 'Apenas leitura para seu acesso'
+    : published
+      ? 'Publicação vigente'
+      : rejected
+        ? 'Revisão rejeitada'
+        : statusMeta.label
+  const description = accessIsReadOnly ? READ_ONLY_ACCESS_DESCRIPTION : statusMeta.description
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-lg border px-4 py-3',
+        published
+          ? 'border-success/20 bg-success/10'
+          : rejected
+            ? 'border-destructive/20 bg-destructive/10'
+            : 'border-info/20 bg-info/5'
+      )}
+    >
+      {published ? (
+        <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-success" />
+      ) : rejected ? (
+        <AlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />
+      ) : (
+        <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-info" />
+      )}
+      <div>
+        <p className="font-semibold">{title}</p>
+        <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  )
 }
 
 function displayIssues(
@@ -130,8 +218,10 @@ export default function EstablishmentEditorPage({
   categories,
   effective_attributes,
   review_issues = [],
+  rejection_context: rejectionContext = null,
   feedback_targets,
   allowed_actions: allowedActions,
+  revision_creation_source: revisionCreationSource,
 }: EstablishmentEditorProps) {
   const { errors: pageErrors } = usePage().props as {
     errors?: Record<string, unknown>
@@ -142,12 +232,22 @@ export default function EstablishmentEditorPage({
   const organizationId = Number(establishment.organization_id)
   const revisionStatus = stringValue(revision, 'status', 'draft')
   const revisionVersion = numberValue(revision, 'version') ?? 1
-  const contentStateEditable = ['draft', 'changes_requested'].includes(revisionStatus)
-  const editable = contentStateEditable && allowedActions.establishments.update
-  const submitAllowed = contentStateEditable && allowedActions.establishments.submit
+  const presentationStatus = revisionPresentationStatus(
+    revisionStatus,
+    numberValue(revision, 'id'),
+    numberValue(establishment, 'published_revision_id')
+  )
+  const editable = allowedActions.establishments.update
+  const submitAllowed = allowedActions.establishments.submit
   const canManageBenefits = allowedActions.benefit_offers.list
   const canSendFeedback = allowedActions.pilot_feedback.create
-  const statusMeta = getRevisionStatusMeta(revisionStatus)
+  const canCreateRevision =
+    allowedActions.establishments.create_revision && revisionCreationSource !== null
+  const statusMeta = getRevisionStatusMeta(presentationStatus)
+  const editorStatusDescription =
+    !editable && (revisionStatus === 'draft' || revisionStatus === 'changes_requested')
+      ? READ_ONLY_ACCESS_DESCRIPTION
+      : statusMeta.description
   const submitLabel =
     revisionStatus === 'changes_requested' ? 'Reenviar para moderação' : 'Enviar para moderação'
   const effectiveAttributesKey = JSON.stringify(
@@ -465,6 +565,20 @@ export default function EstablishmentEditorPage({
     )
   }
 
+  function createRevision(source: EstablishmentRevisionCreationSource) {
+    if (!canCreateRevision || editorBusy) return
+    if (!beginInternalEditorVisit()) return
+
+    router.post(
+      `/portal/establishments/${establishmentId}/revisions`,
+      { source },
+      {
+        preserveScroll: true,
+        onFinish: finishEditorOperation,
+      }
+    )
+  }
+
   const availabilityLabel =
     identityForm.data.availability_type === 'always_open'
       ? 'Sempre aberto'
@@ -477,26 +591,20 @@ export default function EstablishmentEditorPage({
     EDITOR_SECTION_IDS.find((section) =>
       issuesBySection[section].some((issue) => issue.source === 'moderation')
     ) ?? 'identity'
-  const submitDisabledReason = !submitAllowed
-    ? contentStateEditable
-      ? 'Sua conta não possui permissão para enviar esta ficha.'
-      : statusMeta.description
-    : hasUnsavedChanges
-      ? 'Salve todas as etapas antes de enviar para moderação.'
-      : editorBusy
-        ? 'Aguarde a operação atual terminar.'
-        : !completeness.eligible
-          ? 'Resolva as pendências do checklist antes de enviar para moderação.'
-          : undefined
+  const submitDisabledReason = hasUnsavedChanges
+    ? 'Salve todas as etapas antes de enviar para moderação.'
+    : editorBusy
+      ? 'Aguarde a operação atual terminar.'
+      : !completeness.eligible
+        ? 'Resolva as pendências do checklist antes de enviar para moderação.'
+        : undefined
   const submitActionLabel = submitting
     ? 'Enviando…'
     : editorBusy
       ? 'Aguarde…'
       : hasUnsavedChanges
         ? 'Salve antes de enviar'
-        : submitAllowed
-          ? submitLabel
-          : statusMeta.label
+        : submitLabel
   const pageTitle = stringValue(revision, 'public_name', 'Editar unidade')
 
   return (
@@ -527,6 +635,12 @@ export default function EstablishmentEditorPage({
           }
           actions={
             <>
+              <EstablishmentRevisionAction
+                allowed={canCreateRevision}
+                source={revisionCreationSource}
+                processing={editorBusy}
+                onCreate={createRevision}
+              />
               {canManageBenefits ? (
                 <Button asChild variant="outline" size="lg">
                   <Link href={`/portal/establishments/${establishment.id}/benefits`}>
@@ -548,36 +662,30 @@ export default function EstablishmentEditorPage({
                   Voltar
                 </Link>
               </Button>
-              <Button
-                type="button"
-                size="lg"
-                disabled={
-                  !submitAllowed ||
-                  !completeness.eligible ||
-                  submitting ||
-                  editorBusy ||
-                  hasUnsavedChanges
-                }
-                title={submitDisabledReason}
-                onClick={submitForReview}
-              >
-                {submitting || editorBusy ? (
-                  <LoaderCircle className="animate-spin" />
-                ) : hasUnsavedChanges ? (
-                  <Save />
-                ) : submitAllowed ? (
-                  <Send />
-                ) : (
-                  <LockKeyhole />
-                )}
-                {submitActionLabel}
-              </Button>
+              {submitAllowed ? (
+                <Button
+                  type="button"
+                  size="lg"
+                  disabled={!completeness.eligible || submitting || editorBusy || hasUnsavedChanges}
+                  title={submitDisabledReason}
+                  onClick={submitForReview}
+                >
+                  {submitting || editorBusy ? (
+                    <LoaderCircle className="animate-spin" />
+                  ) : hasUnsavedChanges ? (
+                    <Save />
+                  ) : (
+                    <Send />
+                  )}
+                  {submitActionLabel}
+                </Button>
+              ) : null}
             </>
           }
         />
 
         {submissionError ? (
-          <div className="flex items-start gap-3 rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <div>
               <p className="font-semibold">A ficha ainda não pôde ser enviada</p>
@@ -586,8 +694,10 @@ export default function EstablishmentEditorPage({
           </div>
         ) : null}
 
+        {rejectionContext ? <RejectionContextNotice context={rejectionContext} /> : null}
+
         {review_issues.length > 0 ? (
-          <div className="flex flex-col gap-4 rounded-xl border border-warning/25 bg-warning/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-lg border border-warning/25 bg-warning/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning-foreground" />
               <div>
@@ -604,7 +714,7 @@ export default function EstablishmentEditorPage({
         ) : null}
 
         {readinessIssues.length > 0 ? (
-          <div className="rounded-xl border border-warning/25 bg-warning/5 p-4">
+          <div className="rounded-lg border border-warning/25 bg-warning/5 p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning-foreground" />
               <div>
@@ -620,15 +730,10 @@ export default function EstablishmentEditorPage({
         ) : null}
 
         {!editable ? (
-          <div className="flex items-start gap-3 rounded-xl border border-info/20 bg-info/5 px-4 py-3">
-            <LockKeyhole className="mt-0.5 size-5 shrink-0 text-info" />
-            <div>
-              <p className="font-semibold">Edição temporariamente bloqueada</p>
-              <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                {statusMeta.description}
-              </p>
-            </div>
-          </div>
+          <RevisionReadOnlyNotice
+            presentationStatus={presentationStatus}
+            revisionStatus={revisionStatus}
+          />
         ) : null}
 
         <PendingChangesNotice
@@ -647,14 +752,13 @@ export default function EstablishmentEditorPage({
           onNavigate={navigateTo}
           score={completeness.score}
           eligible={completeness.eligible}
-          editable={editable}
           submitAllowed={submitAllowed}
           submitting={submitting}
           busy={editorBusy}
           unsavedSectionCount={dirtySections.length}
           onSubmit={submitForReview}
           submitLabel={submitLabel}
-          statusLabel={statusMeta.description}
+          statusLabel={editorStatusDescription}
           lockedLabel={statusMeta.label}
         />
 
@@ -666,14 +770,13 @@ export default function EstablishmentEditorPage({
             onNavigate={navigateTo}
             score={completeness.score}
             eligible={completeness.eligible}
-            editable={editable}
             submitAllowed={submitAllowed}
             submitting={submitting}
             busy={editorBusy}
             unsavedSectionCount={dirtySections.length}
             onSubmit={submitForReview}
             submitLabel={submitLabel}
-            statusLabel={statusMeta.description}
+            statusLabel={editorStatusDescription}
             lockedLabel={statusMeta.label}
           />
 

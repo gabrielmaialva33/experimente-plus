@@ -4,30 +4,33 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import PortalOrganizationPage from '~/pages/portal/organizations/show'
 import { render } from '~/tests/test_utils'
 
-const { mockPut, mockRouterPost, guardState, formState, authState } = vi.hoisted(() => ({
-  mockPut: vi.fn(),
-  mockRouterPost: vi.fn(),
-  guardState: {
-    allowNextVisit: vi.fn(),
-    confirmDiscard: vi.fn(() => true),
-  },
-  formState: {
-    current: {
-      isDirty: false,
-      processing: false,
-      errors: {} as Record<string, string>,
+const { mockPut, mockTransform, mockRouterPost, guardState, formState, authState } = vi.hoisted(
+  () => ({
+    mockPut: vi.fn(),
+    mockTransform: vi.fn(),
+    mockRouterPost: vi.fn(),
+    guardState: {
+      allowNextVisit: vi.fn(),
+      confirmDiscard: vi.fn(() => true),
     },
-  },
-  authState: {
-    permissions: [
-      'organizations.update',
-      'organizations.submit',
-      'establishments.create',
-      'analytics.read',
-      'pilot_feedback.create',
-    ],
-  },
-}))
+    formState: {
+      current: {
+        isDirty: false,
+        processing: false,
+        errors: {} as Record<string, string>,
+      },
+    },
+    authState: {
+      permissions: [
+        'organizations.update',
+        'organizations.submit',
+        'establishments.create',
+        'analytics.read',
+        'pilot_feedback.create',
+      ],
+    },
+  })
+)
 
 vi.mock('@inertiajs/react', async () => {
   const React = await import('react')
@@ -56,6 +59,7 @@ vi.mock('@inertiajs/react', async () => {
         data,
         setData: (field: keyof T, value: T[keyof T]) =>
           setDataState((current) => ({ ...current, [field]: value })),
+        transform: mockTransform,
         put: mockPut,
         processing: formState.current.processing,
         errors: formState.current.errors,
@@ -133,11 +137,20 @@ const allowedActions = {
     read: true,
     list: true,
     create: true,
+    create_revision: false,
     update: true,
     submit: true,
     archive: true,
   },
-  benefit_offers: { read: true, list: true, create: true, update: true, archive: true },
+  benefit_offers: {
+    read: true,
+    list: true,
+    create: true,
+    update: true,
+    activate: true,
+    pause: true,
+    archive: true,
+  },
   redemptions: { read: true, validate: true },
   analytics: { read: true },
   pilot_feedback: { create: true },
@@ -251,4 +264,65 @@ describe('PortalOrganizationPage', () => {
     expect(screen.queryByRole('link', { name: 'Ver analytics' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('pilot-feedback-form')).not.toBeInTheDocument()
   })
+
+  it('prioritizes an open workflow while keeping the current publication visible as context', () => {
+    render(
+      <PortalOrganizationPage
+        organization={{
+          ...organization,
+          establishments: [
+            {
+              ...organization.establishments[0],
+              revision: { status: 'pending_review' },
+              published_revision: { id: 20, status: 'approved' },
+            },
+          ],
+        }}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
+    )
+
+    expect(screen.getByText('Em análise')).toBeVisible()
+    expect(screen.getByText('Publicação vigente no catálogo')).toBeVisible()
+    expect(screen.queryByText('Publicada')).not.toBeInTheDocument()
+  })
+
+  it('edits only commercial contacts after approval and never resubmits an active organization', () => {
+    formState.current.isDirty = true
+
+    render(
+      <PortalOrganizationPage
+        organization={{ ...organization, status: 'active' }}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
+    )
+
+    expect(screen.getByLabelText(/Razão social/)).toBeDisabled()
+    expect(screen.getByLabelText(/CNPJ/)).toBeDisabled()
+    expect(screen.getByLabelText(/Endereço da página/)).toBeDisabled()
+    expect(screen.getByLabelText(/Nome fantasia/)).toBeEnabled()
+    expect(screen.getByLabelText(/E-mail/)).toBeEnabled()
+    expect(screen.getByLabelText(/Telefone/)).toBeEnabled()
+    expect(screen.getByLabelText(/Website/)).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Enviar para análise' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar dados' }))
+
+    const transform = mockTransform.mock.calls[0]?.[0] as (
+      data: OrganizationFormDataFixture
+    ) => Record<string, string>
+    expect(transform(organization)).toEqual({
+      trade_name: organization.trade_name,
+      email: organization.email,
+      phone: organization.phone,
+      website: organization.website,
+    })
+  })
 })
+
+type OrganizationFormDataFixture = Pick<
+  typeof organization,
+  'legal_name' | 'trade_name' | 'slug' | 'tax_id' | 'email' | 'phone' | 'website'
+>

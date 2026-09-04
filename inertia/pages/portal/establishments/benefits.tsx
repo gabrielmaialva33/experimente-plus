@@ -126,6 +126,11 @@ const statusMeta: Record<string, { label: string; className: string }> = {
   },
 }
 
+const unavailableEditionMeta = {
+  label: 'Indisponível',
+  className: 'border-border bg-muted/60 text-muted-foreground',
+}
+
 const weekdays = [
   { bit: 2, short: 'Seg', long: 'segunda-feira' },
   { bit: 4, short: 'Ter', long: 'terça-feira' },
@@ -198,6 +203,8 @@ export default function EstablishmentBenefitsPage({
 }: EstablishmentBenefitsProps) {
   const canCreate = allowedActions.benefit_offers.create
   const canUpdate = allowedActions.benefit_offers.update
+  const canActivate = allowedActions.benefit_offers.activate
+  const canPause = allowedActions.benefit_offers.pause
   const canArchive = allowedActions.benefit_offers.archive
   const canReadRedemptions = allowedActions.redemptions.read
   const canValidateRedemptions = allowedActions.redemptions.validate
@@ -210,6 +217,9 @@ export default function EstablishmentBenefitsPage({
 
   const usedEditionIds = useMemo(() => new Set(offers.map((offer) => offer.edition_id)), [offers])
   const editionsForCreation = editions.filter((edition) => !usedEditionIds.has(edition.id))
+  const activeOfferCount = offers.filter(
+    (offer) => offer.status === 'active' && offer.edition.status !== 'archived'
+  ).length
   const canShowForm =
     establishment.published &&
     ((editingId !== null && canUpdate) ||
@@ -368,7 +378,7 @@ export default function EstablishmentBenefitsPage({
                 {offers.length} {offers.length === 1 ? 'oferta' : 'ofertas'}
               </span>
               <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-                {offers.filter((offer) => offer.status === 'active').length} ativas
+                {activeOfferCount} {activeOfferCount === 1 ? 'ativa' : 'ativas'}
               </span>
             </>
           }
@@ -408,7 +418,7 @@ export default function EstablishmentBenefitsPage({
 
         <div
           className={cn(
-            'grid gap-6 xl:items-start',
+            'grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 xl:items-start',
             canManageOffers && 'xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)]'
           )}
         >
@@ -732,11 +742,21 @@ export default function EstablishmentBenefitsPage({
                 }
               />
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <div
+                className={cn(
+                  'grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4',
+                  offers.length > 1 && 'md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2'
+                )}
+              >
                 {offers.map((offer) => {
-                  const meta = statusMeta[offer.status] ?? statusMeta.draft
                   const busy = actionId === offer.id
-                  const editable = offer.status === 'draft' || offer.status === 'paused'
+                  const mutableStatus = offer.status === 'draft' || offer.status === 'paused'
+                  const editionArchived = offer.edition.status === 'archived'
+                  const editable = mutableStatus && !editionArchived
+                  const meta =
+                    editionArchived && offer.status !== 'archived'
+                      ? unavailableEditionMeta
+                      : (statusMeta[offer.status] ?? statusMeta.draft)
 
                   return (
                     <article
@@ -807,6 +827,16 @@ export default function EstablishmentBenefitsPage({
                         </div>
                       ) : null}
 
+                      {editionArchived ? (
+                        <p className="mt-4 rounded-md border border-border bg-muted/45 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                          {offer.status === 'active'
+                            ? 'Esta edição foi arquivada e a oferta não está mais disponível. Pause a oferta antes de arquivar seu histórico.'
+                            : offer.status === 'archived'
+                              ? 'Esta edição foi arquivada. A oferta permanece somente no histórico.'
+                              : 'Esta edição foi arquivada. A oferta não está disponível e só pode ser arquivada.'}
+                        </p>
+                      ) : null}
+
                       <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row sm:flex-wrap">
                         {editable && canUpdate ? (
                           <Button
@@ -821,7 +851,7 @@ export default function EstablishmentBenefitsPage({
                             Editar
                           </Button>
                         ) : null}
-                        {editable && canUpdate ? (
+                        {editable && canActivate ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -840,7 +870,7 @@ export default function EstablishmentBenefitsPage({
                             Ativar
                           </Button>
                         ) : null}
-                        {offer.status === 'active' && canUpdate ? (
+                        {offer.status === 'active' && canPause ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -859,7 +889,7 @@ export default function EstablishmentBenefitsPage({
                             Pausar
                           </Button>
                         ) : null}
-                        {editable && canArchive ? (
+                        {mutableStatus && canArchive ? (
                           <ConfirmDialog
                             title="Arquivar oferta?"
                             description={`A oferta “${offer.title}” deixará de ficar disponível. O histórico será preservado.`}

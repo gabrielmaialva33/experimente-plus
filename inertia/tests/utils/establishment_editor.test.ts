@@ -7,6 +7,7 @@ import {
   groupEditorIssues,
   hasAttributeInputValue,
   localizeCompletenessIssue,
+  revisionPresentationStatus,
   type EditorIssue,
 } from '~/lib/establishment_editor'
 
@@ -20,6 +21,7 @@ const issue = (code: string, field: string, message = 'Original message'): Edito
 describe('establishment editor utilities', () => {
   it('routes gate fields to the section that can solve them', () => {
     expect(editorSectionForField('public_name')).toBe('identity')
+    expect(editorSectionForField('slug')).toBe('identity')
     expect(editorSectionForField('address.coordinates')).toBe('address')
     expect(editorSectionForField('categories')).toBe('categories')
     expect(editorSectionForField('attributes.wifi')).toBe('attributes')
@@ -30,6 +32,7 @@ describe('establishment editor utilities', () => {
 
   it('presents technical issue fields with the shared human catalog and a section fallback', () => {
     expect(editorIssueFieldLabel('public_name')).toBe('Nome público')
+    expect(editorIssueFieldLabel('slug')).toBe('URL pública')
     expect(editorIssueFieldLabel('address.coordinates')).toBe('Coordenadas no mapa')
     expect(editorIssueFieldLabel('attributes.wifi')).toBe('Características')
     expect(editorIssueFieldLabel('unknown_backend_field')).toBe('Ficha')
@@ -54,6 +57,9 @@ describe('establishment editor utilities', () => {
     expect(localizeCompletenessIssue(issue('media_missing', 'media'))).toBe(
       'Adicione ao menos uma imagem para representar a unidade.'
     )
+    expect(localizeCompletenessIssue(issue('slug_already_published', 'slug'))).toBe(
+      'A URL pública já está em uso por outra unidade desta cidade. Altere o nome público para gerar um endereço diferente.'
+    )
     expect(
       localizeCompletenessIssue(
         issue('required_attribute_missing', 'attributes.wifi', 'Wi-Fi is required')
@@ -68,6 +74,18 @@ describe('establishment editor utilities', () => {
     expect(getRevisionStatusMeta('draft').label).toBe('Rascunho')
     expect(getRevisionStatusMeta('changes_requested').label).toBe('Correções solicitadas')
     expect(getRevisionStatusMeta('pending_review').label).toBe('Em moderação')
+  })
+
+  it('presents the current publication without changing its approved technical status', () => {
+    const technicalStatus = 'approved'
+    const presentationStatus = revisionPresentationStatus(technicalStatus, 31, 31)
+
+    expect(technicalStatus).toBe('approved')
+    expect(getRevisionStatusMeta(presentationStatus)).toMatchObject({
+      label: 'Publicada',
+      description: 'Esta revisão está disponível no catálogo público.',
+    })
+    expect(revisionPresentationStatus(technicalStatus, 31, 18)).toBe('approved')
   })
 
   it('treats false, zero and selected options as legitimate attribute values', () => {

@@ -88,13 +88,27 @@ interface OrganizationFormData {
 
 type OrganizationOperation = 'save' | 'submit'
 
-const editableStatuses = new Set(['draft', 'changes_requested'])
+const submittableStatuses = new Set(['draft', 'changes_requested'])
+const editableStatuses = new Set(['draft', 'changes_requested', 'active'])
+const openRevisionStatuses = new Set(['draft', 'pending_review', 'changes_requested'])
 
 function establishmentRevisionStatus(establishment: EstablishmentSummary): string {
+  const status = establishment.revision?.status
+  if (typeof status === 'string' && openRevisionStatuses.has(status)) {
+    return revisionStatusLabel(status)
+  }
   if (establishment.published_revision) return 'Publicada'
 
-  const status = establishment.revision?.status
   return typeof status === 'string' ? revisionStatusLabel(status) : 'Ainda não publicada'
+}
+
+function hasOpenRevisionAlongsidePublication(establishment: EstablishmentSummary): boolean {
+  const status = establishment.revision?.status
+  return (
+    establishment.published_revision !== null &&
+    typeof status === 'string' &&
+    openRevisionStatuses.has(status)
+  )
 }
 
 export default function PortalOrganizationPage({
@@ -118,9 +132,11 @@ export default function PortalOrganizationPage({
     phone: organization.phone,
     website: organization.website ?? '',
   })
-  const statusEditable = editableStatuses.has(organization.status)
-  const editable = statusEditable && allowedActions.organizations.update
-  const canSubmit = statusEditable && allowedActions.organizations.submit
+  const editable = editableStatuses.has(organization.status) && allowedActions.organizations.update
+  const legalIdentityEditable =
+    submittableStatuses.has(organization.status) && allowedActions.organizations.update
+  const canSubmit =
+    submittableStatuses.has(organization.status) && allowedActions.organizations.submit
   const canCreateEstablishment = allowedActions.establishments.create
   const canReadAnalytics = allowedActions.analytics.read
   const canCreateFeedback = allowedActions.pilot_feedback.create
@@ -162,6 +178,16 @@ export default function PortalOrganizationPage({
     setLocalStatus(null)
     setSubmissionError(null)
     guard.allowNextVisit()
+    form.transform((data) =>
+      organization.status === 'active'
+        ? {
+            trade_name: data.trade_name,
+            email: data.email,
+            phone: data.phone,
+            website: data.website,
+          }
+        : data
+    )
     form.put(`/portal/organizations/${organization.id}`, {
       preserveScroll: true,
       onSuccess: () => {
@@ -268,7 +294,7 @@ export default function PortalOrganizationPage({
             ['Em análise', organization.totals.pending_review],
             ['Publicadas', organization.totals.published],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-2xl border border-border bg-card p-5">
+            <article key={label} className="rounded-lg border border-border bg-card p-5">
               <p className="text-sm text-muted-foreground">{label}</p>
               <p className="mt-2 text-3xl font-bold">{value}</p>
             </article>
@@ -344,7 +370,7 @@ export default function PortalOrganizationPage({
                   required
                   maxLength={180}
                   autoComplete="organization"
-                  disabled={!editable || busy}
+                  disabled={!legalIdentityEditable || busy}
                   value={form.data.legal_name}
                   onChange={(event) => form.setData('legal_name', event.target.value)}
                 />
@@ -380,7 +406,7 @@ export default function PortalOrganizationPage({
                   maxLength={180}
                   autoComplete="off"
                   spellCheck={false}
-                  disabled={!editable || busy}
+                  disabled={!legalIdentityEditable || busy}
                   value={form.data.slug}
                   onChange={(event) => form.setData('slug', event.target.value)}
                 />
@@ -400,7 +426,7 @@ export default function PortalOrganizationPage({
                   maxLength={18}
                   inputMode="numeric"
                   autoComplete="off"
-                  disabled={!editable || busy}
+                  disabled={!legalIdentityEditable || busy}
                   value={form.data.tax_id}
                   onChange={(event) => form.setData('tax_id', event.target.value)}
                 />
@@ -555,7 +581,7 @@ export default function PortalOrganizationPage({
                   <Link
                     key={establishment.id}
                     href={`/portal/establishments/${establishment.id}`}
-                    className="rounded-2xl border border-border bg-card p-5 outline-none transition hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="rounded-lg border border-border bg-card p-5 outline-none transition hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -566,6 +592,11 @@ export default function PortalOrganizationPage({
                         <p className="mt-1 text-sm text-muted-foreground">
                           {establishmentRevisionStatus(establishment)}
                         </p>
+                        {hasOpenRevisionAlongsidePublication(establishment) ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Publicação vigente no catálogo
+                          </p>
+                        ) : null}
                       </div>
                       <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
                         {score}%

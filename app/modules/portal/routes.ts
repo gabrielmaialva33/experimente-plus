@@ -89,6 +89,13 @@ router
       .as('portal.establishments.submit')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.SUBMIT))
     router
+      .post('/establishments/:establishmentId/revisions', [
+        PartnerPortalController,
+        'createRevision',
+      ])
+      .as('portal.establishments.revisions.create')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.CREATE))
+    router
       .post('/feedback', [PartnerPortalController, 'feedback'])
       .as('portal.feedback.create')
       .use(permission(IPermission.Resources.PILOT_FEEDBACK, IPermission.Actions.CREATE))

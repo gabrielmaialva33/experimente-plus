@@ -8,6 +8,8 @@ import {
   Clock3,
   MapPin,
   Plus,
+  ReceiptText,
+  ScanLine,
   Store,
 } from 'lucide-react'
 
@@ -80,6 +82,7 @@ interface FeedbackTarget {
 
 interface PortalIndexProps {
   overview: Overview
+  allowed_actions: OrganizationAllowedActions
   feedback_targets: {
     organizations: FeedbackTarget[]
     establishments: FeedbackTarget[]
@@ -100,10 +103,16 @@ function statusClassName(status: string): string {
   return styles[status] ?? 'border-border bg-muted text-muted-foreground'
 }
 
-export default function PartnerPortalIndex({ overview, feedback_targets }: PortalIndexProps) {
+export default function PartnerPortalIndex({
+  overview,
+  allowed_actions: allowedActions,
+  feedback_targets,
+}: PortalIndexProps) {
   const { can } = useAuth()
   const canCreateOrganization = can('organizations.create')
   const canCreateFeedback = can('pilot_feedback.create')
+  const canReadRedemptions = allowedActions.redemptions.read
+  const canValidateRedemptions = allowedActions.redemptions.validate
   const stats = [
     {
       label: 'Organizações',
@@ -116,7 +125,10 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
       value: overview.totals.establishments,
       icon: Store,
       tone: 'info' as const,
-      helper: `${overview.totals.complete} prontas para enviar para análise`,
+      helper:
+        overview.totals.complete === 1
+          ? '1 ficha completa'
+          : `${overview.totals.complete} fichas completas`,
     },
     {
       label: 'Publicadas',
@@ -143,14 +155,32 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
           title="Visão geral"
           description="Organize empresas e unidades, acompanhe a qualidade das fichas e envie conteúdo para moderação."
           actions={
-            canCreateOrganization && overview.organizations.length > 0 ? (
-              <Button asChild variant="primary">
-                <Link href="/portal/organizations/new">
-                  <Plus className="size-4" />
-                  Nova organização
-                </Link>
-              </Button>
-            ) : null
+            <>
+              {canReadRedemptions ? (
+                <Button asChild variant="outline">
+                  <Link href="/portal/redemptions">
+                    <ReceiptText aria-hidden="true" className="size-4" />
+                    Utilizações
+                  </Link>
+                </Button>
+              ) : null}
+              {canValidateRedemptions ? (
+                <Button asChild variant="outline">
+                  <Link href="/portal/redemptions/validate">
+                    <ScanLine aria-hidden="true" className="size-4" />
+                    Validar benefício
+                  </Link>
+                </Button>
+              ) : null}
+              {canCreateOrganization && overview.organizations.length > 0 ? (
+                <Button asChild variant="primary">
+                  <Link href="/portal/organizations/new">
+                    <Plus aria-hidden="true" className="size-4" />
+                    Nova organização
+                  </Link>
+                </Button>
+              ) : null}
+            </>
           }
         />
 
@@ -175,8 +205,14 @@ export default function PartnerPortalIndex({ overview, feedback_targets }: Porta
             className="rounded-lg border border-dashed border-border bg-card"
             headingLevel={2}
             icon={Building2}
-            title="Comece pela organização"
-            description="Cadastre a identidade legal da empresa. Depois você poderá criar uma ou várias unidades em cidades diferentes."
+            title={
+              canCreateOrganization ? 'Comece pela organização' : 'Nenhuma organização disponível'
+            }
+            description={
+              canCreateOrganization
+                ? 'Cadastre a identidade legal da empresa. Depois você poderá criar uma ou várias unidades em cidades diferentes.'
+                : 'Não há organizações disponíveis para o seu acesso na operação ativa.'
+            }
           >
             {canCreateOrganization ? (
               <Button asChild variant="primary">

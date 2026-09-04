@@ -61,11 +61,11 @@ test.group('Partner Portal overview batching', () => {
     }
     const service = new PartnerPortalService(
       organizationService as never,
-      {} as never,
       establishmentRepository as never,
       completenessService as never,
       {} as never,
-      resourceAuthorization as never
+      resourceAuthorization as never,
+      {} as never
     )
     const authorization = {
       access_snapshot: {
@@ -135,11 +135,20 @@ function organizationActions() {
       read: true,
       list: true,
       create: false,
+      create_revision: false,
       update: false,
       submit: false,
       archive: false,
     },
-    benefit_offers: { read: true, list: true, create: false, update: false, archive: false },
+    benefit_offers: {
+      read: true,
+      list: true,
+      create: false,
+      update: false,
+      activate: false,
+      pause: false,
+      archive: false,
+    },
     redemptions: { read: true, validate: false },
     analytics: { read: true },
     pilot_feedback: { create: true },

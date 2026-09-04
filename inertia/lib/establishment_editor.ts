@@ -122,6 +122,8 @@ const ISSUE_MESSAGES: Record<string, string> = {
   media_quarantined: 'Remova as imagens em quarentena antes de enviar a ficha.',
   establishment_not_active: 'A unidade precisa estar ativa antes do envio.',
   establishment_permanently_closed: 'Uma unidade permanentemente fechada não pode ser enviada.',
+  slug_already_published:
+    'A URL pública já está em uso por outra unidade desta cidade. Altere o nome público para gerar um endereço diferente.',
 }
 
 export function getRevisionStatusMeta(status: string): RevisionStatusMeta {
@@ -132,6 +134,14 @@ export function getRevisionStatusMeta(status: string): RevisionStatusMeta {
       className: 'border-border bg-muted text-muted-foreground',
     }
   )
+}
+
+export function revisionPresentationStatus(
+  technicalStatus: string,
+  revisionId: number | null,
+  publishedRevisionId: number | null
+): string {
+  return revisionId !== null && revisionId === publishedRevisionId ? 'published' : technicalStatus
 }
 
 export function localizeCompletenessIssue(issue: EditorIssue): string {
@@ -157,6 +167,7 @@ export function editorSectionForField(field: string): EditorIssueGroupId {
   if (
     [
       'public_name',
+      'slug',
       'city_id',
       'short_description',
       'description',
@@ -199,6 +210,7 @@ export const MODERATION_ISSUE_FIELD_GROUPS: ModerationIssueFieldGroup[] = [
     label: 'Identidade',
     options: [
       { value: 'public_name', label: 'Nome público' },
+      { value: 'slug', label: 'URL pública' },
       { value: 'short_description', label: 'Descrição curta' },
       { value: 'description', label: 'Descrição completa' },
       { value: 'city_id', label: 'Cidade' },

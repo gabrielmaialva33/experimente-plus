@@ -4,14 +4,16 @@ import NotFoundException from '#exceptions/not_found_exception'
 import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
 import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
+import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentCompletenessService from '#modules/establishments/services/establishment_completeness_service'
-import EstablishmentService from '#modules/establishments/services/establishment_service'
 import City from '#modules/geography/models/city'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import Organization from '#modules/organizations/models/organization'
 import OrganizationService from '#modules/organizations/services/organization_service'
 import OrganizationResourceAuthorizationService, {
+  projectEstablishmentRevisionAllowedActions,
+  projectOrganizationStateAllowedActions,
   type OrganizationActorAuthorizationContext,
 } from '#modules/organizations/services/organization_resource_authorization_service'
 import type IPortal from '#modules/portal/interfaces/portal_interface'
@@ -23,11 +25,11 @@ import type User from '#modules/users/models/user'
 export default class PartnerPortalService {
   constructor(
     private organizationService: OrganizationService,
-    private establishmentService: EstablishmentService,
     private establishmentRepository: EstablishmentRepository,
     private completenessService: EstablishmentCompletenessService,
     private effectiveAttributesService: EffectiveCategoryAttributesService,
-    private resourceAuthorization: OrganizationResourceAuthorizationService
+    private resourceAuthorization: OrganizationResourceAuthorizationService,
+    private revisionRepository: EstablishmentRevisionRepository
   ) {}
 
   async overview(
@@ -82,9 +84,16 @@ export default class PartnerPortalService {
     }
   }
 
-  async organization(tenantId: number, organizationId: number, actor: User) {
-    const organization = await this.organizationService.show(tenantId, organizationId, actor)
-    const authorizationContext = await this.resourceAuthorization.forActorContext(tenantId, actor)
+  async organization(
+    tenantId: number,
+    organizationId: number,
+    authorizationContext: OrganizationActorAuthorizationContext
+  ) {
+    const organization = await this.organizationService.showFromAccessSnapshot(
+      tenantId,
+      organizationId,
+      authorizationContext.access_snapshot
+    )
     const organizationAccess = authorizationContext.access_snapshot.organization_accesses.find(
       (access) => access.organization_id === organizationId
     )
@@ -101,9 +110,50 @@ export default class PartnerPortalService {
     )
   }
 
-  async establishmentEditor(tenantId: number, establishmentId: number, actor: User) {
-    const establishment = await this.establishmentService.show(tenantId, establishmentId, actor)
-    const completeness = await this.completenessService.check(tenantId, establishmentId, actor)
+  async establishmentEditor(
+    tenantId: number,
+    establishmentId: number,
+    authorizationContext: OrganizationActorAuthorizationContext
+  ) {
+    const authorizedOrganizationIds =
+      authorizationContext.access_snapshot.platform_access === 'platform_admin'
+        ? null
+        : authorizationContext.access_snapshot.organization_accesses
+            .filter((access) => access.capabilities.read)
+            .map((access) => access.organization_id)
+
+    const establishment = await this.establishmentRepository.findForAuthorizedOrganization(
+      tenantId,
+      establishmentId,
+      authorizedOrganizationIds
+    )
+    if (!establishment) {
+      throw new NotFoundException('Establishment not found')
+    }
+
+    const organization = await this.organizationService.showFromAccessSnapshot(
+      tenantId,
+      establishment.organization_id,
+      authorizationContext.access_snapshot
+    )
+    const rawAllowedActions = this.resourceAuthorization.forOrganizationFromContext(
+      organization.id,
+      authorizationContext
+    )
+    if (!rawAllowedActions.establishments.read) {
+      throw new NotFoundException('Establishment not found')
+    }
+
+    const revision = establishment.revisions[0] ?? establishment.published_revision ?? null
+    if (!revision) {
+      throw new NotFoundException('Establishment revision not found')
+    }
+
+    const completeness = await this.completenessService.checkLoadedForAuthorizedOrganization(
+      tenantId,
+      organization,
+      establishment
+    )
     const cities = await City.query()
       .where('tenant_id', tenantId)
       .where('is_active', true)
@@ -114,11 +164,19 @@ export default class PartnerPortalService {
       .where('is_active', true)
       .orderBy('sort_order', 'asc')
       .orderBy('name', 'asc')
-    const establishmentRecord = establishment as Record<string, unknown>
-    const revision = this.recordValue(establishmentRecord.revision)
+    const establishmentRecord = {
+      id: establishment.id,
+      tenant_id: establishment.tenant_id,
+      organization_id: establishment.organization_id,
+      lifecycle_status: establishment.lifecycle_status,
+      business_status: establishment.business_status,
+      published_revision_id: establishment.published_revision_id,
+      revision: revision.serialize(),
+    }
+    const revisionRecord = this.recordValue(establishmentRecord.revision)
     const effectiveAttributes = await this.effectiveAttributes(tenantId, establishmentRecord)
-    const revisionId = this.numberValue(revision, 'id')
-    const revisionStatus = this.stringValue(revision, 'status')
+    const revisionId = this.numberValue(revisionRecord, 'id')
+    const revisionStatus = revision.status
     const reviewIssues =
       revisionId && revisionStatus === 'changes_requested'
         ? await EstablishmentRevisionReviewIssue.query()
@@ -130,13 +188,56 @@ export default class PartnerPortalService {
             .orderBy('id', 'asc')
         : []
 
+    const organizationActions = projectOrganizationStateAllowedActions(
+      rawAllowedActions,
+      organization.status
+    )
+    const allowedActions = projectEstablishmentRevisionAllowedActions(organizationActions, {
+      organization_status: organization.status,
+      lifecycle_status: establishment.lifecycle_status,
+      business_status: establishment.business_status,
+      published_revision_id: establishment.published_revision_id,
+      revision_status: revisionStatus,
+    })
+    const latestRejectedRevision = await this.revisionRepository.findLatestRejectedForEstablishment(
+      tenantId,
+      establishmentId
+    )
+    const publishedVersion = establishment.published_revision?.version ?? null
+    const rejectionContext: IPortal.RejectionContext | null =
+      latestRejectedRevision &&
+      (publishedVersion === null || latestRejectedRevision.version > publishedVersion)
+        ? {
+            version: latestRejectedRevision.version,
+            notes: latestRejectedRevision.review_notes?.trim() || null,
+          }
+        : null
+    const revisionCreationSource = allowedActions.establishments.create_revision
+      ? establishment.published_revision_id !== null
+        ? ('published' as const)
+        : ('latest_terminal' as const)
+      : null
+
     return {
-      establishment,
+      establishment: establishmentRecord,
       completeness,
       cities: cities.map((city) => city.serialize()),
       categories: categories.map((category) => category.serialize()),
       effective_attributes: effectiveAttributes,
       review_issues: reviewIssues.map((issue) => issue.serialize()),
+      rejection_context: rejectionContext,
+      feedback_targets: {
+        organizations: [{ id: organization.id, label: organization.trade_name }],
+        establishments: [
+          {
+            id: establishment.id,
+            organization_id: organization.id,
+            label: revision.public_name?.trim() || `Unidade ${establishment.id}`,
+          },
+        ],
+      },
+      allowed_actions: allowedActions,
+      revision_creation_source: revisionCreationSource,
     }
   }
 
@@ -146,20 +247,26 @@ export default class PartnerPortalService {
       .where('is_active', true)
       .orderBy('sort_order', 'asc')
       .orderBy('name', 'asc')
+    const categories = await Category.query()
+      .where('tenant_id', tenantId)
+      .where('is_active', true)
+      .orderBy('sort_order', 'asc')
+      .orderBy('name', 'asc')
 
     return {
       cities: cities.map((city) => city.serialize()),
+      categories: categories.map((category) => category.serialize()),
     }
-  }
-
-  async feedbackTargets(tenantId: number, actor: User) {
-    const authorizationContext = await this.resourceAuthorization.forActorContext(tenantId, actor)
-    const overview = await this.overview(tenantId, actor, authorizationContext)
-    return this.feedbackTargetsFromOverview(overview)
   }
 
   feedbackTargetsFromOverview(overview: IPortal.Overview): IPortal.FeedbackTargets {
     return feedbackTargetsFromOverview(overview)
+  }
+
+  feedbackTargetsFromOrganization(
+    organization: IPortal.OrganizationSummary
+  ): IPortal.FeedbackTargets {
+    return feedbackTargetsFromOverview({ organizations: [organization] })
   }
 
   private async establishmentSummariesForOrganizations(
@@ -224,7 +331,8 @@ export default class PartnerPortalService {
     allowedActions: IOrganization.AllowedActions
   ): IPortal.OrganizationSummary {
     const id = Number(organization.id)
-    const status = String(organization.status)
+    const status = String(organization.status) as IOrganization.Status
+    const stateAwareActions = projectOrganizationStateAllowedActions(allowedActions, status)
     const published = establishments.filter(
       (establishment) => establishment.published_revision_id !== null
     ).length
@@ -252,7 +360,7 @@ export default class PartnerPortalService {
           : String(organization.website),
       status,
       role,
-      allowed_actions: allowedActions,
+      allowed_actions: stateAwareActions,
       establishments,
       totals: {
         establishments: establishments.length,
@@ -266,14 +374,14 @@ export default class PartnerPortalService {
           label: 'Organização criada',
           completed: true,
           href: `/portal/organizations/${id}`,
-          available: allowedActions.organizations.read,
+          available: stateAwareActions.organizations.read,
         },
         {
           key: 'organization_active',
           label: 'Organização aprovada e ativa',
           completed: status === 'active',
           href: `/portal/organizations/${id}`,
-          available: allowedActions.organizations.read,
+          available: stateAwareActions.organizations.read,
         },
         {
           key: 'establishment_created',
@@ -283,8 +391,8 @@ export default class PartnerPortalService {
             ? `/portal/establishments/${establishments[0].id}`
             : `/portal/organizations/${id}/establishments/new`,
           available: hasUnit
-            ? allowedActions.establishments.read
-            : allowedActions.establishments.create,
+            ? stateAwareActions.establishments.read
+            : stateAwareActions.establishments.create,
         },
         {
           key: 'establishment_complete',
@@ -294,8 +402,8 @@ export default class PartnerPortalService {
             ? `/portal/establishments/${establishments[0].id}`
             : `/portal/organizations/${id}/establishments/new`,
           available: hasUnit
-            ? allowedActions.establishments.read
-            : allowedActions.establishments.create,
+            ? stateAwareActions.establishments.read
+            : stateAwareActions.establishments.create,
         },
         {
           key: 'establishment_published',
@@ -305,15 +413,15 @@ export default class PartnerPortalService {
             ? `/portal/establishments/${establishments[0].id}`
             : `/portal/organizations/${id}/establishments/new`,
           available: hasUnit
-            ? allowedActions.establishments.read
-            : allowedActions.establishments.create,
+            ? stateAwareActions.establishments.read
+            : stateAwareActions.establishments.create,
         },
         {
           key: 'analytics_available',
           label: 'Métricas de descoberta disponíveis',
           completed: hasPublishedUnit,
           href: `/organizations/${id}/analytics`,
-          available: allowedActions.analytics.read,
+          available: stateAwareActions.analytics.read,
         },
       ],
     }

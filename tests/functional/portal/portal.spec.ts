@@ -7,6 +7,7 @@ import type { ApiClient } from '@japa/api-client'
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 
+import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRevisionAttributeValue from '#modules/establishments/models/establishment_revision_attribute_value'
 import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
@@ -42,6 +43,13 @@ interface EffectiveAttributeProp {
 }
 
 interface EditorProps {
+  establishment: {
+    id: number
+    organization_id: number
+    lifecycle_status: string
+    published_revision_id: number | null
+    revision: Record<string, unknown>
+  }
   effective_attributes: EffectiveAttributeProp[]
   review_issues: Array<{
     code: string
@@ -54,6 +62,16 @@ interface EditorProps {
     score: number
     blocking_issues: Array<{ code: string }>
   }
+  feedback_targets: {
+    organizations: Array<{ id: number; label: string }>
+    establishments: Array<{ id: number; organization_id: number; label: string }>
+  }
+  allowed_actions: IOrganization.AllowedActions
+  revision_creation_source: 'published' | 'latest_terminal' | null
+  rejection_context: {
+    version: number
+    notes: string | null
+  } | null
 }
 
 interface PortalAttributeFixture {
@@ -284,6 +302,11 @@ test.group('Operational portals', (group) => {
     assert.include(overview.text(), scenario.organization.trade_name)
     assert.equal(overview.header('cache-control'), 'private, no-store')
     assert.equal(overview.header('x-robots-tag'), 'noindex, nofollow')
+    const overviewProps = parseComponentProps<{
+      allowed_actions: IOrganization.AllowedActions
+    }>(overview, 'portal/index')
+    assert.isTrue(overviewProps.allowed_actions.redemptions.read)
+    assert.isTrue(overviewProps.allowed_actions.redemptions.validate)
 
     const organization = await client
       .get(`/portal/organizations/${scenario.organization.id}`)
@@ -310,6 +333,30 @@ test.group('Operational portals', (group) => {
   }) => {
     const scenario = await createEstablishmentScenario('portal-action-policy')
     const establishmentId = await createDraftEstablishment(client, scenario)
+    const publishedRevision = await findDraft(establishmentId)
+    publishedRevision.status = 'approved'
+    publishedRevision.submitted_at = DateTime.utc()
+    publishedRevision.reviewed_by = scenario.owner.id
+    publishedRevision.reviewed_at = DateTime.utc()
+    await publishedRevision.save()
+    const publishedEstablishment = await Establishment.findOrFail(establishmentId)
+    publishedEstablishment.published_revision_id = publishedRevision.id
+    await publishedEstablishment.save()
+
+    const openRevision = await client
+      .post(`/portal/establishments/${establishmentId}/revisions`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({
+        ...tenantHeader(scenario.tenant.id),
+        referer: `/portal/establishments/${establishmentId}`,
+      })
+      .loginAs(scenario.owner)
+      .json({ source: 'published' })
+    openRevision.assertStatus(302)
+    const openedDraft = await findDraft(establishmentId)
+    assert.equal(openedDraft.based_on_revision_id, publishedRevision.id)
+
     const organizationAdmin = await createUser({
       prefix: 'portal-org-admin',
       tenant: scenario.tenant,
@@ -325,6 +372,11 @@ test.group('Operational portals', (group) => {
       prefix: 'portal-platform-root',
       tenant: scenario.tenant,
       globalRole: IRoles.Slugs.ROOT,
+    })
+    const platformModerator = await createUser({
+      prefix: 'portal-platform-moderator',
+      tenant: scenario.tenant,
+      globalRole: IRoles.Slugs.MODERATOR,
     })
 
     await addOrganizationMember({
@@ -350,6 +402,7 @@ test.group('Operational portals', (group) => {
       {
         actor: scenario.owner,
         organizationUpdate: true,
+        organizationSubmit: false,
         establishmentUpdate: true,
         lifecycle: true,
         analytics: true,
@@ -357,6 +410,7 @@ test.group('Operational portals', (group) => {
       {
         actor: organizationAdmin,
         organizationUpdate: true,
+        organizationSubmit: false,
         establishmentUpdate: true,
         lifecycle: true,
         analytics: true,
@@ -364,6 +418,7 @@ test.group('Operational portals', (group) => {
       {
         actor: editor,
         organizationUpdate: false,
+        organizationSubmit: false,
         establishmentUpdate: true,
         lifecycle: false,
         analytics: false,
@@ -371,6 +426,7 @@ test.group('Operational portals', (group) => {
       {
         actor: analyst,
         organizationUpdate: false,
+        organizationSubmit: false,
         establishmentUpdate: false,
         lifecycle: false,
         analytics: true,
@@ -378,6 +434,7 @@ test.group('Operational portals', (group) => {
       {
         actor: platformAdmin,
         organizationUpdate: true,
+        organizationSubmit: false,
         establishmentUpdate: true,
         lifecycle: true,
         analytics: true,
@@ -385,6 +442,7 @@ test.group('Operational portals', (group) => {
       {
         actor: platformRoot,
         organizationUpdate: true,
+        organizationSubmit: false,
         establishmentUpdate: true,
         lifecycle: true,
         analytics: true,
@@ -402,7 +460,7 @@ test.group('Operational portals', (group) => {
       }>(organizationResponse, 'portal/organizations/show')
 
       assert.equal(organizationProps.allowed_actions.organizations.update, entry.organizationUpdate)
-      assert.equal(organizationProps.allowed_actions.organizations.submit, entry.organizationUpdate)
+      assert.equal(organizationProps.allowed_actions.organizations.submit, entry.organizationSubmit)
       assert.equal(
         organizationProps.allowed_actions.establishments.update,
         entry.establishmentUpdate
@@ -459,18 +517,318 @@ test.group('Operational portals', (group) => {
       if (entry.establishmentUpdate) {
         newEstablishmentResponse.assertStatus(200)
         assert.include(newEstablishmentResponse.text(), 'portal/establishments/new')
+        const newEstablishmentProps = parseComponentProps<{
+          organization: Record<string, unknown>
+          cities: Array<{ id: number }>
+          categories: Array<{ id: number }>
+        }>(newEstablishmentResponse, 'portal/establishments/new')
+        assert.deepEqual(newEstablishmentProps.organization, {
+          id: scenario.organization.id,
+          trade_name: scenario.organization.trade_name,
+        })
+        assert.include(
+          newEstablishmentProps.categories.map((category) => category.id),
+          scenario.primaryCategory.id
+        )
+        assert.include(
+          newEstablishmentProps.cities.map((city) => city.id),
+          scenario.city.id
+        )
       } else {
         newEstablishmentResponse.assertStatus(403)
       }
     }
 
+    const moderatorOverview = await client
+      .get('/portal')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(platformModerator)
+    moderatorOverview.assertStatus(200)
+    const moderatorOverviewProps = parseComponentProps<{
+      overview: { organizations: unknown[] }
+      allowed_actions: IOrganization.AllowedActions
+    }>(moderatorOverview, 'portal/index')
+    assert.lengthOf(moderatorOverviewProps.overview.organizations, 0)
+    assert.isFalse(moderatorOverviewProps.allowed_actions.redemptions.read)
+    assert.isFalse(moderatorOverviewProps.allowed_actions.redemptions.validate)
+
     scenario.organization.status = 'pending_review'
     await scenario.organization.save()
-    const unavailableOrganizationResponse = await client
-      .get(`/portal/organizations/${scenario.organization.id}/establishments/new`)
+    const pendingOrganizationPage = await client
+      .get(`/portal/organizations/${scenario.organization.id}`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(scenario.owner)
+    pendingOrganizationPage.assertStatus(200)
+    const pendingOrganizationProps = parseComponentProps<{
+      organization: {
+        allowed_actions: IOrganization.AllowedActions
+        onboarding: Array<{ key: string; completed: boolean; available: boolean }>
+      }
+      allowed_actions: IOrganization.AllowedActions
+    }>(pendingOrganizationPage, 'portal/organizations/show')
+    assert.isFalse(pendingOrganizationProps.allowed_actions.establishments.create)
+    assert.deepInclude(
+      pendingOrganizationProps.organization.onboarding.find(
+        (step) => step.key === 'establishment_created'
+      ),
+      { completed: true, available: true }
+    )
+
+    const pendingWithoutUnit = await createEstablishmentScenario('portal-pending-without-unit')
+    pendingWithoutUnit.organization.status = 'pending_review'
+    await pendingWithoutUnit.organization.save()
+    const pendingWithoutUnitPage = await client
+      .get(`/portal/organizations/${pendingWithoutUnit.organization.id}`)
+      .headers(tenantHeader(pendingWithoutUnit.tenant.id))
+      .loginAs(pendingWithoutUnit.owner)
+    pendingWithoutUnitPage.assertStatus(200)
+    const pendingWithoutUnitProps = parseComponentProps<{
+      organization: {
+        onboarding: Array<{ key: string; completed: boolean; available: boolean }>
+      }
+      allowed_actions: IOrganization.AllowedActions
+    }>(pendingWithoutUnitPage, 'portal/organizations/show')
+    assert.isFalse(pendingWithoutUnitProps.allowed_actions.establishments.create)
+    assert.deepInclude(
+      pendingWithoutUnitProps.organization.onboarding.find(
+        (step) => step.key === 'establishment_created'
+      ),
+      { completed: false, available: false }
+    )
+
+    const unavailableOrganizationResponse = await client
+      .get(`/portal/organizations/${pendingWithoutUnit.organization.id}/establishments/new`)
+      .headers(tenantHeader(pendingWithoutUnit.tenant.id))
+      .loginAs(pendingWithoutUnit.owner)
     unavailableOrganizationResponse.assertStatus(400)
+  })
+
+  test('creates Portal revisions from the canonical terminal source', async ({
+    client,
+    assert,
+  }) => {
+    const publishedScenario = await createEstablishmentScenario('portal-revision-published')
+    const publishedEstablishmentId = await createDraftEstablishment(client, publishedScenario)
+    const publishedRevision = await findDraft(publishedEstablishmentId)
+    publishedRevision.status = 'approved'
+    publishedRevision.submitted_at = DateTime.utc()
+    publishedRevision.reviewed_by = publishedScenario.owner.id
+    publishedRevision.reviewed_at = DateTime.utc()
+    await publishedRevision.save()
+    const publishedEstablishment = await Establishment.findOrFail(publishedEstablishmentId)
+    publishedEstablishment.published_revision_id = publishedRevision.id
+    await publishedEstablishment.save()
+    const newerRejectedRevision = await EstablishmentRevision.create({
+      tenant_id: publishedScenario.tenant.id,
+      establishment_id: publishedEstablishmentId,
+      version: 2,
+      status: 'rejected',
+      city_id: publishedScenario.city.id,
+      public_name: publishedRevision.public_name,
+      slug: `rejeitada-apos-publicacao-${publishedEstablishmentId}`,
+      availability_type: 'regular_hours',
+      submitted_at: DateTime.utc(),
+      reviewed_by: publishedScenario.owner.id,
+      reviewed_at: DateTime.utc(),
+      review_notes: 'Atualize as informações de contato antes de tentar novamente.',
+      rules_version: 2,
+      created_by: publishedScenario.owner.id,
+    })
+    const editor = await createUser({
+      prefix: 'portal-terminal-editor',
+      tenant: publishedScenario.tenant,
+    })
+    const analyst = await createUser({
+      prefix: 'portal-terminal-analyst',
+      tenant: publishedScenario.tenant,
+    })
+    await addOrganizationMember({
+      tenant: publishedScenario.tenant,
+      organization: publishedScenario.organization,
+      user: editor,
+      role: 'editor',
+    })
+    await addOrganizationMember({
+      tenant: publishedScenario.tenant,
+      organization: publishedScenario.organization,
+      user: analyst,
+      role: 'analyst',
+    })
+
+    const editorPage = await client
+      .get(`/portal/establishments/${publishedEstablishmentId}`)
+      .headers(tenantHeader(publishedScenario.tenant.id))
+      .loginAs(editor)
+    editorPage.assertStatus(200)
+    const editorProps = parseEditorProps(editorPage)
+    assert.equal(editorProps.establishment.revision.status, 'approved')
+    assert.equal(editorProps.establishment.revision.id, publishedRevision.id)
+    assert.equal(editorProps.establishment.published_revision_id, publishedRevision.id)
+    assert.deepEqual(editorProps.rejection_context, {
+      version: newerRejectedRevision.version,
+      notes: newerRejectedRevision.review_notes,
+    })
+    assert.isTrue(editorProps.allowed_actions.establishments.create_revision)
+    assert.equal(editorProps.revision_creation_source, 'published')
+    assert.deepEqual(editorProps.feedback_targets.organizations, [
+      {
+        id: publishedScenario.organization.id,
+        label: publishedScenario.organization.trade_name,
+      },
+    ])
+    assert.deepEqual(editorProps.feedback_targets.establishments, [
+      {
+        id: publishedEstablishmentId,
+        organization_id: publishedScenario.organization.id,
+        label: publishedRevision.public_name,
+      },
+    ])
+
+    const analystPage = await client
+      .get(`/portal/establishments/${publishedEstablishmentId}`)
+      .headers(tenantHeader(publishedScenario.tenant.id))
+      .loginAs(analyst)
+    analystPage.assertStatus(200)
+    const analystProps = parseEditorProps(analystPage)
+    assert.isFalse(analystProps.allowed_actions.establishments.create_revision)
+    assert.isNull(analystProps.revision_creation_source)
+
+    const analystClone = await client
+      .post(`/portal/establishments/${publishedEstablishmentId}/revisions`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({
+        ...tenantHeader(publishedScenario.tenant.id),
+        referer: `/portal/establishments/${publishedEstablishmentId}`,
+      })
+      .loginAs(analyst)
+      .json({ source: 'published' })
+    analystClone.assertStatus(403)
+
+    const publishedClone = await client
+      .post(`/portal/establishments/${publishedEstablishmentId}/revisions`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({
+        ...tenantHeader(publishedScenario.tenant.id),
+        referer: `/portal/establishments/${publishedEstablishmentId}`,
+      })
+      .loginAs(editor)
+      .json({ source: 'published' })
+    publishedClone.assertStatus(302)
+    assert.equal(
+      publishedClone.header('location'),
+      `/portal/establishments/${publishedEstablishmentId}`
+    )
+    const clonedPublishedRevision = await findDraft(publishedEstablishmentId)
+    assert.equal(clonedPublishedRevision.based_on_revision_id, publishedRevision.id)
+    assert.isNull(clonedPublishedRevision.review_notes)
+    await publishedEstablishment.refresh()
+    assert.equal(publishedEstablishment.published_revision_id, publishedRevision.id)
+    const publishedDraftPage = await client
+      .get(`/portal/establishments/${publishedEstablishmentId}`)
+      .headers(tenantHeader(publishedScenario.tenant.id))
+      .loginAs(editor)
+    publishedDraftPage.assertStatus(200)
+    const publishedDraftProps = parseEditorProps(publishedDraftPage)
+    assert.equal(publishedDraftProps.establishment.revision.status, 'draft')
+    assert.isTrue(publishedDraftProps.allowed_actions.establishments.update)
+    assert.isFalse(publishedDraftProps.allowed_actions.establishments.create_revision)
+    assert.isNull(publishedDraftProps.revision_creation_source)
+    assert.deepEqual(publishedDraftProps.rejection_context, {
+      version: newerRejectedRevision.version,
+      notes: newerRejectedRevision.review_notes,
+    })
+
+    const rejectedScenario = await createEstablishmentScenario('portal-revision-rejected')
+    const rejectedEstablishmentId = await createDraftEstablishment(client, rejectedScenario)
+    const rejectedRevision = await findDraft(rejectedEstablishmentId)
+    rejectedRevision.status = 'rejected'
+    rejectedRevision.submitted_at = DateTime.utc()
+    rejectedRevision.reviewed_by = rejectedScenario.owner.id
+    rejectedRevision.reviewed_at = DateTime.utc()
+    rejectedRevision.review_notes = 'Revisão rejeitada para permitir uma nova tentativa.'
+    await rejectedRevision.save()
+
+    const rejectedPage = await client
+      .get(`/portal/establishments/${rejectedEstablishmentId}`)
+      .headers(tenantHeader(rejectedScenario.tenant.id))
+      .loginAs(rejectedScenario.owner)
+    rejectedPage.assertStatus(200)
+    const rejectedProps = parseEditorProps(rejectedPage)
+    assert.equal(rejectedProps.establishment.revision.status, 'rejected')
+    assert.deepEqual(rejectedProps.rejection_context, {
+      version: rejectedRevision.version,
+      notes: rejectedRevision.review_notes,
+    })
+    assert.isTrue(rejectedProps.allowed_actions.establishments.create_revision)
+    assert.equal(rejectedProps.revision_creation_source, 'latest_terminal')
+
+    const rejectedClone = await client
+      .post(`/portal/establishments/${rejectedEstablishmentId}/revisions`)
+      .withCsrfToken()
+      .redirects(0)
+      .headers({
+        ...tenantHeader(rejectedScenario.tenant.id),
+        referer: `/portal/establishments/${rejectedEstablishmentId}`,
+      })
+      .loginAs(rejectedScenario.owner)
+      .json({ source: 'latest_terminal' })
+    rejectedClone.assertStatus(302)
+    const clonedRejectedRevision = await findDraft(rejectedEstablishmentId)
+    assert.equal(clonedRejectedRevision.based_on_revision_id, rejectedRevision.id)
+    assert.isNull(clonedRejectedRevision.review_notes)
+    const rejectedDraftPage = await client
+      .get(`/portal/establishments/${rejectedEstablishmentId}`)
+      .headers(tenantHeader(rejectedScenario.tenant.id))
+      .loginAs(rejectedScenario.owner)
+    rejectedDraftPage.assertStatus(200)
+    const rejectedDraftProps = parseEditorProps(rejectedDraftPage)
+    assert.equal(rejectedDraftProps.establishment.revision.status, 'draft')
+    assert.isTrue(rejectedDraftProps.allowed_actions.establishments.update)
+    assert.isFalse(rejectedDraftProps.allowed_actions.establishments.create_revision)
+    assert.isNull(rejectedDraftProps.revision_creation_source)
+    assert.deepEqual(rejectedDraftProps.rejection_context, {
+      version: rejectedRevision.version,
+      notes: rejectedRevision.review_notes,
+    })
+
+    const supersededScenario = await createEstablishmentScenario('portal-rejection-superseded')
+    const supersededEstablishmentId = await createDraftEstablishment(client, supersededScenario)
+    const supersededRejection = await findDraft(supersededEstablishmentId)
+    supersededRejection.status = 'rejected'
+    supersededRejection.submitted_at = DateTime.utc()
+    supersededRejection.reviewed_by = supersededScenario.owner.id
+    supersededRejection.reviewed_at = DateTime.utc()
+    supersededRejection.review_notes = 'Motivo já resolvido pela publicação seguinte.'
+    await supersededRejection.save()
+    const currentPublication = await EstablishmentRevision.create({
+      tenant_id: supersededScenario.tenant.id,
+      establishment_id: supersededEstablishmentId,
+      version: 2,
+      status: 'approved',
+      city_id: supersededScenario.city.id,
+      public_name: 'Publicação posterior à rejeição',
+      slug: `publicacao-posterior-${supersededEstablishmentId}`,
+      availability_type: 'regular_hours',
+      submitted_at: DateTime.utc(),
+      reviewed_by: supersededScenario.owner.id,
+      reviewed_at: DateTime.utc(),
+      rules_version: 2,
+      created_by: supersededScenario.owner.id,
+    })
+    const supersededEstablishment = await Establishment.findOrFail(supersededEstablishmentId)
+    supersededEstablishment.published_revision_id = currentPublication.id
+    await supersededEstablishment.save()
+
+    const supersededPage = await client
+      .get(`/portal/establishments/${supersededEstablishmentId}`)
+      .headers(tenantHeader(supersededScenario.tenant.id))
+      .loginAs(supersededScenario.owner)
+    supersededPage.assertStatus(200)
+    const supersededProps = parseEditorProps(supersededPage)
+    assert.equal(supersededProps.establishment.revision.id, currentPublication.id)
+    assert.isNull(supersededProps.rejection_context)
   })
 
   test('projects open moderation corrections back into the partner editor', async ({

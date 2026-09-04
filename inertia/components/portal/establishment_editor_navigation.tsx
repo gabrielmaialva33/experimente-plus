@@ -24,7 +24,6 @@ interface EstablishmentEditorNavigationProps {
   onNavigate: (section: EditorSectionId) => void
   score: number
   eligible: boolean
-  editable: boolean
   submitAllowed: boolean
   submitting: boolean
   busy: boolean
@@ -157,9 +156,7 @@ export function EstablishmentEditorNavigation({
       ? 'Aguarde…'
       : hasUnsavedChanges
         ? 'Salve antes de enviar'
-        : submitAllowed
-          ? submitLabel
-          : lockedLabel
+        : submitLabel
   const helperText = hasUnsavedChanges
     ? `Salve ${unsavedSectionCount} ${unsavedSectionCount === 1 ? 'etapa pendente' : 'etapas pendentes'} antes do envio.`
     : busy
@@ -222,35 +219,43 @@ export function EstablishmentEditorNavigation({
             </nav>
           </CardContent>
           <CardFooter className="min-h-0 border-t border-border/70 bg-muted/20 p-4">
-            <div className="w-full space-y-2">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                disabled={!submitAllowed || !eligible || operationBusy || hasUnsavedChanges}
-                aria-describedby={helperText ? 'editor-submit-help' : undefined}
-                onClick={onSubmit}
-              >
-                {operationBusy ? (
-                  <LoaderCircle className="animate-spin" />
-                ) : hasUnsavedChanges ? (
-                  <Save />
-                ) : submitAllowed ? (
-                  <Send />
-                ) : (
-                  <LockKeyhole />
-                )}
-                {submitButtonLabel}
-              </Button>
-              {helperText ? (
-                <p
-                  id="editor-submit-help"
-                  className="text-center text-[0.7rem] leading-4 text-muted-foreground"
+            {submitAllowed || submitting ? (
+              <div className="w-full space-y-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full"
+                  disabled={!eligible || operationBusy || hasUnsavedChanges}
+                  aria-describedby={helperText ? 'editor-submit-help' : undefined}
+                  onClick={onSubmit}
                 >
-                  {helperText}
-                </p>
-              ) : null}
-            </div>
+                  {operationBusy ? (
+                    <LoaderCircle className="animate-spin" />
+                  ) : hasUnsavedChanges ? (
+                    <Save />
+                  ) : (
+                    <Send />
+                  )}
+                  {submitButtonLabel}
+                </Button>
+                {helperText ? (
+                  <p
+                    id="editor-submit-help"
+                    className="text-center text-[0.7rem] leading-4 text-muted-foreground"
+                  >
+                    {helperText}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p
+                role="status"
+                className="flex w-full items-center justify-center gap-2 text-center text-xs font-medium text-muted-foreground"
+              >
+                <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
+                {lockedLabel}
+              </p>
+            )}
           </CardFooter>
         </Card>
       </div>

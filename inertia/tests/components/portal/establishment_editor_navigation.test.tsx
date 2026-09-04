@@ -16,7 +16,6 @@ const baseProps = {
   items,
   score: 80,
   eligible: true,
-  editable: true,
   submitAllowed: true,
   submitting: false,
   busy: false,
@@ -65,7 +64,7 @@ describe('EstablishmentEditorNavigation', () => {
   })
 
   it('blocks moderation submission while local sections are unsaved', () => {
-    render(
+    const { container } = render(
       <EstablishmentEditorNavigation
         {...baseProps}
         variant="desktop"
@@ -78,5 +77,58 @@ describe('EstablishmentEditorNavigation', () => {
     expect(screen.getByText('2 etapas não salvas')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /salve antes de enviar/i })).toBeDisabled()
     expect(screen.getByText(/salve 2 etapas pendentes/i)).toBeInTheDocument()
+    expect(container.querySelector('[data-slot="progress-circle"]')).toHaveClass('shrink-0')
+  })
+
+  it('keeps submission disabled when the server projects an identity blocker', () => {
+    render(
+      <EstablishmentEditorNavigation
+        {...baseProps}
+        items={[
+          { ...items[0], issueCount: 1 },
+          { ...items[1], issueCount: 0 },
+        ]}
+        score={99}
+        eligible={false}
+        variant="desktop"
+        activeSection="identity"
+        onNavigate={() => undefined}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Identidade: 1 pendência' })).toBeInTheDocument()
+    expect(screen.getByText('1 ajuste necessário')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enviar para moderação' })).toBeDisabled()
+  })
+
+  it('does not render a submission action when the server does not allow it', () => {
+    render(
+      <EstablishmentEditorNavigation
+        {...baseProps}
+        variant="desktop"
+        activeSection="identity"
+        onNavigate={() => undefined}
+        submitAllowed={false}
+      />
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent('Em moderação')
+    expect(screen.queryByRole('button', { name: /em moderação/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps an in-flight submission visible if permissions refresh during the request', () => {
+    render(
+      <EstablishmentEditorNavigation
+        {...baseProps}
+        variant="desktop"
+        activeSection="identity"
+        onNavigate={() => undefined}
+        submitAllowed={false}
+        submitting
+      />
+    )
+
+    expect(screen.getByRole('button', { name: /enviando/i })).toBeDisabled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })
