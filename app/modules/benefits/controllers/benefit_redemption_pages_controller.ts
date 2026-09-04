@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
+import { errors } from '@vinejs/vine'
 
 import InvalidBenefitPresentationException, {
   INVALID_BENEFIT_PRESENTATION_MESSAGE,
@@ -91,7 +92,10 @@ export default class BenefitRedemptionPagesController {
       const payload = await validateBenefitPresentationTokenInput(request, ['json', 'urlencoded'])
       receipt = await this.redemptionService.redeem(tenant!.id, payload.token, auth.getUserOrFail())
     } catch (error) {
-      if (!(error instanceof InvalidBenefitPresentationException) && !isVineValidationError(error)) {
+      if (
+        !(error instanceof InvalidBenefitPresentationException) &&
+        !(error instanceof errors.E_VALIDATION_ERROR)
+      ) {
         throw error
       }
 
@@ -123,10 +127,4 @@ export default class BenefitRedemptionPagesController {
     )
     return inertia.render('portal/redemptions/receipt', { receipt })
   }
-}
-
-function isVineValidationError(error: unknown): boolean {
-  return Boolean(
-    error && typeof error === 'object' && 'code' in error && error.code === 'E_VALIDATION_ERROR'
-  )
 }
