@@ -40,7 +40,8 @@ info:
     ## API Conventions
 
     ### Request Format
-    - **Content-Type**: `application/json` for all requests (except file uploads). Credential-bearing session mutations and tenant creation/switching require this exact base media type; parameters such as `charset=utf-8` are accepted, while JSON-family aliases, forms, multipart, text, and binary bodies are rejected with `422`. Syntactically malformed canonical JSON returns the sanitized `400` response without echoing request data.
+    - **Content-Type**: API request payloads use `application/json` unless an endpoint explicitly documents multipart upload. Public session sign-in, sign-up, password-reset request/consumption, refresh/logout, and authenticated operation creation/switching require that exact base media type; parameters such as `charset=utf-8` are accepted, while JSON-family aliases, forms, multipart, text, and binary bodies are rejected with `422`. Syntactically malformed canonical JSON returns the sanitized `400` response without echoing request data. Browser Inertia forms remain regular form submissions and are not part of this API transport contract.
+    - **Identity**: Email addresses and usernames are trimmed and canonicalized to lowercase. Usernames use only `a-z`, `0-9`, dot, underscore and hyphen, begin with an alphanumeric character, and never contain `@`. On account creation, an omitted, `null`, empty, or whitespace-only username is stored as `null`. On profile updates, omission preserves the current value while `null`, empty, or whitespace-only input clears it.
     - **Pagination**: Use `?page=1&per_page=10` query parameters
     - **Sorting**: Use `?sort_by=field&order=asc` or `?sort_by=field&order=desc`
     - **Searching**: Use `?search=term` for text search
@@ -462,19 +463,37 @@ components:
 
     User:
       type: object
+      required:
+        - id
+        - full_name
+        - email
+        - username
+        - email_verified
+        - email_verified_at
+        - created_at
+        - updated_at
+      additionalProperties: false
       properties:
         id:
           type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
           example: 1
         full_name:
           type: string
+          maxLength: 255
           example: 'John Doe'
         email:
           type: string
           format: email
+          maxLength: 254
           example: 'john@example.com'
         username:
           type: [string, 'null']
+          minLength: 3
+          maxLength: 80
+          pattern: '^[a-z0-9][a-z0-9._-]*$'
           example: 'johndoe'
         email_verified:
           type: boolean
@@ -487,7 +506,7 @@ components:
           format: date-time
           example: '2024-01-01T00:00:00.000Z'
         updated_at:
-          type: string
+          type: [string, 'null']
           format: date-time
           example: '2024-01-01T00:00:00.000Z'
         roles:
@@ -497,19 +516,27 @@ components:
 
     Role:
       type: object
+      description: Stored platform role. Canonical slugs drive authorization; non-canonical compatibility records remain visible to administrators but fail closed in authorization and assignment policies.
+      required: [id, name, description, slug, created_at, updated_at]
+      additionalProperties: false
       properties:
         id:
           type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
           example: 1
         name:
           type: string
           example: 'User'
         description:
-          type: string
+          type: [string, 'null']
           example: 'Regular user role'
         slug:
           type: string
-          enum: [root, admin, user, guest, editor]
+          minLength: 1
+          maxLength: 255
+          description: Canonical values are `root`, `admin`, `moderator`, `user`, and `guest`; other persisted values are compatibility records without authority.
           example: 'user'
         created_at:
           type: string
@@ -518,9 +545,172 @@ components:
           type: string
           format: date-time
 
-    AuthResponse:
+    Permission:
       type: object
-      required: [auth]
+      required: [id, name, description, resource, action, context, created_at, updated_at]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: '^[a-z_]+\.[a-z_]+(?:\.(?:own|team|department))?$'
+          description: Canonical tuple projection. The `any` context is implicit; other contexts are appended.
+        description:
+          type: [string, 'null']
+          maxLength: 500
+        resource:
+          type: string
+        action:
+          type: string
+        context:
+          type: string
+          enum: [own, any, team, department]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RolePermissionProjection:
+      type: object
+      required: [id, name, resource, action, description, source]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        resource:
+          type: string
+        action:
+          type: string
+        description:
+          type: [string, 'null']
+        source:
+          type: string
+          const: role
+
+    DirectPermissionProjection:
+      type: object
+      required: [id, name, resource, action, description, expires_at, granted, source]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        resource:
+          type: string
+        action:
+          type: string
+        description:
+          type: [string, 'null']
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+        granted:
+          type: boolean
+          const: true
+        source:
+          type: string
+          const: direct
+
+    EffectivePermissionProjection:
+      oneOf:
+        - $ref: '#/components/schemas/RolePermissionProjection'
+        - $ref: '#/components/schemas/DirectPermissionProjection'
+      discriminator:
+        propertyName: source
+        mapping:
+          role: '#/components/schemas/RolePermissionProjection'
+          direct: '#/components/schemas/DirectPermissionProjection'
+
+    MyPermissionsResponse:
+      type: object
+      required: [total, permissions, grouped]
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EffectivePermissionProjection'
+        grouped:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/EffectivePermissionProjection'
+
+    AssignedRole:
+      type: object
+      required: [id, name, description, slug, created_at, updated_at, assigned_at]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Canonical values drive authorization; any compatibility value is returned for visibility but grants no authority.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        assigned_at:
+          type: string
+          format: date-time
+
+    MyRolesResponse:
+      type: object
+      required: [total, roles]
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedRole'
+
+    SignInResponse:
+      type: object
+      required:
+        [
+          id,
+          full_name,
+          email,
+          username,
+          email_verified,
+          email_verified_at,
+          created_at,
+          updated_at,
+          roles,
+          auth,
+        ]
+      additionalProperties: false
       properties:
         id:
           type: integer
@@ -531,11 +721,68 @@ components:
           format: email
         username:
           type: [string, 'null']
+          minLength: 3
+          maxLength: 80
+          pattern: '^[a-z0-9][a-z0-9._-]*$'
+        email_verified:
+          type: boolean
+        email_verified_at:
+          type: [string, 'null']
+          format: date-time
         created_at:
           type: string
           format: date-time
         updated_at:
+          type: [string, 'null']
+          format: date-time
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        auth:
+          $ref: '#/components/schemas/AuthTokens'
+
+    SignUpResponse:
+      type: object
+      required:
+        [
+          id,
+          full_name,
+          email,
+          username,
+          email_verified,
+          email_verified_at,
+          created_at,
+          updated_at,
+          roles,
+          auth,
+          email_verification_sent,
+        ]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        full_name:
           type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: [string, 'null']
+          minLength: 3
+          maxLength: 80
+          pattern: '^[a-z0-9][a-z0-9._-]*$'
+        email_verified:
+          type: boolean
+        email_verified_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: [string, 'null']
           format: date-time
         roles:
           type: array
@@ -545,7 +792,7 @@ components:
           $ref: '#/components/schemas/AuthTokens'
         email_verification_sent:
           type: boolean
-          description: Present on sign-up responses; false means the account was created but email delivery failed.
+          description: False means the account was created but email delivery failed.
 
     AuthTokens:
       type: object
@@ -586,6 +833,9 @@ components:
           format: email
         username:
           type: [string, 'null']
+          minLength: 3
+          maxLength: 80
+          pattern: '^[a-z0-9][a-z0-9._-]*$'
         email_verified:
           type: boolean
         email_verified_at:
@@ -684,17 +934,20 @@ components:
 
     UpdateMobileProfileRequest:
       type: object
-      additionalProperties: false
-      description: Partial self-service update. The runtime also strips unknown properties.
+      description: Partial self-service update. Unknown properties are accepted and discarded; omitted properties remain unchanged.
       properties:
         full_name:
           type: string
           minLength: 1
           maxLength: 255
         username:
-          type: string
-          minLength: 3
-          maxLength: 80
+          description: Send `null`, an empty string, or whitespace only to clear the username. A non-empty value is trimmed and canonicalized to lowercase before validation.
+          oneOf:
+            - type: string
+              pattern: '^\s*[A-Za-z0-9][A-Za-z0-9._-]{2,79}\s*$'
+            - type: string
+              pattern: '^\s*$'
+            - type: 'null'
 
     UpdateMobileProfileResponse:
       type: object
@@ -1198,6 +1451,14 @@ components:
         message:
           type: string
 
+    MessageResponse:
+      type: object
+      required: [message]
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+
     ApiRateLimitError:
       type: object
       required: [errors]
@@ -1261,14 +1522,42 @@ components:
         refresh_token:
           $ref: '#/components/schemas/RefreshToken'
 
+    PasswordResetToken:
+      type: string
+      minLength: 64
+      maxLength: 64
+      pattern: '^[A-Za-z0-9_-]{64}$'
+      description: Canonical unpadded base64url encoding of 48 random bytes. Whitespace is part of the credential and is never normalized.
+
+    EmailVerificationToken:
+      type: string
+      minLength: 43
+      maxLength: 43
+      pattern: '^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$'
+      description: Canonical unpadded base64url encoding of 32 random bytes. It is read only from the query string and is never trimmed or normalized.
+
+    EmailVerificationResponse:
+      type: object
+      required: [message, email_verified, email_verified_at]
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          const: Email verified successfully
+        email_verified:
+          type: boolean
+          const: true
+        email_verified_at:
+          type: string
+          format: date-time
+
     PasswordResetRequest:
       type: object
       required: [token, password, password_confirmation]
+      description: Unknown request properties are accepted and discarded. The opaque token itself is read exactly from a canonical application/json body.
       properties:
         token:
-          type: string
-          minLength: 32
-          description: Opaque single-use password reset token delivered by email.
+          $ref: '#/components/schemas/PasswordResetToken'
         password:
           type: string
           format: password
@@ -1349,39 +1638,85 @@ components:
                 type: string
                 example: 'email'
 
-    Pagination:
+    AdministrativePaginationMeta:
       type: object
+      required:
+        - total
+        - per_page
+        - current_page
+        - last_page
+        - first_page
+        - first_page_url
+        - last_page_url
+        - next_page_url
+        - previous_page_url
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 100
+        current_page:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 2147483647
+        last_page:
+          type: integer
+          minimum: 1
+        first_page:
+          type: integer
+          const: 1
+        first_page_url:
+          type: string
+        last_page_url:
+          type: string
+        next_page_url:
+          type: [string, 'null']
+        previous_page_url:
+          type: [string, 'null']
+
+    PaginatedUsersResponse:
+      type: object
+      required: [meta, data]
+      additionalProperties: false
       properties:
         meta:
-          type: object
-          properties:
-            total:
-              type: integer
-              example: 100
-            per_page:
-              type: integer
-              example: 10
-            current_page:
-              type: integer
-              example: 1
-            last_page:
-              type: integer
-              example: 10
-            first_page:
-              type: integer
-              example: 1
-            first_page_url:
-              type: string
-              example: '/?page=1'
-            last_page_url:
-              type: string
-              example: '/?page=10'
-            next_page_url:
-              type: string
-              example: '/?page=2'
-            previous_page_url:
-              type: string
-              example: null
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+        data:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/User'
+              - type: object
+                required: [roles]
+
+    PaginatedRolesResponse:
+      type: object
+      required: [meta, data]
+      additionalProperties: false
+      properties:
+        meta:
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+
+    PaginatedPermissionsResponse:
+      type: object
+      required: [meta, data]
+      additionalProperties: false
+      properties:
+        meta:
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
 
     FileUploadResponse:
       type: object
@@ -3647,6 +3982,17 @@ components:
         minimum: 1
       description: Page number for pagination
 
+    administrativePageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        format: int32
+        default: 1
+        minimum: 1
+        maximum: 2147483647
+      description: Administrative result page. Decimal and exponential notations are rejected.
+
     perPageParam:
       name: per_page
       in: query
@@ -3657,29 +4003,24 @@ components:
         maximum: 100
       description: Number of items per page
 
-    sortByParam:
-      name: sort_by
+    administrativePerPageParam:
+      name: per_page
       in: query
       schema:
-        type: string
-        default: id
-      description: Field to sort by
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+      description: Administrative page size. Values above 100 are rejected rather than silently capped.
 
-    orderParam:
+    administrativeOrderParam:
       name: order
       in: query
       schema:
         type: string
         enum: [asc, desc]
         default: asc
-      description: Sort order
-
-    searchParam:
-      name: search
-      in: query
-      schema:
-        type: string
-      description: Search term for filtering results
+      description: Administrative sort direction.
 
     tenantHeader:
       name: x-tenant-id
@@ -3704,7 +4045,7 @@ components:
         const: noindex, nofollow
 
     PrivateReferrerPolicy:
-      description: Prevents a presentation token in a validation URL from leaking as a referrer.
+      description: Prevents sensitive credentials in verification, reset, or presentation URLs from leaking as referrers.
       schema:
         type: string
         const: no-referrer
@@ -3721,6 +4062,30 @@ components:
         type: integer
         const: 5
 
+    PasswordResetRequestRateLimitLimit:
+      description: Maximum password reset email requests allowed in the current fifteen-minute window.
+      schema:
+        type: integer
+        const: 5
+
+    PasswordResetRateLimitLimit:
+      description: Maximum password reset submissions allowed in the current fifteen-minute window.
+      schema:
+        type: integer
+        const: 10
+
+    EmailVerificationRateLimitLimit:
+      description: Maximum public verification attempts allowed per IP in the current fifteen-minute window.
+      schema:
+        type: integer
+        const: 10
+
+    EmailVerificationResendRateLimitLimit:
+      description: Maximum resend attempts allowed per authenticated user and IP in the current one-hour window.
+      schema:
+        type: integer
+        const: 3
+
     GuestRateLimitLimit:
       description: Maximum unauthenticated API requests allowed in the current one-minute window per IP address.
       schema:
@@ -3732,6 +4097,12 @@ components:
       schema:
         type: integer
         const: 100
+
+    AdminRateLimitLimit:
+      description: Maximum authenticated admin requests allowed in the current one-minute window.
+      schema:
+        type: integer
+        const: 200
 
     RateLimitRemaining:
       description: Requests remaining in the current rate-limit window.
@@ -3748,13 +4119,22 @@ components:
   responses:
     UnauthorizedError:
       description: Authentication required
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             errors:
-              - message: 'Unauthorized'
+              - message: 'Unauthorized access'
 
     PrivateSessionMutationUnauthorizedError:
       description: The bearer credential is absent or invalid, or the submitted refresh credential is invalid, expired, revoked, replayed, or belongs to another user. Refresh failures intentionally share one generic message.
@@ -3811,6 +4191,94 @@ components:
           $ref: '#/components/headers/PrivatePragma'
         X-RateLimit-Limit:
           $ref: '#/components/headers/AuthRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
+    PrivatePasswordResetRequestRateLimitError:
+      description: Password reset email throttle exceeded (5 requests per 15 minutes for the IP and body email).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/PasswordResetRequestRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
+    PrivatePasswordResetRateLimitError:
+      description: Password reset token throttle exceeded (10 requests per 15 minutes for the IP).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/PasswordResetRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
+    PrivateEmailVerificationRateLimitError:
+      description: Public email-verification throttle exceeded (10 attempts per 15 minutes per IP address).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/EmailVerificationRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
+    PrivateEmailVerificationResendRateLimitError:
+      description: Verification-email resend throttle exceeded (3 attempts per hour per authenticated user and IP address).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/EmailVerificationResendRateLimitLimit'
         X-RateLimit-Remaining:
           $ref: '#/components/headers/RateLimitRemaining'
         Retry-After:
@@ -3887,6 +4355,25 @@ components:
           example:
             status: 400
             message: An active tenant is required for this operation
+
+    PrivatePasswordResetBadRequestError:
+      description: The canonical password reset credential is unknown, expired, or already consumed.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiMessageError'
+          example:
+            status: 400
+            message: Invalid or expired password reset token
 
     PrivateBenefitRedemptionBadRequest:
       description: A structurally valid presentation is invalid or expired, or the current benefit, access, edition, offer, establishment, schedule, or redemption limit no longer permits redemption. Presentation failures use one generic message; current domain-state failures preserve their actionable message.
@@ -4001,6 +4488,28 @@ components:
           $ref: '#/components/headers/PrivatePragma'
         X-RateLimit-Limit:
           $ref: '#/components/headers/RateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiRateLimitError'
+
+    PrivateAdminRateLimitError:
+      description: Authenticated admin throttle exceeded (200 requests per minute per user).
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCacheControl'
+        X-Robots-Tag:
+          $ref: '#/components/headers/PrivateRobotsTag'
+        Referrer-Policy:
+          $ref: '#/components/headers/PrivateReferrerPolicy'
+        Pragma:
+          $ref: '#/components/headers/PrivatePragma'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/AdminRateLimitLimit'
         X-RateLimit-Remaining:
           $ref: '#/components/headers/RateLimitRemaining'
         Retry-After:
@@ -6041,7 +6550,7 @@ paths:
     post:
       operationId: signIn
       summary: User login
-      description: Authenticate a user and receive a short-lived access JWT plus an opaque rotating refresh token.
+      description: Authenticate a user and receive a short-lived access JWT plus an opaque rotating refresh token. The fields are accepted only from a canonical `application/json` object body.
       tags:
         - Authentication
       security: []
@@ -6062,7 +6571,6 @@ paths:
                 password:
                   type: string
                   format: password
-                  minLength: 8
                   example: 'password123'
       responses:
         '200':
@@ -6083,7 +6591,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/SignInResponse'
         '400':
           description: Invalid credentials, or a syntactically malformed JSON request body.
           headers:
@@ -6105,7 +6613,7 @@ paths:
                 invalidCredentials:
                   value:
                     errors:
-                      - message: Invalid credentials
+                      - message: Invalid user credentials
                 malformedJson:
                   value:
                     status: 400
@@ -6119,7 +6627,7 @@ paths:
     post:
       operationId: requestPasswordReset
       summary: Request a password reset link
-      description: Returns the same accepted response whether or not the email exists. Any issued token is opaque, single-use, and stored only as an HMAC.
+      description: Returns the same accepted response whether or not the email exists or delivery succeeds. Any issued token is opaque, single-use, and stored only as an HMAC. Token rotation is committed only after the delivery provider accepts the new message, so a rejected delivery preserves any previous active link. The email is accepted only from a canonical `application/json` object body.
       tags:
         - Authentication
       security: []
@@ -6134,20 +6642,33 @@ paths:
                 email:
                   type: string
                   format: email
+                  maxLength: 254
       responses:
         '202':
           description: Request accepted without revealing account existence
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/PasswordResetRequestRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/PrivateMalformedJsonError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
         '429':
-          description: Too many password reset requests
+          $ref: '#/components/responses/PrivatePasswordResetRequestRateLimitError'
 
   /api/v1/sessions/reset-password:
     post:
@@ -6166,12 +6687,29 @@ paths:
       responses:
         '200':
           description: Password reset successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/PasswordResetRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         '400':
-          description: Invalid or expired token
+          $ref: '#/components/responses/PrivatePasswordResetBadRequestError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
         '429':
-          description: Too many password reset attempts
+          $ref: '#/components/responses/PrivatePasswordResetRateLimitError'
 
   /api/v1/sessions/refresh:
     post:
@@ -6271,16 +6809,24 @@ paths:
           headers:
             Cache-Control:
               $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
             X-Robots-Tag:
               $ref: '#/components/headers/PrivateRobotsTag'
             Referrer-Policy:
               $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
     patch:
       operationId: updateProfile
@@ -6300,6 +6846,8 @@ paths:
           headers:
             Cache-Control:
               $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
             X-Robots-Tag:
               $ref: '#/components/headers/PrivateRobotsTag'
             Referrer-Policy:
@@ -6344,12 +6892,27 @@ paths:
       responses:
         '204':
           description: Account anonymized and credentials revoked
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
         '400':
           description: Incorrect password or confirmation
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/me/context:
     get:
@@ -6740,19 +7303,28 @@ paths:
         - Profile
       responses:
         '200':
-          description: Permissions retrieved successfully
+          description: Effective direct and role-derived permissions grouped for client rendering
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  permissions:
-                    type: array
-                    items:
-                      type: string
-                      example: 'users.create'
+                $ref: '#/components/schemas/MyPermissionsResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/me/roles:
     get:
@@ -6763,24 +7335,34 @@ paths:
         - Profile
       responses:
         '200':
-          description: Roles retrieved successfully
+          description: Assigned roles and assignment timestamps
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  roles:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Role'
+                $ref: '#/components/schemas/MyRolesResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/sessions/sign-up:
     post:
       operationId: signUp
       summary: User registration
-      description: Creates a user after explicit acceptance of the current Terms of Use and Privacy Policy, assigns the default role, optionally creates a personal workspace according to `REGISTRATION_WORKSPACE_MODE`, and returns tenant-scoped API tokens. Acceptance is required at the request boundary; this version does not claim to persist versioned legal evidence. Email delivery failure does not roll back the account.
+      description: Creates a user from a canonical `application/json` object body after explicit acceptance of the current Terms of Use and Privacy Policy, assigns the default role, optionally creates a personal workspace according to `REGISTRATION_WORKSPACE_MODE`, and returns tenant-scoped API tokens. Acceptance is required at the request boundary; this version does not claim to persist versioned legal evidence. Email delivery failure does not roll back the account.
       tags:
         - Authentication
       security: []
@@ -6799,15 +7381,22 @@ paths:
               properties:
                 full_name:
                   type: string
+                  maxLength: 255
                   example: 'John Doe'
                 email:
                   type: string
                   format: email
+                  maxLength: 254
                   example: 'john@example.com'
                 username:
-                  type: string
+                  oneOf:
+                    - type: string
+                      pattern: '^\s*[A-Za-z0-9][A-Za-z0-9._-]{2,79}\s*$'
+                    - type: string
+                      pattern: '^\s*$'
+                    - type: 'null'
                   example: 'johndoe'
-                  description: Optional username
+                  description: Optional username. Omitted, `null`, empty, or whitespace-only input is stored as `null`; a non-empty value is trimmed and canonicalized to lowercase.
                 password:
                   type: string
                   format: password
@@ -6840,7 +7429,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/SignUpResponse'
         '400':
           $ref: '#/components/responses/PrivateMalformedJsonError'
         '422':
@@ -6852,7 +7441,7 @@ paths:
     get:
       operationId: verifyEmail
       summary: Verify user email
-      description: Verify a user's email address using a token from the verification link.
+      description: Atomically consumes the exact canonical token from the query string. The token is single-use and is never accepted from a request body or normalized.
       tags:
         - Authentication
       security: []
@@ -6861,13 +7450,39 @@ paths:
           in: query
           required: true
           schema:
-            type: string
-          description: The email verification token
+            $ref: '#/components/schemas/EmailVerificationToken'
+          description: Canonical email-verification credential from the link.
       responses:
         '200':
           description: Email verified successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/EmailVerificationRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationResponse'
         '400':
           description: The verification token expired or its email is already verified
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
           content:
             application/json:
               schema:
@@ -6883,6 +7498,15 @@ paths:
                     message: Email already verified
         '404':
           description: No user has the supplied verification token
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
           content:
             application/json:
               schema:
@@ -6890,6 +7514,23 @@ paths:
               example:
                 status: 404
                 message: Invalid verification token
+        '422':
+          description: The query token is absent or is not a canonical 43-character credential.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/PrivateEmailVerificationRateLimitError'
 
   /api/v1/resend-verification-email:
     post:
@@ -6898,13 +7539,76 @@ paths:
       description: Resends the email verification link to the authenticated user.
       tags:
         - Authentication
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Verification email sent successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/EmailVerificationResendRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Verification email sent successfully
+        '400':
+          description: The authenticated user's email is already verified.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/EmailVerificationResendRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Email already verified
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '503':
           description: Verification email could not be delivered
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/EmailVerificationResendRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Verification email could not be delivered. Please try again later.
+        '429':
+          $ref: '#/components/responses/PrivateEmailVerificationResendRateLimitError'
 
   /api/v1/tenants:
     post:
@@ -7045,31 +7749,55 @@ paths:
     get:
       operationId: listUsers
       summary: List users
-      description: Get a paginated list of users with optional search and sorting
+      description: Get a paginated list of users with optional case-insensitive search and sorting. Only the documented query-string fields are accepted; request-body fields and aliases such as `perPage` or `sortBy` are not part of the contract. Requires the global `users.list` permission.
       tags:
         - Users
       parameters:
-        - $ref: '#/components/parameters/pageParam'
-        - $ref: '#/components/parameters/perPageParam'
-        - $ref: '#/components/parameters/sortByParam'
-        - $ref: '#/components/parameters/orderParam'
-        - $ref: '#/components/parameters/searchParam'
+        - $ref: '#/components/parameters/administrativePageParam'
+        - $ref: '#/components/parameters/administrativePerPageParam'
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [id, full_name, email, username, created_at, updated_at]
+            default: id
+          description: User field used for sorting.
+        - $ref: '#/components/parameters/administrativeOrderParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          description: Case-insensitive search across full name, email, and username.
       responses:
         '200':
           description: User list retrieved successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Pagination'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/PaginatedUsersResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
     post:
       operationId: createUser
@@ -7091,11 +7819,19 @@ paths:
               properties:
                 full_name:
                   type: string
+                  maxLength: 255
                 email:
                   type: string
                   format: email
+                  maxLength: 254
                 username:
-                  type: string
+                  oneOf:
+                    - type: string
+                      pattern: '^\s*[A-Za-z0-9][A-Za-z0-9._-]{2,79}\s*$'
+                    - type: string
+                      pattern: '^\s*$'
+                    - type: 'null'
+                  description: Optional username. Omitted, `null`, empty, or whitespace-only input is stored as `null`; a non-empty value is trimmed and canonicalized to lowercase.
                 password:
                   type: string
                   format: password
@@ -7106,14 +7842,31 @@ paths:
       responses:
         '201':
           description: User created successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/users/{id}:
     get:
@@ -7123,27 +7876,62 @@ paths:
       tags:
         - Users
       parameters:
-        - $ref: '#/components/parameters/pathId'
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 2147483647
       responses:
         '200':
           description: User details retrieved successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
     put:
       operationId: updateUser
       summary: Update user
-      description: Update user details (email and username cannot be changed)
+      description: Requires `users.update`. A currently active Root or Admin may update their own profile or password; another account must have only strictly lower canonical platform roles. Email, username and roles cannot be changed here.
       tags:
         - Users
       parameters:
-        - $ref: '#/components/parameters/pathId'
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 2147483647
       requestBody:
         required: true
         content:
@@ -7153,6 +7941,7 @@ paths:
               properties:
                 full_name:
                   type: string
+                  maxLength: 255
                 password:
                   type: string
                   format: password
@@ -7164,67 +7953,147 @@ paths:
       responses:
         '200':
           description: User updated successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
     delete:
       operationId: deleteUser
       summary: Delete user
-      description: Soft delete a user (marks as deleted)
+      description: Requires `users.delete` and a currently active Root or Admin role. Administrative self-deletion is rejected; use `DELETE /api/v1/me` instead. Another account must have only strictly lower canonical platform roles, and at least one active Root is always preserved.
       tags:
         - Users
       parameters:
-        - $ref: '#/components/parameters/pathId'
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 2147483647
       responses:
         '204':
           description: User deleted successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+        '400':
+          description: The deletion would remove the last active Root account.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessageError'
+              example:
+                status: 400
+                message: The last active root user cannot be deleted
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
 
   /api/v1/admin/roles:
     get:
       operationId: listRoles
       summary: List roles
-      description: Get a paginated list of roles (requires ADMIN or ROOT role)
+      description: Get a paginated list of stored platform roles, including non-canonical compatibility records for migration and audit visibility. Compatibility records never acquire authority because authorization and assignment policies fail closed for unknown slugs. Only the documented query-string fields are accepted; request-body fields and aliases such as `perPage` or `sortBy` are not part of the contract. Requires the Root or Admin ACL and the global `roles.list` permission.
       tags:
         - Roles
       parameters:
-        - $ref: '#/components/parameters/pageParam'
-        - $ref: '#/components/parameters/perPageParam'
+        - $ref: '#/components/parameters/administrativePageParam'
+        - $ref: '#/components/parameters/administrativePerPageParam'
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [id, name, description, slug, created_at, updated_at]
+            default: id
+          description: Role field used for sorting.
+        - $ref: '#/components/parameters/administrativeOrderParam'
       responses:
         '200':
           description: Role list retrieved successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Pagination'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Role'
+                $ref: '#/components/schemas/PaginatedRolesResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/roles/attach:
     put:
       operationId: attachRoles
       summary: Attach roles to user
-      description: Assign roles to a user (requires ADMIN or ROOT role)
+      description: Add canonical platform roles without removing existing assignments. Requires a fresh Root or Admin role and `roles.assign` inside the transaction. Root may attach any canonical role, including Root, to another active user; Admin may attach only roles strictly below Admin. Self-assignment and unknown or custom roles are rejected.
       tags:
         - Roles
       requestBody:
@@ -7233,57 +8102,164 @@ paths:
           application/json:
             schema:
               type: object
+              description: IDs must be JSON numbers. Unknown properties are accepted and discarded.
               required:
                 - user_id
                 - role_ids
               properties:
                 user_id:
                   type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 2147483647
                   example: 1
                 role_ids:
                   type: array
+                  minItems: 1
+                  maxItems: 5
+                  uniqueItems: true
                   items:
                     type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 2147483647
                   example: [1, 2, 3]
       responses:
         '200':
           description: Roles attached successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
           content:
             application/json:
               schema:
                 type: object
+                required: [message]
+                additionalProperties: false
                 properties:
                   message:
                     type: string
-                    example: 'Role attached successfully'
+                    const: Role attached successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/permissions:
     get:
       operationId: listPermissions
       summary: List permissions
-      description: Get a paginated list of permissions
+      description: Get a paginated permission list. Only query-string filters are accepted. Requires the Root or Admin ACL and `permissions.list`.
       tags:
         - Permissions
       parameters:
         - $ref: '#/components/parameters/pageParam'
         - $ref: '#/components/parameters/perPageParam'
+        - name: resource
+          in: query
+          schema:
+            type: string
+            enum:
+              [
+                users,
+                roles,
+                permissions,
+                files,
+                media,
+                tenants,
+                regions,
+                cities,
+                category_families,
+                categories,
+                category_attributes,
+                organizations,
+                organization_members,
+                organization_invitations,
+                organization_claims,
+                establishments,
+                benefit_editions,
+                benefit_offers,
+                benefit_accesses,
+                analytics,
+                pilot_feedback,
+                settings,
+                reports,
+                audit,
+                dashboard,
+              ]
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum:
+              [
+                create,
+                read,
+                update,
+                delete,
+                list,
+                export,
+                import,
+                assign,
+                revoke,
+                submit,
+                approve,
+                reject,
+                request_changes,
+                suspend,
+                restore,
+                resend,
+                accept,
+                archive,
+              ]
       responses:
         '200':
           description: Permission list retrieved successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPermissionsResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
     post:
       operationId: createPermission
       summary: Create permission
-      description: Create a new permission
+      description: Atomically create or update the canonical resource/action/context permission tuple from the JSON request body. The stored `name` is always derived as `resource.action` for `any`, or `resource.action.context` otherwise. The legacy request field remains accepted but is ignored. A collision with a mismatched legacy tuple returns the canonical 422 validation response. Requires a fresh Root or Admin role and `permissions.create` inside the transaction.
       tags:
         - Permissions
       requestBody:
@@ -7292,34 +8268,114 @@ paths:
           application/json:
             schema:
               type: object
+              description: Only the documented JSON body fields are used. Unknown properties are accepted and discarded.
               required:
                 - resource
                 - action
               properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  deprecated: true
+                  description: Legacy compatibility field. It is validated and discarded; the server derives the stored name from resource, action and context.
                 resource:
                   type: string
-                  example: 'posts'
+                  enum:
+                    [
+                      users,
+                      roles,
+                      permissions,
+                      files,
+                      media,
+                      tenants,
+                      regions,
+                      cities,
+                      category_families,
+                      categories,
+                      category_attributes,
+                      organizations,
+                      organization_members,
+                      organization_invitations,
+                      organization_claims,
+                      establishments,
+                      benefit_editions,
+                      benefit_offers,
+                      benefit_accesses,
+                      analytics,
+                      pilot_feedback,
+                      settings,
+                      reports,
+                      audit,
+                      dashboard,
+                    ]
+                  example: 'users'
                 action:
                   type: string
+                  enum:
+                    [
+                      create,
+                      read,
+                      update,
+                      delete,
+                      list,
+                      export,
+                      import,
+                      assign,
+                      revoke,
+                      submit,
+                      approve,
+                      reject,
+                      request_changes,
+                      suspend,
+                      restore,
+                      resend,
+                      accept,
+                      archive,
+                    ]
                   example: 'create'
                 description:
                   type: string
+                  maxLength: 500
                   example: 'Allow creating posts'
+                context:
+                  type: string
+                  enum: [own, any, team, department]
+                  default: any
       responses:
         '201':
           description: Permission created successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/roles/permissions/sync:
     put:
       operationId: syncRolePermissions
       summary: Sync role permissions
-      description: Sync all permissions for a specific role
+      description: Replace all permissions for a lower canonical role. The root role is immutable, and the actor is reauthorized inside the transaction.
       tags:
         - Permissions
       requestBody:
@@ -7328,33 +8384,69 @@ paths:
           application/json:
             schema:
               type: object
+              description: Only the documented JSON body fields are used. Unknown properties are accepted and discarded.
               required:
                 - role_id
                 - permission_ids
               properties:
                 role_id:
                   type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 2147483647
                   example: 2
                 permission_ids:
                   type: array
+                  maxItems: 256
+                  uniqueItems: true
                   items:
                     type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 2147483647
                   example: [1, 2, 3]
       responses:
         '200':
           description: Permissions synced successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                additionalProperties: false
+                properties:
+                  message:
+                    type: string
+                    const: Permissions synced successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/roles/permissions/attach:
     put:
       operationId: attachRolePermissions
       summary: Attach permissions to role
-      description: Attach one or more permissions to a role
+      description: Attach permissions to a lower canonical role. The root role is immutable, and the actor is reauthorized inside the transaction.
       tags:
         - Permissions
       requestBody:
@@ -7363,33 +8455,69 @@ paths:
           application/json:
             schema:
               type: object
+              description: Only the documented JSON body fields are used. Unknown properties are accepted and discarded.
               required:
                 - role_id
                 - permission_ids
               properties:
                 role_id:
                   type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 2147483647
                   example: 2
                 permission_ids:
                   type: array
+                  maxItems: 256
+                  uniqueItems: true
                   items:
                     type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 2147483647
                   example: [4, 5]
       responses:
         '200':
           description: Permissions attached successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                additionalProperties: false
+                properties:
+                  message:
+                    type: string
+                    const: Permissions attached successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/roles/permissions/detach:
     put:
       operationId: detachRolePermissions
       summary: Detach permissions from role
-      description: Detach one or more permissions from a role
+      description: Detach permissions from a lower canonical role. The root role is immutable, and the actor is reauthorized inside the transaction.
       tags:
         - Permissions
       requestBody:
@@ -7398,33 +8526,69 @@ paths:
           application/json:
             schema:
               type: object
+              description: Only the documented JSON body fields are used. Unknown properties are accepted and discarded.
               required:
                 - role_id
                 - permission_ids
               properties:
                 role_id:
                   type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 2147483647
                   example: 2
                 permission_ids:
                   type: array
+                  maxItems: 256
+                  uniqueItems: true
                   items:
                     type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 2147483647
                   example: [1]
       responses:
         '200':
           description: Permissions detached successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                additionalProperties: false
+                properties:
+                  message:
+                    type: string
+                    const: Permissions detached successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/users/permissions/sync:
     put:
       operationId: syncUserPermissions
       summary: Sync user permissions
-      description: Sync all direct permissions for a specific user
+      description: Replace a lower-ranked user's direct permissions from the JSON request body. Self, peer, higher-ranked and root targets are rejected, and the actor is reauthorized inside the transaction.
       tags:
         - Permissions
       requestBody:
@@ -7433,44 +8597,151 @@ paths:
           application/json:
             schema:
               type: object
+              description: Only the documented JSON body fields are used. Unknown properties are accepted and discarded, including inside permission entries. Duplicate permission IDs are rejected.
               required:
                 - user_id
-                - permission_ids
+                - permissions
               properties:
                 user_id:
                   type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 2147483647
                   example: 3
-                permission_ids:
+                permissions:
                   type: array
+                  maxItems: 256
+                  uniqueItems: true
                   items:
-                    type: integer
-                  example: [10, 11]
+                    type: object
+                    required: [permission_id]
+                    properties:
+                      permission_id:
+                        type: integer
+                        format: int32
+                        minimum: 1
+                        maximum: 2147483647
+                      granted:
+                        type: boolean
+                        default: true
+                      expires_at:
+                        type: [string, 'null']
+                        format: date-time
+                        maxLength: 64
+                  example:
+                    - permission_id: 10
+                      granted: true
+                      expires_at: null
       responses:
         '200':
           description: User permissions synced successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                additionalProperties: false
+                properties:
+                  message:
+                    type: string
+                    const: User permissions synced successfully
+        '400':
+          description: A supplied `expires_at` value is not a valid ISO 8601 date-time.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessageError'
+              example:
+                status: 400
+                message: expires_at must be a valid ISO date
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/users/{id}/permissions:
     get:
       operationId: getUserPermissions
-      summary: Get user's direct permissions
-      description: Get a list of direct permissions for a specific user
+      summary: Get user's effective permissions
+      description: Get the effective permission names resolved from direct grants, roles and canonical role inheritance.
       tags:
         - Permissions
       parameters:
-        - $ref: '#/components/parameters/pathId'
+        - name: id
+          in: path
+          required: true
+          description: Active target user ID.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 2147483647
       responses:
         '200':
           description: User permissions retrieved successfully
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [permissions]
+                additionalProperties: false
+                properties:
+                  permissions:
+                    type: array
+                    uniqueItems: true
+                    items:
+                      type: string
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
+        '422':
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/admin/users/{id}/permissions/check:
     post:
@@ -7480,30 +8751,73 @@ paths:
       tags:
         - Permissions
       parameters:
-        - $ref: '#/components/parameters/pathId'
+        - name: id
+          in: path
+          required: true
+          description: Active target user ID.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 2147483647
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              description: Only the documented JSON body fields are used. Unknown properties are accepted and discarded.
               required:
                 - permissions
               properties:
                 permissions:
                   type: array
+                  minItems: 1
+                  maxItems: 100
+                  uniqueItems: true
                   items:
                     type: string
+                    minLength: 3
+                    maxLength: 255
                   example: ['users.create', 'files.delete']
+                require_all:
+                  type: boolean
+                  default: false
       responses:
         '200':
           description: Check result
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Pragma:
+              $ref: '#/components/headers/PrivatePragma'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/AdminRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [has_permission]
+                additionalProperties: false
+                properties:
+                  has_permission:
+                    type: boolean
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '404':
+          $ref: '#/components/responses/PrivateNotFoundError'
         '422':
-          $ref: '#/components/responses/ValidationError'
+          $ref: '#/components/responses/PrivateValidationError'
+        '429':
+          $ref: '#/components/responses/PrivateAdminRateLimitError'
 
   /api/v1/files:
     get:

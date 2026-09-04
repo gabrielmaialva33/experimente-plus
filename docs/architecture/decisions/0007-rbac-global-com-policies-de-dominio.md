@@ -111,7 +111,7 @@ A checagem deve existir no service/caso de uso, não apenas no controller ou na 
 
 ### `editor` do template
 
-A role genérica `editor` será removida da definição canônica pre-1.0 e substituída por `moderator` no produto. O termo `editor` continua válido somente como papel interno de organização.
+A role genérica `editor` não integra a definição canônica pre-1.0 e foi substituída por `moderator` no produto. O termo `editor` continua válido somente como papel interno de organização.
 
 ## Parceiro não é role global
 
@@ -145,6 +145,14 @@ O último owner não pode ser removido ou rebaixado sem transferência atômica.
 ## Catálogo de permissions do primeiro corte
 
 A nomenclatura permanece `resource.action`. Contexto de organização não será codificado como `.own`; a policy executa o escopo.
+
+`Permission.name` não é uma segunda identidade editável: ele é derivado de
+`resource`, `action` e `context`. O contexto padrão `any` continua implícito
+(`resource.action`); contextos não padrão usam `resource.action.context`. O campo
+`name` legado da criação administrativa permanece aceito para compatibilidade de
+transporte, mas seu valor é descartado. Uma colisão com um registro legado cujo
+nome canônico pertence a outra tupla falha como validação `422`, sem converter
+outros erros de banco.
 
 ### Geografia e taxonomia
 
@@ -371,7 +379,7 @@ Rejeitado para scoping de tenant. Acesso transversal deve ser explícito e audit
 
 Quando EP-01/EP-02 começar:
 
-- substituir a role global `editor` por `moderator` na migration original de roles;
+- manter somente `moderator` na migration original de roles, sem restaurar a antiga role global `editor`;
 - estender enums de resources/actions;
 - incorporar permissions do produto à migration original de defaults, seguindo a política pre-1.0;
 - manter role `user` como default;

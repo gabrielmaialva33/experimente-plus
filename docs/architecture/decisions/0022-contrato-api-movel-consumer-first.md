@@ -111,6 +111,15 @@ válidos somente até o TTL residual de, no máximo, quinze minutos; revogação
 exigiria versionamento de credenciais ou denylist e fica como decisão de segurança posterior ao
 piloto.
 
+A emissão de um link de reset também usa `users.id FOR UPDATE` como mutex. A rotação e o envio
+ocorrem dentro da mesma transação: se o SMTP rejeitar a mensagem, o rollback preserva o link
+anterior e a resposta pública continua sendo o mesmo `202`, sem revelar existência de conta ou
+estado da entrega. Somente a falha conhecida de entrega é absorvida; falhas inesperadas de banco
+continuam propagando. Essa fronteira privilegia não invalidar silenciosamente um link utilizável,
+mas não torna SMTP e PostgreSQL atomicamente distribuídos: se o servidor de e-mail aceitar a
+mensagem e o commit falhar depois, o destinatário ainda pode receber um link não persistido. Fechar
+essa janela exige outbox durável e fica para uma decisão posterior ao piloto.
+
 Refresh, logout, criação e troca aceitam credenciais somente em JSON cujo media type base seja
 `application/json`; parâmetros como `charset=utf-8` são permitidos, mas aliases JSON, form,
 multipart, texto e binário resultam em `422`. JSON canônico sintaticamente inválido resulta em `400`
@@ -231,6 +240,8 @@ com o contrato do aplicativo.
 - retry da confirmação retorna o mesmo comprovante;
 - recibos respeitam tenant, titular e organização, ocultando IDOR com `404` quando aplicável;
 - todas as respostas privadas possuem os quatro headers;
+- falha de entrega de reset mantém o link anterior, conserva o `202` anti-enumeração e não oculta
+  falhas inesperadas de persistência;
 - throttle retorna `429` recuperável;
 - parser OpenAPI, unicidade de `operationId` e paridade seletiva com o router permanecem verdes;
 - proxy de produção não persiste query strings de validação nos access logs.
