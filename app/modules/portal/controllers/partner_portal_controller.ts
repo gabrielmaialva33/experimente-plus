@@ -16,6 +16,7 @@ import {
   updateEstablishmentRevisionValidator,
 } from '#modules/establishments/validators/establishment_validator'
 import OrganizationService from '#modules/organizations/services/organization_service'
+import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import OrganizationWorkflowService from '#modules/organizations/services/organization_workflow_service'
 import {
   createOrganizationValidator,
@@ -29,6 +30,7 @@ import PartnerPortalService from '#modules/portal/services/partner_portal_servic
 export default class PartnerPortalController {
   constructor(
     private portalService: PartnerPortalService,
+    private resourceAuthorization: OrganizationResourceAuthorizationService,
     private organizationService: OrganizationService,
     private organizationWorkflowService: OrganizationWorkflowService,
     private establishmentService: EstablishmentService,
@@ -69,16 +71,19 @@ export default class PartnerPortalController {
   async organization({ auth, inertia, params, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const actor = auth.getUserOrFail()
-    const organization = await this.portalService.organization(
+    const organizationId = Number(params.organizationId)
+    const organization = await this.portalService.organization(tenant!.id, organizationId, actor)
+    const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
+    const allowedActions = await this.resourceAuthorization.forOrganization(
       tenant!.id,
-      Number(params.organizationId),
+      organizationId,
       actor
     )
-    const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
 
     return inertia.render('portal/organizations/show', {
       organization,
       feedback_targets: feedbackTargets,
+      allowed_actions: allowedActions,
     })
   }
 
@@ -143,11 +148,18 @@ export default class PartnerPortalController {
       actor
     )
     const feedbackTargets = await this.portalService.feedbackTargets(tenant!.id, actor)
+    const organizationId = Number((editor.establishment as Record<string, unknown>).organization_id)
+    const allowedActions = await this.resourceAuthorization.forOrganization(
+      tenant!.id,
+      organizationId,
+      actor
+    )
 
     return inertia.render('portal/establishments/edit', {
       ...editor,
       tenant_id: tenant!.id,
       feedback_targets: feedbackTargets,
+      allowed_actions: allowedActions,
     })
   }
 

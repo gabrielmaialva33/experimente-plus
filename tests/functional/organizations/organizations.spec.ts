@@ -5,6 +5,7 @@ import Organization from '#modules/organizations/models/organization'
 import OrganizationMember from '#modules/organizations/models/organization_member'
 import IRole from '#modules/roles/interfaces/role_interface'
 import {
+  addOrganizationMember,
   createOperation,
   createOrganization,
   createUser,
@@ -128,6 +129,53 @@ test.group('Organizations', (group) => {
       ownerList.body().map((item: { id: number }) => item.id),
       [organization.id]
     )
+  })
+
+  test('enforces organization edit policy beyond the global USER permission', async ({
+    client,
+    assert,
+  }) => {
+    const tenant = await createOperation('organization-policy')
+    const owner = await createUser({ prefix: 'policy-owner', tenant })
+    const organization = await createOrganization({ tenant, owner, prefix: 'Policy' })
+    const organizationAdmin = await createUser({ prefix: 'policy-org-admin', tenant })
+    const editor = await createUser({ prefix: 'policy-editor', tenant })
+    const analyst = await createUser({ prefix: 'policy-analyst', tenant })
+    const platformAdmin = await createUser({
+      prefix: 'policy-platform-admin',
+      tenant,
+      globalRole: IRole.Slugs.ADMIN,
+    })
+    const platformRoot = await createUser({
+      prefix: 'policy-platform-root',
+      tenant,
+      globalRole: IRole.Slugs.ROOT,
+    })
+
+    await addOrganizationMember({ tenant, organization, user: organizationAdmin, role: 'admin' })
+    await addOrganizationMember({ tenant, organization, user: editor, role: 'editor' })
+    await addOrganizationMember({ tenant, organization, user: analyst, role: 'analyst' })
+
+    for (const actor of [editor, analyst]) {
+      const denied = await client
+        .put(`/api/v1/organizations/${organization.id}`)
+        .header('x-tenant-id', String(tenant.id))
+        .loginAs(actor)
+        .json({ trade_name: `Denied ${actor.id}` })
+
+      denied.assertStatus(403)
+    }
+
+    for (const actor of [owner, organizationAdmin, platformAdmin, platformRoot]) {
+      const allowed = await client
+        .put(`/api/v1/organizations/${organization.id}`)
+        .header('x-tenant-id', String(tenant.id))
+        .loginAs(actor)
+        .json({ trade_name: `Allowed ${actor.id}` })
+
+      allowed.assertStatus(200)
+      assert.equal(allowed.body().trade_name, `Allowed ${actor.id}`)
+    }
   })
 
   test('enforces the review workflow and protects legal data after approval', async ({

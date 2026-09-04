@@ -11,6 +11,7 @@ import EstablishmentRevision from '#modules/establishments/models/establishment_
 import EstablishmentRevisionAttributeValue from '#modules/establishments/models/establishment_revision_attribute_value'
 import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
 import IRoles from '#modules/roles/interfaces/role_interface'
+import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import Category from '#modules/taxonomy/models/category'
 import CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
 import CategoryAttributeOption from '#modules/taxonomy/models/category_attribute_option'
@@ -18,7 +19,7 @@ import {
   createEstablishmentScenario,
   type EstablishmentScenario,
 } from '#tests/functional/establishments/helpers'
-import { createUser } from '#tests/functional/organizations/helpers'
+import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
 
 const mediaFixture = (name: string) => join(process.cwd(), 'tests', 'fixtures', 'media', name)
 const tenantHeader = (tenantId: number) => ({ 'x-tenant-id': String(tenantId) })
@@ -301,6 +302,155 @@ test.group('Operational portals', (group) => {
     assert.include(establishment.text(), 'portal/establishments/edit')
     assert.equal(establishment.header('cache-control'), 'private, no-store')
     assert.equal(establishment.header('x-robots-tag'), 'noindex, nofollow')
+  })
+
+  test('projects organization-scoped actions for every membership role and platform admins', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('portal-action-policy')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+    const organizationAdmin = await createUser({
+      prefix: 'portal-org-admin',
+      tenant: scenario.tenant,
+    })
+    const editor = await createUser({ prefix: 'portal-editor', tenant: scenario.tenant })
+    const analyst = await createUser({ prefix: 'portal-analyst', tenant: scenario.tenant })
+    const platformAdmin = await createUser({
+      prefix: 'portal-platform-admin',
+      tenant: scenario.tenant,
+      globalRole: IRoles.Slugs.ADMIN,
+    })
+    const platformRoot = await createUser({
+      prefix: 'portal-platform-root',
+      tenant: scenario.tenant,
+      globalRole: IRoles.Slugs.ROOT,
+    })
+
+    await addOrganizationMember({
+      tenant: scenario.tenant,
+      organization: scenario.organization,
+      user: organizationAdmin,
+      role: 'admin',
+    })
+    await addOrganizationMember({
+      tenant: scenario.tenant,
+      organization: scenario.organization,
+      user: editor,
+      role: 'editor',
+    })
+    await addOrganizationMember({
+      tenant: scenario.tenant,
+      organization: scenario.organization,
+      user: analyst,
+      role: 'analyst',
+    })
+
+    const cases = [
+      {
+        actor: scenario.owner,
+        organizationUpdate: true,
+        establishmentUpdate: true,
+        lifecycle: true,
+        analytics: true,
+      },
+      {
+        actor: organizationAdmin,
+        organizationUpdate: true,
+        establishmentUpdate: true,
+        lifecycle: true,
+        analytics: true,
+      },
+      {
+        actor: editor,
+        organizationUpdate: false,
+        establishmentUpdate: true,
+        lifecycle: false,
+        analytics: true,
+      },
+      {
+        actor: analyst,
+        organizationUpdate: false,
+        establishmentUpdate: false,
+        lifecycle: false,
+        analytics: true,
+      },
+      {
+        actor: platformAdmin,
+        organizationUpdate: true,
+        establishmentUpdate: true,
+        lifecycle: true,
+        analytics: true,
+      },
+      {
+        actor: platformRoot,
+        organizationUpdate: true,
+        establishmentUpdate: true,
+        lifecycle: true,
+        analytics: true,
+      },
+    ]
+
+    for (const entry of cases) {
+      const organizationResponse = await client
+        .get(`/portal/organizations/${scenario.organization.id}`)
+        .headers(tenantHeader(scenario.tenant.id))
+        .loginAs(entry.actor)
+      organizationResponse.assertStatus(200)
+      const organizationProps = parseComponentProps<{
+        allowed_actions: IOrganization.AllowedActions
+      }>(organizationResponse, 'portal/organizations/show')
+
+      assert.equal(organizationProps.allowed_actions.organizations.update, entry.organizationUpdate)
+      assert.equal(organizationProps.allowed_actions.organizations.submit, entry.organizationUpdate)
+      assert.equal(
+        organizationProps.allowed_actions.establishments.update,
+        entry.establishmentUpdate
+      )
+      assert.equal(organizationProps.allowed_actions.establishments.archive, entry.lifecycle)
+      assert.equal(organizationProps.allowed_actions.analytics.read, entry.analytics)
+
+      const establishmentResponse = await client
+        .get(`/portal/establishments/${establishmentId}`)
+        .headers(tenantHeader(scenario.tenant.id))
+        .loginAs(entry.actor)
+      establishmentResponse.assertStatus(200)
+      const establishmentProps = parseComponentProps<{
+        allowed_actions: IOrganization.AllowedActions
+      }>(establishmentResponse, 'portal/establishments/edit')
+
+      assert.equal(
+        establishmentProps.allowed_actions.establishments.update,
+        entry.establishmentUpdate
+      )
+      assert.equal(
+        establishmentProps.allowed_actions.establishments.submit,
+        entry.establishmentUpdate
+      )
+      assert.equal(
+        establishmentProps.allowed_actions.benefit_offers.update,
+        entry.establishmentUpdate
+      )
+      assert.equal(
+        establishmentProps.allowed_actions.redemptions.validate,
+        entry.establishmentUpdate
+      )
+      assert.isTrue(establishmentProps.allowed_actions.benefit_offers.read)
+      assert.isTrue(establishmentProps.allowed_actions.redemptions.read)
+
+      const benefitsResponse = await client
+        .get(`/portal/establishments/${establishmentId}/benefits`)
+        .headers(tenantHeader(scenario.tenant.id))
+        .loginAs(entry.actor)
+      benefitsResponse.assertStatus(200)
+      const benefitsProps = parseComponentProps<{
+        allowed_actions: IOrganization.AllowedActions
+      }>(benefitsResponse, 'portal/establishments/benefits')
+
+      assert.equal(benefitsProps.allowed_actions.benefit_offers.create, entry.establishmentUpdate)
+      assert.equal(benefitsProps.allowed_actions.benefit_offers.update, entry.establishmentUpdate)
+      assert.isTrue(benefitsProps.allowed_actions.benefit_offers.read)
+    }
   })
 
   test('projects open moderation corrections back into the partner editor', async ({

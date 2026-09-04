@@ -414,7 +414,7 @@ test.group('Discovery analytics', (group) => {
       .get(`/api/v1/organizations/${scenario.organization.id}/analytics`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(editor)
-    editorDashboard.assertStatus(403)
+    editorDashboard.assertStatus(200)
 
     const outsider = await createUser({
       prefix: 'analytics-outsider',
@@ -433,6 +433,12 @@ test.group('Discovery analytics', (group) => {
       tenantRole: 'member',
       globalRole: IRoles.Slugs.ADMIN,
     })
+    const administratorDashboard = await client
+      .get(`/api/v1/organizations/${scenario.organization.id}/analytics`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(administrator)
+    administratorDashboard.assertStatus(200)
+
     const noResults = await client
       .get('/api/v1/admin/analytics/searches/no-results')
       .headers(tenantHeader(scenario.tenant.id))

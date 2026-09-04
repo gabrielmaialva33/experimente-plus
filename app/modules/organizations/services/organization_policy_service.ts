@@ -10,18 +10,89 @@ import IRole from '#modules/roles/interfaces/role_interface'
 import type User from '#modules/users/models/user'
 
 const PLATFORM_STAFF_ROLES = [IRole.Slugs.ROOT, IRole.Slugs.ADMIN, IRole.Slugs.MODERATOR]
-const PLATFORM_ADMIN_ROLES = [IRole.Slugs.ROOT, IRole.Slugs.ADMIN]
+
+export interface OrganizationPolicyDecision {
+  membership: OrganizationMember | null
+  capabilities: IOrganization.PolicyCapabilities
+}
+
+/**
+ * The canonical organization-role matrix from ADR-0011. Keeping this mapping
+ * pure makes the exact policy independently testable and lets page projections
+ * reuse the same decisions as service authorization.
+ */
+export function organizationPolicyCapabilitiesFor(
+  source: IOrganization.AccessSource,
+  role: IOrganization.Role | null
+): IOrganization.PolicyCapabilities {
+  const readOnly = {
+    source,
+    role,
+    read: true,
+    update_organization: false,
+    submit_organization: false,
+    manage_establishments: false,
+    manage_establishment_lifecycle: false,
+    read_analytics: false,
+  } satisfies IOrganization.PolicyCapabilities
+
+  if (source === 'platform_admin') {
+    return {
+      ...readOnly,
+      update_organization: true,
+      submit_organization: true,
+      manage_establishments: true,
+      manage_establishment_lifecycle: true,
+      read_analytics: true,
+    }
+  }
+
+  if (source === 'platform_moderator') {
+    return readOnly
+  }
+
+  if (role === 'owner' || role === 'admin') {
+    return {
+      ...readOnly,
+      update_organization: true,
+      submit_organization: true,
+      manage_establishments: true,
+      manage_establishment_lifecycle: true,
+      read_analytics: true,
+    }
+  }
+
+  if (role === 'editor') {
+    return {
+      ...readOnly,
+      manage_establishments: true,
+      read_analytics: true,
+    }
+  }
+
+  if (role === 'analyst') {
+    return {
+      ...readOnly,
+      read_analytics: true,
+    }
+  }
+
+  return {
+    ...readOnly,
+    read: false,
+  }
+}
 
 @inject()
 export default class OrganizationPolicyService {
   constructor(private memberRepository: OrganizationMemberRepository) {}
 
   async isPlatformStaff(actor: User): Promise<boolean> {
-    return this.hasGlobalRole(actor, PLATFORM_STAFF_ROLES)
+    return (await this.platformAccess(actor)) !== null
   }
 
   async isPlatformAdmin(actor: User): Promise<boolean> {
-    return this.hasGlobalRole(actor, PLATFORM_ADMIN_ROLES)
+    return (await this.platformAccess(actor)) === 'platform_admin'
   }
 
   async requirePlatformModerator(actor: User): Promise<void> {
@@ -36,17 +107,55 @@ export default class OrganizationPolicyService {
     }
   }
 
+  async resolveAccess(
+    actor: User,
+    tenantId: number,
+    organizationId: number,
+    client?: TransactionClientContract
+  ): Promise<OrganizationPolicyDecision> {
+    const platformAccess = await this.platformAccess(actor)
+    if (platformAccess === 'platform_admin') {
+      return {
+        membership: null,
+        capabilities: organizationPolicyCapabilitiesFor('platform_admin', null),
+      }
+    }
+
+    const membership = await this.memberRepository.findActiveByUser(
+      tenantId,
+      organizationId,
+      actor.id,
+      client
+    )
+    if (membership) {
+      return {
+        membership,
+        capabilities: organizationPolicyCapabilitiesFor('membership', membership.role),
+      }
+    }
+
+    if (platformAccess === 'platform_moderator') {
+      return {
+        membership: null,
+        capabilities: organizationPolicyCapabilitiesFor('platform_moderator', null),
+      }
+    }
+
+    throw new NotFoundException('Organization not found')
+  }
+
   async authorizeRead(
     actor: User,
     tenantId: number,
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformStaff(actor)) {
-      return null
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.read) {
+      throw new NotFoundException('Organization not found')
     }
 
-    return this.requireActiveMembership(actor.id, tenantId, organizationId, client)
+    return decision.membership
   }
 
   async authorizeEditOrganization(
@@ -55,22 +164,12 @@ export default class OrganizationPolicyService {
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformAdmin(actor)) {
-      return null
-    }
-
-    const membership = await this.requireActiveMembership(
-      actor.id,
-      tenantId,
-      organizationId,
-      client
-    )
-
-    if (!['owner', 'admin'].includes(membership.role)) {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.update_organization) {
       throw new ForbiddenException('Only organization owners and admins may edit this organization')
     }
 
-    return membership
+    return decision.membership
   }
 
   async authorizeSubmit(
@@ -79,7 +178,14 @@ export default class OrganizationPolicyService {
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    return this.authorizeEditOrganization(actor, tenantId, organizationId, client)
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.submit_organization) {
+      throw new ForbiddenException(
+        'Only organization owners and admins may submit this organization'
+      )
+    }
+
+    return decision.membership
   }
 
   async authorizeManageEstablishments(
@@ -88,22 +194,12 @@ export default class OrganizationPolicyService {
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformAdmin(actor)) {
-      return null
-    }
-
-    const membership = await this.requireActiveMembership(
-      actor.id,
-      tenantId,
-      organizationId,
-      client
-    )
-
-    if (!['owner', 'admin', 'editor'].includes(membership.role)) {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.manage_establishments) {
       throw new ForbiddenException('Your organization role cannot edit establishments')
     }
 
-    return membership
+    return decision.membership
   }
 
   async authorizeManageEstablishmentLifecycle(
@@ -112,22 +208,26 @@ export default class OrganizationPolicyService {
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformAdmin(actor)) {
-      return null
-    }
-
-    const membership = await this.requireActiveMembership(
-      actor.id,
-      tenantId,
-      organizationId,
-      client
-    )
-
-    if (!['owner', 'admin'].includes(membership.role)) {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.manage_establishment_lifecycle) {
       throw new ForbiddenException('Only organization owners and admins may change lifecycle state')
     }
 
-    return membership
+    return decision.membership
+  }
+
+  async authorizeReadAnalytics(
+    actor: User,
+    tenantId: number,
+    organizationId: number,
+    client?: TransactionClientContract
+  ): Promise<OrganizationMember | null> {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (!decision.capabilities.read_analytics) {
+      throw new ForbiddenException('This organization role cannot read analytics')
+    }
+
+    return decision.membership
   }
 
   async authorizeListMembers(
@@ -146,22 +246,17 @@ export default class OrganizationPolicyService {
     invitedRole: IOrganization.Role,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformAdmin(actor)) {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (decision.capabilities.source === 'platform_admin') {
       return null
     }
 
-    const membership = await this.requireActiveMembership(
-      actor.id,
-      tenantId,
-      organizationId,
-      client
-    )
-
-    if (membership.role === 'owner') {
+    const membership = decision.membership
+    if (membership?.role === 'owner') {
       return membership
     }
 
-    if (membership.role === 'admin' && ['editor', 'analyst'].includes(invitedRole)) {
+    if (membership?.role === 'admin' && ['editor', 'analyst'].includes(invitedRole)) {
       return membership
     }
 
@@ -176,25 +271,20 @@ export default class OrganizationPolicyService {
     nextRole?: IOrganization.Role,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformAdmin(actor)) {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (decision.capabilities.source === 'platform_admin') {
       return null
     }
 
-    const membership = await this.requireActiveMembership(
-      actor.id,
-      tenantId,
-      organizationId,
-      client
-    )
-
-    if (membership.role === 'owner') {
+    const membership = decision.membership
+    if (membership?.role === 'owner') {
       return membership
     }
 
     const managesLimitedRole = ['editor', 'analyst'].includes(target.role)
     const assignsLimitedRole = nextRole === undefined || ['editor', 'analyst'].includes(nextRole)
 
-    if (membership.role === 'admin' && managesLimitedRole && assignsLimitedRole) {
+    if (membership?.role === 'admin' && managesLimitedRole && assignsLimitedRole) {
       return membership
     }
 
@@ -207,45 +297,32 @@ export default class OrganizationPolicyService {
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
-    if (await this.isPlatformAdmin(actor)) {
+    const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
+    if (decision.capabilities.source === 'platform_admin') {
       return null
     }
 
-    const membership = await this.requireActiveMembership(
-      actor.id,
-      tenantId,
-      organizationId,
-      client
-    )
-
-    if (membership.role !== 'owner') {
+    if (decision.membership?.role !== 'owner') {
       throw new ForbiddenException('Only an organization owner may archive this draft')
     }
 
-    return membership
+    return decision.membership
   }
 
-  private async requireActiveMembership(
-    userId: number,
-    tenantId: number,
-    organizationId: number,
-    client?: TransactionClientContract
-  ): Promise<OrganizationMember> {
-    const membership = await this.memberRepository.findActiveByUser(
-      tenantId,
-      organizationId,
-      userId,
-      client
-    )
+  private async platformAccess(
+    actor: User
+  ): Promise<Exclude<IOrganization.AccessSource, 'membership'> | null> {
+    const roles = await actor
+      .related('roles')
+      .query()
+      .whereIn('roles.slug', PLATFORM_STAFF_ROLES)
+      .select('roles.slug')
+    const slugs = new Set(roles.map((role) => role.slug))
 
-    if (!membership) {
-      throw new NotFoundException('Organization not found')
+    if (slugs.has(IRole.Slugs.ROOT) || slugs.has(IRole.Slugs.ADMIN)) {
+      return 'platform_admin'
     }
 
-    return membership
-  }
-
-  private async hasGlobalRole(actor: User, roles: IRole.Slugs[]): Promise<boolean> {
-    return Boolean(await actor.related('roles').query().whereIn('roles.slug', roles).first())
+    return slugs.has(IRole.Slugs.MODERATOR) ? 'platform_moderator' : null
   }
 }

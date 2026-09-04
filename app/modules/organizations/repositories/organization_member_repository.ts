@@ -4,6 +4,14 @@ import type IOrganization from '#modules/organizations/interfaces/organization_i
 import OrganizationMember from '#modules/organizations/models/organization_member'
 
 export default class OrganizationMemberRepository {
+  async listActiveByUser(tenantId: number, userId: number): Promise<OrganizationMember[]> {
+    return OrganizationMember.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', userId)
+      .where('status', 'active')
+      .orderBy('organization_id', 'asc')
+  }
+
   async listByOrganization(
     tenantId: number,
     organizationId: number

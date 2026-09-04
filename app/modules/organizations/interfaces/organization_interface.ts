@@ -20,6 +20,63 @@ namespace IOrganization {
   export type MutableMemberStatus = (typeof MUTABLE_ORGANIZATION_MEMBER_STATUSES)[number]
   export type ClaimStatus = (typeof ORGANIZATION_CLAIM_STATUSES)[number]
 
+  /**
+   * Domain-level access resolved from either an active organization membership
+   * or an explicit platform staff role. Global permissions are applied later,
+   * when page actions are projected for the current actor.
+   */
+  export type AccessSource = 'membership' | 'platform_admin' | 'platform_moderator'
+
+  export interface PolicyCapabilities {
+    source: AccessSource
+    role: Role | null
+    read: boolean
+    update_organization: boolean
+    submit_organization: boolean
+    manage_establishments: boolean
+    manage_establishment_lifecycle: boolean
+    read_analytics: boolean
+  }
+
+  /**
+   * Server-projected actions for organization-scoped Portal resources. Every
+   * flag combines the global permission required by the route with the domain
+   * policy for the organization. The frontend may hide controls from these
+   * values, but the services remain the authorization authority.
+   */
+  export interface AllowedActions {
+    organizations: {
+      read: boolean
+      update: boolean
+      submit: boolean
+    }
+    establishments: {
+      read: boolean
+      list: boolean
+      create: boolean
+      update: boolean
+      submit: boolean
+      archive: boolean
+    }
+    benefit_offers: {
+      read: boolean
+      list: boolean
+      create: boolean
+      update: boolean
+      archive: boolean
+    }
+    redemptions: {
+      read: boolean
+      validate: boolean
+    }
+    analytics: {
+      read: boolean
+    }
+    pilot_feedback: {
+      create: boolean
+    }
+  }
+
   export interface CreatePayload {
     legal_name: string
     trade_name: string
