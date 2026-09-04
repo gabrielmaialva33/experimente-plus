@@ -7,15 +7,22 @@ import DeleteUserService from '#modules/users/services/delete_user_service'
 import GetUserService from '#modules/users/services/get_user_service'
 import PaginateUserService from '#modules/users/services/paginate_user_service'
 
-import { createUserValidator, editUserValidator } from '#modules/users/validators/users_validator'
+import {
+  createUserValidator,
+  editUserValidator,
+  listUsersValidator,
+  userIdParamValidator,
+} from '#modules/users/validators/users_validator'
 
 export default class InertiaUsersController {
   async index({ inertia, request }: HttpContext) {
-    const page = request.input('page', 1)
-    const perPage = request.input('per_page', 10)
-    const search = request.input('search')
-    const sortBy = request.input('sort_by', 'created_at')
-    const direction = request.input('order', 'desc')
+    const {
+      page = 1,
+      per_page: perPage = 10,
+      search,
+      sort_by: sortBy = 'created_at',
+      order: direction = 'desc',
+    } = await request.validateUsing(listUsersValidator, { data: request.qs() })
 
     const paginateUserService = await app.container.make(PaginateUserService)
     const users = await paginateUserService.run({
@@ -39,35 +46,43 @@ export default class InertiaUsersController {
   }
 
   async store({ request, response }: HttpContext) {
-    const payload = await request.validateUsing(createUserValidator)
+    const payload = await request.validateUsing(createUserValidator, {
+      data: request.body(),
+    })
     const createUserService = await app.container.make(CreateUserService)
     await createUserService.run(payload)
 
     return response.redirect().toPath('/users')
   }
 
-  async edit({ inertia, params }: HttpContext) {
+  async edit({ inertia, params, request }: HttpContext) {
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
     const getUserService = await app.container.make(GetUserService)
-    const user = await getUserService.run(params.id)
+    const user = await getUserService.run(userId)
 
     return inertia.render('users/edit', { user })
   }
 
-  async update({ request, response, params }: HttpContext) {
+  async update({ auth, request, response, params }: HttpContext) {
+    const actor = auth.getUserOrFail()
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
     const payload = await request.validateUsing(editUserValidator, {
+      data: request.body(),
       meta: {
-        userId: params.id,
+        userId,
       },
     })
     const editUserService = await app.container.make(EditUserService)
-    await editUserService.run(params.id, payload)
+    await editUserService.run(actor.id, userId, payload)
 
     return response.redirect().toPath('/users')
   }
 
-  async destroy({ response, params }: HttpContext) {
+  async destroy({ auth, request, response, params }: HttpContext) {
+    const actor = auth.getUserOrFail()
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
     const deleteUserService = await app.container.make(DeleteUserService)
-    await deleteUserService.run(params.id)
+    await deleteUserService.run(actor.id, userId)
 
     return response.redirect().toPath('/users')
   }

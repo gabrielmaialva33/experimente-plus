@@ -1,5 +1,6 @@
 import { type HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
+import { errors } from '@vinejs/vine'
 
 import AuthEventService from '#modules/auth/services/auth_event_service'
 import RequestPasswordResetService from '#modules/auth/services/request_password_reset_service'
@@ -37,7 +38,9 @@ export default class InertiaAuthController {
   async forgotPassword(ctx: HttpContext) {
     preventCredentialResponseCaching(ctx)
     const { request, response, session } = ctx
-    const { email } = await request.validateUsing(requestPasswordResetValidator)
+    const { email } = await request.validateUsing(requestPasswordResetValidator, {
+      data: request.body(),
+    })
     const service = await app.container.make(RequestPasswordResetService)
     await service.run(email)
 
@@ -59,7 +62,9 @@ export default class InertiaAuthController {
     preventCredentialResponseCaching(ctx)
     const { request, response, session } = ctx
     try {
-      const { token, password } = await request.validateUsing(resetPasswordValidator)
+      const { token, password } = await request.validateUsing(resetPasswordValidator, {
+        data: request.body(),
+      })
       const service = await app.container.make(ResetPasswordService)
       await service.run(token, password)
 
@@ -69,14 +74,18 @@ export default class InertiaAuthController {
       session.flash('errors', {
         general: 'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.',
       })
-      return response.redirect().back()
+      // Never reflect a credential-bearing Referer after rejecting the body.
+      // The user must return through a freshly issued reset link.
+      return response.redirect().toPath('/reset-password')
     }
   }
 
   async login(ctx: HttpContext) {
     preventCredentialResponseCaching(ctx)
     const { request, response, session, auth } = ctx
-    const { uid, password } = await request.validateUsing(signInValidator)
+    const { uid, password } = await request.validateUsing(signInValidator, {
+      data: request.body(),
+    })
 
     try {
       const signInService = await app.container.make(SignInService)
@@ -102,7 +111,9 @@ export default class InertiaAuthController {
     const { request, response, session, auth } = ctx
 
     try {
-      const registration = await request.validateUsing(publicRegistrationValidator)
+      const registration = await request.validateUsing(publicRegistrationValidator, {
+        data: request.body(),
+      })
       const data = {
         full_name: registration.full_name,
         email: registration.email,
@@ -129,13 +140,13 @@ export default class InertiaAuthController {
 
       return response.redirect(await resolveAuthenticatedLandingPath(user, activeTenantId))
     } catch (error) {
-      if (error && typeof error === 'object' && 'messages' in error) {
-        session.flash('errors', error.messages as Record<string, unknown>)
-      } else {
-        session.flash('errors', {
-          general: 'Não foi possível concluir o cadastro. Tente novamente em instantes.',
-        })
+      if (error instanceof errors.E_VALIDATION_ERROR) {
+        throw error
       }
+
+      session.flash('errors', {
+        general: 'Não foi possível concluir o cadastro. Tente novamente em instantes.',
+      })
       return response.redirect().back()
     }
   }

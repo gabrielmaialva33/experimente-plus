@@ -25,6 +25,7 @@ export default class InertiaSettingsController {
     const user = auth.getUserOrFail()
 
     const payload = await request.validateUsing(updateProfileValidator, {
+      data: request.body(),
       meta: { userId: user.id },
     })
 
@@ -41,8 +42,12 @@ export default class InertiaSettingsController {
     const user = auth.getUserOrFail()
 
     try {
-      const { current_password: currentPassword, confirmation } =
-        await request.validateUsing(deleteOwnAccountValidator)
+      const { current_password: currentPassword, confirmation } = await request.validateUsing(
+        deleteOwnAccountValidator,
+        {
+          data: request.body(),
+        }
+      )
       const deleteOwnAccount = await app.container.make(DeleteOwnAccountService)
 
       await deleteOwnAccount.run(user.id, { currentPassword, confirmation })

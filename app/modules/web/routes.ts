@@ -3,7 +3,12 @@ import router from '@adonisjs/core/services/router'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import env from '#start/env'
 import { middleware } from '#start/kernel'
-import { passwordResetRequestThrottle, passwordResetThrottle } from '#start/limiter'
+import {
+  passwordResetRequestThrottle,
+  passwordResetThrottle,
+  signInThrottle,
+  signUpThrottle,
+} from '#start/limiter'
 import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
 
 const InertiaAuthController = () => import('#modules/web/controllers/auth_controller')
@@ -30,7 +35,7 @@ router
 router
   .post('/login', [InertiaAuthController, 'login'])
   .as('login.post')
-  .use(middleware.guest({ guards: ['jwt'] }))
+  .use([middleware.guest({ guards: ['jwt'] }), signInThrottle])
 router
   .get('/register', [InertiaAuthController, 'showRegister'])
   .as('register')
@@ -38,7 +43,7 @@ router
 router
   .post('/register', [InertiaAuthController, 'register'])
   .as('register.post')
-  .use(middleware.guest({ guards: ['jwt'] }))
+  .use([middleware.guest({ guards: ['jwt'] }), signUpThrottle])
 router
   .get('/forgot-password', [InertiaAuthController, 'showForgotPassword'])
   .as('password.forgot')
