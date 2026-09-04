@@ -88,4 +88,15 @@ describe('BenefitsBackofficePage', () => {
     expect(screen.queryByRole('button', { name: 'Arquivar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Criar edição' })).not.toBeInTheDocument()
   })
+
+  it('explains the immediate and irreversible impact before archiving an edition', async () => {
+    mocks.permissions = ['benefit_editions.archive']
+
+    const { user } = render(<BenefitsBackofficePage editions={[edition]} cities={[edition.city]} />)
+
+    await user.click(screen.getByRole('button', { name: 'Arquivar' }))
+
+    expect(screen.getByText(/ofertas ficarão indisponíveis imediatamente/i)).toBeVisible()
+    expect(screen.getByText(/não há restauração após o arquivamento/i)).toBeVisible()
+  })
 })

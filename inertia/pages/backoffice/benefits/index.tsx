@@ -708,7 +708,7 @@ export default function BenefitsBackofficePage({
             if (!open) setArchiveTarget(null)
           }}
           title="Arquivar esta edição?"
-          description={`A edição “${archiveTarget?.name ?? ''}” deixará de aceitar novas alterações. O histórico será preservado.`}
+          description={`A edição “${archiveTarget?.name ?? ''}” e suas ofertas ficarão indisponíveis imediatamente. O histórico será preservado, mas não há restauração após o arquivamento.`}
           confirmLabel="Arquivar edição"
           destructive
           processing={archiveTarget !== null && actionId === archiveTarget.id}
