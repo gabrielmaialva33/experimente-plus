@@ -78,22 +78,12 @@ export default class EstablishmentService {
     payload: IEstablishment.RevisionIdentityPayload
   ) {
     const result = await db.transaction(async (client) => {
-      const organization = await Organization.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', organizationId)
-        .forUpdate()
-        .first()
-      if (!organization) {
-        throw new NotFoundException('Organization not found')
-      }
-
-      await this.organizationPolicy.authorizeManageEstablishments(
-        actor,
+      const organization = await this.authorizeCreateForOrganization(
         tenantId,
-        organization.id,
+        organizationId,
+        actor,
         client
       )
-      this.ensureOrganizationAllowsManagement(organization)
 
       const cityId = payload.city_id ?? null
       await this.validateCity(tenantId, cityId, client)
@@ -164,6 +154,31 @@ export default class EstablishmentService {
     })
 
     return this.show(tenantId, result.establishment.id, actor)
+  }
+
+  async authorizeCreateForOrganization(
+    tenantId: number,
+    organizationId: number,
+    actor: User,
+    client?: TransactionClientContract
+  ): Promise<Organization> {
+    const organization = await Organization.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', organizationId)
+      .if(Boolean(client), (query) => query.forUpdate())
+      .first()
+    if (!organization) {
+      throw new NotFoundException('Organization not found')
+    }
+
+    await this.organizationPolicy.authorizeManageEstablishments(
+      actor,
+      tenantId,
+      organization.id,
+      client
+    )
+    this.ensureOrganizationAllowsManagement(organization)
+    return organization
   }
 
   async updateRevision(
