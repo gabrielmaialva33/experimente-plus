@@ -11,6 +11,22 @@ export interface EstablishmentCompletenessEvaluationContext {
   checked_at: string
 }
 
+export const ESTABLISHMENT_SLUG_ALREADY_PUBLISHED_CODE = 'slug_already_published'
+
+export function establishmentSlugAlreadyPublishedIssue(
+  cityId: number | null,
+  slug: string
+): IEstablishment.CompletenessIssue {
+  return {
+    code: ESTABLISHMENT_SLUG_ALREADY_PUBLISHED_CODE,
+    field: 'slug',
+    message:
+      'A URL pública já está em uso por outra unidade desta cidade. Altere o nome público para gerar um endereço diferente.',
+    severity: 'blocking',
+    metadata: { city_id: cityId, slug },
+  }
+}
+
 export function evaluateEstablishmentCompleteness({
   revision,
   organization_active: organizationActive,

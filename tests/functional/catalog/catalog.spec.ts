@@ -330,13 +330,16 @@ test.group('Public catalog', (group) => {
     authenticatedHtml.assertStatus(200)
     authenticatedHtml.assertHeader('cache-control', 'private, no-store')
     const authenticatedPage = parseInertiaPage(authenticatedHtml)
-    const authenticatedUser = (
-      authenticatedPage.props.auth as { user: { id: number; email: string } | null }
-    ).user
+    const authenticatedAuth = authenticatedPage.props.auth as {
+      user: { id: number; email: string } | null
+      platformAccess: 'platform_admin' | 'platform_moderator' | null
+    }
+    const authenticatedUser = authenticatedAuth.user
     assert.deepInclude(authenticatedUser, {
       id: scenario.owner.id,
       email: scenario.owner.email,
     })
+    assert.isNull(authenticatedAuth.platformAccess)
 
     const flashedHtml = await client
       .get(pagePath)

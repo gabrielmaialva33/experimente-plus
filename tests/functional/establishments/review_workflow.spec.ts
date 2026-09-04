@@ -22,6 +22,20 @@ import { addOrganizationMember, createUser } from '#tests/functional/organizatio
 const fixture = (name: string) => join(process.cwd(), 'tests', 'fixtures', 'media', name)
 const tenantHeader = (tenantId: number) => ({ 'x-tenant-id': String(tenantId) })
 
+function parseInertiaPage(response: { text(): string }): {
+  component: string
+  props: Record<string, unknown>
+} {
+  const match = response
+    .text()
+    .match(/<script data-page="app" type="application\/json">([\s\S]*?)<\/script>/)
+  if (!match?.[1]) {
+    throw new Error('The response does not contain an Inertia page payload')
+  }
+
+  return JSON.parse(match[1]) as { component: string; props: Record<string, unknown> }
+}
+
 async function createDraftEstablishment(
   client: ApiClient,
   scenario: EstablishmentScenario,
@@ -159,6 +173,10 @@ async function pendingRevision(establishmentId: number) {
     .where('establishment_id', establishmentId)
     .where('status', 'pending_review')
     .firstOrFail()
+}
+
+function databaseDateKey(value: unknown): string {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10)
 }
 
 test.group('Establishment review workflow', (group) => {
@@ -384,13 +402,202 @@ test.group('Establishment review workflow', (group) => {
     secondDecision.assertStatus(400)
   })
 
-  test('clones a published revision, preserves its aggregate and keeps the old publication after rejection', async ({
+  test('blocks a public slug owned by another establishment on submission and approval', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('review-published-slug')
+    const moderator = await createModerator(scenario)
+
+    const firstEstablishmentId = await createDraftEstablishment(
+      client,
+      scenario,
+      'Unidade com URL pública'
+    )
+    const firstMediaId = await completeProfile(client, scenario, firstEstablishmentId)
+    const firstSubmission = await submitRevision(client, scenario, firstEstablishmentId)
+    firstSubmission.assertStatus(200)
+    const firstRevision = await pendingRevision(firstEstablishmentId)
+    const firstMediaApproval = await approveMedia(client, scenario, moderator, firstMediaId)
+    firstMediaApproval.assertStatus(200)
+    const firstApproval = await client
+      .post(`/api/v1/admin/establishment-revisions/${firstRevision.id}/approve`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+      .json({})
+    firstApproval.assertStatus(200)
+
+    const secondEstablishmentId = await createDraftEstablishment(
+      client,
+      scenario,
+      'Outra unidade completa'
+    )
+    const secondMediaId = await completeProfile(client, scenario, secondEstablishmentId)
+    const secondDraft = await EstablishmentRevision.query()
+      .where('establishment_id', secondEstablishmentId)
+      .where('status', 'draft')
+      .firstOrFail()
+    const availableSlug = secondDraft.slug
+    secondDraft.slug = firstRevision.slug
+    await secondDraft.save()
+
+    const editorPath = `/portal/establishments/${secondEstablishmentId}`
+    const conflictedEditor = await client
+      .get(editorPath)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    conflictedEditor.assertStatus(200)
+    const conflictedPage = parseInertiaPage(conflictedEditor)
+    assert.equal(conflictedPage.component, 'portal/establishments/edit')
+    const conflictedCompleteness = conflictedPage.props.completeness as {
+      eligible: boolean
+      score: number
+      blocking_issues: Array<{
+        code: string
+        field: string
+        message: string
+        severity: string
+      }>
+    }
+    assert.isFalse(conflictedCompleteness.eligible)
+    assert.equal(conflictedCompleteness.score, 99)
+    assert.deepEqual(conflictedCompleteness.blocking_issues, [
+      {
+        code: 'slug_already_published',
+        field: 'slug',
+        message:
+          'A URL pública já está em uso por outra unidade desta cidade. Altere o nome público para gerar um endereço diferente.',
+        severity: 'blocking',
+        metadata: { city_id: scenario.city.id, slug: firstRevision.slug },
+      },
+    ])
+
+    const blockedPortalSubmission = await client
+      .post(`${editorPath}/submit`)
+      .withCsrfToken()
+      .headers({ ...tenantHeader(scenario.tenant.id), referer: editorPath })
+      .loginAs(scenario.owner)
+      .json({})
+    blockedPortalSubmission.assertStatus(200)
+    const redirectedPage = parseInertiaPage(blockedPortalSubmission)
+    assert.equal(redirectedPage.component, 'portal/establishments/edit')
+    assert.equal(
+      (redirectedPage.props.errors as Record<string, unknown> | undefined)?.submission,
+      'A ficha ainda não está pronta. Revise as pendências indicadas antes de enviar.'
+    )
+    const redirectedCompleteness = redirectedPage.props.completeness as {
+      eligible: boolean
+      blocking_issues: Array<{ code: string; field: string; message: string }>
+    }
+    assert.isFalse(redirectedCompleteness.eligible)
+    assert.deepInclude(redirectedCompleteness.blocking_issues[0], {
+      code: 'slug_already_published',
+      field: 'slug',
+    })
+    assert.notInclude(redirectedCompleteness.blocking_issues[0].message, 'Another establishment')
+
+    const blockedSubmission = await submitRevision(client, scenario, secondEstablishmentId)
+    blockedSubmission.assertStatus(422)
+    blockedSubmission.assertBodyContains({
+      submitted: false,
+      revision: { status: 'draft' },
+      gate: { eligible: false },
+    })
+    const submissionSlugIssue = blockedSubmission
+      .body()
+      .gate.blocking_issues.find(
+        (issue: { code: string }) => issue.code === 'slug_already_published'
+      )
+    assert.deepInclude(submissionSlugIssue, {
+      field: 'slug',
+      severity: 'blocking',
+    })
+
+    secondDraft.slug = availableSlug
+    await secondDraft.save()
+    const secondSubmission = await submitRevision(client, scenario, secondEstablishmentId)
+    secondSubmission.assertStatus(200)
+    const secondRevision = await pendingRevision(secondEstablishmentId)
+    secondRevision.slug = firstRevision.slug
+    await secondRevision.save()
+    const secondMediaApproval = await approveMedia(client, scenario, moderator, secondMediaId)
+    secondMediaApproval.assertStatus(200)
+
+    const blocked = await client
+      .post(`/api/v1/admin/establishment-revisions/${secondRevision.id}/approve`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+      .json({})
+    blocked.assertStatus(422)
+    blocked.assertBodyContains({
+      approved: false,
+      revision: { status: 'pending_review' },
+      publication_gate: { eligible: false },
+    })
+    const slugIssue = blocked
+      .body()
+      .publication_gate.blocking_issues.find(
+        (issue: { code: string }) => issue.code === 'slug_already_published'
+      )
+    assert.deepInclude(slugIssue, {
+      field: 'slug',
+      severity: 'blocking',
+    })
+    assert.include(slugIssue.message, 'URL pública')
+
+    const firstEstablishment = await Establishment.findOrFail(firstEstablishmentId)
+    const secondEstablishment = await Establishment.findOrFail(secondEstablishmentId)
+    assert.equal(firstEstablishment.published_revision_id, firstRevision.id)
+    assert.isNull(secondEstablishment.published_revision_id)
+    await secondRevision.refresh()
+    assert.equal(secondRevision.status, 'pending_review')
+  })
+
+  test('clones only the published revision when one exists and preserves its full aggregate', async ({
     client,
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('review-clone')
+    scenario.selectDefinition.data_type = 'multi_select'
+    await scenario.selectDefinition.save()
     const establishmentId = await createDraftEstablishment(client, scenario)
     const mediaId = await completeProfile(client, scenario, establishmentId)
+
+    const attributes = await client
+      .put(`/api/v1/establishments/${establishmentId}/attributes`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        attributes: [
+          { attribute_definition_id: scenario.inheritedBoolean.id, value: true },
+          {
+            attribute_definition_id: scenario.selectDefinition.id,
+            option_ids: [scenario.standardOption.id, scenario.premiumOption.id],
+          },
+        ],
+      })
+    attributes.assertStatus(200)
+
+    const specialDays = await client
+      .put(`/api/v1/establishments/${establishmentId}/special-days`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({
+        special_days: [
+          { date: '2026-12-25', status: 'closed', note: 'Natal' },
+          {
+            date: '2026-12-31',
+            status: 'custom_hours',
+            note: 'Véspera de Ano-Novo',
+            intervals: [
+              { opens_at: '09:00', closes_at: '12:00', sort_order: 0 },
+              { opens_at: '13:00', closes_at: '17:00', sort_order: 1 },
+            ],
+          },
+        ],
+      })
+    specialDays.assertStatus(200)
+
     await submitRevision(client, scenario, establishmentId)
     const revisionOne = await pendingRevision(establishmentId)
     const moderator = await createModerator(scenario)
@@ -408,11 +615,13 @@ test.group('Establishment review workflow', (group) => {
       .post(`/api/v1/establishments/${establishmentId}/revisions`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(scenario.owner)
-      .json({ status: 'approved', reviewed_by: moderator.id })
+      .json({ source: 'published' })
     clone.assertStatus(201)
     clone.assertBodyContains({ version: 2, status: 'draft', based_on_revision_id: revisionOne.id })
 
     const revisionTwoId = Number(clone.body().id)
+    const revisionTwo = await EstablishmentRevision.findOrFail(revisionTwoId)
+    assert.isNull(revisionTwo.review_notes)
     const copiedMedia = await EstablishmentRevisionMedia.query()
       .where('revision_id', revisionTwoId)
       .firstOrFail()
@@ -452,6 +661,65 @@ test.group('Establishment review workflow', (group) => {
       [1, 1, 2, 2]
     )
 
+    const copiedMultiValue = await db
+      .from('establishment_revision_attribute_values')
+      .where('tenant_id', scenario.tenant.id)
+      .where('revision_id', revisionTwoId)
+      .where('attribute_definition_id', scenario.selectDefinition.id)
+      .firstOrFail()
+    const copiedOptions = await db
+      .from('establishment_revision_attribute_value_options')
+      .where('tenant_id', scenario.tenant.id)
+      .where('attribute_value_id', copiedMultiValue.id)
+      .orderBy('attribute_option_id', 'asc')
+    assert.deepEqual(
+      copiedOptions.map((option) => Number(option.attribute_option_id)),
+      [scenario.standardOption.id, scenario.premiumOption.id].sort((left, right) => left - right)
+    )
+
+    const copiedSpecialDays = await db
+      .from('establishment_revision_special_days')
+      .where('tenant_id', scenario.tenant.id)
+      .where('revision_id', revisionTwoId)
+      .orderBy('date', 'asc')
+    assert.lengthOf(copiedSpecialDays, 2)
+    assert.deepEqual(
+      copiedSpecialDays.map((day) => [databaseDateKey(day.date), day.status, day.note]),
+      [
+        ['2026-12-25', 'closed', 'Natal'],
+        ['2026-12-31', 'custom_hours', 'Véspera de Ano-Novo'],
+      ]
+    )
+    const customDay = copiedSpecialDays.find((day) => databaseDateKey(day.date) === '2026-12-31')
+    assert.exists(customDay)
+    const copiedSpecialHours = await db
+      .from('establishment_revision_special_hours')
+      .where('tenant_id', scenario.tenant.id)
+      .where('revision_id', revisionTwoId)
+      .orderBy('sort_order', 'asc')
+    assert.deepEqual(
+      copiedSpecialHours.map((interval) => ({
+        special_day_id: Number(interval.special_day_id),
+        opens_at: String(interval.opens_at).slice(0, 5),
+        closes_at: String(interval.closes_at).slice(0, 5),
+        sort_order: Number(interval.sort_order),
+      })),
+      [
+        {
+          special_day_id: Number(customDay!.id),
+          opens_at: '09:00',
+          closes_at: '12:00',
+          sort_order: 0,
+        },
+        {
+          special_day_id: Number(customDay!.id),
+          opens_at: '13:00',
+          closes_at: '17:00',
+          sort_order: 1,
+        },
+      ]
+    )
+
     const secondSubmission = await submitRevision(client, scenario, establishmentId)
     secondSubmission.assertStatus(200)
 
@@ -466,17 +734,68 @@ test.group('Establishment review workflow', (group) => {
     const establishment = await Establishment.findOrFail(establishmentId)
     assert.equal(establishment.published_revision_id, revisionOne.id)
 
-    const cloneRejected = await client
+    const rejectedSourceAttack = await client
       .post(`/api/v1/establishments/${establishmentId}/revisions`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(scenario.owner)
       .json({ source: 'latest_terminal' })
-    cloneRejected.assertStatus(201)
-    cloneRejected.assertBodyContains({
+    rejectedSourceAttack.assertStatus(400)
+
+    const clonePublished = await client
+      .post(`/api/v1/establishments/${establishmentId}/revisions`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ source: 'published' })
+    clonePublished.assertStatus(201)
+    clonePublished.assertBodyContains({
       version: 3,
       status: 'draft',
-      based_on_revision_id: revisionTwoId,
+      based_on_revision_id: revisionOne.id,
     })
+  })
+
+  test('clones the latest rejected revision only when no publication exists', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('review-clone-rejected')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+    await completeProfile(client, scenario, establishmentId)
+    await submitRevision(client, scenario, establishmentId)
+    const rejectedRevision = await pendingRevision(establishmentId)
+    const moderator = await createModerator(scenario)
+
+    const rejected = await client
+      .post(`/api/v1/admin/establishment-revisions/${rejectedRevision.id}/reject`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+      .json({ reason: 'Conteúdo precisa de uma nova proposta editorial' })
+    rejected.assertStatus(200)
+
+    const establishment = await Establishment.findOrFail(establishmentId)
+    assert.isNull(establishment.published_revision_id)
+
+    const publishedSource = await client
+      .post(`/api/v1/establishments/${establishmentId}/revisions`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ source: 'published' })
+    publishedSource.assertStatus(400)
+
+    const clone = await client
+      .post(`/api/v1/establishments/${establishmentId}/revisions`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ source: 'latest_terminal' })
+    clone.assertStatus(201)
+    clone.assertBodyContains({
+      version: 2,
+      status: 'draft',
+      based_on_revision_id: rejectedRevision.id,
+    })
+
+    const clonedRevision = await EstablishmentRevision.findOrFail(Number(clone.body().id))
+    assert.isNull(clonedRevision.review_notes)
   })
 
   test('keeps the moderation queue tenant-scoped and inaccessible to partners', async ({

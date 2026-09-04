@@ -9,7 +9,12 @@ import EstablishmentRevisionRepository from '#modules/establishments/repositorie
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
 import EstablishmentRevisionEventService from '#modules/establishments/services/establishment_revision_event_service'
+import Organization from '#modules/organizations/models/organization'
 import type User from '#modules/users/models/user'
+
+// Each special-hour row binds 9 values. A 1,000-row chunk uses at most 9,000 of
+// PostgreSQL's 65,535 bind parameters, leaving a conservative safety margin.
+const SPECIAL_HOUR_INSERT_CHUNK_SIZE = 1_000
 
 @inject()
 export default class EstablishmentRevisionCloneService {
@@ -36,6 +41,20 @@ export default class EstablishmentRevisionCloneService {
 
       if (establishment.lifecycle_status === 'archived') {
         throw new BadRequestException('Archived establishments cannot receive new revisions')
+      }
+
+      const organization = await Organization.query({ client })
+        .where('tenant_id', tenantId)
+        .where('id', establishment.organization_id)
+        .forUpdate()
+        .first()
+      if (!organization) {
+        throw new NotFoundException('Organization not found')
+      }
+      if (!['draft', 'changes_requested', 'active'].includes(organization.status)) {
+        throw new BadRequestException(
+          `Organization cannot manage establishment revisions while ${organization.status}`
+        )
       }
 
       const openRevision = await this.revisionRepository.findLockedForEstablishment(
@@ -140,6 +159,12 @@ export default class EstablishmentRevisionCloneService {
     sourceMode: NonNullable<IEstablishmentReview.CreateRevisionPayload['source']>,
     client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
   ): Promise<EstablishmentRevision> {
+    if (publishedRevisionId && sourceMode !== 'published') {
+      throw new BadRequestException(
+        'The published revision is the required source while a publication exists'
+      )
+    }
+
     if (sourceMode === 'published') {
       if (!publishedRevisionId) {
         throw new BadRequestException(
@@ -163,13 +188,13 @@ export default class EstablishmentRevisionCloneService {
     const terminal = await EstablishmentRevision.query({ client })
       .where('tenant_id', tenantId)
       .where('establishment_id', establishmentId)
-      .whereIn('status', ['approved', 'rejected'])
+      .where('status', 'rejected')
       .orderBy('version', 'desc')
       .forUpdate()
       .first()
 
     if (!terminal) {
-      throw new NotFoundException('No terminal revision is available to clone')
+      throw new NotFoundException('No rejected revision is available to clone')
     }
     return terminal
   }
@@ -244,10 +269,21 @@ export default class EstablishmentRevisionCloneService {
       .where('revision_id', sourceRevisionId)
       .orderBy('id', 'asc')
 
-    for (const value of values) {
-      const [created] = await client
-        .table('establishment_revision_attribute_values')
-        .insert({
+    if (values.length === 0) return
+
+    const options = await client
+      .from('establishment_revision_attribute_value_options')
+      .where('tenant_id', tenantId)
+      .whereIn(
+        'attribute_value_id',
+        values.map((value) => value.id)
+      )
+      .orderBy('id', 'asc')
+    const now = new Date()
+    const createdValues = await client
+      .table('establishment_revision_attribute_values')
+      .insert(
+        values.map((value) => ({
           tenant_id: tenantId,
           revision_id: targetRevisionId,
           attribute_definition_id: value.attribute_definition_id,
@@ -256,29 +292,34 @@ export default class EstablishmentRevisionCloneService {
           value_integer: value.value_integer,
           value_decimal: value.value_decimal,
           value_url: value.value_url,
-          created_at: new Date(),
-          updated_at: new Date(),
-        })
-        .returning('id')
+          created_at: now,
+          updated_at: now,
+        }))
+      )
+      .returning(['id', 'attribute_definition_id'])
 
-      const options = await client
-        .from('establishment_revision_attribute_value_options')
-        .where('tenant_id', tenantId)
-        .where('attribute_value_id', value.id)
-        .orderBy('id', 'asc')
+    if (options.length === 0) return
 
-      if (options.length > 0) {
-        await client.table('establishment_revision_attribute_value_options').insert(
-          options.map((option) => ({
-            tenant_id: tenantId,
-            attribute_value_id: Number(created.id),
-            attribute_definition_id: option.attribute_definition_id,
-            attribute_option_id: option.attribute_option_id,
-            created_at: new Date(),
-          }))
-        )
+    const targetValueIdsByDefinition = new Map(
+      createdValues.map((value) => [Number(value.attribute_definition_id), Number(value.id)])
+    )
+    const copiedOptions = options.map((option) => {
+      const targetValueId = targetValueIdsByDefinition.get(Number(option.attribute_definition_id))
+      if (!targetValueId) {
+        throw new BadRequestException('Attribute option source is inconsistent')
       }
-    }
+
+      return {
+        tenant_id: tenantId,
+        attribute_value_id: targetValueId,
+        attribute_definition_id: option.attribute_definition_id,
+        attribute_option_id: option.attribute_option_id,
+        created_at: now,
+      }
+    })
+
+    // The domain caps a revision at 5,000 selected options: 25,000 bind values here.
+    await client.table('establishment_revision_attribute_value_options').insert(copiedOptions)
   }
 
   private async copyHours(
@@ -322,42 +363,76 @@ export default class EstablishmentRevisionCloneService {
       .where('revision_id', sourceRevisionId)
       .orderBy('date', 'asc')
 
-    for (const day of days) {
-      const [created] = await client
-        .table('establishment_revision_special_days')
-        .insert({
+    if (days.length === 0) return
+
+    const intervals = await client
+      .from('establishment_revision_special_hours')
+      .where('tenant_id', tenantId)
+      .where('revision_id', sourceRevisionId)
+      .whereIn(
+        'special_day_id',
+        days.map((day) => day.id)
+      )
+      .orderBy('special_day_id', 'asc')
+      .orderBy('sort_order', 'asc')
+    const now = new Date()
+    const createdDays = await client
+      .table('establishment_revision_special_days')
+      .insert(
+        days.map((day) => ({
           tenant_id: tenantId,
           revision_id: targetRevisionId,
           date: day.date,
           status: day.status,
           note: day.note,
-          created_at: new Date(),
-          updated_at: new Date(),
-        })
-        .returning('id')
+          created_at: now,
+          updated_at: now,
+        }))
+      )
+      .returning(['id', 'date'])
 
-      const intervals = await client
-        .from('establishment_revision_special_hours')
-        .where('tenant_id', tenantId)
-        .where('special_day_id', day.id)
-        .orderBy('sort_order', 'asc')
+    if (intervals.length === 0) return
 
-      if (intervals.length > 0) {
-        await client.table('establishment_revision_special_hours').insert(
-          intervals.map((interval) => ({
-            tenant_id: tenantId,
-            special_day_id: Number(created.id),
-            revision_id: targetRevisionId,
-            opens_at: interval.opens_at,
-            closes_at: interval.closes_at,
-            spans_next_day: interval.spans_next_day,
-            sort_order: interval.sort_order,
-            created_at: new Date(),
-            updated_at: new Date(),
-          }))
-        )
+    const sourceDatesById = new Map(
+      days.map((day) => [Number(day.id), this.normalizedDateKey(day.date)])
+    )
+    const targetDayIdsByDate = new Map(
+      createdDays.map((day) => [this.normalizedDateKey(day.date), Number(day.id)])
+    )
+    const copiedIntervals = intervals.map((interval) => {
+      const sourceDate = sourceDatesById.get(Number(interval.special_day_id))
+      const targetDayId = sourceDate ? targetDayIdsByDate.get(sourceDate) : undefined
+      if (!targetDayId) {
+        throw new BadRequestException('Special-hour source is inconsistent')
       }
+
+      return {
+        tenant_id: tenantId,
+        special_day_id: targetDayId,
+        revision_id: targetRevisionId,
+        opens_at: interval.opens_at,
+        closes_at: interval.closes_at,
+        spans_next_day: interval.spans_next_day,
+        sort_order: interval.sort_order,
+        created_at: now,
+        updated_at: now,
+      }
+    })
+
+    for (
+      let offset = 0;
+      offset < copiedIntervals.length;
+      offset += SPECIAL_HOUR_INSERT_CHUNK_SIZE
+    ) {
+      await client
+        .table('establishment_revision_special_hours')
+        .insert(copiedIntervals.slice(offset, offset + SPECIAL_HOUR_INSERT_CHUNK_SIZE))
     }
+  }
+
+  private normalizedDateKey(value: unknown): string {
+    if (value instanceof Date) return value.toISOString().slice(0, 10)
+    return String(value).slice(0, 10)
   }
 
   private async copyMedia(

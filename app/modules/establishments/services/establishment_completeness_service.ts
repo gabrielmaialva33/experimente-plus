@@ -7,7 +7,11 @@ import type IEstablishment from '#modules/establishments/interfaces/establishmen
 import Establishment from '#modules/establishments/models/establishment'
 import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
-import { evaluateEstablishmentCompleteness } from '#modules/establishments/services/establishment_completeness_evaluator'
+import {
+  ESTABLISHMENT_SLUG_ALREADY_PUBLISHED_CODE,
+  establishmentSlugAlreadyPublishedIssue,
+  evaluateEstablishmentCompleteness,
+} from '#modules/establishments/services/establishment_completeness_evaluator'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import City from '#modules/geography/models/city'
@@ -30,10 +34,16 @@ export default class EstablishmentCompletenessService {
     client?: TransactionClientContract
   ): Promise<IEstablishment.CompletenessResult> {
     const establishment = await this.accessService.getReadable(tenantId, establishmentId, actor)
-    const openRevision = revisionIdOverride
-      ? null
-      : await this.revisionRepository.findOpenForEstablishment(tenantId, establishment.id)
-    const revisionId = revisionIdOverride ?? openRevision?.id ?? establishment.published_revision_id
+    const currentRevision =
+      revisionIdOverride === undefined
+        ? await this.revisionRepository.findCurrentForEstablishment(
+            tenantId,
+            establishment.id,
+            establishment.published_revision_id,
+            client
+          )
+        : null
+    const revisionId = revisionIdOverride ?? currentRevision?.id
     if (!revisionId) {
       throw new NotFoundException('Establishment revision not found')
     }
@@ -49,8 +59,9 @@ export default class EstablishmentCompletenessService {
       organizationQuery.forUpdate()
     }
     const organization = await organizationQuery.first()
+    const cityQuery = client ? City.query({ client }) : City.query()
     const city = revision.city_id
-      ? await City.query()
+      ? await cityQuery
           .where('tenant_id', tenantId)
           .where('id', revision.city_id)
           .where('is_active', true)
@@ -76,7 +87,7 @@ export default class EstablishmentCompletenessService {
           )
         : false
 
-    return evaluateEstablishmentCompleteness({
+    const result = evaluateEstablishmentCompleteness({
       revision,
       organization_active: organization?.status === 'active',
       city_active: city !== null,
@@ -84,12 +95,20 @@ export default class EstablishmentCompletenessService {
       allows_always_open: allowsAlwaysOpen,
       checked_at: DateTime.utc().toISO()!,
     })
+    await this.addPublishedSlugConflicts(
+      tenantId,
+      [revision],
+      new Map([[revision.id, result]]),
+      client
+    )
+
+    return result
   }
 
   /**
    * Evaluates a Portal overview batch from tenant-scoped establishments whose
    * organizations were already returned by the canonical authorization-aware
-   * OrganizationService. Every relation needed by the evaluator is preloaded
+   * OrganizationService. Every relation needed by the evaluator is loaded
    * by EstablishmentRepository.listForAuthorizedOrganizations.
    */
   async checkManyForAuthorizedOrganizations(
@@ -152,6 +171,7 @@ export default class EstablishmentCompletenessService {
     ])
     const checkedAt = DateTime.utc().toISO()!
     const results = new Map<number, IEstablishment.CompletenessResult>()
+    const resultsByRevisionId = new Map<number, IEstablishment.CompletenessResult>()
 
     for (const establishment of establishments) {
       const revision = revisionByEstablishment.get(establishment.id)
@@ -165,40 +185,98 @@ export default class EstablishmentCompletenessService {
         ? categoryContexts.get(primaryCategory.category_id)
         : undefined
 
-      results.set(
-        establishment.id,
-        evaluateEstablishmentCompleteness({
-          revision,
-          organization_active: organization.status === 'active',
-          city_active: revision.city_id !== null && activeCityIds.has(revision.city_id),
-          effective_attributes: categoryContext?.attributes ?? [],
-          allows_always_open: categoryContext?.allows_always_open ?? false,
-          checked_at: checkedAt,
-        })
-      )
+      const result = evaluateEstablishmentCompleteness({
+        revision,
+        organization_active: organization.status === 'active',
+        city_active: revision.city_id !== null && activeCityIds.has(revision.city_id),
+        effective_attributes: categoryContext?.attributes ?? [],
+        allows_always_open: categoryContext?.allows_always_open ?? false,
+        checked_at: checkedAt,
+      })
+      results.set(establishment.id, result)
+      resultsByRevisionId.set(revision.id, result)
     }
+
+    await this.addPublishedSlugConflicts(
+      tenantId,
+      [...revisionByEstablishment.values()],
+      resultsByRevisionId
+    )
 
     return results
   }
 
+  async checkLoadedForAuthorizedOrganization(
+    tenantId: number,
+    organization: Organization,
+    establishment: Establishment
+  ): Promise<IEstablishment.CompletenessResult> {
+    const results = await this.checkManyForAuthorizedOrganizations(
+      tenantId,
+      [organization],
+      [establishment]
+    )
+    const result = results.get(establishment.id)
+    if (!result) {
+      throw new NotFoundException('Establishment completeness not found')
+    }
+    return result
+  }
+
   private loadedCompletenessRevision(establishment: Establishment): EstablishmentRevision | null {
-    const openRevision = establishment.revisions
-      .filter((revision) =>
-        ['draft', 'pending_review', 'changes_requested'].includes(revision.status)
+    return this.revisionRepository.resolveCurrentFromLoaded(
+      establishment.tenant_id,
+      establishment.id,
+      establishment.published_revision_id,
+      establishment.revisions,
+      establishment.published_revision ?? null
+    )
+  }
+
+  private async addPublishedSlugConflicts(
+    tenantId: number,
+    revisions: readonly EstablishmentRevision[],
+    resultsByRevisionId: Map<number, IEstablishment.CompletenessResult>,
+    client?: TransactionClientContract
+  ): Promise<void> {
+    const candidates = revisions.flatMap((revision) =>
+      revision.slug
+        ? [
+            {
+              revision_id: revision.id,
+              establishment_id: revision.establishment_id,
+              city_id: revision.city_id,
+              slug: revision.slug,
+            },
+          ]
+        : []
+    )
+    const conflictRevisionIds = await this.revisionRepository.findPublishedSlugConflictRevisionIds(
+      tenantId,
+      candidates,
+      client
+    )
+
+    for (const revision of revisions) {
+      if (!revision.slug || !conflictRevisionIds.has(revision.id)) {
+        continue
+      }
+
+      const result = resultsByRevisionId.get(revision.id)
+      if (
+        !result ||
+        result.blocking_issues.some(
+          (issue) => issue.code === ESTABLISHMENT_SLUG_ALREADY_PUBLISHED_CODE
+        )
+      ) {
+        continue
+      }
+
+      result.eligible = false
+      result.score = Math.min(result.score, 99)
+      result.blocking_issues.push(
+        establishmentSlugAlreadyPublishedIssue(revision.city_id, revision.slug)
       )
-      .sort((left, right) => right.version - left.version || right.id - left.id)[0]
-
-    if (openRevision) {
-      return openRevision
     }
-
-    if (
-      establishment.published_revision_id !== null &&
-      establishment.published_revision?.id === establishment.published_revision_id
-    ) {
-      return establishment.published_revision
-    }
-
-    return null
   }
 }

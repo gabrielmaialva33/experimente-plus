@@ -8,6 +8,10 @@ import EstablishmentRepository from '#modules/establishments/repositories/establ
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import EstablishmentRevisionReviewIssueRepository from '#modules/establishments/repositories/establishment_revision_review_issue_repository'
 import EstablishmentCompletenessService from '#modules/establishments/services/establishment_completeness_service'
+import {
+  ESTABLISHMENT_SLUG_ALREADY_PUBLISHED_CODE,
+  establishmentSlugAlreadyPublishedIssue,
+} from '#modules/establishments/services/establishment_completeness_evaluator'
 import type User from '#modules/users/models/user'
 
 @inject()
@@ -46,15 +50,15 @@ export default class EstablishmentPublicationGateService {
       revisionId,
       client
     )
-    const blocking: IEstablishmentReview.GateIssue[] = completeness.blocking_issues.map(
-      (issue) => ({
+    const blocking: IEstablishmentReview.GateIssue[] = completeness.blocking_issues
+      .filter((issue) => issue.code !== ESTABLISHMENT_SLUG_ALREADY_PUBLISHED_CODE)
+      .map((issue) => ({
         code: issue.code,
         field: issue.field,
         message: issue.message,
         severity: 'blocking',
         metadata: issue.metadata,
-      })
-    )
+      }))
     const warnings: IEstablishmentReview.GateIssue[] = completeness.warnings.map((issue) => ({
       code: issue.code,
       field: issue.field,
@@ -62,6 +66,28 @@ export default class EstablishmentPublicationGateService {
       severity: issue.severity === 'warning' ? 'warning' : 'blocking',
       metadata: issue.metadata,
     }))
+
+    if (revision.slug) {
+      if (client) {
+        await this.revisionRepository.lockSlugForPublication(
+          tenantId,
+          revision.city_id,
+          revision.slug,
+          client
+        )
+      }
+
+      const slugAlreadyPublished = await this.revisionRepository.isPublishedSlugTaken(
+        tenantId,
+        revision.city_id,
+        revision.slug,
+        establishment.id,
+        client
+      )
+      if (slugAlreadyPublished) {
+        blocking.push(establishmentSlugAlreadyPublishedIssue(revision.city_id, revision.slug))
+      }
+    }
 
     const latitude = revision.address?.latitude
     const longitude = revision.address?.longitude

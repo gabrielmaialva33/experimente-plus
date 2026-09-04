@@ -48,24 +48,29 @@ export default class EstablishmentService {
     )
 
     return establishments.map((establishment) => {
-      const openRevision = establishment.revisions[0] ?? null
+      const revision = this.revisionRepository.resolveCurrentFromLoaded(
+        tenantId,
+        establishment.id,
+        establishment.published_revision_id,
+        establishment.revisions,
+        establishment.published_revision ?? null
+      )
       return {
         ...establishment.serialize(),
-        revision:
-          openRevision?.serialize() ?? establishment.published_revision?.serialize() ?? null,
+        revision: revision?.serialize() ?? null,
       }
     })
   }
 
   async show(tenantId: number, establishmentId: number, actor: User) {
     const establishment = await this.accessService.getReadable(tenantId, establishmentId, actor)
-    const openRevision = await this.revisionRepository.findOpenForEstablishment(
+    const currentRevision = await this.revisionRepository.findCurrentForEstablishment(
       tenantId,
-      establishment.id
+      establishment.id,
+      establishment.published_revision_id
     )
-    const revisionId = openRevision?.id ?? establishment.published_revision_id
-    const revision = revisionId
-      ? await this.revisionRepository.findAggregate(tenantId, revisionId)
+    const revision = currentRevision
+      ? await this.revisionRepository.findAggregate(tenantId, currentRevision.id)
       : null
 
     return this.serialize(establishment, revision)
@@ -89,7 +94,7 @@ export default class EstablishmentService {
       await this.validateCity(tenantId, cityId, client)
       const publicName = payload.public_name.trim()
       const slug = await resolveUniqueSlug(publicName, (candidate) =>
-        this.revisionRepository.isSlugTaken(tenantId, cityId, candidate)
+        this.revisionRepository.isSlugTaken(tenantId, cityId, candidate, { client })
       )
 
       const establishment = await this.establishmentRepository.create(
@@ -236,12 +241,11 @@ export default class EstablishmentService {
         }
 
         context.revision.slug = await resolveUniqueSlug(publicName, (candidate) =>
-          this.revisionRepository.isSlugTaken(
-            tenantId,
-            context.revision.city_id,
-            candidate,
-            context.establishment.id
-          )
+          this.revisionRepository.isSlugTaken(tenantId, context.revision.city_id, candidate, {
+            excludeRevisionId: context.revision.id,
+            excludeEstablishmentId: context.establishment.id,
+            client,
+          })
         )
       }
 

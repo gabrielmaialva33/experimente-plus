@@ -42,23 +42,12 @@ export default class EstablishmentSubmissionService {
 
   async status(tenantId: number, establishmentId: number, actor: User) {
     const establishment = await this.accessService.getReadable(tenantId, establishmentId, actor)
-    const openRevision = await this.revisionRepository.findOpenForEstablishment(
+    const revision = await this.revisionRepository.findCurrentForEstablishment(
       tenantId,
-      establishment.id
+      establishment.id,
+      establishment.published_revision_id
     )
-    const revisionId = openRevision?.id ?? establishment.published_revision_id
 
-    if (!revisionId) {
-      return {
-        establishment_id: establishment.id,
-        revision: null,
-        gate: null,
-        review_issues: [],
-        events: [],
-      }
-    }
-
-    const revision = await this.revisionRepository.findByIdForTenant(tenantId, revisionId)
     if (!revision) {
       return {
         establishment_id: establishment.id,
@@ -69,7 +58,7 @@ export default class EstablishmentSubmissionService {
       }
     }
 
-    const gate = await this.completenessService.check(tenantId, establishmentId, actor)
+    const gate = await this.completenessService.check(tenantId, establishmentId, actor, revision.id)
     const issues = await this.issueRepository.listForRevision(
       tenantId,
       establishmentId,
