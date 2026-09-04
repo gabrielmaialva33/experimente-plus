@@ -4,8 +4,10 @@ import { type HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
+import { projectSessionUser } from '#modules/auth/services/session_user_projection'
 import SignInService from '#modules/auth/services/sign_in_service'
 import SignUpService from '#modules/auth/services/sign_up_service'
+import { canonicalJsonBody } from '#modules/auth/utils/canonical_json_body'
 import { refreshTokenFromRawBody } from '#modules/auth/utils/refresh_token_input'
 import { refreshSessionValidator } from '#modules/auth/validators/session_validator'
 import {
@@ -20,7 +22,7 @@ export default class SessionsController {
   async signIn(ctx: HttpContext) {
     const { request, response } = ctx
     const { uid, password } = await request.validateUsing(signInValidator, {
-      data: request.body(),
+      data: canonicalJsonBody(request) ?? {},
     })
 
     try {
@@ -30,7 +32,7 @@ export default class SessionsController {
         throw new Error('Authentication tokens were not issued')
       }
 
-      return response.json({ ...user.toJSON(), auth })
+      return response.json({ ...projectSessionUser(user), auth })
     } catch (error) {
       if (error instanceof authErrors.E_INVALID_CREDENTIALS) {
         return response.badRequest({
@@ -44,7 +46,7 @@ export default class SessionsController {
 
   async signUp({ request, response }: HttpContext) {
     const registration = await request.validateUsing(publicRegistrationValidator, {
-      data: request.body(),
+      data: canonicalJsonBody(request) ?? {},
     })
     const payload = {
       full_name: registration.full_name,
@@ -60,7 +62,7 @@ export default class SessionsController {
     }
 
     return response.created({
-      ...user.toJSON(),
+      ...projectSessionUser(user),
       auth,
       email_verification_sent: emailVerificationSent,
     })

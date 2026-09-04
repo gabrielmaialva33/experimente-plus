@@ -6,6 +6,7 @@ import RolesRepository from '#modules/roles/repositories/roles_repository'
 
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
 import AuthEventService from '#modules/auth/services/auth_event_service'
+import { projectSessionUser } from '#modules/auth/services/session_user_projection'
 
 import NotFoundException from '#exceptions/not_found_exception'
 
@@ -50,12 +51,10 @@ export default class AdminSignInService {
         { userId: user.id, tenantId: tenant?.id },
         { expectedPasswordHash }
       )
-      const userJson = user.toJSON()
-
       // Emit login succeeded event
       AuthEventService.emitLoginSucceeded(user, 'password', true, ctx)
 
-      return { ...userJson, auth }
+      return { ...projectSessionUser(user), auth }
     } catch (error) {
       // Emit login failed event if not already emitted
       const reason = error instanceof Error ? error.message : 'Invalid credentials'

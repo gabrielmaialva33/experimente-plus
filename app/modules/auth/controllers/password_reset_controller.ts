@@ -3,6 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import RequestPasswordResetService from '#modules/auth/services/request_password_reset_service'
 import ResetPasswordService from '#modules/auth/services/reset_password_service'
+import { canonicalJsonBody } from '#modules/auth/utils/canonical_json_body'
 import {
   requestPasswordResetValidator,
   resetPasswordValidator,
@@ -17,7 +18,7 @@ export default class PasswordResetController {
 
   async forgot({ request, response }: HttpContext) {
     const { email } = await request.validateUsing(requestPasswordResetValidator, {
-      data: request.body(),
+      data: canonicalJsonBody(request) ?? {},
     })
     await this.requestPasswordResetService.run(email)
 
@@ -28,7 +29,7 @@ export default class PasswordResetController {
 
   async reset({ request, response }: HttpContext) {
     const { token, password } = await request.validateUsing(resetPasswordValidator, {
-      data: request.body(),
+      data: canonicalJsonBody(request) ?? {},
     })
     await this.resetPasswordService.run(token, password)
 

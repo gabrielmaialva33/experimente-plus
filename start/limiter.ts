@@ -4,6 +4,10 @@ import limiter from '@adonisjs/limiter/services/main'
 
 const MAX_THROTTLE_IDENTIFIER_LENGTH = 512
 
+function throttleIdentifierDigest(value: string): string {
+  return createHash('sha256').update(value).digest('hex')
+}
+
 function bodyIdentifierDigest(body: unknown, fields: readonly string[]): string {
   const payload =
     body && typeof body === 'object' && !Array.isArray(body)
@@ -18,7 +22,7 @@ function bodyIdentifierDigest(body: unknown, fields: readonly string[]): string 
     .toLowerCase()
     .slice(0, MAX_THROTTLE_IDENTIFIER_LENGTH)
 
-  return createHash('sha256').update(normalizedIdentifier).digest('hex')
+  return throttleIdentifierDigest(normalizedIdentifier)
 }
 
 /**
@@ -96,6 +100,44 @@ export const passwordResetThrottle = limiter.define('password-reset', (ctx) => {
       error.setMessage('Too many password reset attempts. Please try again later.')
     })
 })
+
+/**
+ * Verification links are public and require a JSON metadata scan until the
+ * pre-1.0 schema can be recreated with a dedicated index.
+ */
+export const emailVerificationThrottle = limiter.define('email-verification', (ctx) => {
+  const identifier = throttleIdentifierDigest(ctx.request.ip())
+
+  return limiter
+    .allowRequests(10)
+    .every('15 minutes')
+    .blockFor('30 minutes')
+    .usingKey(`email_verification_${identifier}`)
+    .limitExceeded((error) => {
+      error.setMessage('Too many email verification attempts. Please try again later.')
+    })
+})
+
+/**
+ * Resends are authenticated before reaching this limiter. Hashing the user/IP
+ * tuple keeps the storage key fixed-size without exposing either identifier.
+ */
+export const emailVerificationResendThrottle = limiter.define(
+  'email-verification-resend',
+  (ctx) => {
+    const user = ctx.auth.getUserOrFail()
+    const identifier = throttleIdentifierDigest(`${user.id}:${ctx.request.ip()}`)
+
+    return limiter
+      .allowRequests(3)
+      .every('1 hour')
+      .blockFor('1 hour')
+      .usingKey(`email_verification_resend_${identifier}`)
+      .limitExceeded((error) => {
+        error.setMessage('Too many verification email requests. Please try again later.')
+      })
+  }
+)
 
 /**
  * API throttle for protected API endpoints

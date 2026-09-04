@@ -78,6 +78,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       error.code === 'E_TOO_MANY_REQUESTS'
     ) {
       const rateLimitError = error as any
+      const message = rateLimitError.message || 'Too many requests'
 
       // Set rate limit headers from the response object
       if (rateLimitError.response) {
@@ -86,11 +87,17 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         ctx.response.header('retry-after', rateLimitError.response.availableIn)
       }
 
+      if (!isApiRequest && ctx.request.accepts(['html', 'json']) !== 'json') {
+        setPrivateResponseHeaders(ctx.response)
+        ctx.session.flash('errors', { general: message })
+        return ctx.response.redirect().back()
+      }
+
       return ctx.response.status(429).json({
         errors: [
           {
             code: 'E_TOO_MANY_REQUESTS',
-            message: rateLimitError.message || 'Too many requests',
+            message,
             status: 429,
           },
         ],

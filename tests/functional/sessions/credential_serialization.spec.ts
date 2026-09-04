@@ -16,14 +16,17 @@ import CredentialInvalidationService from '#modules/auth/services/credential_inv
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
 import PasswordResetTokenService from '#modules/auth/services/password_reset_token_service'
 import SignInService from '#modules/auth/services/sign_in_service'
+import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import RolesRepository from '#modules/roles/repositories/roles_repository'
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
+import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
 import DeleteOwnAccountService from '#modules/users/services/delete_own_account_service'
 import DeleteUserService from '#modules/users/services/delete_user_service'
 import EditUserService from '#modules/users/services/edit_user_service'
+import UserAdministrationPolicyService from '#modules/users/services/user_administration_policy_service'
 import JwtService from '#shared/jwt/jwt_service'
 
 type Deferred = {
@@ -53,6 +56,11 @@ function createServices() {
     refreshTokenRepository,
     usersRepository
   )
+  const userAdministrationPolicyService = {
+    async assertCanUpdate() {},
+    async assertCanDelete() {},
+  } as unknown as UserAdministrationPolicyService
+  const activeRootGuardService = new ActiveRootGuardService()
 
   return {
     usersRepository,
@@ -66,9 +74,23 @@ function createServices() {
     ),
     signIn: new SignInService(usersRepository, jwtTokens),
     adminSignIn: new AdminSignInService(usersRepository, new RolesRepository(), jwtTokens),
-    deleteOwnAccount: new DeleteOwnAccountService(usersRepository, credentialInvalidationService),
-    deleteUser: new DeleteUserService(usersRepository, credentialInvalidationService),
-    editUser: new EditUserService(usersRepository, credentialInvalidationService),
+    deleteOwnAccount: new DeleteOwnAccountService(
+      usersRepository,
+      credentialInvalidationService,
+      activeRootGuardService,
+      new PermissionCacheService(usersRepository)
+    ),
+    deleteUser: new DeleteUserService(
+      usersRepository,
+      credentialInvalidationService,
+      userAdministrationPolicyService,
+      new PermissionCacheService(usersRepository)
+    ),
+    editUser: new EditUserService(
+      usersRepository,
+      credentialInvalidationService,
+      userAdministrationPolicyService
+    ),
   }
 }
 
@@ -102,6 +124,7 @@ test.group('Credential mutation serialization', () => {
 
     const loginVerified = deferred()
     const releaseLogin = deferred()
+    cleanup(() => releaseLogin.resolve())
     const verifyCredentials = services.usersRepository.verifyCredentials.bind(
       services.usersRepository
     )
@@ -135,6 +158,7 @@ test.group('Credential mutation serialization', () => {
 
     const deletionVerified = deferred()
     const releaseDeletion = deferred()
+    cleanup(() => releaseDeletion.resolve())
     const verifyCredentials = services.usersRepository.verifyCredentials.bind(
       services.usersRepository
     )
@@ -182,6 +206,27 @@ test.group('Credential mutation serialization', () => {
 
     assert.isString(result.auth.access_token)
     assert.isString(result.auth.refresh_token)
+    assert.deepEqual(Object.keys(result).sort(), [
+      'auth',
+      'created_at',
+      'email',
+      'email_verified',
+      'email_verified_at',
+      'full_name',
+      'id',
+      'roles',
+      'updated_at',
+      'username',
+    ])
+    assert.lengthOf(result.roles, 1)
+    assert.deepEqual(Object.keys(result.roles[0]).sort(), [
+      'created_at',
+      'description',
+      'id',
+      'name',
+      'slug',
+      'updated_at',
+    ])
     const refreshTokens = await RefreshToken.query().where('user_id', user.id)
     assert.lengthOf(refreshTokens, 1)
     assert.isNull(refreshTokens[0].revoked_at)
@@ -204,6 +249,7 @@ test.group('Credential mutation serialization', () => {
     const rotationEntered = deferred()
     const releaseRotation = deferred()
     const resetRequestedUserLock = deferred()
+    cleanup(() => releaseRotation.resolve())
     let observeReset = false
     const findActiveUser = services.usersRepository.findActiveByIdForUpdate.bind(
       services.usersRepository
@@ -258,6 +304,7 @@ test.group('Credential mutation serialization', () => {
     const resetReachedInvalidation = deferred()
     const releaseReset = deferred()
     const refreshRequestedUserLock = deferred()
+    cleanup(() => releaseReset.resolve())
     const invalidateCredentials = services.credentialInvalidationService.run.bind(
       services.credentialInvalidationService
     )
@@ -310,15 +357,14 @@ test.group('Credential mutation serialization', () => {
     const rotationEntered = deferred()
     const releaseRotation = deferred()
     const deleteRequestedUserLock = deferred()
+    cleanup(() => releaseRotation.resolve())
     let observeDelete = false
-    const findActiveUser = services.usersRepository.findActiveByIdForUpdate.bind(
-      services.usersRepository
-    )
-    services.usersRepository.findActiveByIdForUpdate = async (userId, client) => {
+    const lockActiveUsers = services.usersRepository.lockActiveByIds.bind(services.usersRepository)
+    services.usersRepository.lockActiveByIds = async (userIds, client) => {
       if (observeDelete) {
         deleteRequestedUserLock.resolve()
       }
-      return findActiveUser(userId, client)
+      return lockActiveUsers(userIds, client)
     }
 
     const rotation = services.jwtTokens.rotateForAuthenticatedUser(
@@ -333,7 +379,7 @@ test.group('Credential mutation serialization', () => {
     await rotationEntered.promise
 
     observeDelete = true
-    const deletion = services.deleteUser.run(user.id)
+    const deletion = services.deleteUser.run(user.id, user.id)
     await deleteRequestedUserLock.promise
     releaseRotation.resolve()
 
@@ -345,6 +391,224 @@ test.group('Credential mutation serialization', () => {
     const refreshTokens = await RefreshToken.query().where('user_id', user.id)
     assert.lengthOf(refreshTokens, 2)
     assert.isTrue(refreshTokens.every((token) => token.revoked_at !== null))
+  })
+
+  test('rejects a target mutation after a concurrent actor deletion commits', async ({
+    assert,
+    cleanup,
+  }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+    const services = createServices()
+    const actorAccount = await createAccount(cleanup, 'deleted-admin-actor')
+    const targetAccount = await createAccount(cleanup, 'deleted-admin-target')
+    const adminRole = await Role.findByOrFail('slug', IRole.Slugs.ADMIN)
+    const userRole = await Role.findByOrFail('slug', IRole.Slugs.USER)
+    await actorAccount.user.related('roles').attach([adminRole.id])
+    await targetAccount.user.related('roles').attach([userRole.id])
+
+    const policy = new UserAdministrationPolicyService(new ActiveRootGuardService())
+    const editUser = new EditUserService(
+      services.usersRepository,
+      services.credentialInvalidationService,
+      policy
+    )
+    const actorDeletionLocked = deferred()
+    const releaseActorDeletion = deferred()
+    cleanup(() => releaseActorDeletion.resolve())
+    const actorDeletion = db.transaction(async (client) => {
+      const actor = await services.usersRepository.findActiveByIdForUpdate(
+        actorAccount.user.id,
+        client
+      )
+      if (!actor) throw new Error('Expected the administrative actor to be active')
+
+      actorDeletionLocked.resolve()
+      await releaseActorDeletion.promise
+      actor.useTransaction(client)
+      actor.is_deleted = true
+      await actor.save()
+    })
+    await actorDeletionLocked.promise
+
+    const mutationRequestedLocks = deferred()
+    const lockActiveUsers = services.usersRepository.lockActiveByIds.bind(services.usersRepository)
+    services.usersRepository.lockActiveByIds = async (userIds, client) => {
+      mutationRequestedLocks.resolve()
+      return lockActiveUsers(userIds, client)
+    }
+
+    let mutationSettled = false
+    const mutation = editUser.run(actorAccount.user.id, targetAccount.user.id, {
+      full_name: 'Unauthorized concurrent mutation',
+    })
+    void mutation.then(
+      () => {
+        mutationSettled = true
+      },
+      () => {
+        mutationSettled = true
+      }
+    )
+    await mutationRequestedLocks.promise
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    assert.isFalse(mutationSettled)
+
+    releaseActorDeletion.resolve()
+    await actorDeletion
+    await assert.rejects(() => mutation, 'The acting user is no longer active')
+
+    await targetAccount.user.refresh()
+    assert.notEqual(targetAccount.user.full_name, 'Unauthorized concurrent mutation')
+  })
+
+  test('reasserts the admin ACL after role demotions that still dominate the target', async ({
+    assert,
+    cleanup,
+  }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+
+    for (const scenario of [
+      {
+        label: 'moderator-over-user',
+        demotedActorSlug: IRole.Slugs.MODERATOR,
+        targetSlug: IRole.Slugs.USER,
+      },
+      {
+        label: 'user-over-guest',
+        demotedActorSlug: IRole.Slugs.USER,
+        targetSlug: IRole.Slugs.GUEST,
+      },
+    ]) {
+      const services = createServices()
+      // Create the target first so the repository must reorder [actor, target].
+      const targetAccount = await createAccount(cleanup, `${scenario.label}-target`)
+      const actorAccount = await createAccount(cleanup, `${scenario.label}-actor`)
+      const adminRole = await Role.findByOrFail('slug', IRole.Slugs.ADMIN)
+      const demotedActorRole = await Role.findByOrFail('slug', scenario.demotedActorSlug)
+      const targetRole = await Role.findByOrFail('slug', scenario.targetSlug)
+      assert.isTrue(IRole.dominates(demotedActorRole.slug, targetRole.slug))
+      await actorAccount.user.related('roles').attach([adminRole.id])
+      await targetAccount.user.related('roles').attach([targetRole.id])
+
+      const policy = new UserAdministrationPolicyService(new ActiveRootGuardService())
+      const editUser = new EditUserService(
+        services.usersRepository,
+        services.credentialInvalidationService,
+        policy
+      )
+      const actorDemotionLocked = deferred()
+      const releaseActorDemotion = deferred()
+      cleanup(() => releaseActorDemotion.resolve())
+      const actorDemotion = db.transaction(async (client) => {
+        const actor = await services.usersRepository.findActiveByIdForUpdate(
+          actorAccount.user.id,
+          client
+        )
+        if (!actor) throw new Error('Expected the administrative actor to be active')
+
+        actorDemotionLocked.resolve()
+        await releaseActorDemotion.promise
+        await client
+          .from('user_roles')
+          .where('user_id', actor.id)
+          .where('role_id', adminRole.id)
+          .update({ role_id: demotedActorRole.id, updated_at: new Date() })
+      })
+      await actorDemotionLocked.promise
+
+      const mutationRequestedLocks = deferred()
+      const lockActiveUsers = services.usersRepository.lockActiveByIds.bind(
+        services.usersRepository
+      )
+      services.usersRepository.lockActiveByIds = async (userIds, client) => {
+        mutationRequestedLocks.resolve()
+        return lockActiveUsers(userIds, client)
+      }
+
+      let mutationSettled = false
+      const forbiddenName = `Unauthorized ${scenario.label} mutation`
+      const mutation = editUser.run(actorAccount.user.id, targetAccount.user.id, {
+        full_name: forbiddenName,
+      })
+      void mutation.then(
+        () => {
+          mutationSettled = true
+        },
+        () => {
+          mutationSettled = true
+        }
+      )
+      await mutationRequestedLocks.promise
+      await new Promise<void>((resolve) => setImmediate(resolve))
+      assert.isFalse(mutationSettled)
+
+      releaseActorDemotion.resolve()
+      await actorDemotion
+      await assert.rejects(() => mutation, 'The acting user is no longer a platform administrator')
+
+      await targetAccount.user.refresh()
+      assert.notEqual(targetAccount.user.full_name, forbiddenName)
+    }
+  })
+
+  test('allows only one of two concurrent root self-deletions', async ({ assert, cleanup }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+    const services = createServices()
+    const first = await createAccount(cleanup, 'concurrent-root-first')
+    const second = await createAccount(cleanup, 'concurrent-root-second')
+    const rootRole = await Role.findByOrFail('slug', IRole.Slugs.ROOT)
+    await first.user.related('roles').attach([rootRole.id])
+    await second.user.related('roles').attach([rootRole.id])
+    const epochCache = new PermissionCacheService(services.usersRepository)
+    const epochBefore = await epochCache.getUserPermissionsSnapshot(first.user.id)
+
+    const bothPasswordsVerified = deferred()
+    const releasePasswordVerifications = deferred()
+    cleanup(() => releasePasswordVerifications.resolve())
+    let verifiedPasswords = 0
+    const verifyCredentials = services.usersRepository.verifyCredentials.bind(
+      services.usersRepository
+    )
+    services.usersRepository.verifyCredentials = async (...args) => {
+      const verifiedUser = await verifyCredentials(...args)
+      verifiedPasswords += 1
+      if (verifiedPasswords === 2) {
+        bothPasswordsVerified.resolve()
+      }
+      await releasePasswordVerifications.promise
+      return verifiedUser
+    }
+
+    const confirmation = 'EXCLUIR MINHA CONTA'
+    const deletions = [
+      services.deleteOwnAccount.run(first.user.id, {
+        currentPassword: first.password,
+        confirmation,
+      }),
+      services.deleteOwnAccount.run(second.user.id, {
+        currentPassword: second.password,
+        confirmation,
+      }),
+    ]
+    await bothPasswordsVerified.promise
+    releasePasswordVerifications.resolve()
+
+    const results = await Promise.allSettled(deletions)
+
+    assert.deepEqual(results.map((result) => result.status).sort(), ['fulfilled', 'rejected'])
+    const rejected = results.find((result) => result.status === 'rejected')
+    assert.instanceOf(rejected!.reason, BadRequestException)
+    assert.equal(rejected!.reason.message, 'The last active root user cannot be deleted')
+    const epochAfter = await epochCache.getUserPermissionsSnapshot(first.user.id)
+    assert.equal(BigInt(epochAfter.epoch), BigInt(epochBefore.epoch) + 1n)
+
+    const activeRoots = await db
+      .from('users')
+      .innerJoin('user_roles', 'user_roles.user_id', 'users.id')
+      .whereIn('users.id', [first.user.id, second.user.id])
+      .where('users.is_deleted', false)
+      .where('user_roles.role_id', rootRole.id)
+    assert.lengthOf(activeRoots, 1)
   })
 
   test('keeps exactly one active password reset token under concurrent issuance', async ({
@@ -427,7 +691,7 @@ test.group('Credential mutation serialization', () => {
       { userId: deletedAccount.user.id },
       { expectedPasswordHash: deletedAccount.user.password }
     )
-    await services.deleteUser.run(deletedAccount.user.id)
+    await services.deleteUser.run(deletedAccount.user.id, deletedAccount.user.id)
 
     await services.jwtTokens.revoke(deletedAuth.refresh_token)
     await services.jwtTokens.revoke(deletedAuth.refresh_token)
@@ -458,6 +722,7 @@ test.group('Credential mutation serialization', () => {
     const rotationEntered = deferred()
     const releaseRotation = deferred()
     const logoutRequestedUserLock = deferred()
+    cleanup(() => releaseRotation.resolve())
     let observeLogout = false
     const findActiveUser = services.usersRepository.findActiveByIdForUpdate.bind(
       services.usersRepository
@@ -514,6 +779,7 @@ test.group('Credential mutation serialization', () => {
     const logoutReachedRevocation = deferred()
     const releaseLogout = deferred()
     const rotationRequestedUserLock = deferred()
+    cleanup(() => releaseLogout.resolve())
     const revokeChainFrom = services.refreshTokenRepository.revokeChainFrom.bind(
       services.refreshTokenRepository
     )
@@ -570,7 +836,9 @@ test.group('Credential mutation serialization', () => {
       updated_at: new Date(),
     })
 
-    const updated = await services.editUser.run(user.id, { password: 'admin-password123' })
+    const updated = await services.editUser.run(user.id, user.id, {
+      password: 'admin-password123',
+    })
     assert.isNotNull(updated)
 
     const activeRefresh = await RefreshToken.query()

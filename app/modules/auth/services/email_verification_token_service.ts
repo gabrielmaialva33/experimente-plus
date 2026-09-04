@@ -1,8 +1,7 @@
 import { createHmac, randomBytes } from 'node:crypto'
 
+import { EMAIL_VERIFICATION_TOKEN_BYTES } from '#modules/auth/utils/email_verification_token'
 import env from '#start/env'
-
-const EMAIL_VERIFICATION_TOKEN_BYTES = 32
 
 export default class EmailVerificationTokenService {
   generate(): { token: string; tokenHash: string } {

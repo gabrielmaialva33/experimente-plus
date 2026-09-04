@@ -1,9 +1,9 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
-import vine from '@vinejs/vine'
 
 import VerifyEmailService from '#modules/auth/services/verify_email_service'
 import SendVerificationEmailService from '#modules/auth/services/send_verification_email_service'
+import { verifyEmailValidator } from '#modules/auth/validators/email_verification_validator'
 
 @inject()
 export default class EmailVerificationController {
@@ -16,13 +16,9 @@ export default class EmailVerificationController {
    * Verify email with a token
    */
   async verify({ request, response }: HttpContext) {
-    const schema = vine.compile(
-      vine.object({
-        token: vine.string().trim(),
-      })
-    )
-
-    const { token } = await request.validateUsing(schema)
+    const { token } = await request.validateUsing(verifyEmailValidator, {
+      data: request.qs(),
+    })
 
     const user = await this.verifyEmailService.handle(token)
 
@@ -38,15 +34,15 @@ export default class EmailVerificationController {
    */
   async resend({ auth, response }: HttpContext) {
     const user = auth.getUserOrFail()
+    const result = await this.sendVerificationEmailService.handle(user.id)
 
-    if (user.metadata.email_verified) {
+    if (result === 'already_verified') {
       return response.badRequest({
         message: 'Email already verified',
       })
     }
 
-    const delivered = await this.sendVerificationEmailService.handle(user)
-    if (!delivered) {
+    if (result === 'delivery_failed') {
       return response.serviceUnavailable({
         message: 'Verification email could not be delivered. Please try again later.',
       })

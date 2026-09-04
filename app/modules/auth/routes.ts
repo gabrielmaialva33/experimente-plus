@@ -2,6 +2,8 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import {
   apiThrottle,
+  emailVerificationResendThrottle,
+  emailVerificationThrottle,
   passwordResetRequestThrottle,
   passwordResetThrottle,
   signInThrottle,
@@ -52,10 +54,16 @@ router
  */
 router
   .group(() => {
-    router.get('/verify-email', [EmailVerificationController, 'verify'])
+    router
+      .get('/verify-email', [EmailVerificationController, 'verify'])
+      .use([privateResponseHeadersMiddleware, emailVerificationThrottle])
     router
       .post('/resend-verification-email', [EmailVerificationController, 'resend'])
-      .use(middleware.auth({ guards: ['jwt'] }))
+      .use([
+        middleware.auth({ guards: ['jwt'] }),
+        privateResponseHeadersMiddleware,
+        emailVerificationResendThrottle,
+      ])
   })
   .prefix('/api/v1')
 

@@ -58,7 +58,8 @@ export default class SignUpService {
       .orderBy('tenants.id', 'asc')
       .first()
 
-    const emailVerificationSent = await this.sendVerificationEmailService.handle(user)
+    const emailVerificationSent =
+      (await this.sendVerificationEmailService.handle(user.id)) === 'sent'
     AuthEventService.emitUserRegistered(user, 'sign-up', false, ctx)
 
     const auth =

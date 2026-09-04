@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
+import limiter from '@adonisjs/limiter/services/main'
 
 import User from '#modules/users/models/user'
 import Role from '#modules/roles/models/role'
@@ -8,6 +9,10 @@ import IRole from '#modules/roles/interfaces/role_interface'
 
 test.group('Sessions sign in', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
+  group.each.setup(async () => {
+    await limiter.clear()
+    return () => limiter.clear()
+  })
 
   test('should sign in with valid credentials', async ({ client, assert }) => {
     const password = 'password123'
@@ -20,7 +25,7 @@ test.group('Sessions sign in', (group) => {
     })
 
     const response = await client.post('/api/v1/sessions/sign-in').json({
-      uid: 'john@example.com',
+      uid: 'JOHN@EXAMPLE.COM',
       password: password,
     })
 
@@ -40,6 +45,19 @@ test.group('Sessions sign in', (group) => {
 
     assert.isDefined(response.body().auth?.access_token)
     assert.isDefined(response.body().auth?.refresh_token)
+    assert.deepEqual(Object.keys(response.body()).sort(), [
+      'auth',
+      'created_at',
+      'email',
+      'email_verified',
+      'email_verified_at',
+      'full_name',
+      'id',
+      'roles',
+      'updated_at',
+      'username',
+    ])
+    assert.notProperty(response.body(), 'email_verification_sent')
     response.assertHeader('cache-control', 'private, no-store')
     response.assertHeader('pragma', 'no-cache')
     response.assertHeader('x-robots-tag', 'noindex, nofollow')
@@ -90,6 +108,54 @@ test.group('Sessions sign in', (group) => {
     bodyWins.assertBodyContains({ id: user.id, email: user.email })
   })
 
+  test('should require canonical application/json for API sign in', async ({ client }) => {
+    const user = await User.create({
+      full_name: 'Canonical JSON Sign In',
+      email: 'canonical-json-sign-in@example.com',
+      username: 'canonical-json-sign-in',
+      password: 'password123',
+    })
+    const payload = { uid: user.email, password: 'password123' }
+    const rawPayload = JSON.stringify(payload)
+    const rejected = [
+      await client.post('/api/v1/sessions/sign-in').accept('json').form(payload),
+      await client
+        .post('/api/v1/sessions/sign-in')
+        .accept('json')
+        .field('uid', payload.uid)
+        .field('password', payload.password),
+    ]
+
+    for (const contentType of ['application/json-patch+json', 'application/vnd.api+json']) {
+      rejected.push(
+        await client
+          .post('/api/v1/sessions/sign-in')
+          .accept('json')
+          .unsafeJson(rawPayload)
+          .header('content-type', contentType)
+      )
+    }
+
+    for (const response of rejected) {
+      response.assertStatus(422)
+      response.assertBodyContains({
+        errors: [
+          { field: 'uid', rule: 'required' },
+          { field: 'password', rule: 'required' },
+        ],
+      })
+    }
+
+    const canonicalWithCharset = await client
+      .post('/api/v1/sessions/sign-in')
+      .accept('json')
+      .unsafeJson(rawPayload)
+      .header('content-type', 'Application/JSON; charset=utf-8')
+
+    canonicalWithCharset.assertStatus(200)
+    canonicalWithCharset.assertBodyContains({ id: user.id, email: user.email })
+  })
+
   test('should fail with invalid password', async ({ client }) => {
     const password = 'password123'
 
@@ -136,7 +202,7 @@ test.group('Sessions sign in', (group) => {
     })
   })
 
-  test('should include user roles in response', async ({ client }) => {
+  test('should include user roles in response', async ({ client, assert }) => {
     const password = 'password123'
 
     const user = await User.create({
@@ -172,5 +238,13 @@ test.group('Sessions sign in', (group) => {
         },
       ],
     })
+    assert.deepEqual(Object.keys(response.body().roles[0]).sort(), [
+      'created_at',
+      'description',
+      'id',
+      'name',
+      'slug',
+      'updated_at',
+    ])
   })
 })

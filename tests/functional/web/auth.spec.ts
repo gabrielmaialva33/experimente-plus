@@ -1,9 +1,13 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
+import limiter from '@adonisjs/limiter/services/main'
 import mail from '@adonisjs/mail/services/main'
 import jwt from 'jsonwebtoken'
 
 import { OrganizationFactory, OrganizationMemberFactory } from '#database/factories/index'
+import PasswordResetToken from '#modules/auth/models/password_reset_token'
+import PasswordResetNotification from '#modules/auth/services/password_reset_notification'
+import VerifyEmailNotification from '#modules/auth/services/verify_email_notification'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import Tenant from '#modules/tenants/models/tenant'
@@ -51,6 +55,10 @@ function signedWebAccessCookie(user: User, tenantId?: unknown): string {
 
 test.group('Web authentication', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
+  group.each.setup(async () => {
+    await limiter.clear()
+    return () => limiter.clear()
+  })
 
   async function attachDefaultRole(user: User) {
     const role = await Role.findByOrFail('slug', IRole.Slugs.USER)
@@ -117,6 +125,332 @@ test.group('Web authentication', (group) => {
 
     const wallet = await client.get('/wallet').cookie(JWT_COOKIE_NAME, tokenCookie!.value)
     wallet.assertStatus(200)
+  })
+
+  test('should treat the optional username sent blank by the registration form as omitted', async ({
+    client,
+    assert,
+    cleanup,
+  }) => {
+    mail.restore()
+    const { mails } = mail.fake()
+    cleanup(() => mail.restore())
+
+    const response = await client.post('/register').withCsrfToken().redirects(0).form({
+      full_name: 'Web Blank Username',
+      email: 'web-blank-username@example.com',
+      username: '',
+      password: 'password123',
+      password_confirmation: 'password123',
+      terms_accepted: true,
+    })
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/wallet')
+    mails.assertSentCount(VerifyEmailNotification, 1)
+
+    const user = await User.findByOrFail('email', 'web-blank-username@example.com')
+    assert.isNull(user.username)
+  })
+
+  test('should flash registration validation through the official Inertia error bag', async ({
+    client,
+  }) => {
+    await User.create({
+      full_name: 'Existing Web Registration',
+      email: 'existing-web-registration@example.com',
+      username: 'existing-web-registration',
+      password: 'password123',
+    })
+
+    const response = await client
+      .post('/register')
+      .withCsrfToken()
+      .header('x-inertia', 'true')
+      .header('referer', '/register')
+      .accept('html')
+      .redirects(0)
+      .form({
+        full_name: 'Duplicate Web Registration',
+        email: 'another-web-registration@example.com',
+        username: 'existing-web-registration',
+        password: 'password123',
+        password_confirmation: 'password123',
+        terms_accepted: true,
+      })
+
+    response.assertStatus(302)
+    response.assertHeader('location', '/register')
+    response.assertFlashMessage('inputErrorsBag', {
+      username: ['The username has already been taken'],
+    })
+    response.assertFlashMissing('errors')
+  })
+
+  test('should read web registration and login credentials only from the request body', async ({
+    client,
+    assert,
+    cleanup,
+  }) => {
+    mail.restore()
+    mail.fake()
+    cleanup(() => mail.restore())
+
+    const queryRegistration = {
+      full_name: 'Query Registration',
+      email: 'query-registration@example.com',
+      username: 'query-registration',
+      password: 'password123',
+      password_confirmation: 'password123',
+      terms_accepted: true,
+    }
+    const queryOnlyRegistration = await client
+      .post('/register')
+      .header('referer', '/register')
+      .withCsrfToken()
+      .redirects(0)
+      .qs(queryRegistration)
+      .json({})
+
+    queryOnlyRegistration.assertStatus(302)
+    queryOnlyRegistration.assertHeader('location', '/register')
+    assert.isNull(await User.findBy('email', queryRegistration.email))
+    assert.notExists(queryOnlyRegistration.cookie(JWT_COOKIE_NAME))
+
+    const bodyRegistration = {
+      full_name: 'Body Registration',
+      email: 'body-registration@example.com',
+      username: 'body-registration',
+      password: 'password123',
+      password_confirmation: 'password123',
+      terms_accepted: true,
+    }
+    const conflictingRegistration = await client
+      .post('/register')
+      .header('referer', '/register')
+      .withCsrfToken()
+      .redirects(0)
+      .qs(queryRegistration)
+      .json(bodyRegistration)
+
+    conflictingRegistration.assertStatus(302)
+    conflictingRegistration.assertHeader('location', '/wallet')
+    assert.exists(conflictingRegistration.cookie(JWT_COOKIE_NAME))
+    assert.exists(await User.findBy('email', bodyRegistration.email))
+    assert.isNull(await User.findBy('email', queryRegistration.email))
+
+    const queryOnlyLogin = await client
+      .post('/login')
+      .header('referer', '/login')
+      .withCsrfToken()
+      .redirects(0)
+      .qs({ uid: bodyRegistration.email, password: bodyRegistration.password })
+      .json({})
+
+    queryOnlyLogin.assertStatus(302)
+    queryOnlyLogin.assertHeader('location', '/login')
+    assert.notExists(queryOnlyLogin.cookie(JWT_COOKIE_NAME))
+
+    const conflictingLogin = await client
+      .post('/login')
+      .header('referer', '/login')
+      .withCsrfToken()
+      .redirects(0)
+      .qs({ uid: bodyRegistration.email, password: 'query-password-cannot-win' })
+      .json({ uid: bodyRegistration.email, password: bodyRegistration.password })
+
+    conflictingLogin.assertStatus(302)
+    conflictingLogin.assertHeader('location', '/wallet')
+    assert.exists(conflictingLogin.cookie(JWT_COOKIE_NAME))
+  })
+
+  test('should read web password reset fields only from the request body', async ({
+    client,
+    assert,
+    cleanup,
+  }) => {
+    mail.restore()
+    const { mails } = mail.fake()
+    cleanup(() => mail.restore())
+
+    const bodyUser = await User.create({
+      full_name: 'Body Password Reset',
+      email: 'body-web-password-reset@example.com',
+      username: 'body-web-password-reset',
+      password: 'password123',
+    })
+    const queryUser = await User.create({
+      full_name: 'Query Password Reset',
+      email: 'query-web-password-reset@example.com',
+      username: 'query-web-password-reset',
+      password: 'password123',
+    })
+
+    const queryOnlyForgot = await client
+      .post('/forgot-password')
+      .header('referer', '/forgot-password')
+      .withCsrfToken()
+      .redirects(0)
+      .qs({ email: queryUser.email })
+      .json({})
+
+    queryOnlyForgot.assertStatus(302)
+    queryOnlyForgot.assertHeader('location', '/forgot-password')
+    mails.assertSentCount(PasswordResetNotification, 0)
+    assert.isNull(await PasswordResetToken.query().where('user_id', queryUser.id).first())
+
+    const conflictingForgot = await client
+      .post('/forgot-password')
+      .header('referer', '/forgot-password')
+      .withCsrfToken()
+      .redirects(0)
+      .qs({ email: queryUser.email })
+      .json({ email: bodyUser.email })
+
+    conflictingForgot.assertStatus(302)
+    conflictingForgot.assertHeader('location', '/forgot-password')
+    mails.assertSentCount(PasswordResetNotification, 1)
+    assert.isNull(await PasswordResetToken.query().where('user_id', queryUser.id).first())
+    const resetToken = (mails.sent()[0] as PasswordResetNotification).getResetToken()
+    const storedToken = await PasswordResetToken.query().where('user_id', bodyUser.id).firstOrFail()
+
+    const queryOnlyReset = await client
+      .post('/reset-password')
+      .header('referer', `/reset-password?token=${resetToken}`)
+      .withCsrfToken()
+      .redirects(0)
+      .qs({
+        token: resetToken,
+        password: 'query-password123',
+        password_confirmation: 'query-password123',
+      })
+      .json({})
+
+    queryOnlyReset.assertStatus(302)
+    queryOnlyReset.assertHeader('location', '/reset-password')
+    assert.notInclude(queryOnlyReset.header('location') ?? '', resetToken)
+    await storedToken.refresh()
+    assert.isNull(storedToken.consumed_at)
+
+    const conflictingReset = await client
+      .post('/reset-password')
+      .header('referer', `/reset-password?token=${resetToken}`)
+      .withCsrfToken()
+      .redirects(0)
+      .qs({
+        token: 'query-token-cannot-win',
+        password: 'query-password123',
+        password_confirmation: 'query-password123',
+      })
+      .json({
+        token: resetToken,
+        password: 'body-password123',
+        password_confirmation: 'body-password123',
+      })
+
+    conflictingReset.assertStatus(302)
+    conflictingReset.assertHeader('location', '/login')
+    await storedToken.refresh()
+    assert.isNotNull(storedToken.consumed_at)
+    const authenticatedUser = await User.verifyCredentials(bodyUser.email, 'body-password123')
+    assert.equal(authenticatedUser.id, bodyUser.id)
+  })
+
+  test('should throttle repeated web login attempts with an Inertia-safe redirect', async ({
+    client,
+  }) => {
+    const user = await User.create({
+      full_name: 'Web Login Throttle',
+      email: 'web-login-throttle@example.com',
+      username: 'web-login-throttle',
+      password: 'password123',
+    })
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await client
+        .post('/login')
+        .withCsrfToken()
+        .header('x-inertia', 'true')
+        .header('referer', '/login')
+        .accept('html')
+        .redirects(0)
+        .form({ uid: user.email, password: 'wrong-password' })
+
+      response.assertStatus(302)
+      response.assertHeader('location', '/login')
+      response.assertHeader('x-ratelimit-limit', '5')
+    }
+
+    const rateLimited = await client
+      .post('/login')
+      .withCsrfToken()
+      .header('x-inertia', 'true')
+      .header('referer', '/login')
+      .accept('html')
+      .redirects(0)
+      .form({ uid: user.email, password: 'wrong-password' })
+
+    rateLimited.assertStatus(302)
+    rateLimited.assertHeader('location', '/login')
+    rateLimited.assertHeader('cache-control', 'private, no-store')
+    rateLimited.assertHeader('pragma', 'no-cache')
+    rateLimited.assertHeader('x-robots-tag', 'noindex, nofollow')
+    rateLimited.assertHeader('referrer-policy', 'no-referrer')
+    rateLimited.assertHeader('x-ratelimit-limit', '5')
+    rateLimited.assertHeader('x-ratelimit-remaining', '0')
+    rateLimited.assertHeader('retry-after')
+    rateLimited.assertFlashMessage('errors', {
+      general: 'Too many authentication attempts. Please try again later.',
+    })
+  })
+
+  test('should throttle repeated web registration attempts with an Inertia-safe redirect', async ({
+    client,
+    assert,
+  }) => {
+    const payload = {
+      full_name: 'Web Registration Throttle',
+      email: 'web-registration-throttle@example.com',
+      username: 'web-registration-throttle',
+      password: 'short',
+      password_confirmation: 'short',
+      terms_accepted: true,
+    }
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await client
+        .post('/register')
+        .withCsrfToken()
+        .header('x-inertia', 'true')
+        .header('referer', '/register')
+        .accept('html')
+        .redirects(0)
+        .form(payload)
+
+      response.assertStatus(302)
+      response.assertHeader('location', '/register')
+      response.assertHeader('x-ratelimit-limit', '5')
+    }
+
+    const rateLimited = await client
+      .post('/register')
+      .withCsrfToken()
+      .header('x-inertia', 'true')
+      .header('referer', '/register')
+      .accept('html')
+      .redirects(0)
+      .form(payload)
+
+    rateLimited.assertStatus(302)
+    rateLimited.assertHeader('location', '/register')
+    rateLimited.assertHeader('cache-control', 'private, no-store')
+    rateLimited.assertHeader('x-ratelimit-limit', '5')
+    rateLimited.assertHeader('x-ratelimit-remaining', '0')
+    rateLimited.assertHeader('retry-after')
+    rateLimited.assertFlashMessage('errors', {
+      general: 'Too many authentication attempts. Please try again later.',
+    })
+    assert.isNull(await User.findBy('email', payload.email))
   })
 
   test('should set an HTTP-only cookie on login and clear it on logout', async ({
