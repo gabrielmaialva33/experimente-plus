@@ -344,7 +344,11 @@ export default function PortalOrganizationPage({
               <Alert role="status">
                 <AlertTitle>Existem alterações não salvas</AlertTitle>
                 <AlertDescription className="space-y-3">
-                  <p>Salve ou descarte os dados antes de enviar a organização para análise.</p>
+                  <p>
+                    {canSubmit
+                      ? 'Salve ou descarte os dados antes de enviar a organização para análise.'
+                      : 'Salve ou descarte os dados para concluir a atualização.'}
+                  </p>
                   <Button
                     type="button"
                     variant="outline"

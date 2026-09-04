@@ -91,6 +91,30 @@ export interface RejectionContext {
 const READ_ONLY_ACCESS_DESCRIPTION =
   'Você pode consultar esta ficha, mas seu acesso não permite editar ou enviar esta revisão para moderação.'
 
+export function establishmentEditorDescription({
+  editable,
+  canCreateRevision,
+  presentationStatus,
+}: {
+  editable: boolean
+  canCreateRevision: boolean
+  presentationStatus: string
+}): string {
+  if (editable) {
+    return 'Complete cada etapa da ficha pública. O servidor recalcula a prontidão e aplica as mesmas regras no envio e na publicação.'
+  }
+
+  if (canCreateRevision) {
+    return presentationStatus === 'rejected'
+      ? 'Esta revisão foi encerrada. Crie uma nova revisão para retomar os ajustes com o histórico preservado.'
+      : 'Esta é a publicação vigente. Crie uma nova revisão para editar sem interromper o catálogo.'
+  }
+
+  return presentationStatus === 'pending_review'
+    ? 'Consulte a ficha enviada enquanto a equipe realiza a moderação.'
+    : 'Consulte os dados e as pendências desta ficha em modo somente leitura.'
+}
+
 interface EstablishmentEditorProps {
   tenant_id: number
   establishment: JsonRecord
@@ -606,6 +630,11 @@ export default function EstablishmentEditorPage({
         ? 'Salve antes de enviar'
         : submitLabel
   const pageTitle = stringValue(revision, 'public_name', 'Editar unidade')
+  const pageDescription = establishmentEditorDescription({
+    editable,
+    canCreateRevision,
+    presentationStatus,
+  })
 
   return (
     <MainLayout>
@@ -616,7 +645,7 @@ export default function EstablishmentEditorPage({
           eyebrow="Editor da unidade"
           icon={Store}
           title={stringValue(revision, 'public_name', 'Unidade sem nome')}
-          description="Complete cada etapa da ficha pública. O servidor recalcula a prontidão e aplica as mesmas regras no envio e na publicação."
+          description={pageDescription}
           meta={
             <>
               <span

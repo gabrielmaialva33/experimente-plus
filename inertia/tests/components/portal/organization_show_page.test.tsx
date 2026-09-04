@@ -307,6 +307,12 @@ describe('PortalOrganizationPage', () => {
     expect(screen.getByLabelText(/Telefone/)).toBeEnabled()
     expect(screen.getByLabelText(/Website/)).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Enviar para análise' })).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Salve ou descarte os dados para concluir a atualização.')
+    ).toBeVisible()
+    expect(
+      screen.queryByText('Salve ou descarte os dados antes de enviar a organização para análise.')
+    ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Salvar dados' }))
 

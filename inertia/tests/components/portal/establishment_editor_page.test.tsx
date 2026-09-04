@@ -1,7 +1,11 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { RejectionContextNotice, RevisionReadOnlyNotice } from '~/pages/portal/establishments/edit'
+import {
+  establishmentEditorDescription,
+  RejectionContextNotice,
+  RevisionReadOnlyNotice,
+} from '~/pages/portal/establishments/edit'
 import { render } from '~/tests/test_utils'
 
 describe('Establishment editor page', () => {
@@ -48,5 +52,33 @@ describe('Establishment editor page', () => {
 
     expect(screen.getByText('Revisão rejeitada')).toBeVisible()
     expect(screen.getByText(/encerrada sem publicação/)).toBeVisible()
+  })
+
+  it('uses action-aware page guidance instead of asking read-only users to edit', () => {
+    expect(
+      establishmentEditorDescription({
+        editable: true,
+        canCreateRevision: false,
+        presentationStatus: 'draft',
+      })
+    ).toMatch(/^Complete cada etapa/)
+
+    expect(
+      establishmentEditorDescription({
+        editable: false,
+        canCreateRevision: true,
+        presentationStatus: 'published',
+      })
+    ).toBe(
+      'Esta é a publicação vigente. Crie uma nova revisão para editar sem interromper o catálogo.'
+    )
+
+    expect(
+      establishmentEditorDescription({
+        editable: false,
+        canCreateRevision: false,
+        presentationStatus: 'draft',
+      })
+    ).toBe('Consulte os dados e as pendências desta ficha em modo somente leitura.')
   })
 })
