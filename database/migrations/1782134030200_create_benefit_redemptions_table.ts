@@ -16,7 +16,7 @@ export default class extends BaseSchema {
       table.integer('redeemed_by').unsigned().notNullable()
       table.integer('redemption_number').unsigned().notNullable()
       table.string('presentation_nonce_hash', 64).notNullable()
-      table.string('receipt_code', 24).notNullable()
+      table.string('receipt_code', 20).notNullable()
       table.string('edition_name_snapshot', 160).notNullable()
       table.string('offer_title_snapshot', 180).notNullable()
       table.string('benefit_type_snapshot', 32).notNullable()
@@ -100,6 +100,11 @@ export default class extends BaseSchema {
         "presentation_nonce_hash ~ '^[0-9a-f]{64}$'",
         [],
         'benefit_redemptions_nonce_hash_check'
+      )
+      table.check(
+        "receipt_code ~ '^EXP-[0-9A-F]{16}$'",
+        [],
+        'benefit_redemptions_receipt_code_format_check'
       )
       table.check(
         "benefit_type_snapshot IN ('buy_one_get_one', 'percentage', 'fixed_amount', 'complimentary_item', 'custom')",

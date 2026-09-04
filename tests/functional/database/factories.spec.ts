@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import db from '@adonisjs/lucid/services/db'
 import testUtils from '@adonisjs/core/services/test_utils'
 
 import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
@@ -36,6 +37,23 @@ test.group('Domain factories', (group) => {
     assert.equal(scenario.access.status, 'active')
     assert.equal(scenario.redemption?.redemption_number, 1)
     assert.match(scenario.redemption!.receipt_code, /^EXP-[0-9A-F]{16}$/)
+    const receiptColumn = await db.rawQuery<{
+      rows: Array<{ character_maximum_length: number }>
+    }>(
+      `select character_maximum_length
+       from information_schema.columns
+       where table_schema = current_schema()
+         and table_name = 'benefit_redemptions'
+         and column_name = 'receipt_code'`
+    )
+    assert.equal(receiptColumn.rows[0]?.character_maximum_length, 20)
+    const receiptConstraint = await db.rawQuery<{ rows: Array<{ definition: string }> }>(
+      `select pg_get_constraintdef(oid) as definition
+       from pg_constraint
+       where conname = 'benefit_redemptions_receipt_code_format_check'
+         and conrelid = 'benefit_redemptions'::regclass`
+    )
+    assert.include(receiptConstraint.rows[0]?.definition, '^EXP-[0-9A-F]{16}$')
     assert.equal(scenario.redemption?.offer_terms_snapshot, scenario.offer.terms)
     assert.equal(scenario.credentials.password, 'password123')
 
