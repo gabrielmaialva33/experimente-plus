@@ -10,7 +10,7 @@ import { benefitPresentationTokenValidator } from '#modules/benefits/validators/
  */
 export async function validateBenefitPresentationTokenInput(
   request: HttpRequest,
-  allowedBodyTypes: readonly Array<'json' | 'urlencoded'>
+  allowedBodyTypes: ReadonlyArray<'json' | 'urlencoded'>
 ): Promise<{ token: string }> {
   const rawToken = tokenFromRawBody(request, allowedBodyTypes)
   return request.validateUsing(benefitPresentationTokenValidator, {
@@ -32,14 +32,17 @@ export function normalizeBenefitPresentationTokenQuery(input: unknown): string {
 
 function tokenFromRawBody(
   request: HttpRequest,
-  allowedBodyTypes: readonly Array<'json' | 'urlencoded'>
+  allowedBodyTypes: ReadonlyArray<'json' | 'urlencoded'>
 ): unknown {
-  if (!allowedBodyTypes.includes(request.bodyType as 'json' | 'urlencoded')) return undefined
+  const bodyType = request.bodyType
+  if (bodyType !== 'json' && bodyType !== 'urlencoded') return undefined
+  if (!allowedBodyTypes.includes(bodyType)) return undefined
+  if (!hasCanonicalMediaType(request, bodyType)) return undefined
 
   const rawBody = request.raw()
   if (!rawBody) return undefined
 
-  if (request.bodyType === 'json') {
+  if (bodyType === 'json') {
     try {
       const parsed: unknown = JSON.parse(rawBody)
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined
@@ -49,13 +52,25 @@ function tokenFromRawBody(
     }
   }
 
-  if (request.bodyType === 'urlencoded') {
+  if (bodyType === 'urlencoded') {
     const parsedToken: unknown = request.body().token
     if (typeof parsedToken !== 'string') return parsedToken
-    const tokens = new URLSearchParams(rawBody).getAll('token')
-    if (tokens.length > 1) return tokens
-    return tokens.length === 1 ? tokens[0] : undefined
+
+    const fields = [...new URLSearchParams(rawBody)]
+    const tokens = fields.filter(([key]) => key === 'token').map(([, value]) => value)
+    const hasStructuralCollision = fields.some(
+      ([key]) => key.startsWith('token[') || key.startsWith('token.')
+    )
+    if (tokens.length !== 1 || hasStructuralCollision) return tokens
+    return tokens[0]
   }
 
   return undefined
+}
+
+function hasCanonicalMediaType(request: HttpRequest, bodyType: 'json' | 'urlencoded'): boolean {
+  const mediaType = request.header('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+  const expectedMediaType =
+    bodyType === 'json' ? 'application/json' : 'application/x-www-form-urlencoded'
+  return mediaType === expectedMediaType
 }

@@ -246,7 +246,10 @@ test.group('Benefits mobile API hardening', (group) => {
     assert,
     client,
   }) => {
-    const scenario = await createBenefitFlowScenario({ suffix: 'bounded-presentation-token' })
+    const scenario = await createBenefitFlowScenario({
+      suffix: 'bounded-presentation-token',
+      maxRedemptionsPerAccess: 2,
+    })
     const tenantHeader = String(scenario.tenant.id)
     const presentationPath = '/api/v1/me/benefits/presentations'
 
@@ -341,35 +344,97 @@ test.group('Benefits mobile API hardening', (group) => {
     queryOnly.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
     assertPrivateMobileResponse(queryOnly)
 
-    const emptyJson = await client
-      .post('/api/v1/benefit-redemptions/preview')
-      .header('x-tenant-id', tenantHeader)
-      .loginAs(scenario.users.partner)
-      .accept('json')
-      .unsafeJson('')
-    emptyJson.assertStatus(422)
-    emptyJson.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
-    assertPrivateMobileResponse(emptyJson)
+    for (const path of ['/api/v1/benefit-redemptions/preview', '/api/v1/benefit-redemptions']) {
+      const emptyJson = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .accept('json')
+        .unsafeJson('')
+      emptyJson.assertStatus(422)
+      emptyJson.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+      assertPrivateMobileResponse(emptyJson)
 
-    const urlEncodedApi = await client
-      .post('/api/v1/benefit-redemptions/preview')
-      .header('x-tenant-id', tenantHeader)
-      .loginAs(scenario.users.partner)
-      .accept('json')
-      .form({ token: paddedToken })
-    urlEncodedApi.assertStatus(422)
-    urlEncodedApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
-    assertPrivateMobileResponse(urlEncodedApi)
+      const urlEncodedApi = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .accept('json')
+        .form({ token: paddedToken })
+      urlEncodedApi.assertStatus(422)
+      urlEncodedApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+      assertPrivateMobileResponse(urlEncodedApi)
 
-    const multipartApi = await client
-      .post('/api/v1/benefit-redemptions/preview')
-      .header('x-tenant-id', tenantHeader)
-      .loginAs(scenario.users.partner)
-      .accept('json')
-      .field('token', paddedToken)
-    multipartApi.assertStatus(422)
-    multipartApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
-    assertPrivateMobileResponse(multipartApi)
+      const multipartApi = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .accept('json')
+        .field('token', paddedToken)
+      multipartApi.assertStatus(422)
+      multipartApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+      assertPrivateMobileResponse(multipartApi)
+
+      const rawTextApi = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .header('content-type', 'text/plain')
+        .loginAs(scenario.users.partner)
+        .accept('json')
+        .setup((request) => {
+          request.request.send(JSON.stringify({ token: issuedToken }))
+        })
+      rawTextApi.assertStatus(422)
+      rawTextApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+      assertPrivateMobileResponse(rawTextApi)
+
+      const unknownMediaApi = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .header('content-type', 'application/octet-stream')
+        .loginAs(scenario.users.partner)
+        .accept('json')
+        .setup((request) => {
+          request.request.send(JSON.stringify({ token: issuedToken }))
+        })
+      unknownMediaApi.assertStatus(422)
+      unknownMediaApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+      assertPrivateMobileResponse(unknownMediaApi)
+
+      for (const jsonFamilyAlias of [
+        'application/json-patch+json',
+        'application/vnd.api+json',
+        'application/csp-report',
+      ]) {
+        const aliasedJsonApi = await client
+          .post(path)
+          .header('x-tenant-id', tenantHeader)
+          .header('content-type', jsonFamilyAlias)
+          .loginAs(scenario.users.partner)
+          .accept('json')
+          .setup((request) => {
+            request.request.send(JSON.stringify({ token: issuedToken }))
+          })
+        aliasedJsonApi.assertStatus(422)
+        aliasedJsonApi.assertBodyContains({ errors: [{ field: 'token', rule: 'required' }] })
+        assertPrivateMobileResponse(aliasedJsonApi)
+      }
+
+      const invalidJsonBody = `{"token":"${issuedToken}"`
+      const syntacticallyInvalidJson = await client
+        .post(path)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.partner)
+        .accept('json')
+        .unsafeJson(invalidJsonBody)
+      syntacticallyInvalidJson.assertStatus(400)
+      syntacticallyInvalidJson.assertBody({
+        status: 400,
+        message: 'Malformed JSON request body',
+      })
+      assertPrivateMobileResponse(syntacticallyInvalidJson)
+      assert.notInclude(syntacticallyInvalidJson.text(), issuedToken)
+    }
 
     const signature = 'A'.repeat(43)
     const nonCanonicalTokens = [
@@ -437,6 +502,7 @@ test.group('Benefits mobile API hardening', (group) => {
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.partner)
       .json({ token: paddedToken })
+      .header('content-type', 'application/json; charset=utf-8')
     paddedApi.assertStatus(200)
     assertPrivateMobileResponse(paddedApi)
     assert.equal(paddedApi.body().token, issuedToken)
@@ -459,6 +525,25 @@ test.group('Benefits mobile API hardening', (group) => {
     oversizedWebQuery.assertStatus(200)
     assert.include(oversizedWebQuery.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
     assert.notInclude(oversizedWebQuery.text(), 'Apresentação válida')
+
+    const oversizedWebPostRedirect = await client
+      .post('/portal/redemptions')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .accept('html')
+      .redirects(0)
+      .form({ token: rawOversizedPaddedToken })
+    oversizedWebPostRedirect.assertStatus(302)
+    oversizedWebPostRedirect.assertHeader('location', '/portal/redemptions/validate')
+    oversizedWebPostRedirect.assertFlashMessage('errors', {
+      presentation: INVALID_BENEFIT_PRESENTATION_MESSAGE,
+    })
+    oversizedWebPostRedirect.assertFlashMissing('input')
+    assert.notInclude(
+      JSON.stringify(oversizedWebPostRedirect.flashMessages()),
+      rawOversizedPaddedToken
+    )
 
     const oversizedWebPost = await client
       .post('/portal/redemptions')
@@ -509,15 +594,14 @@ test.group('Benefits mobile API hardening', (group) => {
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.partner)
       .accept('html')
+      .redirects(0)
       .unsafeJson('')
-    emptyJsonWebPost.assertStatus(200)
-    emptyJsonWebPost.assertRedirectsTo('/portal/redemptions/validate')
-    assert.include(emptyJsonWebPost.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
-    const emptyJsonWebPostPage = parseInertiaPage(emptyJsonWebPost)
-    assert.equal(emptyJsonWebPostPage.props.token, '')
-    assert.deepEqual(emptyJsonWebPostPage.props.errors, {
+    emptyJsonWebPost.assertStatus(302)
+    emptyJsonWebPost.assertHeader('location', '/portal/redemptions/validate')
+    emptyJsonWebPost.assertFlashMessage('errors', {
       presentation: INVALID_BENEFIT_PRESENTATION_MESSAGE,
     })
+    emptyJsonWebPost.assertFlashMissing('input')
 
     const signatureStart = issuedToken.indexOf('.') + 1
     const replacement = issuedToken[signatureStart] === 'A' ? 'B' : 'A'
@@ -545,6 +629,27 @@ test.group('Benefits mobile API hardening', (group) => {
     paddedWebRedemption.assertStatus(302)
     assert.match(
       paddedWebRedemption.header('location') ?? '',
+      /^\/portal\/redemptions\/EXP-[0-9A-F]{16}$/
+    )
+
+    const jsonPresentation = await client
+      .post(presentationPath)
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.holder)
+      .json({ access_id: scenario.access.id, offer_id: scenario.offer.id })
+    jsonPresentation.assertStatus(201)
+
+    const jsonWebRedemption = await client
+      .post('/portal/redemptions')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.partner)
+      .accept('html')
+      .redirects(0)
+      .json({ token: jsonPresentation.body().token })
+    jsonWebRedemption.assertStatus(302)
+    assert.match(
+      jsonWebRedemption.header('location') ?? '',
       /^\/portal\/redemptions\/EXP-[0-9A-F]{16}$/
     )
   })
