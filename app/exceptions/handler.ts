@@ -2,6 +2,10 @@ import app from '@adonisjs/core/services/app'
 import { ExceptionHandler, type HttpContext } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
 
+import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
+
+const MALFORMED_JSON_MESSAGE = 'Malformed JSON request body'
+
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
    * In debug mode, the exception handler will display verbose errors
@@ -30,6 +34,18 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * response to the client
    */
   async handle(error: unknown, ctx: HttpContext) {
+    const isApiRequest = ctx.request.url().startsWith('/api/')
+    if (isApiRequest) {
+      setPrivateResponseHeaders(ctx.response)
+    }
+
+    if (isApiRequest && isMalformedJsonError(error)) {
+      return ctx.response.status(400).json({
+        status: 400,
+        message: MALFORMED_JSON_MESSAGE,
+      })
+    }
+
     /**
      * Handle validation errors from VineJS
      */
@@ -40,7 +56,6 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       error.code === 'E_VALIDATION_ERROR'
     ) {
       const validationError = error as any
-      const isApiRequest = ctx.request.url().startsWith('/api/')
       const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
 
       if (isApiRequest || acceptsJson) {
@@ -94,7 +109,6 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       'code' in error &&
       error.code === 'E_UNAUTHORIZED_ACCESS'
     ) {
-      const isApiRequest = ctx.request.url().startsWith('/api/')
       const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
 
       if (!isApiRequest && !acceptsJson) {
@@ -116,4 +130,16 @@ export default class HttpExceptionHandler extends ExceptionHandler {
   async report(error: unknown, ctx: HttpContext) {
     return super.report(error, ctx)
   }
+}
+
+function isMalformedJsonError(
+  error: unknown
+): error is SyntaxError & { body: string; status: 400 } {
+  return Boolean(
+    error instanceof SyntaxError &&
+    'status' in error &&
+    error.status === 400 &&
+    'body' in error &&
+    typeof error.body === 'string'
+  )
 }

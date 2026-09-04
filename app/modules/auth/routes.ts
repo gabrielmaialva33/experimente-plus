@@ -19,8 +19,14 @@ const MeController = () => import('#modules/auth/controllers/me_controller')
  */
 router
   .group(() => {
-    router.post('/sign-in', [SessionsController, 'signIn']).as('session.signIn').use(authThrottle)
-    router.post('/sign-up', [SessionsController, 'signUp']).as('session.signUp').use(authThrottle)
+    router
+      .post('/sign-in', [SessionsController, 'signIn'])
+      .as('session.signIn')
+      .use([privateResponseHeadersMiddleware, authThrottle])
+    router
+      .post('/sign-up', [SessionsController, 'signUp'])
+      .as('session.signUp')
+      .use([privateResponseHeadersMiddleware, authThrottle])
     router
       .post('/forgot-password', [PasswordResetController, 'forgot'])
       .as('session.forgotPassword')
@@ -29,8 +35,14 @@ router
       .post('/reset-password', [PasswordResetController, 'reset'])
       .as('session.resetPassword')
       .use(passwordResetThrottle)
-    router.post('/refresh', [SessionsController, 'refresh']).as('session.refresh').use(apiThrottle)
-    router.post('/logout', [SessionsController, 'logout']).as('session.logout').use(apiThrottle)
+    router
+      .post('/refresh', [SessionsController, 'refresh'])
+      .as('session.refresh')
+      .use([privateResponseHeadersMiddleware, apiThrottle])
+    router
+      .post('/logout', [SessionsController, 'logout'])
+      .as('session.logout')
+      .use([privateResponseHeadersMiddleware, apiThrottle])
   })
   .prefix('/api/v1/sessions')
 

@@ -4,7 +4,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import CreateTenantService from '#modules/tenants/services/create_tenant_service'
-import { createTenantValidator } from '#modules/tenants/validators/tenant_validator'
+import { createWebTenantValidator } from '#modules/tenants/validators/tenant_validator'
 
 /**
  * Switches the active browser tenant by reissuing the signed HTTP-only access
@@ -17,7 +17,7 @@ export default class InertiaTenantController {
 
   async create({ auth, request, response, session }: HttpContext) {
     const user = auth.getUserOrFail()
-    const payload = await request.validateUsing(createTenantValidator)
+    const payload = await request.validateUsing(createWebTenantValidator)
     const tenant = await this.createTenantService.run(user.id, payload)
 
     await auth.use('jwt').generate(user, { tenantId: tenant.id })
