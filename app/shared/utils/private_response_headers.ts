@@ -3,6 +3,7 @@ import type { NextFn } from '@adonisjs/core/types/http'
 
 export function setPrivateResponseHeaders(response: HttpContext['response']): void {
   response.header('Cache-Control', 'private, no-store')
+  response.header('Pragma', 'no-cache')
   response.header('X-Robots-Tag', 'noindex, nofollow')
   response.header('Referrer-Policy', 'no-referrer')
 }

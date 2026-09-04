@@ -6,14 +6,15 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { DateTime } from 'luxon'
 
 import UnauthorizedException from '#exceptions/unauthorized_exception'
+import RefreshToken from '#modules/auth/models/refresh_token'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
+import { isCanonicalRefreshToken, REFRESH_TOKEN_BYTES } from '#modules/auth/utils/refresh_token'
 import User from '#modules/users/models/user'
 import {
   API_ACCESS_TOKEN_EXPIRES_IN,
   API_ACCESS_TOKEN_TTL_SECONDS,
   JWT_AUDIENCE,
   JWT_ISSUER,
-  REFRESH_TOKEN_BYTES,
   REFRESH_TOKEN_TTL_SECONDS,
 } from '#shared/jwt/constants'
 import JwtService from '#shared/jwt/jwt_service'
@@ -32,6 +33,18 @@ type RefreshTokenIssueOptions = {
   client?: TransactionClientContract
   rotatedFromId?: number
 }
+
+type RefreshRotationContext<T> = {
+  tenantId?: number
+  value: T
+}
+
+export type RefreshRotationResult<T> = {
+  value: T
+  auth: GenerateAuthTokensResponse
+}
+
+const INVALID_REFRESH_TOKEN_MESSAGE = 'Invalid or expired refresh token'
 
 @inject()
 export default class JwtAuthTokensService {
@@ -55,20 +68,64 @@ export default class JwtAuthTokensService {
    * not expose reusable credentials.
    */
   async refresh(refreshToken: string): Promise<GenerateAuthTokensResponse> {
+    const { auth } = await this.rotate(refreshToken, undefined, async (_client, current) => ({
+      tenantId: current.tenant_id ?? undefined,
+      value: undefined,
+    }))
+
+    return auth
+  }
+
+  /**
+   * Rotates a credential while an authenticated operation resolves its new
+   * tenant context in the same transaction. Binding the refresh credential to
+   * the bearer identity prevents a stolen access token from opening a new
+   * long-lived session chain.
+   */
+  async rotateForAuthenticatedUser<T>(
+    refreshToken: string,
+    expectedUserId: number,
+    resolveContext: (
+      client: TransactionClientContract,
+      current: RefreshToken
+    ) => Promise<RefreshRotationContext<T>>
+  ): Promise<RefreshRotationResult<T>> {
+    return this.rotate(refreshToken, expectedUserId, resolveContext)
+  }
+
+  private async rotate<T>(
+    refreshToken: string,
+    expectedUserId: number | undefined,
+    resolveContext: (
+      client: TransactionClientContract,
+      current: RefreshToken
+    ) => Promise<RefreshRotationContext<T>>
+  ): Promise<RefreshRotationResult<T>> {
+    if (!isCanonicalRefreshToken(refreshToken)) {
+      throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
+    }
+
     const tokenHash = this.hashRefreshToken(refreshToken)
 
     return db.transaction(async (client) => {
       const current = await this.refreshTokenRepository.findByHashForUpdate(tokenHash, client)
       const now = DateTime.now()
 
-      if (!current || current.revoked_at || current.expires_at.toMillis() <= now.toMillis()) {
-        throw new UnauthorizedException('Invalid or expired refresh token')
+      if (
+        !current ||
+        current.revoked_at ||
+        current.expires_at.toMillis() <= now.toMillis() ||
+        (expectedUserId !== undefined && current.user_id !== expectedUserId)
+      ) {
+        throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
       }
 
       const user = await User.query({ client }).where('id', current.user_id).first()
       if (!user) {
-        throw new UnauthorizedException('Invalid or expired refresh token')
+        throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE)
       }
+
+      const context = await resolveContext(client, current)
 
       current.useTransaction(client)
       current.revoked_at = now
@@ -76,7 +133,7 @@ export default class JwtAuthTokensService {
 
       const payload: JwtContent = {
         userId: user.id,
-        tenantId: current.tenant_id ?? undefined,
+        tenantId: context.tenantId,
       }
 
       const accessToken = await this.generateAccessToken(payload)
@@ -85,11 +142,18 @@ export default class JwtAuthTokensService {
         rotatedFromId: current.id,
       })
 
-      return this.toResponse(accessToken, rotatedRefreshToken)
+      return {
+        value: context.value,
+        auth: this.toResponse(accessToken, rotatedRefreshToken),
+      }
     })
   }
 
   async revoke(refreshToken: string): Promise<void> {
+    if (!isCanonicalRefreshToken(refreshToken)) {
+      return
+    }
+
     const tokenHash = this.hashRefreshToken(refreshToken)
 
     await db.transaction(async (client) => {

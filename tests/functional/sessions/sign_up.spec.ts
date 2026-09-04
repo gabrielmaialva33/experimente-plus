@@ -54,6 +54,10 @@ test.group('Sessions sign up', (group) => {
 
     assert.isDefined(response.body().auth?.access_token)
     assert.isDefined(response.body().auth?.refresh_token)
+    response.assertHeader('cache-control', 'private, no-store')
+    response.assertHeader('pragma', 'no-cache')
+    response.assertHeader('x-robots-tag', 'noindex, nofollow')
+    response.assertHeader('referrer-policy', 'no-referrer')
 
     const user = await User.findBy('email', userData.email)
     assert.isNotNull(user)

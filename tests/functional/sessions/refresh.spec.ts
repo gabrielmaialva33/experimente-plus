@@ -80,6 +80,10 @@ test.group('Session refresh tokens', (group) => {
         refresh_expires_in: 259200,
       },
     })
+    response.assertHeader('cache-control', 'private, no-store')
+    response.assertHeader('pragma', 'no-cache')
+    response.assertHeader('x-robots-tag', 'noindex, nofollow')
+    response.assertHeader('referrer-policy', 'no-referrer')
 
     const rotatedAccessToken = response.body().auth.access_token as string
     const rotatedRefreshToken = response.body().auth.refresh_token as string
@@ -120,5 +124,33 @@ test.group('Session refresh tokens', (group) => {
       refresh_token: refreshToken,
     })
     refresh.assertStatus(401)
+  })
+
+  test('should reject non-canonical refresh token encodings without normalizing whitespace', async ({
+    client,
+  }) => {
+    const { refreshToken } = await signIn(client)
+    const malformedTokens = [
+      'A'.repeat(42),
+      `${refreshToken}=`,
+      ` ${refreshToken}`,
+      `${refreshToken} `,
+      `${'A'.repeat(42)}B`,
+    ]
+
+    for (const malformed of malformedTokens) {
+      const response = await client
+        .post('/api/v1/sessions/refresh')
+        .json({ refresh_token: malformed })
+      response.assertStatus(422)
+      response.assertBodyContains({ errors: [{ field: 'refresh_token' }] })
+      response.assertHeader('cache-control', 'private, no-store')
+      response.assertHeader('pragma', 'no-cache')
+    }
+
+    const valid = await client
+      .post('/api/v1/sessions/refresh')
+      .json({ refresh_token: refreshToken })
+    valid.assertStatus(200)
   })
 })

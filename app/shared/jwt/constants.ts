@@ -18,7 +18,6 @@ export const API_ACCESS_TOKEN_EXPIRES_IN: SignOptions['expiresIn'] = API_ACCESS_
 export const WEB_ACCESS_TOKEN_EXPIRES_IN: SignOptions['expiresIn'] = '1h'
 
 export const REFRESH_TOKEN_TTL_DAYS = 3
-export const REFRESH_TOKEN_BYTES = 48
 
 /** Stable client-facing lifetimes for every API token pair. */
 export const REFRESH_TOKEN_TTL_SECONDS = REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60

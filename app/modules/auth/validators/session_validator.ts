@@ -1,8 +1,10 @@
 import vine from '@vinejs/vine'
 
+import { refreshTokenField } from '#modules/auth/validators/refresh_token_field'
+
 export const refreshSessionValidator = vine.compile(
   vine.object({
-    refresh_token: vine.string().trim().minLength(32),
+    refresh_token: refreshTokenField(),
   })
 )
 
