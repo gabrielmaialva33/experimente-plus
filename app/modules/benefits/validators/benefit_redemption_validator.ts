@@ -8,8 +8,8 @@ import {
 
 export const benefitPresentationRequestValidator = vine.compile(
   vine.object({
-    access_id: vine.number().min(1),
-    offer_id: vine.number().min(1),
+    access_id: vine.number({ strict: true }).withoutDecimals().min(1).max(2_147_483_647),
+    offer_id: vine.number({ strict: true }).withoutDecimals().min(1).max(2_147_483_647),
   })
 )
 

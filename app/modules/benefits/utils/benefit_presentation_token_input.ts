@@ -9,9 +9,10 @@ import { benefitPresentationTokenValidator } from '#modules/benefits/validators/
  * whitespace normalization, then applies the canonical HTTP input validator.
  */
 export async function validateBenefitPresentationTokenInput(
-  request: HttpRequest
+  request: HttpRequest,
+  allowedBodyTypes: readonly Array<'json' | 'urlencoded'>
 ): Promise<{ token: string }> {
-  const rawToken = tokenFromRawBody(request)
+  const rawToken = tokenFromRawBody(request, allowedBodyTypes)
   return request.validateUsing(benefitPresentationTokenValidator, {
     data: { token: rawToken },
   })
@@ -29,21 +30,32 @@ export function normalizeBenefitPresentationTokenQuery(input: unknown): string {
   return input.trim()
 }
 
-function tokenFromRawBody(request: HttpRequest): unknown {
+function tokenFromRawBody(
+  request: HttpRequest,
+  allowedBodyTypes: readonly Array<'json' | 'urlencoded'>
+): unknown {
+  if (!allowedBodyTypes.includes(request.bodyType as 'json' | 'urlencoded')) return undefined
+
   const rawBody = request.raw()
-  if (rawBody === null) return request.body().token
+  if (!rawBody) return undefined
 
   if (request.bodyType === 'json') {
-    const parsed: unknown = JSON.parse(rawBody)
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined
-    return (parsed as Record<string, unknown>).token
+    try {
+      const parsed: unknown = JSON.parse(rawBody)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined
+      return (parsed as Record<string, unknown>).token
+    } catch {
+      return undefined
+    }
   }
 
   if (request.bodyType === 'urlencoded') {
+    const parsedToken: unknown = request.body().token
+    if (typeof parsedToken !== 'string') return parsedToken
     const tokens = new URLSearchParams(rawBody).getAll('token')
     if (tokens.length > 1) return tokens
-    return tokens.length === 1 ? tokens[0] : request.body().token
+    return tokens.length === 1 ? tokens[0] : undefined
   }
 
-  return request.body().token
+  return undefined
 }

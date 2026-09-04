@@ -14,7 +14,9 @@ export default class BenefitRedemptionsController {
   ) {}
 
   async present({ auth, request, response, tenant }: HttpContext) {
-    const payload = await request.validateUsing(benefitPresentationRequestValidator)
+    const payload = await request.validateUsing(benefitPresentationRequestValidator, {
+      data: request.body(),
+    })
     const origin = this.presentationOrigin.resolve(request)
     const presentation = await this.redemptionService.present(
       tenant!.id,
@@ -27,7 +29,7 @@ export default class BenefitRedemptionsController {
   }
 
   async preview({ auth, request, response, tenant }: HttpContext) {
-    const payload = await validateBenefitPresentationTokenInput(request)
+    const payload = await validateBenefitPresentationTokenInput(request, ['json'])
     const preview = await this.redemptionService.preview(
       tenant!.id,
       payload.token,
@@ -37,7 +39,7 @@ export default class BenefitRedemptionsController {
   }
 
   async store({ auth, request, response, tenant }: HttpContext) {
-    const payload = await validateBenefitPresentationTokenInput(request)
+    const payload = await validateBenefitPresentationTokenInput(request, ['json'])
     const receipt = await this.redemptionService.redeem(
       tenant!.id,
       payload.token,

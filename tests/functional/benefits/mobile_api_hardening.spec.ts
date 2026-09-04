@@ -248,8 +248,60 @@ test.group('Benefits mobile API hardening', (group) => {
   }) => {
     const scenario = await createBenefitFlowScenario({ suffix: 'bounded-presentation-token' })
     const tenantHeader = String(scenario.tenant.id)
+    const presentationPath = '/api/v1/me/benefits/presentations'
+
+    const queryOnlyPresentation = await client
+      .post(presentationPath)
+      .qs({ access_id: scenario.access.id, offer_id: scenario.offer.id })
+      .header('x-tenant-id', tenantHeader)
+      .loginAs(scenario.users.holder)
+      .json({})
+    queryOnlyPresentation.assertStatus(422)
+    queryOnlyPresentation.assertBodyContains({
+      errors: [
+        { field: 'access_id', rule: 'required' },
+        { field: 'offer_id', rule: 'required' },
+      ],
+    })
+    assertPrivateMobileResponse(queryOnlyPresentation)
+
+    for (const invalidInput of [
+      {
+        body: { access_id: String(scenario.access.id), offer_id: scenario.offer.id },
+        field: 'access_id',
+        rule: 'number',
+      },
+      {
+        body: { access_id: scenario.access.id, offer_id: String(scenario.offer.id) },
+        field: 'offer_id',
+        rule: 'number',
+      },
+      {
+        body: { access_id: 1.5, offer_id: scenario.offer.id },
+        field: 'access_id',
+        rule: 'withoutDecimals',
+      },
+      {
+        body: { access_id: 2_147_483_648, offer_id: scenario.offer.id },
+        field: 'access_id',
+        rule: 'max',
+      },
+    ]) {
+      const invalidPresentation = await client
+        .post(presentationPath)
+        .header('x-tenant-id', tenantHeader)
+        .loginAs(scenario.users.holder)
+        .json(invalidInput.body)
+      invalidPresentation.assertStatus(422)
+      invalidPresentation.assertBodyContains({
+        errors: [{ field: invalidInput.field, rule: invalidInput.rule }],
+      })
+      assertPrivateMobileResponse(invalidPresentation)
+    }
+
     const presentation = await client
-      .post('/api/v1/me/benefits/presentations')
+      .post(presentationPath)
+      .qs({ access_id: 2_147_483_648, offer_id: 2_147_483_648 })
       .header('x-tenant-id', tenantHeader)
       .loginAs(scenario.users.holder)
       .json({ access_id: scenario.access.id, offer_id: scenario.offer.id })

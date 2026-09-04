@@ -85,13 +85,13 @@ export default class BenefitRedemptionPagesController {
   }
 
   async redeem({ auth, request, response, session, tenant }: HttpContext) {
-    const payload = await validateBenefitPresentationTokenInput(request)
     let receipt: Awaited<ReturnType<BenefitRedemptionService['redeem']>>
 
     try {
+      const payload = await validateBenefitPresentationTokenInput(request, ['json', 'urlencoded'])
       receipt = await this.redemptionService.redeem(tenant!.id, payload.token, auth.getUserOrFail())
     } catch (error) {
-      if (!(error instanceof InvalidBenefitPresentationException)) {
+      if (!(error instanceof InvalidBenefitPresentationException) && !isVineValidationError(error)) {
         throw error
       }
 
@@ -123,4 +123,10 @@ export default class BenefitRedemptionPagesController {
     )
     return inertia.render('portal/redemptions/receipt', { receipt })
   }
+}
+
+function isVineValidationError(error: unknown): boolean {
+  return Boolean(
+    error && typeof error === 'object' && 'code' in error && error.code === 'E_VALIDATION_ERROR'
+  )
 }
