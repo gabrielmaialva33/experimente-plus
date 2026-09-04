@@ -8,7 +8,7 @@ import QRCode from 'qrcode'
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import { BENEFIT_RECEIPT_CODE_PATTERN } from '#modules/benefits/constants/benefit_redemption'
+import { isCanonicalBenefitReceiptCode } from '#modules/benefits/constants/benefit_redemption'
 import type IBenefitAccess from '#modules/benefits/interfaces/benefit_access_interface'
 import type IBenefitRedemption from '#modules/benefits/interfaces/benefit_redemption_interface'
 import BenefitAccess from '#modules/benefits/models/benefit_access'
@@ -518,7 +518,7 @@ export default class BenefitRedemptionService {
     tenantId: number,
     receiptCode: string
   ): Promise<BenefitRedemption> {
-    if (!BENEFIT_RECEIPT_CODE_PATTERN.test(receiptCode)) {
+    if (!isCanonicalBenefitReceiptCode(receiptCode)) {
       throw new NotFoundException('Redemption receipt not found')
     }
 

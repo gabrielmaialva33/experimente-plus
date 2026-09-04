@@ -5,4 +5,13 @@ export const BENEFIT_PRESENTATION_TOKEN_MAX_LENGTH = 512
 export const BENEFIT_PRESENTATION_TOKEN_PATTERN =
   /^(?:(?:[A-Za-z0-9_-]{4})+|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-][AQgw]|(?:[A-Za-z0-9_-]{4})*[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/
 
+export const BENEFIT_RECEIPT_CODE_LENGTH = 20
 export const BENEFIT_RECEIPT_CODE_PATTERN = /^EXP-[0-9A-F]{16}$/
+
+export function isCanonicalBenefitReceiptCode(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length === BENEFIT_RECEIPT_CODE_LENGTH &&
+    BENEFIT_RECEIPT_CODE_PATTERN.test(value)
+  )
+}

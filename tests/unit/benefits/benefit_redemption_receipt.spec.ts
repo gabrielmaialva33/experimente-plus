@@ -43,11 +43,16 @@ test.group('Benefit redemption receipt boundary', () => {
     const partnerFailure = await captureFailure(() =>
       service.partnerReceipt(1, 'not-a-receipt', actor)
     )
+    const trailingNewlineFailure = await captureFailure(() =>
+      service.holderReceipt(1, 'EXP-0123456789ABCDEF\n', actor)
+    )
 
     assert.instanceOf(holderFailure, NotFoundException)
     assert.equal((holderFailure as Error).message, 'Redemption receipt not found')
     assert.instanceOf(partnerFailure, NotFoundException)
     assert.equal((partnerFailure as Error).message, 'Redemption receipt not found')
+    assert.instanceOf(trailingNewlineFailure, NotFoundException)
+    assert.equal((trailingNewlineFailure as Error).message, 'Redemption receipt not found')
     assert.equal(repositoryCalls, 0)
   })
 })
