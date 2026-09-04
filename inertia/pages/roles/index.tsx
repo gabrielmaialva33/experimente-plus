@@ -47,7 +47,6 @@ const SLUG_BADGE: Record<string, 'primary' | 'destructive' | 'info' | 'success' 
   root: 'destructive',
   admin: 'primary',
   moderator: 'info',
-  editor: 'secondary',
   user: 'success',
   guest: 'secondary',
 }

@@ -46,7 +46,6 @@ export const GLOBAL_ROLE_LABELS: Record<string, string> = {
   root: 'Responsável técnico',
   admin: 'Administrador',
   moderator: 'Moderador',
-  editor: 'Editor legado',
   user: 'Explorador',
   guest: 'Visitante',
 }
@@ -55,7 +54,6 @@ export const GLOBAL_ROLE_DESCRIPTIONS: Record<string, string> = {
   root: 'Acesso técnico integral à plataforma.',
   admin: 'Opera cadastros, conteúdo e recursos administrativos.',
   moderator: 'Analisa e decide sobre conteúdo submetido.',
-  editor: 'Papel global legado mantido pela fundação.',
   user: 'Usa a descoberta e recursos pessoais; o Portal depende de vínculo com uma organização.',
   guest: 'Papel base sem acesso privado por padrão.',
 }

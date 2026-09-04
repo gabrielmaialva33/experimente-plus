@@ -10,20 +10,42 @@ namespace IRole {
     MODERATOR = 'moderator',
     USER = 'user',
     GUEST = 'guest',
-    EDITOR = 'editor',
   }
 
-  export interface RoleHierarchy {
-    [key: string]: string[]
-  }
-
-  export const ROLE_HIERARCHY: RoleHierarchy = {
-    [Slugs.ROOT]: [Slugs.ADMIN, Slugs.MODERATOR, Slugs.USER, Slugs.GUEST, Slugs.EDITOR],
-    [Slugs.ADMIN]: [Slugs.MODERATOR, Slugs.USER, Slugs.GUEST, Slugs.EDITOR],
+  /**
+   * Canonical partial order for platform roles. Entries list every role that
+   * the key may dominate. Organization roles are deliberately outside this
+   * global hierarchy.
+   */
+  export const ROLE_HIERARCHY: Readonly<Record<Slugs, readonly Slugs[]>> = {
+    [Slugs.ROOT]: [Slugs.ADMIN, Slugs.MODERATOR, Slugs.USER, Slugs.GUEST],
+    [Slugs.ADMIN]: [Slugs.MODERATOR, Slugs.USER, Slugs.GUEST],
     [Slugs.MODERATOR]: [Slugs.USER],
-    [Slugs.EDITOR]: [Slugs.USER],
     [Slugs.USER]: [Slugs.GUEST],
     [Slugs.GUEST]: [],
+  }
+
+  export const CANONICAL_SLUGS = Object.freeze(Object.keys(ROLE_HIERARCHY) as Slugs[])
+
+  export function isCanonicalSlug(slug: string): slug is Slugs {
+    return Object.hasOwn(ROLE_HIERARCHY, slug)
+  }
+
+  /** ACL boundary for privileged platform mutations, evaluated from fresh roles. */
+  export function isPlatformAdministrator(roleSlugs: readonly string[]): boolean {
+    return (
+      roleSlugs.length > 0 &&
+      roleSlugs.every(isCanonicalSlug) &&
+      roleSlugs.some((slug) => slug === Slugs.ROOT || slug === Slugs.ADMIN)
+    )
+  }
+
+  export function dominates(actorRole: string, targetRole: string): boolean {
+    if (!isCanonicalSlug(actorRole) || !isCanonicalSlug(targetRole)) {
+      return false
+    }
+
+    return ROLE_HIERARCHY[actorRole].includes(targetRole)
   }
 }
 

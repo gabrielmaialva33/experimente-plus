@@ -1,9 +1,8 @@
 import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
-import db from '@adonisjs/lucid/services/db'
 
-import { attachRoleValidator } from '#modules/roles/validators/roles_validator'
+import { attachRoleValidator, listRolesValidator } from '#modules/roles/validators/roles_validator'
 
 import ListRolesService from '#modules/roles/services/list_roles_service'
 import SyncRolesService from '#modules/roles/services/sync_roles_service'
@@ -12,42 +11,29 @@ import SyncRolesService from '#modules/roles/services/sync_roles_service'
 export default class RolesController {
   async list({ request, response }: HttpContext) {
     const service = await app.container.make(ListRolesService)
-    const page = request.input('page', 1)
-    const perPage = request.input('perPage', 10)
+    const {
+      page = 1,
+      per_page: perPage = 10,
+      sort_by: sortBy = 'id',
+      order: direction = 'asc',
+    } = await request.validateUsing(listRolesValidator, { data: request.qs() })
 
-    const roles = await service.run({ page, perPage })
+    const roles = await service.run({ page, perPage, sortBy, direction })
     return response.json(roles)
   }
 
-  async attach({ request, response }: HttpContext) {
-    try {
-      const { user_id: userId, role_ids: roleIds } = await attachRoleValidator.validate(
-        request.all()
-      )
+  async attach({ auth, request, response }: HttpContext) {
+    const actor = auth.getUserOrFail()
+    const { user_id: userId, role_ids: roleIds } = await request.validateUsing(
+      attachRoleValidator,
+      { data: request.body() }
+    )
 
-      // Check if user exists
-      const user = await db.from('users').where('id', userId).first()
-      if (!user) {
-        return response.notFound({ message: 'User not found' })
-      }
+    const syncRolesService = await app.container.make(SyncRolesService)
+    await syncRolesService.run({ actorUserId: actor.id, userId, roleIds })
 
-      // Check if all roles exist
-      const roles = await db.from('roles').whereIn('id', roleIds)
-      if (roles.length !== roleIds.length) {
-        return response.notFound({ message: 'Role not found' })
-      }
-
-      const syncRolesService = await app.container.make(SyncRolesService)
-      await syncRolesService.run({ userId, roleIds })
-
-      return response.json({
-        message: 'Role attached successfully',
-      })
-    } catch (error) {
-      if (error && typeof error === 'object' && 'messages' in error) {
-        return response.unprocessableEntity({ errors: error.messages })
-      }
-      throw error
-    }
+    return response.json({
+      message: 'Role attached successfully',
+    })
   }
 }
