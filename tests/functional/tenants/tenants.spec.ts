@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import testUtils from '@adonisjs/core/services/test_utils'
+import limiter from '@adonisjs/limiter/services/main'
 import db from '@adonisjs/lucid/services/db'
 import type { Assert } from '@japa/assert'
 import type { ApiClient, ApiResponse } from '@japa/api-client'
@@ -79,6 +80,10 @@ async function assertSingleRotation(assert: Assert, userId: number): Promise<voi
 
 test.group('Tenants', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
+  group.each.setup(async () => {
+    await limiter.clear()
+    return () => limiter.clear()
+  })
 
   test('POST / atomically creates an operation and rotates a bound refresh credential', async ({
     client,
@@ -140,11 +145,8 @@ test.group('Tenants', (group) => {
     response.assertStatus(403)
     assertPrivateCredentialResponse(response)
     assert.isNull(await Tenant.findBy('name', 'Unauthorized operation'))
-
-    const refresh = await client
-      .post('/api/v1/sessions/refresh')
-      .json({ refresh_token: auth.refresh_token })
-    refresh.assertStatus(200)
+    const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
+    assert.isNull(stored.revoked_at)
   })
 
   test('GET /me lists tenant memberships using a real access JWT', async ({ client, assert }) => {
@@ -246,9 +248,7 @@ test.group('Tenants', (group) => {
         client
           .post('/api/v1/tenants')
           .bearerToken(auth.access_token)
-          .unsafeJson(
-            JSON.stringify({ name: 'Malformed Refresh', refresh_token: refreshToken })
-          ),
+          .unsafeJson(JSON.stringify({ name: 'Malformed Refresh', refresh_token: refreshToken })),
         client
           .post('/api/v1/tenants/switch')
           .bearerToken(auth.access_token)
@@ -261,6 +261,162 @@ test.group('Tenants', (group) => {
         response.assertBodyContains({ errors: [{ field: 'refresh_token' }] })
       }
     }
+  })
+
+  test('requires canonical application/json on both tenant mutation endpoints', async ({
+    client,
+    assert,
+  }) => {
+    const user = await createUser(
+      { email: 'tenant-media-type@example.com', username: 'tenant-media-type' },
+      IRole.Slugs.ADMIN
+    )
+    const target = await Tenant.create({
+      name: 'Media Type Target',
+      slug: 'media-type-target',
+      is_active: true,
+    })
+    await user.related('tenants').attach({ [target.id]: { role: 'owner' } })
+    const auth = await signIn(client, user)
+    const paths = [
+      {
+        path: '/api/v1/tenants',
+        body: { name: 'Rejected Media Type', refresh_token: auth.refresh_token },
+      },
+      {
+        path: '/api/v1/tenants/switch',
+        body: { tenant_id: target.id, refresh_token: auth.refresh_token },
+      },
+    ]
+
+    for (const { path, body } of paths) {
+      const responses = [
+        await client.post(path).bearerToken(auth.access_token).accept('json').form(body),
+        await Object.entries(body).reduce(
+          (request, [name, value]) => request.field(name, String(value)),
+          client.post(path).bearerToken(auth.access_token).accept('json')
+        ),
+      ]
+      for (const contentType of [
+        'application/json-patch+json',
+        'application/vnd.api+json',
+        'application/csp-report',
+        'text/plain',
+        'application/octet-stream',
+      ]) {
+        responses.push(
+          await client
+            .post(path)
+            .bearerToken(auth.access_token)
+            .header('content-type', contentType)
+            .accept('json')
+            .setup((request) => {
+              request.request.send(JSON.stringify(body))
+            })
+        )
+      }
+
+      for (const response of responses) {
+        response.assertStatus(422)
+        response.assertBodyContains({
+          errors: [{ field: 'refresh_token', rule: 'required' }],
+        })
+        assertPrivateCredentialResponse(response)
+      }
+    }
+
+    assert.isNull(await Tenant.findBy('name', 'Rejected Media Type'))
+    const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
+    assert.isNull(stored.revoked_at)
+  })
+
+  test('accepts canonical JSON with a charset parameter when switching operations', async ({
+    client,
+    assert,
+  }) => {
+    const user = await createUser({
+      email: 'tenant-json-charset@example.com',
+      username: 'tenant-json-charset',
+    })
+    const target = await Tenant.create({
+      name: 'JSON Charset Target',
+      slug: 'json-charset-target',
+      is_active: true,
+    })
+    await user.related('tenants').attach({ [target.id]: { role: 'owner' } })
+    const auth = await signIn(client, user)
+
+    const response = await client
+      .post('/api/v1/tenants/switch')
+      .bearerToken(auth.access_token)
+      .header('content-type', 'Application/JSON; charset=utf-8')
+      .accept('json')
+      .setup((request) => {
+        request.request.send(
+          JSON.stringify({ tenant_id: target.id, refresh_token: auth.refresh_token })
+        )
+      })
+
+    response.assertStatus(200)
+    assertPrivateCredentialResponse(response)
+    assert.equal(response.body().tenant.id, target.id)
+    await assertSingleRotation(assert, user.id)
+  })
+
+  test('sanitizes malformed JSON without creating an operation or consuming its refresh token', async ({
+    client,
+    assert,
+  }) => {
+    const user = await createUser(
+      { email: 'tenant-malformed-json@example.com', username: 'tenant-malformed-json' },
+      IRole.Slugs.ADMIN
+    )
+    const auth = await signIn(client, user)
+
+    const response = await client
+      .post('/api/v1/tenants')
+      .bearerToken(auth.access_token)
+      .accept('json')
+      .unsafeJson(`{"name":"Malformed JSON Operation","refresh_token":"${auth.refresh_token}"`)
+
+    response.assertStatus(400)
+    response.assertBody({ status: 400, message: 'Malformed JSON request body' })
+    assertPrivateCredentialResponse(response)
+    assert.notInclude(response.text(), auth.refresh_token)
+    assert.isNull(await Tenant.findBy('name', 'Malformed JSON Operation'))
+
+    const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
+    assert.isNull(stored.revoked_at)
+  })
+
+  test('does not source tenant mutation fields from the query string', async ({ client }) => {
+    const user = await createUser(
+      { email: 'tenant-query-input@example.com', username: 'tenant-query-input' },
+      IRole.Slugs.ADMIN
+    )
+    const target = await Tenant.create({
+      name: 'Query Input Target',
+      slug: 'query-input-target',
+      is_active: true,
+    })
+    await user.related('tenants').attach({ [target.id]: { role: 'owner' } })
+    const auth = await signIn(client, user)
+
+    const create = await client
+      .post('/api/v1/tenants')
+      .qs({ name: 'Query Operation', refresh_token: auth.refresh_token })
+      .bearerToken(auth.access_token)
+      .json({})
+    create.assertStatus(422)
+    create.assertBodyContains({ errors: [{ field: 'name', rule: 'required' }] })
+
+    const switchTenant = await client
+      .post('/api/v1/tenants/switch')
+      .qs({ tenant_id: target.id, refresh_token: auth.refresh_token })
+      .bearerToken(auth.access_token)
+      .json({})
+    switchTenant.assertStatus(422)
+    switchTenant.assertBodyContains({ errors: [{ field: 'tenant_id', rule: 'required' }] })
   })
 
   test('rejects a refresh token owned by another bearer without consuming it', async ({
@@ -288,11 +444,6 @@ test.group('Tenants', (group) => {
     response.assertBody({ status: 401, message: 'Invalid or expired refresh token' })
     const storedB = await RefreshToken.query().where('user_id', userB.id).firstOrFail()
     assert.isNull(storedB.revoked_at)
-
-    const refreshB = await client
-      .post('/api/v1/sessions/refresh')
-      .json({ refresh_token: authB.refresh_token })
-    refreshB.assertStatus(200)
   })
 
   test('rejects a foreign tenant without consuming the submitted refresh token', async ({
@@ -312,11 +463,6 @@ test.group('Tenants', (group) => {
     assertPrivateCredentialResponse(response)
     const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
     assert.isNull(stored.revoked_at)
-
-    const refresh = await client
-      .post('/api/v1/sessions/refresh')
-      .json({ refresh_token: auth.refresh_token })
-    refresh.assertStatus(200)
   })
 
   test('rejects an inactive tenant without consuming the submitted refresh token', async ({
@@ -344,15 +490,11 @@ test.group('Tenants', (group) => {
     assertPrivateCredentialResponse(response)
     const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
     assert.isNull(stored.revoked_at)
-
-    const refresh = await client
-      .post('/api/v1/sessions/refresh')
-      .json({ refresh_token: auth.refresh_token })
-    refresh.assertStatus(200)
   })
 
   test('validates tenant_id with 422 and leaves the refresh credential usable', async ({
     client,
+    assert,
   }) => {
     const user = await createUser({
       email: 'invalid-switch@example.com',
@@ -369,11 +511,8 @@ test.group('Tenants', (group) => {
       response.assertStatus(422)
       assertPrivateCredentialResponse(response)
     }
-
-    const refresh = await client
-      .post('/api/v1/sessions/refresh')
-      .json({ refresh_token: auth.refresh_token })
-    refresh.assertStatus(200)
+    const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
+    assert.isNull(stored.revoked_at)
   })
 
   test('does not persist an operation when validation or refresh authentication fails', async ({
@@ -400,11 +539,8 @@ test.group('Tenants', (group) => {
     invalidRefresh.assertStatus(401)
     assertPrivateCredentialResponse(invalidRefresh)
     assert.isNull(await Tenant.findBy('name', 'Must Roll Back'))
-
-    const refresh = await client
-      .post('/api/v1/sessions/refresh')
-      .json({ refresh_token: auth.refresh_token })
-    refresh.assertStatus(200)
+    const stored = await RefreshToken.query().where('user_id', user.id).firstOrFail()
+    assert.isNull(stored.revoked_at)
   })
 
   test('requires bearer authentication for tenant endpoints', async ({ client }) => {

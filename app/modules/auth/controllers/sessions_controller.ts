@@ -4,6 +4,7 @@ import app from '@adonisjs/core/services/app'
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
 import SignInService from '#modules/auth/services/sign_in_service'
 import SignUpService from '#modules/auth/services/sign_up_service'
+import { refreshTokenFromRawBody } from '#modules/auth/utils/refresh_token_input'
 import { refreshSessionValidator } from '#modules/auth/validators/session_validator'
 import {
   publicRegistrationValidator,
@@ -58,7 +59,9 @@ export default class SessionsController {
   }
 
   async refresh({ request, response }: HttpContext) {
-    const { refresh_token: refreshToken } = await request.validateUsing(refreshSessionValidator)
+    const { refresh_token: refreshToken } = await request.validateUsing(refreshSessionValidator, {
+      data: { refresh_token: refreshTokenFromRawBody(request) },
+    })
     const service = await app.container.make(JwtAuthTokensService)
     const auth = await service.refresh(refreshToken)
 
@@ -66,7 +69,9 @@ export default class SessionsController {
   }
 
   async logout({ request, response }: HttpContext) {
-    const { refresh_token: refreshToken } = await request.validateUsing(refreshSessionValidator)
+    const { refresh_token: refreshToken } = await request.validateUsing(refreshSessionValidator, {
+      data: { refresh_token: refreshTokenFromRawBody(request) },
+    })
     const service = await app.container.make(JwtAuthTokensService)
     await service.revoke(refreshToken)
 

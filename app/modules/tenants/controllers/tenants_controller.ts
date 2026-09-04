@@ -1,6 +1,7 @@
 import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 
+import { refreshTokenFromRawBody } from '#modules/auth/utils/refresh_token_input'
 import TenantSessionService from '#modules/tenants/services/tenant_session_service'
 import {
   createTenantValidator,
@@ -28,7 +29,9 @@ export default class TenantsController {
 
   async create({ auth, request, response }: HttpContext) {
     const user = auth.getUserOrFail()
-    const payload = await request.validateUsing(createTenantValidator)
+    const payload = await request.validateUsing(createTenantValidator, {
+      data: { ...request.body(), refresh_token: refreshTokenFromRawBody(request) },
+    })
     const {
       tenant,
       role,
@@ -48,7 +51,9 @@ export default class TenantsController {
 
   async switch({ auth, request, response }: HttpContext) {
     const user = auth.getUserOrFail()
-    const payload = await request.validateUsing(switchTenantValidator)
+    const payload = await request.validateUsing(switchTenantValidator, {
+      data: { ...request.body(), refresh_token: refreshTokenFromRawBody(request) },
+    })
     const {
       tenant,
       role,
