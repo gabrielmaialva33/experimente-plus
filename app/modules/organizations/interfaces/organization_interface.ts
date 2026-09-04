@@ -64,6 +64,7 @@ namespace IOrganization {
       read: boolean
       list: boolean
       create: boolean
+      create_revision: boolean
       update: boolean
       submit: boolean
       archive: boolean
@@ -73,6 +74,8 @@ namespace IOrganization {
       list: boolean
       create: boolean
       update: boolean
+      activate: boolean
+      pause: boolean
       archive: boolean
     }
     redemptions: {

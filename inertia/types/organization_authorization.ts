@@ -13,6 +13,7 @@ export interface OrganizationAllowedActions {
     read: boolean
     list: boolean
     create: boolean
+    create_revision: boolean
     update: boolean
     submit: boolean
     archive: boolean
@@ -22,6 +23,8 @@ export interface OrganizationAllowedActions {
     list: boolean
     create: boolean
     update: boolean
+    activate: boolean
+    pause: boolean
     archive: boolean
   }
   redemptions: {

@@ -11,6 +11,8 @@ import type User from '#modules/users/models/user'
 
 const PLATFORM_STAFF_ROLES = [IRole.Slugs.ROOT, IRole.Slugs.ADMIN, IRole.Slugs.MODERATOR]
 
+export type PlatformAccess = Exclude<IOrganization.AccessSource, 'membership'>
+
 export interface OrganizationPolicyDecision {
   membership: OrganizationMember | null
   capabilities: IOrganization.PolicyCapabilities
@@ -97,11 +99,26 @@ export default class OrganizationPolicyService {
   constructor(private memberRepository: OrganizationMemberRepository) {}
 
   async isPlatformStaff(actor: User): Promise<boolean> {
-    return (await this.platformAccess(actor)) !== null
+    return (await this.resolvePlatformAccess(actor)) !== null
   }
 
   async isPlatformAdmin(actor: User): Promise<boolean> {
-    return (await this.platformAccess(actor)) === 'platform_admin'
+    return (await this.resolvePlatformAccess(actor)) === 'platform_admin'
+  }
+
+  async resolvePlatformAccess(actor: User): Promise<PlatformAccess | null> {
+    const roles = await actor
+      .related('roles')
+      .query()
+      .whereIn('roles.slug', PLATFORM_STAFF_ROLES)
+      .select('roles.slug')
+    const slugs = new Set(roles.map((role) => role.slug))
+
+    if (slugs.has(IRole.Slugs.ROOT) || slugs.has(IRole.Slugs.ADMIN)) {
+      return 'platform_admin'
+    }
+
+    return slugs.has(IRole.Slugs.MODERATOR) ? 'platform_moderator' : null
   }
 
   async requirePlatformModerator(actor: User): Promise<void> {
@@ -125,7 +142,7 @@ export default class OrganizationPolicyService {
     actor: User,
     tenantId: number
   ): Promise<IOrganization.ActorAccessSnapshot> {
-    const platformAccess = await this.platformAccess(actor)
+    const platformAccess = await this.resolvePlatformAccess(actor)
     if (platformAccess === 'platform_admin') {
       return {
         platform_access: platformAccess,
@@ -149,7 +166,7 @@ export default class OrganizationPolicyService {
     organizationId: number,
     client?: TransactionClientContract
   ): Promise<OrganizationPolicyDecision> {
-    const platformAccess = await this.platformAccess(actor)
+    const platformAccess = await this.resolvePlatformAccess(actor)
     if (platformAccess === 'platform_admin') {
       return {
         membership: null,
@@ -371,22 +388,5 @@ export default class OrganizationPolicyService {
     }
 
     return decision.membership
-  }
-
-  private async platformAccess(
-    actor: User
-  ): Promise<Exclude<IOrganization.AccessSource, 'membership'> | null> {
-    const roles = await actor
-      .related('roles')
-      .query()
-      .whereIn('roles.slug', PLATFORM_STAFF_ROLES)
-      .select('roles.slug')
-    const slugs = new Set(roles.map((role) => role.slug))
-
-    if (slugs.has(IRole.Slugs.ROOT) || slugs.has(IRole.Slugs.ADMIN)) {
-      return 'platform_admin'
-    }
-
-    return slugs.has(IRole.Slugs.MODERATOR) ? 'platform_moderator' : null
   }
 }

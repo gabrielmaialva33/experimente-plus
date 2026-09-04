@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 
+import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import OrganizationPolicyService, {
   organizationPolicyCapabilitiesFor,
@@ -59,6 +60,9 @@ export function projectOrganizationAllowedActions(
         IPermission.Resources.ESTABLISHMENTS,
         IPermission.Actions.CREATE
       ),
+      // A new revision also uses establishments.create, but remains fail-closed
+      // until the establishment lifecycle/revision projection selects a source.
+      create_revision: false,
       update: allows(
         'manage_establishments',
         IPermission.Resources.ESTABLISHMENTS,
@@ -88,6 +92,16 @@ export function projectOrganizationAllowedActions(
         IPermission.Resources.BENEFIT_OFFERS,
         IPermission.Actions.UPDATE
       ),
+      activate: allows(
+        'manage_establishments',
+        IPermission.Resources.BENEFIT_OFFERS,
+        IPermission.Actions.UPDATE
+      ),
+      pause: allows(
+        'manage_establishments',
+        IPermission.Resources.BENEFIT_OFFERS,
+        IPermission.Actions.UPDATE
+      ),
       archive: allows(
         'manage_establishments',
         IPermission.Resources.BENEFIT_OFFERS,
@@ -111,6 +125,120 @@ export function projectOrganizationAllowedActions(
     },
     pilot_feedback: {
       create: allows('read', IPermission.Resources.PILOT_FEEDBACK, IPermission.Actions.CREATE),
+    },
+  }
+}
+
+const ORGANIZATION_ESTABLISHMENT_MANAGEMENT_STATUSES = new Set<IOrganization.Status>([
+  'draft',
+  'changes_requested',
+  'active',
+])
+
+/**
+ * Narrows organization-scoped actions with lifecycle state. Capabilities stay
+ * reusable and aggregated actions stay generic; only an organization projection
+ * may expose creation of a unit.
+ */
+export function projectOrganizationStateAllowedActions(
+  actions: IOrganization.AllowedActions,
+  status: IOrganization.Status
+): IOrganization.AllowedActions {
+  const acceptsManagement = ORGANIZATION_ESTABLISHMENT_MANAGEMENT_STATUSES.has(status)
+  const acceptsSubmission = status === 'draft' || status === 'changes_requested'
+
+  return {
+    ...actions,
+    organizations: {
+      ...actions.organizations,
+      update: actions.organizations.update && acceptsManagement,
+      submit: actions.organizations.submit && acceptsSubmission,
+    },
+    establishments: {
+      ...actions.establishments,
+      create: actions.establishments.create && acceptsManagement,
+      create_revision: false,
+    },
+  }
+}
+
+export interface EstablishmentRevisionActionState {
+  organization_status: IOrganization.Status
+  lifecycle_status: IEstablishment.LifecycleStatus
+  business_status: IEstablishment.BusinessStatus
+  published_revision_id: number | null
+  revision_status: IEstablishment.RevisionStatus | null
+}
+
+/**
+ * A revision CTA is available only when the domain service has a canonical
+ * source to clone and no open revision can race the request. The clone service
+ * repeats all checks transactionally.
+ */
+export function projectEstablishmentRevisionAllowedActions(
+  actions: IOrganization.AllowedActions,
+  state: EstablishmentRevisionActionState
+): IOrganization.AllowedActions {
+  const establishmentArchived = state.lifecycle_status === 'archived'
+  const organizationAllowsManagement = ORGANIZATION_ESTABLISHMENT_MANAGEMENT_STATUSES.has(
+    state.organization_status
+  )
+  const revisionAcceptsEdits =
+    state.revision_status === 'draft' || state.revision_status === 'changes_requested'
+  const canEditRevision =
+    organizationAllowsManagement && !establishmentArchived && revisionAcceptsEdits
+  const canSubmitRevision =
+    canEditRevision &&
+    state.lifecycle_status === 'active' &&
+    state.business_status !== 'permanently_closed'
+  const hasCloneSource = state.published_revision_id
+    ? state.revision_status === 'approved'
+    : state.revision_status === 'rejected'
+
+  return {
+    ...actions,
+    establishments: {
+      ...actions.establishments,
+      update: actions.establishments.update && canEditRevision,
+      submit: actions.establishments.submit && canSubmitRevision,
+      archive: actions.establishments.archive && !establishmentArchived,
+      create_revision:
+        actions.establishments.create &&
+        organizationAllowsManagement &&
+        !establishmentArchived &&
+        hasCloneSource,
+    },
+  }
+}
+
+export interface EstablishmentBenefitActionState {
+  lifecycle_status: IEstablishment.LifecycleStatus
+  business_status: IEstablishment.BusinessStatus
+  published_revision_id: number | null
+}
+
+/**
+ * Keeps emergency/terminal offer actions available while narrowing actions
+ * that would advertise new or changed terms. The offer service repeats these
+ * checks for create/update/activate and intentionally keeps pause/archive as
+ * state-transition escape hatches.
+ */
+export function projectEstablishmentBenefitAllowedActions(
+  actions: IOrganization.AllowedActions,
+  state: EstablishmentBenefitActionState
+): IOrganization.AllowedActions {
+  const acceptsNewTerms =
+    state.lifecycle_status === 'active' &&
+    state.published_revision_id !== null &&
+    state.business_status !== 'permanently_closed'
+
+  return {
+    ...actions,
+    benefit_offers: {
+      ...actions.benefit_offers,
+      create: actions.benefit_offers.create && acceptsNewTerms,
+      update: actions.benefit_offers.update && acceptsNewTerms,
+      activate: actions.benefit_offers.activate && acceptsNewTerms,
     },
   }
 }

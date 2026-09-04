@@ -36,14 +36,38 @@ export default class OrganizationService {
     tenantId: number,
     snapshot: IOrganization.ActorAccessSnapshot
   ): Promise<Organization[]> {
-    if (snapshot.platform_access !== null) {
+    if (snapshot.platform_access === 'platform_admin') {
       return this.organizationRepository.listForTenant(tenantId)
     }
 
     return this.organizationRepository.listByIdsForTenant(
       tenantId,
-      snapshot.organization_accesses.map((access) => access.organization_id)
+      snapshot.organization_accesses
+        .filter((access) => access.capabilities.read)
+        .map((access) => access.organization_id)
     )
+  }
+
+  /**
+   * Loads the lightweight Portal organization from the request authorization
+   * snapshot. It deliberately skips private relations that the detail page does
+   * not render and fails closed before returning another organization's data.
+   */
+  async showFromAccessSnapshot(
+    tenantId: number,
+    id: number,
+    snapshot: IOrganization.ActorAccessSnapshot
+  ): Promise<Organization> {
+    const canRead =
+      snapshot.platform_access === 'platform_admin' ||
+      snapshot.organization_accesses.some(
+        (access) => access.organization_id === id && access.capabilities.read
+      )
+    if (!canRead) {
+      throw new NotFoundException('Organization not found')
+    }
+
+    return this.getOrFail(tenantId, id)
   }
 
   async show(tenantId: number, id: number, actor: User): Promise<Organization> {
