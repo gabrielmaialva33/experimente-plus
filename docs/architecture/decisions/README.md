@@ -28,6 +28,7 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 | [ADR-0020](0020-acesso-a-edicao-e-carteira-derivada.md)               | Acesso à edição e carteira derivada                | entitlement, carteira, histórico e privacidade              |
 | [ADR-0021](0021-resgate-transacional-com-apresentacao-temporaria.md)  | Resgate transacional e apresentação temporária     | QR assinado, replay, comprovante e histórico                |
 | [ADR-0022](0022-contrato-api-movel-consumer-first.md)                 | Contrato de API móvel consumer-first               | contexto, capabilities, tokens, carteira e resgate          |
+| [ADR-0023](0023-stack-e-navegacao-do-cliente-movel.md)                | Stack e navegação do cliente móvel                 | Expo, abas por capability, cidade local e filtro único      |
 
 ## Regra de evolução
 
@@ -52,4 +53,5 @@ EP-09 — benefícios controlados              implementado e validado
 EP-10 — acesso e carteira                    implementado e validado
 EP-11 — apresentação e resgate               implementado e validado
 EP-12 — API móvel consumer-first              implementado e validado
+EP-13 — cliente móvel                         decidido, implementação pendente
 ```
