@@ -238,6 +238,21 @@ test.group('Documentation', () => {
     }
   })
 
+  test('documents readiness responses as stateless and non-cacheable', async ({ assert }) => {
+    const specification = await readOpenApi()
+    const health = operationAt(specification, '/api/v1/health', 'get')
+    const cacheHeader = '#/components/headers/ReadinessCacheControl'
+
+    assert.include(health?.description ?? '', 'without creating a session')
+    assert.equal(
+      specification.components?.headers?.ReadinessCacheControl?.schema?.const,
+      'no-store'
+    )
+    for (const status of ['200', '429', '503']) {
+      assert.equal(health?.responses?.[status]?.headers?.['Cache-Control']?.$ref, cacheHeader)
+    }
+  })
+
   test('locks the administrative roles and permissions contracts', async ({ assert }) => {
     const specification = await readOpenApi()
     const schemas = specification.components?.schemas ?? {}

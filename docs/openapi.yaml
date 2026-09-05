@@ -4068,6 +4068,12 @@ components:
       description: Optional active operation override. Membership and active status are always validated.
 
   headers:
+    ReadinessCacheControl:
+      description: Prevents health responses from being stored and replayed by HTTP caches.
+      schema:
+        type: string
+        const: no-store
+
     PrivateCacheControl:
       description: Prevents storage in shared or device HTTP caches.
       schema:
@@ -6539,13 +6545,16 @@ paths:
     get:
       operationId: healthCheck
       summary: Health check
-      description: Check the health status of the API and its services
+      description: Check the current health of the API and its services without creating a session or a cacheable response.
       tags:
         - Health
       security: []
       responses:
         '200':
           description: Service is healthy
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/ReadinessCacheControl'
           content:
             application/json:
               schema:
@@ -6565,12 +6574,18 @@ paths:
                             example: true
         '429':
           description: Too Many Requests
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/ReadinessCacheControl'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '503':
           description: Service unhealthy
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/ReadinessCacheControl'
           content:
             application/json:
               schema:

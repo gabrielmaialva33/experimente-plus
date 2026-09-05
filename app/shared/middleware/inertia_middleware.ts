@@ -94,6 +94,14 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
 
     super.dispose(ctx)
 
+    // Session and Shield run inside this server middleware. At this point their
+    // unwind has already appended the anonymous session/CSRF cookies, so the
+    // readiness endpoint can remain strictly stateless for both 200 and 503.
+    if (this.isPublicHealthCheck(ctx)) {
+      ctx.response.header('Cache-Control', 'no-store')
+      ctx.response.removeHeader('Set-Cookie')
+    }
+
     // @adonisjs/inertia currently sets Vary with `header`, replacing cache
     // dimensions already declared by the route. Rebuild it through Adonis'
     // merge-aware API so Host, X-Inertia and compression variants survive.
@@ -132,6 +140,11 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
 
   private isInertiaRequest(ctx: HttpContext): boolean {
     return ctx.inertia.requestInfo().isInertiaRequest
+  }
+
+  private isPublicHealthCheck(ctx: HttpContext): boolean {
+    const method = ctx.request.method()
+    return (method === 'GET' || method === 'HEAD') && ctx.route?.name === 'public.health'
   }
 
   private isPublicCacheCandidate(ctx: HttpContext): boolean {
