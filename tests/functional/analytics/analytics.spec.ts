@@ -198,7 +198,7 @@ test.group('Discovery analytics', (group) => {
     const scenario = await createEstablishmentScenario('analytics-ingest')
     const published = await completeAndPublish(client, scenario)
     const events = [
-      analyticsEvent('catalog_impression', published),
+      analyticsEvent('catalog_impression', published, { search_term: 'Estação' }),
       analyticsEvent('establishment_view', published),
       {
         event_id: randomUUID(),
@@ -237,6 +237,11 @@ test.group('Discovery analytics', (group) => {
     assert.lengthOf(rawEvents, 3)
     assert.isTrue(rawEvents.every((event) => event.anonymous_session_hash.length === 64))
     assert.isTrue(rawEvents.every((event) => event.dedupe_key.length === 64))
+
+    const impressionEvent = rawEvents.find((event) => event.event_type === 'catalog_impression')
+    assert.exists(impressionEvent)
+    assert.isNull(impressionEvent!.search_term_redacted)
+    assert.isNull(impressionEvent!.search_term_hash)
 
     const searchEvent = rawEvents.find((event) => event.event_type === 'search_without_results')
     assert.exists(searchEvent)

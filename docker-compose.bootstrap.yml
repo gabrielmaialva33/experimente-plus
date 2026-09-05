@@ -1,0 +1,25 @@
+# Standalone one-shot stack for security:rotate-bootstrap. It intentionally has
+# no build context and requires the immutable image ID recorded as production's
+# last-known-good. Never attach this bind to the long-running HTTP service: it
+# contains the only plaintext recovery copy.
+name: experimente-plus-bootstrap
+
+services:
+  app:
+    image: ${EXPERIMENTE_BOOTSTRAP_IMAGE:?Set EXPERIMENTE_BOOTSTRAP_IMAGE to the validated last-known-good sha256 image ID}
+    env_file:
+      - ${EXPERIMENTE_BOOTSTRAP_ENV_FILE:?Set EXPERIMENTE_BOOTSTRAP_ENV_FILE to the frozen production environment snapshot}
+    environment:
+      NODE_ENV: production
+    volumes:
+      - type: bind
+        source: /var/lib/experimente-plus/bootstrap-credentials
+        target: /var/lib/experimente-plus/bootstrap-credentials
+        bind:
+          create_host_path: false
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    external: true

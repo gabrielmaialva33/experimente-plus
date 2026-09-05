@@ -20,6 +20,7 @@
     "app/**/*.ts",
     "config/**/*.ts",
     "database/**/*.ts",
+    "commands/**/*.ts",
     "start/**/*.ts",
     "bin/**/*.ts",
     "providers/**/*.ts",

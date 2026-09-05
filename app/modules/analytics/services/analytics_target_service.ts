@@ -83,16 +83,21 @@ export default class AnalyticsTargetService {
       }
     }
 
+    // Catalog bundles published before the wire contract was tightened attached
+    // the active query to impression events. Accept that legacy dimension during
+    // rollout, but deliberately discard it below: only no-result searches enter
+    // the privacy/redaction pipeline or storage.
+    const hasUnsupportedSearchTerm =
+      Boolean(input.search_term) && input.event_type !== 'catalog_impression'
+
     if (
       !ANALYTICS_ESTABLISHMENT_EVENT_TYPES.includes(
         input.event_type as IAnalytics.EstablishmentEventType
       ) ||
       !input.establishment_slug ||
-      input.search_term
+      hasUnsupportedSearchTerm
     ) {
-      throw new BadRequestException(
-        'Establishment analytics events require establishment_slug and do not accept search_term'
-      )
+      throw new BadRequestException('Invalid establishment analytics event dimensions')
     }
 
     const target = await this.targetRepository.findEstablishment(

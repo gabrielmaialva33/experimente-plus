@@ -106,10 +106,14 @@ a essa cadeia: outras sessões raiz do mesmo usuário continuam ativas. Reset, a
 exclusão de conta continuam invalidando todas as cadeias do usuário.
 
 Reset ou alteração administrativa de senha consome links de reset ativos, revoga refresh tokens e
-remove access tokens opacos persistidos na mesma transação. Access JWTs já assinados permanecem
-válidos somente até o TTL residual de, no máximo, quinze minutos; revogação imediata desses JWTs
-exigiria versionamento de credenciais ou denylist e fica como decisão de segurança posterior ao
-piloto.
+remove access tokens opacos persistidos na mesma transação. A mesma invalidação incrementa a versão
+de credenciais do usuário. Todo access JWT, inclusive o cookie web, leva o snapshot dessa versão e o
+guard o compara com o usuário ativo carregado do banco. Token sem a claim, com valor não canônico ou
+com versão divergente retorna `401`; por isso reset, alteração administrativa, rotação operacional de
+credenciais e exclusão revogam imediatamente também os JWTs já assinados, sem denylist por token.
+A emissão e o refresh da API usam a versão da linha bloqueada. A emissão do cookie web pode partir
+do snapshot já autenticado; se ele ficar stale durante uma corrida, o guard compara a claim com a
+linha atual na primeira requisição e falha fechado depois do commit da rotação.
 
 A emissão de um link de reset também usa `users.id FOR UPDATE` como mutex. A rotação e o envio
 ocorrem dentro da mesma transação: se o SMTP rejeitar a mensagem, o rollback preserva o link

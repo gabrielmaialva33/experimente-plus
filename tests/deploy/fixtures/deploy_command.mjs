@@ -429,7 +429,9 @@ if (command === 'git') {
       if (!state.rollingBack && state.fail === 'up') fail('up after changing container')
     } else fail('unexpected compose command')
   } else if (args[0] === 'ps') {
-    if (state.migrationExists) output(state.migrationContainerId)
+    if (args.includes('label=com.experimente-plus.operation=bootstrap-rotation')) {
+      output(state.bootstrapRotationContainer ?? '')
+    } else if (state.migrationExists) output(state.migrationContainerId)
   } else if (args[0] === 'wait') {
     if (!state.migrationExists || args.at(-1) !== state.migrationContainerId)
       fail('unknown migration wait target')

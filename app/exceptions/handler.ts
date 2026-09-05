@@ -45,19 +45,29 @@ export default class HttpExceptionHandler extends ExceptionHandler {
 
   /**
    * Status pages are used to display a custom HTML pages for certain error
-   * codes. You might want to enable them in production only, but feel
-   * free to enable them in development as well.
+   * codes. The 404 page is also enabled in tests so its full HTTP contract can
+   * be exercised; the 5xx status page below remains production-only so test
+   * failures retain their debug output.
    */
-  protected renderStatusPages = app.inProduction
+  protected renderStatusPages = app.inProduction || app.inTest
 
   /**
    * Status pages is a collection of error code range and a callback
    * to return the HTML contents to send as a response.
    */
   protected statusPages: Record<StatusPageRange, StatusPageRenderer> = {
-    '404': (error, { inertia }) => inertia.render('errors/not_found', { error }),
-    '500..599': (error, { inertia }) =>
-      inertia.render('errors/server_error', { error: createPublicServerError(error.status) }),
+    '404': (_error, ctx) => {
+      this.preparePublicErrorResponse(ctx, ctx.request.id())
+      return ctx.inertia.render('errors/not_found', {})
+    },
+    ...(app.inProduction
+      ? {
+          '500..599': (error: Parameters<StatusPageRenderer>[0], { inertia }: HttpContext) =>
+            inertia.render('errors/server_error', {
+              error: createPublicServerError(error.status),
+            }),
+        }
+      : {}),
   }
 
   /**

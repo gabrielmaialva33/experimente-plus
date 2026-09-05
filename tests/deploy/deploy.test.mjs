@@ -216,7 +216,38 @@ test('advances last-known-good only after the expected image and catalog pass', 
   )
   const up = commands.findIndex(({ command, args }) => command === 'docker' && args.includes('up'))
   assert.ok(build < stop && stop < quietPs && quietPs < migration && migration < up)
+  const bootstrapRotationChecks = commands.filter(
+    ({ command, args }) =>
+      command === 'docker' &&
+      args[0] === 'ps' &&
+      args.includes('label=com.experimente-plus.operation=bootstrap-rotation')
+  )
+  assert.equal(bootstrapRotationChecks.length, 2)
+  const secondBootstrapCheck = commands.findLastIndex(
+    ({ command, args }) =>
+      command === 'docker' &&
+      args[0] === 'ps' &&
+      args.includes('label=com.experimente-plus.operation=bootstrap-rotation')
+  )
+  const firstCheckoutMutation = commands.findIndex(
+    ({ command, args }) => command === 'git' && args[0] === 'read-tree'
+  )
+  assert.ok(secondBootstrapCheck >= 0 && secondBootstrapCheck < firstCheckoutMutation)
   assert.equal(state.migrationRuns, 1)
+})
+
+test('refuses deploy while a bootstrap rotation container awaits reconciliation', async (t) => {
+  const rotationContainer = '9'.repeat(64)
+  const f = await fixture(t, { bootstrapRotationContainer: rotationContainer })
+
+  const result = await f.start().result
+
+  assert.equal(result.code, 75, result.stderr)
+  assert.match(result.stderr, /rotação de credenciais bootstrap exige reconciliação/)
+  const commands = await f.commands()
+  assert.equal(hasFetchOrCheckout(commands), false)
+  assert.equal(composeCalls(commands, 'build').length, 0)
+  assert.equal(await f.knownGood(), f.knownGoodRecord)
 })
 
 test('removes a timed-out migration writer before restoring GOOD', async (t) => {

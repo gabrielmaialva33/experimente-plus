@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
+import app from '@adonisjs/core/services/app'
 import limiter from '@adonisjs/limiter/services/main'
 import mail from '@adonisjs/mail/services/main'
 import jwt from 'jsonwebtoken'
@@ -7,6 +8,7 @@ import jwt from 'jsonwebtoken'
 import { OrganizationFactory, OrganizationMemberFactory } from '#database/factories/index'
 import PasswordResetToken from '#modules/auth/models/password_reset_token'
 import PasswordResetNotification from '#modules/auth/services/password_reset_notification'
+import PasswordResetTokenService from '#modules/auth/services/password_reset_token_service'
 import VerifyEmailNotification from '#modules/auth/services/verify_email_notification'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
@@ -538,6 +540,49 @@ test.group('Web authentication', (group) => {
 
     dashboard.assertStatus(302)
     assert.equal(dashboard.header('location'), '/login')
+  })
+
+  test('should reject browser access tokens issued before or from a stale credential snapshot', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.create({
+      full_name: 'Web Credential Rotation',
+      email: 'web-credential-rotation@example.com',
+      username: 'web-credential-rotation',
+      password: 'password123',
+    })
+    await attachDefaultRole(user)
+
+    const login = await client
+      .post('/login')
+      .withCsrfToken()
+      .redirects(0)
+      .json({ uid: user.email, password: 'password123' })
+    login.assertStatus(302)
+
+    const tokenBeforeRotation = login.cookie(JWT_COOKIE_NAME)?.value
+    assert.isString(tokenBeforeRotation)
+    const staleCredentialVersion = user.credential_version
+
+    const passwordResets = await app.container.make(PasswordResetTokenService)
+    const reset = await passwordResets.issue(user.id)
+    assert.isNotNull(reset)
+    await passwordResets.consume(reset!.token, 'new-password123')
+
+    const currentUser = await User.findOrFail(user.id)
+    assert.equal(currentUser.credential_version, staleCredentialVersion + 1)
+
+    // This cookie is signed after the rotation, but from the deliberately stale
+    // model snapshot held by the request that raced with the password change.
+    const signedFromStaleSnapshot = signedWebAccessCookie(user)
+
+    for (const staleCookie of [tokenBeforeRotation!, signedFromStaleSnapshot]) {
+      const response = await client.get('/wallet').cookie(JWT_COOKIE_NAME, staleCookie).redirects(0)
+
+      response.assertStatus(302)
+      assert.equal(response.header('location'), '/login')
+    }
   })
 
   test('should reject web registration without acceptance of the legal documents', async ({

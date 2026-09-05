@@ -12,7 +12,9 @@ import RefreshToken from '#modules/auth/models/refresh_token'
 import PasswordResetTokenRepository from '#modules/auth/repositories/password_reset_token_repository'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
 import AdminSignInService from '#modules/auth/services/admin_sign_in_service'
-import CredentialInvalidationService from '#modules/auth/services/credential_invalidation_service'
+import CredentialInvalidationService, {
+  CredentialVersionExhaustedError,
+} from '#modules/auth/services/credential_invalidation_service'
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
 import PasswordResetTokenService from '#modules/auth/services/password_reset_token_service'
 import SignInService from '#modules/auth/services/sign_in_service'
@@ -27,6 +29,7 @@ import DeleteOwnAccountService from '#modules/users/services/delete_own_account_
 import DeleteUserService from '#modules/users/services/delete_user_service'
 import EditUserService from '#modules/users/services/edit_user_service'
 import UserAdministrationPolicyService from '#modules/users/services/user_administration_policy_service'
+import { MAX_CREDENTIAL_VERSION } from '#shared/jwt/credential_version'
 import JwtService from '#shared/jwt/jwt_service'
 
 type Deferred = {
@@ -814,13 +817,15 @@ test.group('Credential mutation serialization', () => {
   })
 
   test('invalidates reset, refresh, and persisted access tokens on admin password edit', async ({
+    client,
     assert,
     cleanup,
   }) => {
     assert.equal(db.connectionGlobalTransactions.size, 0)
     const services = createServices()
     const { user } = await createAccount(cleanup, 'admin-password')
-    await services.jwtTokens.startChain(
+    const credentialVersionBefore = user.credential_version
+    const auth = await services.jwtTokens.startChain(
       { userId: user.id },
       { expectedPasswordHash: user.password }
     )
@@ -853,6 +858,91 @@ test.group('Credential mutation serialization', () => {
     assert.lengthOf(accessTokens, 0)
     const verifiedUser = await User.verifyCredentials(user.email, 'admin-password123')
     assert.equal(verifiedUser.id, user.id)
+    assert.equal(verifiedUser.credential_version, credentialVersionBefore + 1)
+
+    const staleAccess = await client.get('/api/v1/me').bearerToken(auth.access_token)
+    staleAccess.assertStatus(401)
+  })
+
+  test('fails closed without partial credential mutation at the terminal generation', async ({
+    assert,
+    cleanup,
+  }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+    const services = createServices()
+    const { user, password } = await createAccount(cleanup, 'terminal-generation')
+    await db
+      .from('users')
+      .where('id', user.id)
+      .update({ credential_version: MAX_CREDENTIAL_VERSION })
+    await user.refresh()
+
+    const auth = await services.jwtTokens.startChain(
+      { userId: user.id },
+      { expectedPasswordHash: user.password }
+    )
+    const issued = await services.passwordResets.issue(user.id)
+    assert.isNotNull(issued)
+    await db.table('auth_access_tokens').insert({
+      tokenable_id: user.id,
+      type: 'auth_token',
+      name: 'terminal generation test',
+      hash: randomUUID(),
+      abilities: '[]',
+      created_at: new Date(),
+      updated_at: new Date(),
+    })
+
+    const failure = await services.editUser
+      .run(user.id, user.id, { password: 'must-not-commit123' })
+      .catch((error) => error)
+    assert.instanceOf(failure, CredentialVersionExhaustedError)
+    assert.equal(
+      (failure as CredentialVersionExhaustedError).code,
+      'E_CREDENTIAL_VERSION_EXHAUSTED'
+    )
+
+    const reloaded = await User.findOrFail(user.id)
+    assert.equal(reloaded.credential_version, MAX_CREDENTIAL_VERSION)
+    const verifiedWithOriginalPassword = await User.verifyCredentials(user.email, password)
+    assert.equal(verifiedWithOriginalPassword.id, user.id)
+    await assert.rejects(() => User.verifyCredentials(user.email, 'must-not-commit123'))
+
+    const activeRefresh = await RefreshToken.query()
+      .where('user_id', user.id)
+      .whereNull('revoked_at')
+    const activeResets = await PasswordResetToken.query()
+      .where('user_id', user.id)
+      .whereNull('consumed_at')
+    const accessTokens = await db.from('auth_access_tokens').where('tokenable_id', user.id)
+    assert.lengthOf(activeRefresh, 1)
+    assert.lengthOf(activeResets, 1)
+    assert.lengthOf(accessTokens, 1)
+
+    const stillCurrent = await services.jwtTokens.refresh(auth.refresh_token)
+    assert.isString(stillCurrent.access_token)
+  })
+
+  test('advances the penultimate credential generation exactly to the int4 boundary', async ({
+    assert,
+    cleanup,
+  }) => {
+    assert.equal(db.connectionGlobalTransactions.size, 0)
+    const services = createServices()
+    const { user } = await createAccount(cleanup, 'penultimate-generation')
+    await db
+      .from('users')
+      .where('id', user.id)
+      .update({ credential_version: MAX_CREDENTIAL_VERSION - 1 })
+
+    await db.transaction(async (client) => {
+      const locked = await services.usersRepository.findActiveByIdForUpdate(user.id, client)
+      assert.isNotNull(locked)
+      await services.credentialInvalidationService.run(user.id, client)
+    })
+
+    const reloaded = await User.findOrFail(user.id)
+    assert.equal(reloaded.credential_version, MAX_CREDENTIAL_VERSION)
   })
 
   test('allows exactly one concurrent rotation of the same refresh token', async ({

@@ -10,6 +10,16 @@ const PUBLIC_MESSAGE = 'Algo deu errado ao processar sua solicitação. Tente no
 
 class ProductionExceptionHandler extends HttpExceptionHandler {
   protected override debug = false
+
+  renderNotFoundForTest(ctx: HttpContext) {
+    return this.statusPages['404'](
+      {
+        message: 'Cannot GET:/private-route?token=secret',
+        status: 404,
+      },
+      ctx
+    )
+  }
 }
 
 type CapturedResponse = {
@@ -145,6 +155,23 @@ function assertNoInternalDetails(assert: Assert, response: CapturedResponse): vo
 }
 
 test.group('Production exception handler', () => {
+  test('renders a private 404 without serializing the route error', async ({ assert }) => {
+    const handler = new ProductionExceptionHandler()
+    const { captured, ctx } = createContext({ format: 'html', url: '/private-route' })
+
+    await handler.renderNotFoundForTest(ctx)
+
+    assert.equal(captured.inertia?.component, 'errors/not_found')
+    assert.deepEqual(captured.inertia?.props, {})
+    assert.equal(captured.headers.get('cache-control'), 'private, no-store')
+    assert.equal(captured.headers.get('x-robots-tag'), 'noindex, nofollow')
+    assert.equal(captured.headers.get('strict-transport-security'), 'max-age=15552000')
+    assert.equal(captured.headers.get('x-frame-options'), 'DENY')
+    assert.equal(captured.headers.get('x-content-type-options'), 'nosniff')
+    assert.notInclude(JSON.stringify(captured), 'private-route')
+    assert.notInclude(JSON.stringify(captured), 'token=secret')
+  })
+
   test('sanitizes database failures returned as JSON', async ({ assert }) => {
     const handler = new ProductionExceptionHandler()
     const { captured, ctx } = createContext({ format: 'json', url: '/api/v1/catalog/cities' })

@@ -69,6 +69,36 @@ describe('analytics utilities', () => {
     )
   })
 
+  it('transmits search text only for privacy-redacted no-result analytics', async () => {
+    setPrivacySignals(null, false)
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await trackAnalyticsEvents([
+      {
+        event_id: '00000000-0000-4000-8000-000000000001',
+        event_type: 'catalog_impression',
+        city_slug: 'londrina',
+        establishment_slug: 'bar-estacao-43-londrina',
+        category_slug: 'bares',
+        search_term: 'Estação',
+      },
+      {
+        event_id: '00000000-0000-4000-8000-000000000002',
+        event_type: 'search_without_results',
+        city_slug: 'londrina',
+        category_slug: 'bares',
+        search_term: 'Estação',
+      },
+    ])
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit
+    const payload = JSON.parse(String(request.body)) as { events: AnalyticsEventInput[] }
+
+    expect(payload.events[0]).not.toHaveProperty('search_term')
+    expect(payload.events[1]).toHaveProperty('search_term', 'Estação')
+  })
+
   it('respects Global Privacy Control and Do Not Track', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
     vi.stubGlobal('fetch', fetchMock)

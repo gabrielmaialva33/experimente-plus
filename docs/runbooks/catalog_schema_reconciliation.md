@@ -148,6 +148,9 @@ em `authorized_keys`, mantendo suas restrições existentes. Essa instalação e
 pertencem à janela; não foram executadas neste lote. Não deixar o forced command apontando para o
 arquivo que o próprio rollback pode substituir por uma versão antiga. O entrypoint deve ser
 atualizado separadamente quando seu contrato mudar; ele não instala automaticamente código recebido.
+Para a release que adiciona o fence de rotação bootstrap, seguir o
+[procedimento atômico de atualização do entrypoint](persistent_schema_reconciliation.md#atualização-obrigatória-do-entrypoint-externo)
+depois da promoção a LKG e antes de habilitar a rotação.
 
 ## Deploy e recuperação
 

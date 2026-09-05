@@ -18,6 +18,12 @@ type SettingsProfile = {
   username: string | null
 }
 
+type PublicServerError = {
+  code: 'E_INTERNAL_SERVER_ERROR'
+  message: 'Algo deu errado ao processar sua solicitação. Tente novamente em instantes.'
+  status: number
+}
+
 declare module '@adonisjs/inertia/types' {
   interface InertiaPages {
     // Auth
@@ -109,11 +115,9 @@ declare module '@adonisjs/inertia/types' {
     }
 
     // Error pages
-    'errors/not_found': {
-      error: Record<string, any>
-    }
+    'errors/not_found': Record<string, never>
     'errors/server_error': {
-      error: Record<string, any>
+      error: PublicServerError
     }
   }
 }

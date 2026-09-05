@@ -21,6 +21,18 @@ export interface AnalyticsEventInput {
 
 const MAX_BATCH_SIZE = 20
 
+function toAnalyticsWireEvent(event: AnalyticsEventInput): AnalyticsEventInput {
+  if (event.event_type === 'search_without_results' || !('search_term' in event)) {
+    return event
+  }
+
+  // Search text is useful only for privacy-redacted no-result analytics. Do not
+  // transmit it with impressions, views, or actions, even if a caller includes it.
+  const minimized = { ...event }
+  delete minimized.search_term
+  return minimized
+}
+
 export function analyticsEventId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -43,7 +55,7 @@ export async function trackAnalyticsEvents(events: AnalyticsEventInput[]): Promi
   }
 
   for (let index = 0; index < events.length; index += MAX_BATCH_SIZE) {
-    const batch = events.slice(index, index + MAX_BATCH_SIZE)
+    const batch = events.slice(index, index + MAX_BATCH_SIZE).map(toAnalyticsWireEvent)
 
     try {
       await fetch('/api/v1/analytics/events', {

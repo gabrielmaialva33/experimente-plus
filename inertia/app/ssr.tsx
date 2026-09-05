@@ -2,6 +2,7 @@ import { renderToString } from 'react-dom/server'
 import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react'
 import type { RenderInertiaSsrApp } from '@adonisjs/inertia/types'
 
+import { formatDocumentTitle } from '~/app/document_title'
 import { NetworkNotice } from '~/components/network_notice'
 import { ThemeProvider } from '~/providers/theme_provider'
 import { QueryProvider } from '~/providers/query_provider'
@@ -11,6 +12,8 @@ import { QueryProvider } from '~/providers/query_provider'
  * depend on `@inertiajs/core` just for the type.
  */
 type PaginaInertia = NonNullable<NonNullable<Parameters<typeof createInertiaApp>[0]>['page']>
+
+const appName = import.meta.env.VITE_APP_NAME || 'Experimente+'
 
 const render: RenderInertiaSsrApp = (page) => {
   return createInertiaApp({
@@ -23,6 +26,7 @@ const render: RenderInertiaSsrApp = (page) => {
      */
     page: { rememberedState: {}, ...page } as PaginaInertia,
     render: renderToString,
+    title: (title) => formatDocumentTitle(title, appName),
     resolve: (name) => {
       const paginas = import.meta.glob<{ default: ResolvedComponent }>('../pages/**/*.tsx', {
         eager: true,

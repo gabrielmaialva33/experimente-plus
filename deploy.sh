@@ -692,6 +692,19 @@ docker_command() {
   timeout --kill-after=5s 30 docker "$@"
 }
 
+assert_no_bootstrap_rotation() {
+  local rotation_containers
+  if ! rotation_containers=$(docker_command ps --all --quiet --no-trunc \
+      --filter 'label=com.experimente-plus.operation=bootstrap-rotation'); then
+    echo 'FALHA: não foi possível verificar rotações de credenciais bootstrap.' >&2
+    return 1
+  fi
+  if [[ -n "$rotation_containers" ]]; then
+    echo 'FALHA: rotação de credenciais bootstrap exige reconciliação antes do deploy.' >&2
+    return 1
+  fi
+}
+
 cleanup_migration_containers() {
   local container_id metadata
   if ! docker_command ps --all --quiet --no-trunc \
@@ -905,6 +918,9 @@ main() {
     echo 'FALHA: outro deploy está em andamento neste host.' >&2
     exit 75
   fi
+  if ! assert_no_bootstrap_rotation; then
+    exit 75
+  fi
 
   RUN_DIR=$(mktemp -d "$STATE_DIR/run.XXXXXX")
   NEW_SOURCE="$RUN_DIR/source"
@@ -1005,6 +1021,13 @@ main() {
   if ! git merge-base --is-ancestor "$GOOD_REVISION" "$NEW_REVISION"; then
     echo 'FALHA: revisão solicitada não sucede a versão validada em produção.' >&2
     return 1
+  fi
+
+  # Recheck immediately before the first release mutation. The shared flock
+  # prevents a conforming rotation from starting after this point; an orphaned
+  # or out-of-protocol container remains a hard stop and is never removed here.
+  if ! assert_no_bootstrap_rotation; then
+    return 75
   fi
   if [[ "$GOOD_REVISION" == "$NEW_REVISION" ]]; then
     DEPLOY_STARTED=1

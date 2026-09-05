@@ -4,6 +4,7 @@ import '../css/app.css'
 import { hydrateRoot } from 'react-dom/client'
 import { createInertiaApp, router, type ResolvedComponent } from '@inertiajs/react'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
+import { formatDocumentTitle } from '~/app/document_title'
 import { NetworkNotice } from '~/components/network_notice'
 import { bindInertiaFailureNotice } from '~/lib/network_notice'
 import { ThemeProvider } from '~/providers/theme_provider'
@@ -16,7 +17,7 @@ bindInertiaFailureNotice(router)
 createInertiaApp({
   progress: { color: '#cf4217' },
 
-  title: (title) => `${title} - ${appName}`,
+  title: (title) => formatDocumentTitle(title, appName),
 
   resolve: async (name) => {
     /**

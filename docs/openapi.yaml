@@ -34,6 +34,7 @@ info:
     - **Web Cookie Lifetime**: 1 hour
     - **Refresh Token Lifetime**: 3 days
     - **Access Token Format**: JWT with `token_use=access`
+    - **Credential Invalidation**: Password reset, administrative password change, bootstrap credential rotation, and account deletion immediately invalidate previously issued access JWTs as well as renewable credentials; clients handle the resulting `401` by returning to sign-in
     - **Refresh Token Format**: 32 random bytes encoded as 43 canonical unpadded base64url characters; it is not a JWT and whitespace is never normalized
     - **Rotation Serialization**: Refresh, operation creation, and operation switching share one single-use token chain and must be serialized by clients
 
@@ -80,7 +81,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Short-lived access JWT. Opaque refresh tokens are never accepted here.
+      description: Short-lived access JWT. Opaque refresh tokens are never accepted here. Previously issued JWTs become invalid immediately after a global credential rotation for their user.
 
   schemas:
     Region:
@@ -3633,6 +3634,40 @@ components:
       type: object
       required: [event_id, event_type, city_slug]
       additionalProperties: false
+      description: |
+        `search_without_results` requires `search_term` and forbids `establishment_slug`.
+        Every other event type requires `establishment_slug` and canonical clients must omit
+        `search_term`. During the current rollout, the server tolerates and discards
+        `search_term` on legacy `catalog_impression` requests; it is never stored for impressions.
+      oneOf:
+        - title: Search without results
+          properties:
+            event_type:
+              const: search_without_results
+          required: [search_term]
+          not:
+            required: [establishment_slug]
+        - title: Establishment event
+          properties:
+            event_type:
+              enum:
+                - catalog_impression
+                - establishment_view
+                - route_click
+                - whatsapp_click
+                - phone_click
+                - website_click
+                - share_click
+          required: [establishment_slug]
+          not:
+            required: [search_term]
+        - title: Legacy catalog impression compatibility
+          deprecated: true
+          description: Transitional input accepted and discarded for already-published clients.
+          properties:
+            event_type:
+              const: catalog_impression
+          required: [establishment_slug, search_term]
       properties:
         event_id:
           type: string
@@ -3660,7 +3695,8 @@ components:
         search_term:
           type: string
           minLength: 1
-          maxLength: 160
+          maxLength: 120
+          description: Accepted only for `search_without_results` in the canonical contract.
 
     AnalyticsEventsRequest:
       type: object
@@ -6674,7 +6710,7 @@ paths:
     post:
       operationId: resetPassword
       summary: Reset an account password
-      description: Consumes a valid reset token, changes the password, invalidates other reset links, and revokes active API refresh tokens.
+      description: Consumes a valid reset token, changes the password, invalidates other reset links, and immediately revokes active API refresh tokens and previously issued access JWTs.
       tags:
         - Authentication
       security: []
