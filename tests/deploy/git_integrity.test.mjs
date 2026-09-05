@@ -117,6 +117,11 @@ git() {
   command git "$@"
 }
 timeout() {
+  if [[ "$#" -eq 9 && "$1" == --kill-after=5s && "$2" == 30 && "$3" == docker &&
+        "$4" == ps && "$5" == --all && "$6" == --quiet && "$7" == --no-trunc &&
+        "$8" == --filter && "$9" == label=com.experimente-plus.operation=bootstrap-rotation ]]; then
+    return 0
+  fi
   printf 'timeout\\n' >> "$DEPLOY_TEST_TRACE"
   return 88
 }
@@ -622,6 +627,11 @@ test('Git filter enumeration rc 86 fails closed before fetch or materialization'
       '  command git "$@"',
       '}',
       'timeout() {',
+      '  if [[ "$#" -eq 9 && "$1" == --kill-after=5s && "$2" == 30 && "$3" == docker &&',
+      '        "$4" == ps && "$5" == --all && "$6" == --quiet && "$7" == --no-trunc &&',
+      '        "$8" == --filter && "$9" == label=com.experimente-plus.operation=bootstrap-rotation ]]; then',
+      '    return 0',
+      '  fi',
       '  printf \'timeout\\n\' >> "$DEPLOY_TEST_TRACE"',
       '  return 88',
       '}',
