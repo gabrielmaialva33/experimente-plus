@@ -18,8 +18,9 @@ import {
   JWT_ISSUER,
   REFRESH_TOKEN_TTL_SECONDS,
 } from '#shared/jwt/constants'
+import { isValidCredentialVersion } from '#shared/jwt/credential_version'
 import JwtService from '#shared/jwt/jwt_service'
-import type { JwtContent } from '#shared/jwt/types'
+import type { JwtContent, JwtSessionContext } from '#shared/jwt/types'
 import env from '#start/env'
 
 export type GenerateAuthTokensResponse = {
@@ -65,7 +66,7 @@ export default class JwtAuthTokensService {
    * login, password changes, refresh rotation, logout, and account deletion.
    */
   async startChain(
-    payload: JwtContent,
+    payload: JwtSessionContext,
     options: StartRefreshChainOptions
   ): Promise<GenerateAuthTokensResponse> {
     return db.transaction(async (client) => {
@@ -76,8 +77,13 @@ export default class JwtAuthTokensService {
         throw new authErrors.E_INVALID_CREDENTIALS('Invalid user credentials')
       }
 
-      const accessToken = await this.generateAccessToken(payload)
-      const refreshToken = await this.issueRefreshToken(payload, { client })
+      const currentContext: JwtContent = {
+        userId: user.id,
+        tenantId: payload.tenantId,
+        credentialVersion: user.credential_version,
+      }
+      const accessToken = await this.generateAccessToken(currentContext)
+      const refreshToken = await this.issueRefreshToken(currentContext, { client })
 
       return this.toResponse(accessToken, refreshToken)
     })
@@ -164,6 +170,7 @@ export default class JwtAuthTokensService {
       const payload: JwtContent = {
         userId: user.id,
         tenantId: context.tenantId,
+        credentialVersion: user.credential_version,
       }
 
       const accessToken = await this.generateAccessToken(payload)
@@ -210,6 +217,10 @@ export default class JwtAuthTokensService {
   }
 
   private generateAccessToken(payload: JwtContent): Promise<string> {
+    if (!isValidCredentialVersion(payload.credentialVersion)) {
+      throw new TypeError('Cannot issue an access token with an invalid credential version')
+    }
+
     return this.jwtService.sign(
       {
         ...payload,
@@ -227,7 +238,7 @@ export default class JwtAuthTokensService {
   }
 
   private async issueRefreshToken(
-    payload: JwtContent,
+    payload: JwtSessionContext,
     options: RefreshTokenIssueOptions = {}
   ): Promise<string> {
     const token = randomBytes(REFRESH_TOKEN_BYTES).toString('base64url')

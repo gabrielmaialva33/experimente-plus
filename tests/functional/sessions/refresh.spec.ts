@@ -55,10 +55,12 @@ test.group('Session refresh tokens', (group) => {
     const payload = jwt.verify(accessToken, env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY')), {
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
-    }) as jwt.JwtPayload & { token_use: string; userId: number }
+    }) as jwt.JwtPayload & { token_use: string; userId: number; credentialVersion: number }
 
     assert.equal(payload.token_use, 'access')
     assert.equal(payload.userId, user.id)
+    assert.equal(payload.credentialVersion, user.credential_version)
+    assert.notProperty(user.serialize(), 'credential_version')
     assert.isString(payload.jti)
     assert.equal(payload.exp! - payload.iat!, 900)
     assert.isNull(jwt.decode(refreshToken))
@@ -77,6 +79,35 @@ test.group('Session refresh tokens', (group) => {
 
     const response = await client.get('/api/v1/me').bearerToken(refreshToken)
     response.assertStatus(401)
+  })
+
+  test('should reject access JWTs without the current credential version', async ({ client }) => {
+    const { user } = await signIn(client)
+    const secret = env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY'))
+    const options: jwt.SignOptions = {
+      expiresIn: '15m',
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    }
+    const baseClaims = {
+      sub: String(user.id),
+      userId: user.id,
+      token_use: 'access',
+    }
+    const invalidTokens = [
+      jwt.sign(baseClaims, secret, options),
+      jwt.sign({ ...baseClaims, credentialVersion: user.credential_version + 1 }, secret, options),
+      jwt.sign(
+        { ...baseClaims, credentialVersion: String(user.credential_version) },
+        secret,
+        options
+      ),
+    ]
+
+    for (const token of invalidTokens) {
+      const response = await client.get('/api/v1/me').bearerToken(token)
+      response.assertStatus(401)
+    }
   })
 
   test('should rotate refresh tokens and reject replay of the previous token', async ({
@@ -101,6 +132,13 @@ test.group('Session refresh tokens', (group) => {
     const rotatedAccessToken = response.body().auth.access_token as string
     const rotatedRefreshToken = response.body().auth.refresh_token as string
     assert.notEqual(rotatedRefreshToken, refreshToken)
+
+    const rotatedPayload = jwt.verify(
+      rotatedAccessToken,
+      env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY')),
+      { issuer: JWT_ISSUER, audience: JWT_AUDIENCE }
+    ) as jwt.JwtPayload & { credentialVersion: number }
+    assert.equal(rotatedPayload.credentialVersion, user.credential_version)
 
     const accessResponse = await client.get('/api/v1/me').bearerToken(rotatedAccessToken)
     accessResponse.assertStatus(200)

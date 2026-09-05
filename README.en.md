@@ -243,7 +243,8 @@ the validation link. The local `docker-compose.yml` defaults to `NODE_ENV=develo
 
 The pipeline in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every push:
 frozen install, lint, typecheck, Japa suites, Vitest, and the production build. On `master`, a
-`deploy` job connects over SSH and triggers [`deploy.sh`](deploy.sh) on the host.
+`deploy` job sends the same `github.sha` used by the validated checkout over SSH and triggers
+[`deploy.sh`](deploy.sh) on the host.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {
@@ -254,15 +255,56 @@ frozen install, lint, typecheck, Japa suites, Vitest, and the production build. 
 flowchart LR
     Push["push on master"] --> CI["CI<br/>lint · typecheck · tests · build"]
     CI -->|green| Deploy["deploy job<br/>ssh forced command"]
-    Deploy --> Script["deploy.sh<br/>reset --hard · build · up"]
-    Script --> Health{"HTTP 200<br/>within 120s?"}
-    Health -->|yes| Ok["published"]
-    Health -->|no| Back["roll code back<br/>and rebuild"]
+    Deploy --> Script["deploy.sh<br/>pinned SHA · preflight · build · migrate · up"]
+    Script --> Ready{"Home responds<br/>within 120s?"}
+    Ready -->|yes| Catalog{"Catalog smoke<br/>HTML · Inertia · APIs"}
+    Catalog -->|passed| Ok["published"]
+    Ready -->|no| Back["restore revision and image<br/>and validate rollback"]
+    Catalog -->|failed| Back
 ```
 
-`deploy.sh` syncs with `origin/master`, rebuilds the image, starts the container — which applies
-pending migrations before serving — and waits for the app to answer. If it never answers, the code
-returns to the previous commit.
+`deploy.sh` requires a full commit SHA, fetches that exact commit, and verifies its identity. Over
+forced SSH, it accepts the SHA only when it belongs to the remote `master` history fetched in the
+same operation. It rejects untracked files outside the operational allowlist, including Git-ignored
+files. The tracked preflight compares the index object graph with `HEAD` and manually hashes regular
+worktree files with `git hash-object --no-filters`, without invoking diff filters.
+
+The build uses a verified snapshot extracted from that commit outside the working tree, so files
+appearing later cannot contaminate `COPY . .` either. To materialize the release, the script advances
+the index with plain `git read-tree` (without `--reset`/`-u`) and `HEAD` with an expected-old-value guarded
+`git update-ref`, then copies from that snapshot with `rsync --archive --checksum`. It never runs
+checkout, any form of `git reset`, or `git clean`.
+
+The script rebuilds the image, stops the service, and applies pending migrations exactly once in a
+detached one-shot container whose name and labels are bound to the revision. It waits on the concrete
+container ID for up to 600s and, regardless of the result, removes migration containers in that
+namespace and proves that none remain before any `compose up`, including rollback. Only then does it
+start the HTTP server. It waits up to 120s for the home page and then runs
+[`scripts/smoke_catalog.sh`](scripts/smoke_catalog.sh) under an external 45s limit: home, cities, the
+city catalog in HTML and Inertia, and the establishments and filters APIs must return `200` with the
+expected content type. Readiness and smoke `curl` calls ignore local configuration and proxies. A
+trap handles materialization, build, migration, startup, and validation failures by restoring the
+last verified revision and image without rebuilding, then checking readiness and catalog again using
+the smoke contract stored for that good revision. APIs are checked once after readiness to avoid
+exhausting the anonymous rate limit.
+
+A host `flock` serializes manual and CI deployments through recovery. The `last-known-good` record
+lives in the common Git directory, stores revision/image/smoke SHA256, and advances only after
+validation. The smoke script is retained there by hash; `HEAD` is never an implicit
+fallback. The first run requires `DEPLOY_INITIAL_GOOD_REVISION` identifying the revision actually
+being served and, if it has no smoke script, `DEPLOY_INITIAL_GOOD_SMOKE_REVISION` identifying a
+reviewed compatible contract, as described in the [runbook](docs/runbooks/catalog_schema_reconciliation.md).
+`/usr/bin/rsync`, `/usr/bin/sync`, and `/usr/bin/jq` are prerequisites: the first two materialize
+snapshots and make LKG publication durable; the third validates the effective build model. The CI
+job has a 75-minute limit and its SSH step a 70-minute limit, in addition to keepalives; host
+operations have timeouts too.
+The HTTPS fetch runs in an isolated bare repository, NEW must descend from the verified release,
+and Compose uses immutable snapshots of both code and `.env` throughout rollout and rollback.
+
+The smoke uses the operation's trusted `Host` and a real city (`londrina` by default). Configure
+`CATALOG_SMOKE_BASE_URL`, `CATALOG_SMOKE_HOST`, and `CATALOG_SMOKE_CITY_SLUG` in the deploy process
+environment to override them. It neither follows redirects nor prints response bodies. Its tests
+use a simulated HTTP server and run without a database: `node --test tests/deploy/*.test.mjs`.
 
 > [!WARNING]
 > The rollback covers **code only**. Migrations already applied are not reverted.
@@ -275,23 +317,31 @@ Before deploying to the VPS, configure `BENEFIT_PRESENTATION_BASE_URL` with a pu
 origin or ensure the `APP_URL` fallback is a valid HTTPS origin; otherwise, production bootstrap
 will intentionally fail.
 
-The key the CI uses carries a forced command in the host's `authorized_keys`, so it runs `deploy.sh`
-and nothing else.
+The CI key carries a forced command in the host's `authorized_keys`. Install the reviewed entrypoint
+outside the checkout so rollback cannot downgrade it. It only accepts `SSH_ORIGINAL_COMMAND` in
+the form `deploy <full lowercase SHA>`, without shell evaluation. Manual deployments also require
+that SHA as their sole argument. `.dockerignore` excludes credentials, `.env.*.local`, logs,
+`storage/uploads/**`, and `storage/seed-media/**`; the runbook documents the operational allowlist.
 
 ---
 
 ## Migrations before version 1.0
 
-While the product has no published stable version, the schema must describe a fresh, canonical
-install. Changes to unreleased tables belong in the original `create_*` migration; disposable
-development and test databases should be recreated.
+Consolidation into the original `create_*` migration only applies to migrations that have never
+reached a persistent environment. From the first pilot or production deployment, applied history
+is append-only, even before 1.0. Changes to deployed tables, constraints, indexes, functions, and
+triggers require a new forward migration; editing an applied file does not upgrade the database.
 
-Because the size and format of `benefit_redemptions.receipt_code` were corrected in its original
-`create_*` migration, development and test databases that already ran it must be recreated before
-validating this contract. This documentation does not authorize resetting a database with pilot
-data.
+The forward migration `1788556800100_reconcile_benefit_receipt_codes.ts` reconciles
+`benefit_redemptions.receipt_code`: it validates existing values before applying `varchar(20) NOT NULL`
+and the `^EXP-[0-9A-F]{16}$` check. Invalid data aborts without truncation or normalization; existing
+databases do not need to be recreated for this repair. Scenarios and rollout coordination are in the
+[persistent contracts runbook](docs/runbooks/persistent_schema_reconciliation.md).
 
-After the first stable release, history becomes append-only.
+Forward repairs must support the old schema, clean installations, and documented operational
+hotfixes while preserving data. The `catalog_establishments.attribute_slugs` repair and validation
+window are described in the [catalog runbook](docs/runbooks/catalog_schema_reconciliation.md).
+Code rollback does not revert migrations; each repair must document that compatibility.
 
 ---
 

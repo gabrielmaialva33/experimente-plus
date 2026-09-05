@@ -50,6 +50,10 @@ services:
     build:
       context: .
       target: production
+    # Preserve the one-command local stack on a fresh pgdata volume. Production
+    # deliberately omits this override and runs migrations as a detached,
+    # deployment-controlled one-shot before starting the HTTP service.
+    command: ['sh', '-c', 'node ace.js migration:run --force && exec node bin/server.js']
     restart: unless-stopped
     depends_on:
       postgres:

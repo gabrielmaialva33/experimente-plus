@@ -6,6 +6,9 @@ coverage
 .vscode
 .DS_STORE
 .env
+.env.local
+.env.*.local
+**/.env.*.local
 tmp
 
 # Additional .gitignore ignores (any custom file you wish)
@@ -18,3 +21,13 @@ docker-compose*
 *.md
 .git
 .gitignore
+
+# Operational secrets and logs must never enter COPY . . (including untracked files).
+.bootstrap-credentials
+**/.bootstrap-credentials*
+build.log
+**/*.log
+
+# Persistent media belongs in runtime volumes, never in image layers/build cache.
+storage/uploads/**
+storage/seed-media/**

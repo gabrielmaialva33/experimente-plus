@@ -1,3 +1,4 @@
+import { type symbols } from '@adonisjs/auth'
 import { type GuardConfigProvider } from '@adonisjs/auth/types'
 import type { HttpContext } from '@adonisjs/core/http'
 import { type Secret } from '@adonisjs/core/helpers'
@@ -14,7 +15,12 @@ export function jwtGuard<UserProvider extends JwtUserProviderContract<unknown>>(
   audience?: string
   useCookies?: boolean
   cookieName?: string
-  content: <T>(user: JwtGuardUser<T>) => Record<string, unknown>
+  content: (
+    user: JwtGuardUser<UserProvider[typeof symbols.PROVIDER_REAL_USER]>
+  ) => Record<string, unknown>
+  getCredentialVersion: (
+    user: JwtGuardUser<UserProvider[typeof symbols.PROVIDER_REAL_USER]>
+  ) => number
 }): GuardConfigProvider<(ctx: HttpContext) => JwtGuard<UserProvider>> {
   return {
     async resolver(_, app) {
@@ -33,6 +39,7 @@ export function jwtGuard<UserProvider extends JwtUserProviderContract<unknown>>(
           sameSite: 'lax',
         },
         content: config.content,
+        getCredentialVersion: config.getCredentialVersion,
       }
 
       return (ctx) => new JwtGuard(ctx, config.provider, options)

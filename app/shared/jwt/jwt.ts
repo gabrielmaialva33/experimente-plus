@@ -6,6 +6,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import jwt from 'jsonwebtoken'
 
 import { JWT_COOKIE_NAME } from '#shared/jwt/constants'
+import { credentialVersionMatches, isValidCredentialVersion } from '#shared/jwt/credential_version'
 import type {
   AccessTokenPayload,
   JwtGuardOptions,
@@ -95,7 +96,8 @@ export class JwtGuard<
         typeof verified === 'string' ||
         verified.token_use !== 'access' ||
         !('userId' in verified) ||
-        (typeof verified.userId !== 'string' && typeof verified.userId !== 'number')
+        (typeof verified.userId !== 'string' && typeof verified.userId !== 'number') ||
+        !isValidCredentialVersion(verified.credentialVersion)
       ) {
         return this.#throwUnauthorized()
       }
@@ -107,6 +109,15 @@ export class JwtGuard<
 
     const providerUser = await this.#userProvider.findById(payload.userId)
     if (!providerUser) {
+      return this.#throwUnauthorized()
+    }
+
+    if (
+      !credentialVersionMatches(
+        payload.credentialVersion,
+        this.#options.getCredentialVersion(providerUser)
+      )
+    ) {
       return this.#throwUnauthorized()
     }
 
@@ -154,6 +165,11 @@ export class JwtGuard<
     const rawId = providerUser.getId()
     const userId = typeof rawId === 'number' || typeof rawId === 'string' ? rawId : rawId.toString()
     const customContent = this.#options.content?.(providerUser) ?? {}
+    const credentialVersion = this.#options.getCredentialVersion(providerUser)
+
+    if (!isValidCredentialVersion(credentialVersion)) {
+      throw new TypeError('Cannot issue an access token with an invalid credential version')
+    }
 
     return jwt.sign(
       {
@@ -161,6 +177,7 @@ export class JwtGuard<
         ...extraClaims,
         sub: String(userId),
         userId,
+        credentialVersion,
         token_use: 'access',
       },
       this.#options.secret,

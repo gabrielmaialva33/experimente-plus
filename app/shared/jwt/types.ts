@@ -15,9 +15,13 @@ export interface JwtUserProviderContract<RealUser> {
   findById(identifier: string | number | BigInt): Promise<JwtGuardUser<RealUser> | null>
 }
 
-export type JwtContent = {
+export type JwtSessionContext = {
   userId: string | number
   tenantId?: number
+}
+
+export type JwtContent = JwtSessionContext & {
+  credentialVersion: number
 }
 
 export type AccessTokenPayload = JwtPayload &
@@ -41,4 +45,5 @@ export type JwtGuardOptions<RealUser = unknown> = {
   cookieName?: string
   cookieOptions?: JwtCookieOptions
   content?: (user: JwtGuardUser<RealUser>) => Record<string, unknown>
+  getCredentialVersion: (user: JwtGuardUser<RealUser>) => number
 }

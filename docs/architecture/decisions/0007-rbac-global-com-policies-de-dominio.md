@@ -377,11 +377,13 @@ Rejeitado para scoping de tenant. Acesso transversal deve ser explícito e audit
 
 ## Impacto nas migrations canônicas
 
-Quando EP-01/EP-02 começar:
+Migrations que chegaram a qualquer ambiente persistente, inclusive o piloto pre-1.0, são publicadas e seguem a regra append-only. Alterações nesses contratos exigem novas migrations forward; editar um arquivo já aplicado não atualiza o banco. Somente migrations que nunca chegaram a um ambiente persistente podem ser consolidadas nos arquivos originais.
 
-- manter somente `moderator` na migration original de roles, sem restaurar a antiga role global `editor`;
+Na evolução desses contratos:
+
+- manter `moderator` como substituto da antiga role global `editor`; reconciliar a remoção do `editor` global em ambientes já implantados por migration forward, preservando `editor` como papel interno de organização;
 - estender enums de resources/actions;
-- incorporar permissions do produto à migration original de defaults, seguindo a política pre-1.0;
+- incorporar novas permissions do produto por migrations forward quando os defaults originais já tiverem sido implantados;
 - manter role `user` como default;
 - criar `organization_members` com role e estado validados por constraint;
 - adicionar testes que comparem migration e catálogo runtime de permissions.

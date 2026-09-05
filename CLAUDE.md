@@ -12,7 +12,7 @@ Tour Londrina is a product-experience reference, not an implementation contract.
 
 City and category are core discovery dimensions. A city is not a tenant: tenant represents an isolated platform operation, while organizations may own multiple public establishments across multiple cities. Public discovery must not require tenant membership. Monetization, benefits, review policies, and AI behavior remain staged decisions documented under `docs/product/`.
 
-Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content is versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role. EP-01 — Geography and Taxonomy is implemented; EP-02 — Organizations and memberships is the next implementation milestone.
+Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content is versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role. EP-01 through EP-12 are implemented. The next milestone is operational pilot validation and evidence-driven backlog prioritization, not an automatic expansion of scope.
 
 ## ⚠️ CRITICAL RULE: KEEP THE MODULAR STRUCTURE
 
@@ -211,7 +211,7 @@ and are being phased out — prefer the top-level `ui/` components for new work.
 
 - **ORM**: Lucid with snake_case naming strategy
 - **Migrations**: `database/migrations/` (includes `create_tenants_table`, `create_user_tenants_table`)
-- **Pre-1.0 migration policy**: this application has not published a stable schema, so unshipped schema changes belong in the original `create_*` migration. Recreate dev/test databases instead of adding compatibility alters. Add a new migration only for a genuinely new table/schema object. After the first stable release, migrations become append-only.
+- **Migration policy**: only migrations that have never reached a persistent deployment may be consolidated into their original `create_*` file. From the first persistent pilot deployment, applied history is append-only, including tables, constraints, indexes, functions, and triggers. Use forward repairs that accept older schemas, clean installations, and documented hotfixes without losing data. Recreate only disposable dev/test databases; see `docs/runbooks/catalog_schema_reconciliation.md`.
 - **Soft Deletes**: `User` uses an `is_deleted` flag; other domains must opt in explicitly
 - **Relationships**: heavy use of many-to-many (RBAC roles/permissions, user↔tenant)
 
@@ -352,9 +352,10 @@ await loadHelpers() // helpers
    tenant middleware and scope every read/write by `ctx.tenant.id`. Roles, permissions and audit
    logs remain global in the current RBAC model.
 
-7. **Keep pre-1.0 migrations native** — update the original create migration for unshipped schema
-   changes and rebuild the disposable dev/test database. Do not add alter/backfill migrations for
-   compatibility with a schema that has never been released.
+7. **Preserve deployed migration history** — use new forward migrations for objects already
+   deployed to any persistent environment, including the pre-1.0 pilot. Keep repair SQL
+   self-contained and versioned; document rebuilds, rollout and rollback. Only migrations that
+   have never reached a persistent environment may be consolidated into their original file.
 
 8. **Example workflow** (new "products" feature)
 

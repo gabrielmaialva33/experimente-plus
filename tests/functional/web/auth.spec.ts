@@ -41,6 +41,7 @@ function signedWebAccessCookie(user: User, tenantId?: unknown): string {
     {
       sub: String(user.id),
       userId: user.id,
+      credentialVersion: user.credential_version,
       token_use: 'access',
       ...(tenantId === undefined ? {} : { tenantId }),
     },
@@ -484,6 +485,13 @@ test.group('Web authentication', (group) => {
     assert.exists(tokenCookie)
     assert.isNotEmpty(tokenCookie!.value)
     assert.isTrue(tokenCookie!.httpOnly)
+
+    const payload = jwt.verify(
+      tokenCookie!.value,
+      env.get('ACCESS_TOKEN_SECRET', env.get('APP_KEY')),
+      { issuer: JWT_ISSUER, audience: JWT_AUDIENCE }
+    ) as jwt.JwtPayload & { credentialVersion: number }
+    assert.equal(payload.credentialVersion, user.credential_version)
 
     const authenticatedHome = await client
       .get('/')

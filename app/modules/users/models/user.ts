@@ -3,6 +3,7 @@ import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
 import {
   BaseModel,
+  beforeCreate,
   beforeFetch,
   beforeFind,
   beforePaginate,
@@ -61,6 +62,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column({ serializeAs: null })
   declare is_deleted: boolean
+
+  @column({ serializeAs: null })
+  declare credential_version: number
 
   @column({
     serializeAs: null,
@@ -124,6 +128,13 @@ export default class User extends compose(BaseModel, AuthFinder) {
    * Hooks
    * ------------------------------------------------------
    */
+  @beforeCreate()
+  static initializeCredentialVersion(user: User) {
+    // Lucid does not hydrate database defaults into a newly inserted model.
+    // Keep first-use web cookies and test-client tokens aligned with the DB.
+    user.credential_version = 1
+  }
+
   @beforeSave()
   static canonicalizeIdentity(user: User) {
     if (user.$dirty.email) {

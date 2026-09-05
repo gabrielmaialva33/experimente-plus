@@ -10,7 +10,7 @@ Tour Londrina is a product-experience reference, not an implementation contract.
 
 City and category are core discovery dimensions. A city is not a tenant: tenant represents an isolated platform operation, while organizations may own multiple public establishments across multiple cities. Public discovery must not require tenant membership. Monetization, benefit rules, review policies, and later AI behavior remain staged product decisions documented under `docs/product/`.
 
-Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes resolve the operation from a trusted hostname instead of tenant membership; organization access uses domain policies; public establishment content and media composition are versioned; public search reads a rebuildable PostgreSQL projection; Partner is an organization membership, not a global role. EP-01 through EP-11 are implemented. The next milestone is operational pilot validation and evidence-driven backlog prioritization, not an automatic expansion of scope.
+Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes resolve the operation from a trusted hostname instead of tenant membership; organization access uses domain policies; public establishment content and media composition are versioned; public search reads a rebuildable PostgreSQL projection; Partner is an organization membership, not a global role. EP-01 through EP-12 are implemented. The next milestone is operational pilot validation and evidence-driven backlog prioritization, not an automatic expansion of scope.
 
 ## Project Structure & Module Organization
 
@@ -33,7 +33,9 @@ Use Node 24 from `.nvmrc`. Copy `.env.example` to `.env` for local development; 
 
 ## Migration Policy Before 1.0
 
-This application has not published a stable schema. Keep migrations optimized for a clean installation: when an unshipped table or constraint changes, update its original `create_*` migration and recreate the development/test database. Add a new migration only for a genuinely new table or other new schema object. After the first stable release, switch to append-only forward migrations and never rewrite published history.
+Only migrations that have never reached a persistent deployment may be consolidated into their original `create_*` file and validated by recreating disposable development/test databases. Once a migration has reached any persistent environment (including the pre-1.0 pilot), treat it as published: use append-only forward migrations for changes to its tables, constraints, indexes, functions, or triggers. Never rely on editing an applied migration to upgrade an existing database.
+
+Forward repairs must accept both the older deployed schema and a fresh installation; when a manual hotfix exists, they must also accept that state without losing data. Keep migration SQL self-contained and versioned, rebuild derived projections from their authoritative sources, and document the rollout and rollback behavior. Recreating a pilot or production database is not an upgrade strategy. See `docs/runbooks/catalog_schema_reconciliation.md` for the catalog repair and its validation scenarios.
 
 ## Coding Style & Naming Conventions
 

@@ -11,7 +11,6 @@ import {
   JWT_ISSUER,
   WEB_ACCESS_TOKEN_EXPIRES_IN,
 } from '#shared/jwt/constants'
-import type { JwtGuardUser } from '#shared/jwt/types'
 import env from '#start/env'
 
 const authConfig = defineConfig({
@@ -44,7 +43,8 @@ const authConfig = defineConfig({
       provider: sessionUserProvider({
         model: () => import('#modules/users/models/user'),
       }),
-      content: <User>(_user: JwtGuardUser<User>) => ({}),
+      content: () => ({}),
+      getCredentialVersion: (user) => user.getOriginal().credential_version,
     }),
   },
 })

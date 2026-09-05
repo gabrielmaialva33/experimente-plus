@@ -4,8 +4,10 @@ import {
   MemoryHeapCheck,
   MemoryRSSCheck,
 } from '@adonisjs/core/health'
-import { DbCheck, DbConnectionCountCheck } from '@adonisjs/lucid/database'
 import db from '@adonisjs/lucid/services/db'
+
+import { DatabaseConnectivityCheck } from '#modules/health/checks/database_connectivity_check'
+import { PostgresConnectionCapacityCheck } from '#modules/health/checks/postgres_connection_capacity_check'
 
 export const healthChecks = new HealthChecks().register([
   new DiskSpaceCheck(),
@@ -19,6 +21,6 @@ export const healthChecks = new HealthChecks().register([
   new MemoryHeapCheck().warnWhenExceedsPercentage(80).failWhenExceedsPercentage(90),
   new MemoryRSSCheck().warnWhenExceedsPercentage(70).failWhenExceedsPercentage(85),
 
-  new DbCheck(db.connection()),
-  new DbConnectionCountCheck(db.connection()),
+  new DatabaseConnectivityCheck(db.connection()),
+  new PostgresConnectionCapacityCheck(db.connection()),
 ])

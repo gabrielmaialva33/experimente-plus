@@ -31,5 +31,5 @@ COPY --from=build /app/build ./
 COPY pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 EXPOSE 3333
-# Run pending migrations, then start the HTTP server (compiled ace is plain JS).
-CMD ["sh", "-c", "node ace.js migration:run --force && node bin/server.js"]
+# Migrations are a one-shot deploy phase; the long-running service starts only HTTP.
+CMD ["node", "bin/server.js"]

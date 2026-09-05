@@ -1,11 +1,40 @@
 import app from '@adonisjs/core/services/app'
 import { ExceptionHandler, type HttpContext } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
+import { errors as driveErrors } from '@adonisjs/drive'
 
 import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 const MALFORMED_JSON_MESSAGE = 'Malformed JSON request body'
 const UNAUTHORIZED_ACCESS_MESSAGE = 'Unauthorized access'
+const INTERNAL_SERVER_ERROR_CODE = 'E_INTERNAL_SERVER_ERROR'
+const FILE_NOT_FOUND_ERROR_CODE = 'E_FILE_NOT_FOUND'
+const FILE_NOT_FOUND_ERROR_MESSAGE = 'File not found'
+const JSON_API_MEDIA_TYPE = 'application/vnd.api+json'
+const HSTS_MAX_AGE_SECONDS = 180 * 24 * 60 * 60
+const INTERNAL_SERVER_ERROR_MESSAGE =
+  'Algo deu errado ao processar sua solicitação. Tente novamente em instantes.'
+const INTERNAL_SERVER_ERROR_HTML = `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Erro interno</title>
+  </head>
+  <body>
+    <main>
+      <h1>Algo deu errado</h1>
+      <p>${INTERNAL_SERVER_ERROR_MESSAGE}</p>
+      <p>Código: ${INTERNAL_SERVER_ERROR_CODE}</p>
+    </main>
+  </body>
+</html>`
+
+type PublicServerError = {
+  code: typeof INTERNAL_SERVER_ERROR_CODE
+  message: typeof INTERNAL_SERVER_ERROR_MESSAGE
+  status: number
+}
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
@@ -27,7 +56,8 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    */
   protected statusPages: Record<StatusPageRange, StatusPageRenderer> = {
     '404': (error, { inertia }) => inertia.render('errors/not_found', { error }),
-    '500..599': (error, { inertia }) => inertia.render('errors/server_error', { error }),
+    '500..599': (error, { inertia }) =>
+      inertia.render('errors/server_error', { error: createPublicServerError(error.status) }),
   }
 
   /**
@@ -40,7 +70,28 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       setPrivateResponseHeaders(ctx.response)
     }
 
-    if (isApiRequest && isMalformedJsonError(error)) {
+    const httpError = this.toHttpError(error)
+
+    const debuggingEnabled = this.isDebuggingEnabled(ctx)
+
+    /**
+     * Adonis intentionally renders an exception's message in non-debug JSON
+     * responses. Database drivers commonly put the SQL query and schema
+     * identifiers in that message. Gate on the original status before any
+     * code-specific handler can downgrade or render it. Never invoke or reuse
+     * the response from a self-handler whose original status is 5xx. The only
+     * downgrade is a Drive error whose root cause is proven to be ENOENT, and
+     * that response is rebuilt from constants.
+     */
+    if (!debuggingEnabled && httpError.status >= 500) {
+      if (isMissingLocalDriveFile(httpError)) {
+        return this.renderPublicFileNotFound(ctx, isApiRequest)
+      }
+
+      return this.renderPublicServerError(httpError.status, ctx, isApiRequest)
+    }
+
+    if (isApiRequest && isMalformedJsonError(httpError)) {
       return ctx.response.status(400).json({
         status: 400,
         message: MALFORMED_JSON_MESSAGE,
@@ -50,13 +101,8 @@ export default class HttpExceptionHandler extends ExceptionHandler {
     /**
      * Handle validation errors from VineJS
      */
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === 'E_VALIDATION_ERROR'
-    ) {
-      const validationError = error as any
+    if ('code' in httpError && httpError.code === 'E_VALIDATION_ERROR') {
+      const validationError = httpError as any
       const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
 
       if (isApiRequest || acceptsJson) {
@@ -65,19 +111,14 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         })
       }
 
-      return super.handle(error, ctx)
+      return super.handle(httpError, ctx)
     }
 
     /**
      * Handle rate limiting errors
      */
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === 'E_TOO_MANY_REQUESTS'
-    ) {
-      const rateLimitError = error as any
+    if ('code' in httpError && httpError.code === 'E_TOO_MANY_REQUESTS') {
+      const rateLimitError = httpError as any
       const message = rateLimitError.message || 'Too many requests'
 
       // Set rate limit headers from the response object
@@ -110,12 +151,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
      * A browser navigating to a protected page should land on the login screen,
      * not on a bare 401. API clients keep the JSON body they parse.
      */
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === 'E_UNAUTHORIZED_ACCESS'
-    ) {
+    if ('code' in httpError && httpError.code === 'E_UNAUTHORIZED_ACCESS') {
       if (isApiRequest) {
         return ctx.response.status(401).json({
           errors: [{ message: UNAUTHORIZED_ACCESS_MESSAGE }],
@@ -125,13 +161,125 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       const acceptsJson = ctx.request.accepts(['html', 'json']) === 'json'
 
       if (!acceptsJson) {
-        const authError = error as any
+        const authError = httpError as any
         ctx.session.flash('error', authError.message || 'Faça login para continuar.')
         return ctx.response.redirect().toPath('/login')
       }
     }
 
-    return super.handle(error, ctx)
+    return super.handle(httpError, ctx)
+  }
+
+  private async renderPublicServerError(status: number, ctx: HttpContext, isApiRequest: boolean) {
+    const publicStatus = Number.isInteger(status) && status >= 500 && status <= 599 ? status : 500
+    const publicError = createPublicServerError(publicStatus)
+    const requestId = ctx.request.id()
+
+    this.preparePublicErrorResponse(ctx, requestId)
+
+    const responseFormat = ctx.request.accepts(['html', JSON_API_MEDIA_TYPE, 'json'])
+    if (responseFormat === JSON_API_MEDIA_TYPE) {
+      ctx.response.header('Content-Type', JSON_API_MEDIA_TYPE)
+      return ctx.response.status(publicStatus).send({
+        errors: [
+          {
+            code: publicError.code,
+            status: String(publicError.status),
+            title: publicError.message,
+          },
+        ],
+      })
+    }
+
+    if (isApiRequest || responseFormat === 'json') {
+      ctx.response.header('Content-Type', 'application/json; charset=utf-8')
+      return ctx.response.status(publicStatus).json({ errors: [publicError] })
+    }
+
+    try {
+      const page = await ctx.inertia.render('errors/server_error', { error: publicError })
+      return ctx.response.status(publicStatus).send(page)
+    } catch (renderError) {
+      this.reportSecondaryFailure(
+        ctx,
+        'server_error_page_render_failed',
+        renderError,
+        'Failed to render the sanitized server error page'
+      )
+
+      /**
+       * Error pages must not depend on the same database-backed shared props
+       * that may have caused the original failure. A static final response also
+       * protects errors raised before the Inertia middleware was initialized.
+       */
+      this.preparePublicErrorResponse(ctx, requestId)
+      return ctx.response.status(publicStatus).type('html').send(INTERNAL_SERVER_ERROR_HTML)
+    }
+  }
+
+  private renderPublicFileNotFound(ctx: HttpContext, isApiRequest: boolean) {
+    const requestId = ctx.request.id()
+    this.preparePublicErrorResponse(ctx, requestId)
+
+    const responseFormat = ctx.request.accepts(['html', JSON_API_MEDIA_TYPE, 'json'])
+    if (responseFormat === JSON_API_MEDIA_TYPE) {
+      ctx.response.header('Content-Type', JSON_API_MEDIA_TYPE)
+      return ctx.response.status(404).send({
+        errors: [
+          {
+            code: FILE_NOT_FOUND_ERROR_CODE,
+            status: '404',
+            title: FILE_NOT_FOUND_ERROR_MESSAGE,
+          },
+        ],
+      })
+    }
+
+    if (isApiRequest || responseFormat === 'json') {
+      ctx.response.header('Content-Type', 'application/json; charset=utf-8')
+      return ctx.response.status(404).json({
+        errors: [
+          {
+            code: FILE_NOT_FOUND_ERROR_CODE,
+            message: FILE_NOT_FOUND_ERROR_MESSAGE,
+            status: 404,
+          },
+        ],
+      })
+    }
+
+    ctx.response.header('Content-Type', 'text/plain; charset=utf-8')
+    return ctx.response.status(404).send(FILE_NOT_FOUND_ERROR_MESSAGE)
+  }
+
+  private preparePublicErrorResponse(ctx: HttpContext, requestId: string | undefined): void {
+    for (const header of Object.keys(ctx.response.getHeaders())) {
+      ctx.response.removeHeader(header)
+    }
+
+    setPrivateResponseHeaders(ctx.response)
+    // The sanitization above removes any header that may contain downstream
+    // diagnostics. Restore the same browser protections configured by Shield
+    // explicitly so even failures raised before/inside middleware stay safe.
+    ctx.response.header('Strict-Transport-Security', `max-age=${HSTS_MAX_AGE_SECONDS}`)
+    ctx.response.header('X-Frame-Options', 'DENY')
+    ctx.response.header('X-Content-Type-Options', 'nosniff')
+    if (requestId) {
+      ctx.response.header('X-Request-Id', requestId)
+    }
+  }
+
+  private reportSecondaryFailure(
+    ctx: HttpContext,
+    event: 'server_error_page_render_failed',
+    error: unknown,
+    message: string
+  ): void {
+    try {
+      ctx.logger.error({ err: error, event, requestId: ctx.request.id() }, message)
+    } catch {
+      // A logger failure must not escape the final dependency-free response.
+    }
   }
 
   /**
@@ -143,6 +291,33 @@ export default class HttpExceptionHandler extends ExceptionHandler {
   async report(error: unknown, ctx: HttpContext) {
     return super.report(error, ctx)
   }
+}
+
+function createPublicServerError(status: number): PublicServerError {
+  return {
+    code: INTERNAL_SERVER_ERROR_CODE,
+    message: INTERNAL_SERVER_ERROR_MESSAGE,
+    status,
+  }
+}
+
+function isMissingLocalDriveFile(error: unknown): boolean {
+  if (!(error instanceof driveErrors.CannotServeFileException)) {
+    return false
+  }
+
+  const seen = new Set<object>()
+  let cause: unknown = error
+
+  while (cause && typeof cause === 'object' && 'cause' in cause && cause.cause !== undefined) {
+    if (seen.has(cause)) {
+      return false
+    }
+    seen.add(cause)
+    cause = cause.cause
+  }
+
+  return Boolean(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENOENT')
 }
 
 function isMalformedJsonError(
