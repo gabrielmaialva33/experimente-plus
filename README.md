@@ -341,6 +341,10 @@ e a janela estão no [runbook dos contratos persistidos](docs/runbooks/persisten
 Correções forward devem funcionar sobre o schema antigo, sobre uma instalação limpa e sobre
 hotfixes operacionais documentados, preservando dados. O reparo de `catalog_establishments.attribute_slugs`
 e a janela de validação estão descritos no [runbook do catálogo](docs/runbooks/catalog_schema_reconciliation.md).
+
+O reverse proxy preserva políticas privadas emitidas pela aplicação e evita headers de segurança
+duplicados conforme o [runbook do Nginx](docs/runbooks/nginx_security_headers.md).
+
 Rollback de código não reverte migrations; cada reparo deve documentar essa compatibilidade.
 
 ---
