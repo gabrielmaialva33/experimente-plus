@@ -7,6 +7,7 @@ import { test } from 'node:test'
 
 const exec = promisify(execFile)
 const smokePath = fileURLToPath(new URL('../../scripts/smoke_catalog.sh', import.meta.url))
+const inertiaVersion = '0123456789abcdef0123456789abcdef'
 
 // Deliberately uses node:test rather than the Japa bootstrap, which migrates and
 // seeds the database even for unit tests. Only this loopback HTTP fixture is used.
@@ -19,8 +20,20 @@ async function runSmoke({
   const requests = []
   const server = createServer((request, response) => {
     requests.push({ url: request.url, headers: request.headers })
-    const isJson = request.url.startsWith('/api/') || request.headers['x-inertia'] === 'true'
-    const result = override?.(request) ?? {}
+    const isInertia = request.headers['x-inertia'] === 'true'
+    const isJson = request.url.startsWith('/api/') || isInertia
+    const overridden = override?.(request)
+    const result =
+      overridden ??
+      (isInertia && request.headers['x-inertia-version'] === undefined
+        ? {
+            status: 409,
+            headers: {
+              'x-inertia-version': inertiaVersion,
+              'x-inertia-location': request.url,
+            },
+          }
+        : {})
     response.writeHead(result.status ?? 200, {
       'content-type':
         result.contentType ?? (isJson ? 'application/json' : 'text/html; charset=utf-8'),
@@ -60,6 +73,7 @@ test('checks home, cities, SSR, Inertia, establishments and filters with the tru
       '/cidades',
       '/cidades/londrina',
       '/cidades/londrina',
+      '/cidades/londrina',
       '/api/v1/catalog/cities/londrina/establishments?per_page=1',
       '/api/v1/catalog/cities/londrina/filters',
     ]
@@ -73,8 +87,10 @@ test('checks home, cities, SSR, Inertia, establishments and filters with the tru
   assert.equal(result.requests[2].headers['x-inertia'], undefined)
   assert.equal(result.requests[3].headers['x-inertia'], 'true')
   assert.equal(result.requests[3].headers['x-requested-with'], 'XMLHttpRequest')
-  assert.equal(result.requests[4].headers.accept, 'application/json')
+  assert.equal(result.requests[3].headers['x-inertia-version'], undefined)
+  assert.equal(result.requests[4].headers['x-inertia-version'], inertiaVersion)
   assert.equal(result.requests[5].headers.accept, 'application/json')
+  assert.equal(result.requests[6].headers.accept, 'application/json')
 })
 
 test('bypasses inherited proxy variables for loopback smoke requests', async () => {
@@ -97,7 +113,7 @@ test('bypasses inherited proxy variables for loopback smoke requests', async () 
     })
 
     assert.equal(result.code, 0, result.stderr)
-    assert.equal(result.requests.length, 6)
+    assert.equal(result.requests.length, 7)
     assert.deepEqual(proxyRequests, [])
   } finally {
     await new Promise((resolve) => proxy.close(resolve))
@@ -153,7 +169,7 @@ test('accepts the configured city and operation instead of hardcoding their data
   const result = await runSmoke({ city: 'cornelio-procopio', host: 'another.example.test' })
   assert.equal(result.code, 0, result.stderr)
   assert.equal(result.requests[2].url, '/cidades/cornelio-procopio')
-  assert.equal(result.requests[5].url, '/api/v1/catalog/cities/cornelio-procopio/filters')
+  assert.equal(result.requests[6].url, '/api/v1/catalog/cities/cornelio-procopio/filters')
   assert.equal(
     result.requests.every((request) => request.headers.host === 'another.example.test'),
     true

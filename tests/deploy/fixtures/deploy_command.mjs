@@ -479,8 +479,11 @@ if (command === 'git') {
   }
 } else if (command === 'curl') {
   const url = new URL(args.at(-1))
-  const readiness = args[args.indexOf('--write-out') + 1] === '%{http_code}'
-  const isJson = url.pathname.startsWith('/api/') || args.includes('X-Inertia: true')
+  const writeOut = args[args.indexOf('--write-out') + 1]
+  const readiness = writeOut === '%{http_code}'
+  const isInertia = args.includes('X-Inertia: true')
+  const hasInertiaVersion = args.some((arg) => arg.startsWith('X-Inertia-Version: '))
+  const isJson = url.pathname.startsWith('/api/') || isInertia
   const failedStage = state.rollingBack
     ? state.rollbackFail
     : state.running === state.newImage
@@ -488,11 +491,19 @@ if (command === 'git') {
       : state.running === state.goodImage && !state.idempotentRecovered
         ? state.goodFail
         : null
-  const status =
+  let status =
     (readiness && failedStage === 'readiness') ||
     (!readiness && failedStage === 'smoke' && url.pathname.endsWith('/filters')) ||
     (state.running === state.goodImage && url.pathname === '/new-contract-only')
       ? '500'
       : '200'
-  output(readiness ? status : `${status} ${isJson ? 'application/json' : 'text/html'}`)
+  if (!readiness && isInertia && !hasInertiaVersion && status === '200') status = '409'
+  if (readiness) output(status)
+  else if (writeOut.includes('%header{x-inertia-version}')) {
+    output(
+      `${status}\napplication/json\n${status === '409' ? '0123456789abcdef0123456789abcdef' : ''}\n${
+        status === '409' ? url.pathname : ''
+      }`
+    )
+  } else output(`${status} ${isJson ? 'application/json' : 'text/html'}`)
 } else fail('unexpected executable')
