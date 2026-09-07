@@ -5,6 +5,7 @@ import Role from '#modules/roles/models/role'
 import { seedDevelopmentBenefits } from '#database/support/development_benefits'
 import { seedDevelopmentCatalog } from '#database/support/development_catalog'
 import { seedDevelopmentEstablishments } from '#database/support/development_establishments'
+import { seedDevelopmentPurchases } from '#database/support/development_purchases'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
 import env from '#start/env'
@@ -66,5 +67,6 @@ export default class extends BaseSeeder {
     await seedDevelopmentCatalog(tenant)
     await seedDevelopmentEstablishments(tenant, user)
     await seedDevelopmentBenefits(tenant, user, partner, holder)
+    await seedDevelopmentPurchases(tenant, user, partner)
   }
 }
