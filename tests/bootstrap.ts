@@ -48,7 +48,10 @@ export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
     async () => {
       await mkdir(app.tmpPath(), { recursive: true })
     },
-    () => testUtils.db().migrate(),
+    async () => {
+      // Keep migration history forward-only. Tests isolate rows using their transaction hooks.
+      await testUtils.db().migrate()
+    },
     () => testUtils.db().seed(),
   ],
   teardown: [],
