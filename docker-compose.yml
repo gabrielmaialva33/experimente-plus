@@ -83,6 +83,7 @@ services:
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-dev_refresh_token_secret_change_me}
       EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:-dev_email_verification_secret_change_me}
       PASSWORD_RESET_SECRET: ${PASSWORD_RESET_SECRET:-dev_password_reset_secret_change_me}
+      ANALYTICS_HASH_SECRET: ${ANALYTICS_HASH_SECRET:-dev_analytics_hash_secret_change_me_32chars}
       PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-60}
       JWT_ISSUER: ${JWT_ISSUER:-experimente-plus}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-experimente-plus}

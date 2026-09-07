@@ -61,6 +61,15 @@ const env = await Env.create(new URL('../', import.meta.url), {
   ANALYTICS_SESSION_COOKIE_DAYS: Env.schema.number.optional(),
   DEMO_PAGES_ENABLED: Env.schema.boolean.optional(),
 
+  PAYMENT_PROVIDER: Env.schema.enum.optional(['disabled', 'fake', 'mercado_pago'] as const),
+  PAYMENT_METHODS: Env.schema.enum.optional(['none', 'pix', 'card', 'pix,card'] as const),
+  PAYMENT_ENVIRONMENT: Env.schema.enum.optional(['test', 'live'] as const),
+  PURCHASE_AUTO_REFUND_UNUSED: Env.schema.boolean.optional(),
+  PURCHASE_QUOTE_MINUTES: Env.schema.number.optional(),
+  MERCADO_PAGO_ACCOUNT_ID: Env.schema.string.optional(),
+  MERCADO_PAGO_ACCESS_TOKEN: Env.schema.string.optional(),
+  MERCADO_PAGO_WEBHOOK_SECRET: Env.schema.string.optional(),
+
   DEV_ADMIN_NAME: Env.schema.string.optional(),
   DEV_ADMIN_USERNAME: Env.schema.string.optional(),
   DEV_ADMIN_EMAIL: Env.schema.string.optional(),
@@ -157,5 +166,9 @@ assertBenefitPresentationOriginConfiguration({
   configuredBaseUrl: env.get('BENEFIT_PRESENTATION_BASE_URL'),
   appUrl: env.get('APP_URL'),
 })
+
+if (env.get('NODE_ENV') === 'production' && env.get('PAYMENT_PROVIDER') === 'fake') {
+  throw new Error('Fake payments are forbidden in production')
+}
 
 export default env

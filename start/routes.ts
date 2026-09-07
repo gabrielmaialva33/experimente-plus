@@ -65,3 +65,5 @@ router
     }
   })
   .use(throttle)
+
+import '#modules/purchases/routes'
