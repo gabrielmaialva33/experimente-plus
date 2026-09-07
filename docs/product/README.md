@@ -89,3 +89,7 @@ Uma decisão deste diretório só deve virar migration, model, rota ou interface
 4. tiver cenários de teste identificados.
 
 Decisões aceitas que afetem schema também devem possuir ADR quando forem estruturais. A fundação pode avançar para o domínio correspondente somente depois desses dois registros estarem consistentes.
+
+## EP-14 — compra de edição
+
+O dono aceitou o [ADR-0024](../architecture/decisions/0024-compra-de-edicao-e-concessao-por-pagamento.md): compra avulsa da edição inteira, sem SKU por oferta, com acesso somente após pagamento confirmado. A descoberta pública de D-003 continua livre. O backend é agnóstico de provedor; a escolha comercial foi explicitamente deferida. Adaptadores Mercado Pago e falso determinístico não significam abertura de vendas reais. O [runbook](../runbooks/purchases.md) registra operação, recuperação e pré-condições comerciais. Assinaturas, recorrência e os demais cortes não sucedidos do ADR-0022 continuam fora de escopo.

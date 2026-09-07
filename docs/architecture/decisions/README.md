@@ -30,6 +30,8 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 | [ADR-0022](0022-contrato-api-movel-consumer-first.md)                 | Contrato de API móvel consumer-first               | contexto, capabilities, tokens, carteira e resgate          |
 | [ADR-0023](0023-stack-e-navegacao-do-cliente-movel.md)                | Stack e navegação do cliente móvel                 | Expo, abas por capability, cidade local e filtro único      |
 
+| [ADR-0024](0024-compra-de-edicao-e-concessao-por-pagamento.md) | Compra de edição e concessão por pagamento | EP-14, porta agnóstica, confirmação, bloqueio, estorno e conciliação |
+
 ## Regra de evolução
 
 - Decisão estrutural nova recebe um ADR antes da migration correspondente.
@@ -54,4 +56,5 @@ EP-10 — acesso e carteira                    implementado e validado
 EP-11 — apresentação e resgate               implementado e validado
 EP-12 — API móvel consumer-first              implementado e validado
 EP-13 — cliente móvel                         decidido, implementação pendente
+EP-14 — compra de edição                      backend implementado e validado localmente; homologação comercial pendente
 ```

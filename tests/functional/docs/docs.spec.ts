@@ -63,6 +63,7 @@ type OpenApiResponse = {
 }
 
 type OpenApiOperation = {
+  security?: Record<string, string[]>[]
   description?: string
   operationId?: string
   parameters?: OpenApiParameter[]
@@ -89,6 +90,59 @@ const MOBILE_OPERATIONS: ReadonlyArray<{
   runtimePath: string
   openApiPath: string
 }> = [
+  {
+    method: 'get',
+    runtimePath: '/api/v1/catalog/benefit-editions',
+    openApiPath: '/api/v1/catalog/benefit-editions',
+  },
+  { method: 'get', runtimePath: '/api/v1/me/purchases', openApiPath: '/api/v1/me/purchases' },
+  { method: 'post', runtimePath: '/api/v1/me/purchases', openApiPath: '/api/v1/me/purchases' },
+  {
+    method: 'get',
+    runtimePath: '/api/v1/me/purchases/:id',
+    openApiPath: '/api/v1/me/purchases/{id}',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/me/purchases/:id/cancel',
+    openApiPath: '/api/v1/me/purchases/{id}/cancel',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/me/purchases/:id/refunds',
+    openApiPath: '/api/v1/me/purchases/{id}/refunds',
+  },
+  { method: 'get', runtimePath: '/api/v1/admin/purchases', openApiPath: '/api/v1/admin/purchases' },
+  {
+    method: 'get',
+    runtimePath: '/api/v1/admin/purchases/:id',
+    openApiPath: '/api/v1/admin/purchases/{id}',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/admin/purchases/:id/refunds/:refundId/decision',
+    openApiPath: '/api/v1/admin/purchases/{id}/refunds/{refundId}/decision',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/admin/purchases/:id/reconcile',
+    openApiPath: '/api/v1/admin/purchases/{id}/reconcile',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/admin/purchases/settlements',
+    openApiPath: '/api/v1/admin/purchases/settlements',
+  },
+  {
+    method: 'get',
+    runtimePath: '/api/v1/admin/purchases/reconciliation',
+    openApiPath: '/api/v1/admin/purchases/reconciliation',
+  },
+  {
+    method: 'post',
+    runtimePath: '/api/v1/payments/webhooks/:provider',
+    openApiPath: '/api/v1/payments/webhooks/{provider}',
+  },
   {
     method: 'post',
     runtimePath: '/api/v1/sessions/sign-in',
@@ -197,6 +251,50 @@ function operationAt(
 }
 
 test.group('Documentation', () => {
+  test('public storefront documents the server payment method contract and public-only projection', async ({
+    assert,
+  }) => {
+    const specification = await readOpenApi()
+    const operation = operationAt(specification, '/api/v1/catalog/benefit-editions', 'get')
+    assert.deepEqual(operation?.security, [])
+    assert.equal(
+      operation?.responses?.['200']?.content?.['application/json']?.schema?.$ref,
+      '#/components/schemas/PurchaseCatalog'
+    )
+    const schemas = specification.components!.schemas!
+    const edition = schemas.PurchasableEdition
+    assert.isFalse(edition.additionalProperties)
+    assert.sameMembers(edition.required!, [
+      'id',
+      'name',
+      'description',
+      'city',
+      'status',
+      'sales_starts_at',
+      'sales_ends_at',
+      'usage_starts_at',
+      'usage_ends_at',
+      'payment_methods',
+      'amount_cents',
+      'currency',
+      'snapshot',
+      'purchasable',
+    ])
+    assert.sameMembers(Object.keys(edition.properties!), edition.required!)
+    assert.equal(edition.properties?.payment_methods.minItems, 1)
+    assert.isTrue(edition.properties?.payment_methods.uniqueItems)
+    assert.equal(
+      edition.properties?.payment_methods.items?.$ref,
+      '#/components/schemas/PaymentMethod'
+    )
+    assert.equal(
+      schemas.PurchaseRequest.properties?.method.$ref,
+      '#/components/schemas/PaymentMethod'
+    )
+    assert.deepEqual(schemas.PaymentMethod.enum, ['pix', 'card'])
+    assert.equal(edition.properties?.status.const, 'published')
+    assert.equal(edition.properties?.purchasable.const, true)
+  })
   test('should serve the Redoc documentation page', async ({ client, assert }) => {
     const response = await client.get('/docs')
 

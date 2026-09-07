@@ -1114,6 +1114,9 @@ components:
             granted_at:
               type: string
               format: date-time
+            financially_blocked:
+              type: boolean
+              description: Impedimento financeiro reversível; quando ativo, availability usa paused. Não altera status nem cotas.
             availability:
               type: string
               enum: [available, upcoming, outside_schedule, paused, expired, revoked, redeemed]
@@ -3990,6 +3993,647 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PilotFeedback'
+
+    PurchaseOfferSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - establishment_id
+        - title
+        - description
+        - terms
+        - benefit_type
+        - discount_percentage
+        - discount_amount_cents
+        - available_weekdays_mask
+        - daily_start_time
+        - daily_end_time
+        - starts_at
+        - ends_at
+        - reservation_required
+        - on_premise_only
+        - minimum_party_size
+        - max_redemptions_per_access
+      properties:
+        id:
+          type: integer
+        establishment_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        terms:
+          type:
+            - string
+            - 'null'
+        benefit_type:
+          type: string
+        discount_percentage:
+          type:
+            - number
+            - 'null'
+        discount_amount_cents:
+          type:
+            - integer
+            - 'null'
+        available_weekdays_mask:
+          type: integer
+        daily_start_time:
+          type:
+            - string
+            - 'null'
+        daily_end_time:
+          type:
+            - string
+            - 'null'
+        starts_at:
+          type:
+            - string
+            - 'null'
+        ends_at:
+          type:
+            - string
+            - 'null'
+        reservation_required:
+          type: boolean
+        on_premise_only:
+          type: boolean
+        minimum_party_size:
+          type: integer
+        max_redemptions_per_access:
+          type: integer
+    PurchaseSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - usage_starts_at
+        - usage_ends_at
+        - sales_starts_at
+        - sales_ends_at
+        - terms_version
+        - offers
+      properties:
+        name:
+          type: string
+        description:
+          type:
+            - string
+            - 'null'
+        usage_starts_at:
+          type: string
+          format: date-time
+        usage_ends_at:
+          type: string
+          format: date-time
+        sales_starts_at:
+          type: string
+        sales_ends_at:
+          type: string
+        terms_version:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseOfferSnapshot'
+    PurchaseRefund:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - amount_cents
+        - status
+        - reason
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+        status:
+          type: string
+          enum:
+            - review
+            - approved
+            - processing
+            - succeeded
+            - failed
+            - rejected
+        reason:
+          type: string
+    Purchase:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - edition_id
+        - amount_cents
+        - currency
+        - status
+        - method
+        - snapshot
+        - access_id
+        - financially_blocked
+        - expires_at
+        - paid_at
+        - refunded_cents
+        - instructions
+        - created_at
+        - refunds
+      properties:
+        id:
+          type: string
+          format: uuid
+        edition_id:
+          type: integer
+        amount_cents:
+          type: integer
+        currency:
+          const: BRL
+        status:
+          enum:
+            - pending
+            - paid
+            - review
+            - failed
+            - cancelled
+            - refunded
+        method:
+          enum:
+            - pix
+            - card
+        snapshot:
+          $ref: '#/components/schemas/PurchaseSnapshot'
+        access_id:
+          type:
+            - integer
+            - 'null'
+        financially_blocked:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+        paid_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        refunded_cents:
+          type: integer
+        instructions:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: []
+              properties:
+                pix_code:
+                  type: string
+                pix_url:
+                  type: string
+                  format: uri
+        created_at:
+          type: string
+          format: date-time
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseRefund'
+    PaymentMethod:
+      type: string
+      enum:
+        - pix
+        - card
+      description: Meio fornecido em payment_methods da vitrine; disponibilidade revalidada ao criar a compra.
+    PurchaseRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - edition_id
+        - amount_cents
+        - terms_version
+        - method
+      properties:
+        edition_id:
+          type: integer
+          minimum: 1
+        amount_cents:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        terms_version:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        method:
+          $ref: '#/components/schemas/PaymentMethod'
+        card_token:
+          type: string
+          maxLength: 512
+          writeOnly: true
+        payment_method_id:
+          type: string
+          pattern: ^[a-zA-Z0-9_-]{1,60}$
+        document_type:
+          enum:
+            - CPF
+            - CNPJ
+        document_number:
+          type: string
+          pattern: ^\d{11,14}$
+          writeOnly: true
+    PurchaseAccepted:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+    PurchaseRefundAccepted:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - purchase_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        purchase_id:
+          type: string
+          format: uuid
+    PurchaseRefundRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    PurchaseRefundDecision:
+      type: object
+      additionalProperties: false
+      required:
+        - approve
+        - reason
+      properties:
+        approve:
+          type: boolean
+        amount_cents:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    PurchaseReconciliationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+        provider_id:
+          type: string
+          pattern: ^[a-zA-Z0-9_-]{1,150}$
+    PurchaseList:
+      type: object
+      additionalProperties: false
+      required:
+        - purchases
+      properties:
+        purchases:
+          type: array
+          items:
+            $ref: '#/components/schemas/Purchase'
+    PurchaseCatalog:
+      type: object
+      additionalProperties: false
+      required:
+        - editions
+      properties:
+        editions:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PurchasableEdition'
+    PurchasableEdition:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - city
+        - status
+        - sales_starts_at
+        - sales_ends_at
+        - usage_starts_at
+        - usage_ends_at
+        - payment_methods
+        - amount_cents
+        - currency
+        - snapshot
+        - purchasable
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        city:
+          type: object
+          additionalProperties: false
+          required: [id, name, slug, state_code, timezone]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            slug:
+              type: string
+            state_code:
+              type: string
+            timezone:
+              type: string
+        status:
+          type: string
+          const: published
+        sales_starts_at:
+          type: string
+          format: date-time
+        sales_ends_at:
+          type: string
+          format: date-time
+        usage_starts_at:
+          type: string
+          format: date-time
+        usage_ends_at:
+          type: string
+          format: date-time
+        payment_methods:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          description: Meios habilitados na configuração do servidor para esta edição e provedor. Copiar um destes valores para PurchaseRequest.method. Não garante aprovação nem disponibilidade transitória do PSP. Edições sem meios habilitados são omitidas.
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+        amount_cents:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+          const: BRL
+        snapshot:
+          $ref: '#/components/schemas/PurchaseSnapshot'
+        purchasable:
+          type: boolean
+          const: true
+    PurchaseSettlementRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - provider_id
+        - statement_reference
+        - line_reference
+        - currency
+        - gross_cents
+        - fee_cents
+        - net_cents
+        - refunded_cents
+        - settled_at
+      properties:
+        provider_id:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{1,150}$
+        statement_reference:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{1,150}$
+        line_reference:
+          type: string
+          pattern: ^[a-zA-Z0-9_.-]{1,150}$
+        currency:
+          const: BRL
+        gross_cents:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        fee_cents:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        net_cents:
+          type: integer
+          minimum: -2147483647
+          maximum: 2147483647
+        refunded_cents:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        settled_at:
+          type: string
+          format: date-time
+    PurchaseOperationsDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - provider
+        - provider_id
+        - issue
+        - events
+        - commands
+        - holds
+        - redemptions
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        provider_id:
+          type:
+            - string
+            - 'null'
+        issue:
+          type:
+            - string
+            - 'null'
+        events:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - action
+              - actor_id
+              - data
+              - created_at
+            properties:
+              id:
+                type:
+                  - integer
+                  - string
+              action:
+                type: string
+              actor_id:
+                type:
+                  - integer
+                  - 'null'
+              data:
+                type: object
+                additionalProperties: true
+              created_at:
+                type: string
+                format: date-time
+        commands:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - kind
+              - status
+              - attempts
+              - last_error
+              - created_at
+            properties:
+              id:
+                type: string
+                format: uuid
+              kind:
+                enum:
+                  - create
+                  - refund
+                  - cancel
+                  - reconcile
+              status:
+                enum:
+                  - pending
+                  - processing
+                  - done
+                  - review
+              attempts:
+                type: integer
+              last_error:
+                type:
+                  - string
+                  - 'null'
+              created_at:
+                type: string
+                format: date-time
+        holds:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - reason
+              - created_at
+              - released_at
+            properties:
+              reason:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              released_at:
+                type:
+                  - string
+                  - 'null'
+                format: date-time
+        redemptions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - receipt_code
+              - redeemed_at
+            properties:
+              id:
+                type:
+                  - integer
+                  - string
+              receipt_code:
+                type: string
+              redeemed_at:
+                type: string
+                format: date-time
+    PurchaseReconciliation:
+      type: object
+      additionalProperties: false
+      required:
+        - settlements_checked
+        - issues
+        - paid_without_access
+        - unlinked_payment_accesses
+      properties:
+        settlements_checked:
+          type: integer
+        issues:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - settlement_id
+              - purchase_id
+              - reasons
+            properties:
+              settlement_id:
+                type: string
+                format: uuid
+              purchase_id:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+              reasons:
+                type: array
+                items:
+                  type: string
+        paid_without_access:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - issue
+            properties:
+              id:
+                type: string
+                format: uuid
+              issue:
+                type:
+                  - string
+                  - 'null'
+        unlinked_payment_accesses:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+            properties:
+              id:
+                type: integer
 
   parameters:
     TenantHeader:
@@ -10091,3 +10735,770 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/catalog/benefit-editions:
+    get:
+      tags:
+        - Purchases
+      operationId: purchaseCatalog
+      summary: Vitrine pública de edições compráveis, sem login ou aquisição prévia
+      description: >-
+        Operação resolvida pelo hostname confiável. Até 100 edições publicadas com preço
+        positivo em BRL, venda iniciada e ainda aberta, uso ainda não encerrado,
+        ao menos uma oferta ativa de unidade publicada e meio de pagamento habilitado.
+        Pré-venda é permitida quando a venda está aberta e o uso começa no futuro.
+        Edições sem meios disponíveis são omitidas; nenhuma resulta em editions vazio com HTTP 200.
+        Somente dados públicos da edição, cidade e ofertas; não inclui titular, pedidos ou dados do PSP.
+        O catálogo de descoberta permanece público e independente da compra e da disponibilidade do PSP.
+      security: []
+      responses:
+        '200':
+          description: Edições elegíveis; lista vazia quando nenhuma está disponível.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseCatalog'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          description: Limite de consultas públicas excedido.
+  /api/v1/me/purchases:
+    get:
+      tags:
+        - Purchases
+      operationId: listMyPurchases
+      summary: Últimas 100 compras do titular
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseList'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+    post:
+      tags:
+        - Purchases
+      operationId: createPurchase
+      summary: Iniciar compra da edição inteira; acesso somente após confirmação
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: Resultado original para replay; estado atual deve ser consultado por GET.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseAccepted'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: ^[A-Za-z0-9_-]{16,128}$
+          description:
+            Persistir por intenção. Mesma chave e corpo devolvem o identificador original; corpo
+            divergente retorna 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRequest'
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/me/purchases/{id}:
+    get:
+      tags:
+        - Purchases
+      operationId: getMyPurchase
+      summary: Consultar compra e instruções de pagamento
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Purchase'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/me/purchases/{id}/cancel:
+    post:
+      tags:
+        - Purchases
+      operationId: cancelPurchase
+      summary: Solicitar cancelamento de compra não paga
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              maxProperties: 0
+      responses:
+        '202':
+          description: Resultado original para replay; estado atual deve ser consultado por GET.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseAccepted'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: ^[A-Za-z0-9_-]{16,128}$
+          description:
+            Persistir por intenção. Mesma chave e corpo devolvem o identificador original; corpo
+            divergente retorna 409.
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/me/purchases/{id}/refunds:
+    post:
+      tags:
+        - Purchases
+      operationId: refundPurchase
+      summary: Solicitar reembolso e bloquear novos usos
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: Resultado original para replay; estado atual deve ser consultado por GET.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRefundAccepted'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: ^[A-Za-z0-9_-]{16,128}$
+          description:
+            Persistir por intenção. Mesma chave e corpo devolvem o identificador original; corpo
+            divergente retorna 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRefundRequest'
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/admin/purchases:
+    get:
+      tags:
+        - Purchases
+      operationId: listOperationPurchases
+      summary: Últimas 100 compras da operação
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseList'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/admin/purchases/{id}:
+    get:
+      tags:
+        - Purchases
+      operationId: getOperationPurchase
+      summary: Auditoria, comandos, bloqueios e comprovantes de uso
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationsDetail'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/admin/purchases/{id}/refunds/{refundId}/decision:
+    post:
+      tags:
+        - Purchases
+      operationId: decidePurchaseRefund
+      summary: Decisão comercial auditada após uso ou política manual
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseRefundAccepted'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: refundId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRefundDecision'
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/admin/purchases/{id}/reconcile:
+    post:
+      tags:
+        - Purchases
+      operationId: reconcilePurchase
+      summary: Reenfileirar consulta; operador não declara pagamento
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: Resultado original para replay; estado atual deve ser consultado por GET.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseAccepted'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: ^[A-Za-z0-9_-]{16,128}$
+          description:
+            Persistir por intenção. Mesma chave e corpo devolvem o identificador original; corpo
+            divergente retorna 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseReconciliationRequest'
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/admin/purchases/settlements:
+    post:
+      tags:
+        - Purchases
+      operationId: recordPurchaseSettlement
+      summary: Registrar linha cumulativa do fechamento bruto/taxas/reembolso/líquido
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseAccepted'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseSettlementRequest'
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/admin/purchases/reconciliation:
+    get:
+      tags:
+        - Purchases
+      operationId: purchaseReconciliation
+      summary: Últimas 100 linhas e divergências financeiras
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseReconciliation'
+          headers:
+            Cache-Control:
+              schema:
+                const: private, no-store
+            Referrer-Policy:
+              schema:
+                const: no-referrer
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: integer
+          description: Operação validada por membership; também pode ser resolvida pela sessão.
+      description:
+        Resposta privada, no-store. Só o titular pode ler/comprar; operações administrativas
+        exigem admin/root e membership da operação. Nenhum dado de cartão bruto é aceito.
+  /api/v1/payments/webhooks/{provider}:
+    post:
+      tags:
+        - Purchases
+      operationId: purchaseWebhook
+      summary: Receber sinal autenticado; nenhum status do corpo concede acesso
+      security: []
+      responses:
+        '202':
+          description: Resultado original para replay; estado atual deve ser consultado por GET.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseAccepted'
+        '400':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '401':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '403':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '404':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '409':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '422':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '429':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '503':
+          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            enum:
+              - fake
+              - mercado_pago
+        - name: x-signature
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: x-request-id
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: x-fake-signature
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: data.id
+          in: query
+          required: false
+          schema:
+            type: string
+      description:
+        'Mercado Pago Payments: HMAC SHA-256 de id/data.id, x-request-id e ts, com x-signature
+        e tolerância de 5 minutos. GET autenticado no PSP verifica conta, live_mode, valor, moeda e referência.
+        Fake apenas development/test usa assinatura derivada da configuração local. Retorno 202 confirma
+        persistência, não pagamento.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: true
+                  required:
+                    - type
+                    - data
+                  properties:
+                    type:
+                      const: payment
+                    data:
+                      type: object
+                      additionalProperties: false
+                      required:
+                        - id
+                      properties:
+                        id:
+                          type:
+                            - string
+                            - integer
+                - type: object
+                  additionalProperties: false
+                  required:
+                    - resource_id
+                    - event_id
+                  properties:
+                    resource_id:
+                      type: string
+                    event_id:
+                      type: string
