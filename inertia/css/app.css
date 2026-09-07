@@ -60,6 +60,10 @@
     );
     --public-mobile-focus-clearance: calc(var(--public-mobile-navigation-space) + 1rem);
 
+    /* Catalog state mapping (shared with mobile): docs/design/catalog_tokens.md.
+     * success = open now; muted = closed/unknown/historical; warning = temporary
+     * closure; info = appointment-only. primary and cta keep their action roles.
+     */
     --success: 146 65% 30%;
     --success-foreground: 0 0% 100%;
     --success-soft: 146 45% 93%;

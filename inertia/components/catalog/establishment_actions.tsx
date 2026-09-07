@@ -29,6 +29,14 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
     detail.address.street ||
     detail.address.district
   )
+  // Keep one conversion in focus even when the preferred contact is missing.
+  const primaryAction = [
+    { name: 'whatsapp', available: detail.contacts.whatsapp },
+    { name: 'route', available: routeAvailable },
+    { name: 'phone', available: detail.contacts.phone },
+    { name: 'website', available: detail.contacts.website },
+    { name: 'booking', available: detail.contacts.bookingUrl },
+  ].find((action) => action.available)?.name
 
   async function shareEstablishment() {
     const url = window.location.href
@@ -90,7 +98,12 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         ) : null}
 
         {routeAvailable ? (
-          <Button variant="outline" size="lg" className="h-11 justify-start" asChild>
+          <Button
+            variant={primaryAction === 'route' ? 'cta' : 'outline'}
+            size="lg"
+            className="h-11 justify-start"
+            asChild
+          >
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'route')}
               target="_blank"
@@ -103,7 +116,12 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         ) : null}
 
         {detail.contacts.phone ? (
-          <Button variant="outline" size="lg" className="h-11 justify-start" asChild>
+          <Button
+            variant={primaryAction === 'phone' ? 'cta' : 'outline'}
+            size="lg"
+            className="h-11 justify-start"
+            asChild
+          >
             <a href={trackedActionHref(detail.city.slug, detail.slug, 'phone')}>
               <Phone className="size-4" /> Ligar para {detail.contacts.phone}
             </a>
@@ -111,7 +129,12 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         ) : null}
 
         {detail.contacts.website ? (
-          <Button variant="outline" size="lg" className="h-11 justify-start" asChild>
+          <Button
+            variant={primaryAction === 'website' ? 'cta' : 'outline'}
+            size="lg"
+            className="h-11 justify-start"
+            asChild
+          >
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'website')}
               target="_blank"
@@ -124,7 +147,12 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         ) : null}
 
         {detail.contacts.bookingUrl ? (
-          <Button variant="outline" size="lg" className="h-11 justify-start" asChild>
+          <Button
+            variant={primaryAction === 'booking' ? 'cta' : 'outline'}
+            size="lg"
+            className="h-11 justify-start"
+            asChild
+          >
             <a href={detail.contacts.bookingUrl} target="_blank" rel="noopener noreferrer">
               <CalendarCheck className="size-4" /> Agendar ou reservar
               <span className="sr-only"> (abre em nova aba)</span>

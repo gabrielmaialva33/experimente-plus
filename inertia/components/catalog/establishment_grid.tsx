@@ -2,13 +2,10 @@ import { Link } from '@inertiajs/react'
 import { ArrowRight, ImageIcon, MapPin } from 'lucide-react'
 
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import { EstablishmentStatus } from '~/components/catalog/establishment_status'
 import { EmptyState } from '~/components/empty_state'
 import { Badge } from '~/components/ui/badge'
-import {
-  businessStatusLabel,
-  type CatalogSearchItem,
-  type CatalogBusinessStatus,
-} from '~/lib/catalog'
+import type { CatalogSearchItem } from '~/lib/catalog'
 
 interface EstablishmentGridProps {
   entries: CatalogSearchItem[]
@@ -16,13 +13,6 @@ interface EstablishmentGridProps {
   emptyTitle?: string
   emptyMessage?: string
   sponsored?: boolean
-}
-
-function statusClasses(status: CatalogBusinessStatus, openNow: boolean): string {
-  if (status !== 'open') return 'border-border bg-muted text-muted-foreground'
-  return openNow
-    ? 'border-success/25 bg-success-soft text-success-accent'
-    : 'border-border bg-muted text-muted-foreground'
 }
 
 export default function EstablishmentGrid({
@@ -45,7 +35,6 @@ export default function EstablishmentGrid({
       {entries.map((entry) => {
         const resolvedCitySlug = citySlug || entry.citySlug
         const href = `/cidades/${encodeURIComponent(resolvedCitySlug)}/estabelecimentos/${encodeURIComponent(entry.slug)}`
-        const status = businessStatusLabel(entry.businessStatus, entry.isOpenNow)
         const paidPlacement = sponsored || entry.isSponsored
         const titleId = `establishment-${paidPlacement ? 'sponsored' : 'organic'}-${entry.slug}`
         const statusId = `${titleId}-status`
@@ -87,14 +76,12 @@ export default function EstablishmentGrid({
                       Patrocinado
                     </Badge>
                   )}
-                  <Badge
+                  <EstablishmentStatus
                     id={statusId}
-                    variant="outline"
                     size="sm"
-                    className={statusClasses(entry.businessStatus, entry.isOpenNow)}
-                  >
-                    {status}
-                  </Badge>
+                    businessStatus={entry.businessStatus}
+                    isOpenNow={entry.isOpenNow}
+                  />
                 </div>
 
                 {entry.primaryCategory ? (

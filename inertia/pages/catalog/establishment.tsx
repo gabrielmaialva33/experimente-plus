@@ -4,13 +4,13 @@ import { Building2, CalendarClock, Check, CircleAlert, Clock3, Info, MapPin } fr
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { EstablishmentActions } from '~/components/catalog/establishment_actions'
+import { EstablishmentStatus } from '~/components/catalog/establishment_status'
 import { useEstablishmentViewAnalytics } from '~/components/catalog/use_catalog_analytics'
 import { EmptyState } from '~/components/empty_state'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import {
   availabilityLabel,
-  businessStatusLabel,
   catalogDetail,
   formatCatalogAddress,
   weekdayLabel,
@@ -24,13 +24,6 @@ import { cn } from '~/lib/utils'
 interface CatalogEstablishmentProps {
   catalog: unknown
   city_slug: string | null
-}
-
-function statusClasses(detail: CatalogDetail): string {
-  if (detail.businessStatus !== 'open') return 'border-border bg-muted text-muted-foreground'
-  return detail.isOpenNow
-    ? 'border-success/25 bg-success-soft text-success-accent'
-    : 'border-border bg-muted text-muted-foreground'
 }
 
 function formatDate(value: string | null, timeZone: string | null): string | null {
@@ -249,12 +242,12 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
                   <span className="truncate">{locationLabel}</span>
                 </p>
               </div>
-              <Badge
-                variant="outline"
-                className={cn('self-start sm:self-auto', statusClasses(detail))}
-              >
-                {businessStatusLabel(detail.businessStatus, detail.isOpenNow)}
-              </Badge>
+              <EstablishmentStatus
+                businessStatus={detail.businessStatus}
+                isOpenNow={detail.isOpenNow}
+                availabilityType={detail.availabilityType}
+                className="self-start sm:self-auto"
+              />
             </div>
 
             <div className="p-5 sm:p-6">

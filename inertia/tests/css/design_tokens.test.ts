@@ -120,7 +120,15 @@ describe('flat foundation token contract', () => {
     [':root', 'cta-soft', 'cta-accent'],
     ['.dark', 'cta-accent', 'cta-foreground'],
     ['.dark', 'cta-soft', 'cta-accent'],
-  ])('%s %s/%s CTA interaction pair meets WCAG AA', (selector, background, foreground) => {
+    [':root', 'success-soft', 'success-accent'],
+    [':root', 'warning-soft', 'warning-accent'],
+    [':root', 'info-soft', 'info-accent'],
+    [':root', 'muted', 'muted-foreground'],
+    ['.dark', 'success-soft', 'success-accent'],
+    ['.dark', 'warning-soft', 'warning-accent'],
+    ['.dark', 'info-soft', 'info-accent'],
+    ['.dark', 'muted', 'muted-foreground'],
+  ])('%s %s/%s interaction or status pair meets WCAG AA', (selector, background, foreground) => {
     const block = blockFor(selector)
 
     expect(

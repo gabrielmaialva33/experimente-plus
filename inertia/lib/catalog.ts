@@ -701,10 +701,17 @@ export function catalogDetail(value: unknown): CatalogDetail | CatalogHistorical
   }
 }
 
-export function businessStatusLabel(status: CatalogBusinessStatus, isOpenNow: boolean): string {
+export function businessStatusLabel(
+  status: CatalogBusinessStatus,
+  isOpenNow: boolean,
+  availabilityType?: CatalogAvailability
+): string {
   if (status === 'permanently_closed') return 'Encerrado permanentemente'
   if (status === 'temporarily_closed') return 'Fechado temporariamente'
-  return isOpenNow ? 'Aberto agora' : 'Fechado agora'
+  if (availabilityType === 'appointment_only') return 'Somente com agendamento'
+  if (isOpenNow) return 'Aberto agora'
+  // Search results omit availability_type; false can also mean appointment-only.
+  return availabilityType ? 'Fechado agora' : 'Consulte o atendimento'
 }
 
 export function availabilityLabel(value: CatalogAvailability): string {
