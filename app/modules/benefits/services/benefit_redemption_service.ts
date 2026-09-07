@@ -11,6 +11,7 @@ import NotFoundException from '#exceptions/not_found_exception'
 import { isCanonicalBenefitReceiptCode } from '#modules/benefits/constants/benefit_redemption'
 import type IBenefitAccess from '#modules/benefits/interfaces/benefit_access_interface'
 import type IBenefitRedemption from '#modules/benefits/interfaces/benefit_redemption_interface'
+import BenefitFinancialHoldService from '#modules/benefits/services/benefit_financial_hold_service'
 import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitOffer from '#modules/benefits/models/benefit_offer'
@@ -29,6 +30,7 @@ import type User from '#modules/users/models/user'
 import UserModel from '#modules/users/models/user'
 
 type RedemptionContext = {
+  financiallyBlocked: boolean
   access: BenefitAccess
   edition: BenefitEdition
   offer: BenefitOffer
@@ -378,10 +380,25 @@ export default class BenefitRedemptionService {
       throw new NotFoundException('Benefit not found')
     }
 
-    return { access, edition, offer, establishment, revision, city, holder }
+    return {
+      access,
+      edition,
+      offer,
+      establishment,
+      revision,
+      city,
+      holder,
+      financiallyBlocked: await new BenefitFinancialHoldService().blocked(
+        tenantId,
+        access.id,
+        client
+      ),
+    }
   }
 
   private assertRedeemable(context: RedemptionContext, redeemedCount: number, now: DateTime): void {
+    if (context.financiallyBlocked)
+      throw new BadRequestException('Benefit access is financially blocked')
     if (context.access.status !== 'active') {
       throw new BadRequestException('Benefit access is not active')
     }

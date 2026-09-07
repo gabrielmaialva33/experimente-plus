@@ -12,6 +12,7 @@ import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitAccessRepository from '#modules/benefits/repositories/benefit_access_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
+import BenefitFinancialHoldService from '#modules/benefits/services/benefit_financial_hold_service'
 import User from '#modules/users/models/user'
 
 type DatabaseError = Error & { code?: string; constraint?: string }
@@ -160,9 +161,17 @@ export default class BenefitAccessService {
       }
     }
 
+    const blocked = await new BenefitFinancialHoldService().blockedIds(
+      tenantId,
+      accesses.map((access) => access.id)
+    )
     const now = DateTime.utc()
     const passes = [...latestByEdition.values()].map((access) => {
-      const availability = this.resolvePassAvailability(access, now)
+      const financiallyBlocked = blocked.has(access.id)
+      const availability =
+        financiallyBlocked && access.status === 'active'
+          ? 'paused'
+          : this.resolvePassAvailability(access, now)
       const benefits = access.edition.offers.map((offer) =>
         this.projectBenefit(access, offer, availability, now)
       )
@@ -174,6 +183,7 @@ export default class BenefitAccessService {
           status: access.status,
           granted_at: access.granted_at.toISO()!,
           availability,
+          financially_blocked: financiallyBlocked,
         },
         edition: {
           id: access.edition.id,

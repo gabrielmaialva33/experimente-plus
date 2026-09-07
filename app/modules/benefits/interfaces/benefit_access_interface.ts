@@ -73,6 +73,7 @@ namespace IBenefitAccess {
       source: Source
       status: Status
       granted_at: string
+      financially_blocked?: boolean
       availability: Availability
     }
     edition: {
