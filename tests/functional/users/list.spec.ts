@@ -1,3 +1,4 @@
+import { UserFactory } from '#database/factories/index'
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
@@ -55,6 +56,8 @@ test.group('Users list', (group) => {
   }
 
   test('should list users with an exact serialized contract', async ({ client, assert }) => {
+    // Other committed scenarios may already fill page one. Exercise that case explicitly.
+    await UserFactory.createMany(11)
     const userRole = await Role.firstOrCreate(
       { slug: IRole.Slugs.USER },
       {
@@ -79,7 +82,7 @@ test.group('Users list', (group) => {
     // Assign list permission to user role
     await assignPermissions(userRole, [IPermission.Actions.LIST])
 
-    const response = await client.get('/api/v1/users').loginAs(user)
+    const response = await client.get('/api/v1/users').qs({ search: user.email }).loginAs(user)
 
     response.assertStatus(200)
     response.assertBodyContains({
@@ -105,6 +108,8 @@ test.group('Users list', (group) => {
       'previous_page_url',
     ])
 
+    assert.equal(body.meta.total, 1)
+    assert.lengthOf(body.data, 1)
     const serializedUser = body.data.find((item: { id: number }) => item.id === user.id)
     assert.exists(serializedUser)
     assert.sameMembers(Object.keys(serializedUser), [
@@ -419,6 +424,7 @@ test.group('Users list', (group) => {
   })
 
   test('should include user roles in response', async ({ client }) => {
+    await UserFactory.createMany(11)
     const userRole = await Role.firstOrCreate(
       { slug: IRole.Slugs.USER },
       {
@@ -458,7 +464,7 @@ test.group('Users list', (group) => {
     // Assign list permission to user role (admin inherits this too)
     await assignPermissions(userRole, [IPermission.Actions.LIST])
 
-    const response = await client.get('/api/v1/users').loginAs(user)
+    const response = await client.get('/api/v1/users').qs({ search: user.email }).loginAs(user)
 
     response.assertStatus(200)
     response.assertBodyContains({
