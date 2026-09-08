@@ -33,6 +33,8 @@ const driveConfig = defineConfig({
       region: 'auto',
       bucket: env.get('R2_BUCKET', ''),
       endpoint: env.get('R2_ENDPOINT'),
+      supportsACL: false,
+      cdnUrl: env.get('R2_PUBLIC_BASE_URL')?.replace(/\/+$/, ''),
       visibility: 'public',
     }),
     spaces: services.s3({

@@ -60,7 +60,11 @@ export default class UploadFileService {
     const key = `uploads/${randomUUID()}${extname ? `.${extname}` : ''}`
     const disk = drive.use()
 
-    await file.moveToDisk(key)
+    try {
+      await file.moveToDisk(key)
+    } catch {
+      throw new Error('File storage upload failed')
+    }
 
     try {
       const relativeUrl = await disk.getUrl(key)
@@ -95,9 +99,9 @@ export default class UploadFileService {
     } catch (error) {
       try {
         await disk.delete(key)
-      } catch (cleanupError) {
+      } catch {
         ctx.logger.error(
-          { cleanupError, storageKey: key },
+          { storageKey: key },
           'Failed to remove an orphaned upload after persistence error'
         )
       }

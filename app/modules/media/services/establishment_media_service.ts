@@ -456,6 +456,7 @@ export default class EstablishmentMediaService {
 
   async remove(context: MutationContext, mediaId: number): Promise<void> {
     let storageKeyToDelete: string | null = null
+    let storageUrlToDelete: string | undefined
 
     await db.transaction(async (client) => {
       const { revision } = await this.accessService.getEditable(
@@ -498,12 +499,13 @@ export default class EstablishmentMediaService {
         await asset.delete()
         await storedFile.delete()
         storageKeyToDelete = storedFile.file_name
+        storageUrlToDelete = storedFile.url
       }
     })
 
     if (storageKeyToDelete) {
       try {
-        await this.storageService.delete(storageKeyToDelete)
+        await this.storageService.delete(storageKeyToDelete, storageUrlToDelete)
       } catch (error) {
         logger.error(
           { err: error, storage_key: storageKeyToDelete },

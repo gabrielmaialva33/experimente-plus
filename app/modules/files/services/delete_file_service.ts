@@ -1,3 +1,5 @@
+import env from '#start/env'
+import { storedFileDisk } from '#shared/utils/storage_disk'
 import { inject } from '@adonisjs/core'
 import logger from '@adonisjs/core/services/logger'
 import drive from '@adonisjs/drive/services/main'
@@ -36,10 +38,12 @@ export default class DeleteFileService {
     }
 
     try {
-      await drive.use().delete(file.file_name)
-    } catch (error) {
+      await drive
+        .use(storedFileDisk(file.file_name, file.url, env.get('R2_PUBLIC_BASE_URL')))
+        .delete(file.file_name)
+    } catch {
       logger.error(
-        { err: error, file_id: file.id, storage_key: file.file_name },
+        { file_id: file.id, storage_key: file.file_name },
         'Failed to remove an unreferenced file object from storage'
       )
     }

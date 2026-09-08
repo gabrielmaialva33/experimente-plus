@@ -135,6 +135,7 @@ const env = await Env.create(new URL('../', import.meta.url), {
   R2_SECRET: Env.schema.string.optional(),
   R2_BUCKET: Env.schema.string.optional(),
   R2_ENDPOINT: Env.schema.string.optional(),
+  R2_PUBLIC_BASE_URL: Env.schema.string.optional(),
 
   // GCS
   GCS_KEY: Env.schema.string.optional(),
@@ -169,6 +170,26 @@ assertBenefitPresentationOriginConfiguration({
 
 if (env.get('NODE_ENV') === 'production' && env.get('PAYMENT_PROVIDER') === 'fake') {
   throw new Error('Fake payments are forbidden in production')
+}
+
+if (env.get('DRIVE_DISK') === 'r2') {
+  const publicBase = env.get('R2_PUBLIC_BASE_URL')
+  let validBase = false
+  try {
+    const url = new URL(publicBase ?? '')
+    validBase =
+      url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
+  } catch {
+    /* Fail without printing environment values. */
+  }
+  if (
+    !validBase ||
+    !env.get('R2_KEY') ||
+    !env.get('R2_SECRET') ||
+    !env.get('R2_BUCKET') ||
+    !env.get('R2_ENDPOINT')
+  )
+    throw new Error('R2 requires credentials, an endpoint and an HTTPS public base URL')
 }
 
 export default env
