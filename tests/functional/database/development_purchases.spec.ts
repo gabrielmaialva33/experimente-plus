@@ -1,3 +1,4 @@
+import { useFakePayments } from '#tests/helpers/fake_payments'
 import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
@@ -15,6 +16,7 @@ import PurchaseRepository from '#modules/purchases/repositories/purchase_reposit
 import FakePaymentAdapter from '#modules/purchases/adapters/fake_payment_adapter'
 
 test.group('Development paid edition seed', (group) => {
+  group.each.setup(() => useFakePayments())
   group.each.setup(() => testUtils.db().withGlobalTransaction())
 
   test('remains restricted to the development environment', async ({ assert }) => {
@@ -46,6 +48,10 @@ test.group('Development paid edition seed', (group) => {
       .header('host', s.tenant.slug + '.experimente.test')
     response.assertStatus(200)
     const quote = response.body().editions.find((item: { id: number }) => item.id === edition.id)
+    assert.exists(
+      quote,
+      'The seeded edition must be advertised with the configured fake payment methods'
+    )
     assert.deepEqual(quote.payment_methods, ['pix', 'card'])
     const service = await app.container.make(PurchaseService)
     const processor = await app.container.make(PurchaseProcessingService)

@@ -1,3 +1,4 @@
+import { useFakePayments } from '#tests/helpers/fake_payments'
 import { randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
@@ -19,16 +20,7 @@ async function fixture() {
 
 test.group('Public purchasable edition storefront', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
-  group.each.setup(() => {
-    const methods = env.get('PAYMENT_METHODS', 'pix,card')
-    const provider = env.get('PAYMENT_PROVIDER', 'fake')
-    env.set('PAYMENT_METHODS', 'pix,card')
-    env.set('PAYMENT_PROVIDER', 'fake')
-    return () => {
-      env.set('PAYMENT_METHODS', methods)
-      env.set('PAYMENT_PROVIDER', provider)
-    }
-  })
+  group.each.setup(() => useFakePayments())
 
   test('anonymous pre-sale exposes only public edition, city, terms and server payment methods', async ({
     client,

@@ -1,3 +1,4 @@
+import { useFakePayments } from '#tests/helpers/fake_payments'
 import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
 import testUtils from '@adonisjs/core/services/test_utils'
@@ -10,6 +11,7 @@ import {
 import BenefitAccessService from '#modules/benefits/services/benefit_access_service'
 
 test.group('EP-14 aggregate factories', (group) => {
+  group.each.setup(() => useFakePayments())
   group.each.setup(() => testUtils.db().withGlobalTransaction())
 
   for (const state of ['pending', 'paid', 'failed', 'cancelled', 'review', 'refunded'] as const) {

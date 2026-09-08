@@ -1,3 +1,4 @@
+import { useFakePayments } from '#tests/helpers/fake_payments'
 import { mock } from 'node:test'
 import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
@@ -17,6 +18,7 @@ import BenefitRedemptionService from '#modules/benefits/services/benefit_redempt
 const fixture = () => createPurchaseFixture()
 
 test.group('Purchases EP-14', (group) => {
+  group.each.setup(() => useFakePayments({ autoRefundUnused: true }))
   group.each.setup(() => testUtils.db().withGlobalTransaction())
   test('creates one immutable intention and one confirmed access, replaying purchase and webhook', async ({
     assert,
@@ -592,7 +594,8 @@ test.group('Purchases EP-14', (group) => {
   })
 })
 
-test.group('Purchases independent PostgreSQL mutexes', () => {
+test.group('Purchases independent PostgreSQL mutexes', (group) => {
+  group.each.setup(() => useFakePayments({ autoRefundUnused: true }))
   // Committed fixtures intentionally remain in the isolated test ledger: financial facts are immutable.
   for (const first of ['redemption', 'refund'] as const) {
     test('serializes the access mutex when ' + first + ' wins', async ({ assert }) => {

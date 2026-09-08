@@ -1,3 +1,4 @@
+import { useFakePayments } from '#tests/helpers/fake_payments'
 import { mock } from 'node:test'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { test } from '@japa/runner'
@@ -29,6 +30,7 @@ async function setupStripe() {
 }
 
 test.group('Stripe worker reconciliation without webhook or network', (group) => {
+  group.each.setup(() => useFakePayments())
   group.each.setup(() => testUtils.db().withGlobalTransaction())
   group.each.teardown(() => mock.restoreAll())
 
