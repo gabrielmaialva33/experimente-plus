@@ -2,7 +2,7 @@ import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 
-import ReconcileCatalogAttributes from '#database/migrations/1788556800000_reconcile_catalog_attribute_slugs'
+import ReconcileCatalogAttributes from '#tests/fixtures/legacy_migrations/1788556800000_reconcile_catalog_attribute_slugs'
 import {
   EstablishmentFactory,
   EstablishmentRevisionFactory,

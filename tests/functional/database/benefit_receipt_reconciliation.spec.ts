@@ -2,7 +2,7 @@ import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 
-import ReconcileReceiptCodes from '#database/migrations/1788556800100_reconcile_benefit_receipt_codes'
+import ReconcileReceiptCodes from '#tests/fixtures/legacy_migrations/1788556800100_reconcile_benefit_receipt_codes'
 import { createBenefitFlowScenario } from '#database/factories/scenarios/benefit_flow_factory'
 
 const migrationName = 'benefit_receipt_reconciliation_test'

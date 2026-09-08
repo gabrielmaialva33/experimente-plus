@@ -2,7 +2,7 @@ import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 
-import RemoveGlobalEditor from '#database/migrations/1788556800300_remove_unused_global_editor_role'
+import RemoveGlobalEditor from '#tests/fixtures/legacy_migrations/1788556800300_remove_unused_global_editor_role'
 import {
   addOrganizationMember,
   createOperation,

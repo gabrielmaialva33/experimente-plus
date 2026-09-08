@@ -49,7 +49,8 @@ export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
       await mkdir(app.tmpPath(), { recursive: true })
     },
     async () => {
-      // Keep migration history forward-only. Tests isolate rows using their transaction hooks.
+      // Apply the canonical baseline; schema-breaking consolidation requires a fresh disposable DB.
+      // Tests isolate rows using their transaction hooks.
       await testUtils.db().migrate()
     },
     () => testUtils.db().seed(),

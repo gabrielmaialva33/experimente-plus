@@ -14,7 +14,7 @@ function refreshSnapshot(source) {
   return source.slice(start, end + '\n      `)'.length)
 }
 
-test('forward refresh SQL is byte-identical to the create migration and pinned baseline', async () => {
+test('archived forward refresh SQL is byte-identical to the create migration and pinned baseline', async () => {
   // Read source only: no migration imports, Adonis bootstrap, SQL execution or DB.
   const [create, repair] = await Promise.all([
     readFile(
@@ -26,7 +26,7 @@ test('forward refresh SQL is byte-identical to the create migration and pinned b
     ),
     readFile(
       new URL(
-        '../../database/migrations/1788556800000_reconcile_catalog_attribute_slugs.ts',
+        '../fixtures/legacy_migrations/1788556800000_reconcile_catalog_attribute_slugs.ts',
         import.meta.url
       ),
       'utf8'
@@ -44,7 +44,7 @@ test('forward refresh SQL is byte-identical to the create migration and pinned b
 test('repair locks tenant version writers before touching the projection, with bounded waits', async () => {
   const source = await readFile(
     new URL(
-      '../../database/migrations/1788556800000_reconcile_catalog_attribute_slugs.ts',
+      '../fixtures/legacy_migrations/1788556800000_reconcile_catalog_attribute_slugs.ts',
       import.meta.url
     ),
     'utf8'

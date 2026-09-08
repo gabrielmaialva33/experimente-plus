@@ -5,7 +5,7 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 
 import { UserFactory } from '#database/factories/user_factory'
-import ReconcileCredentialVersion from '#database/migrations/1788556800400_add_credential_version_to_users'
+import ReconcileCredentialVersion from '#tests/fixtures/legacy_migrations/1788556800400_add_credential_version_to_users'
 
 const migrationName = 'credential_version_reconciliation_test'
 const constraintName = 'users_credential_version_positive_check'

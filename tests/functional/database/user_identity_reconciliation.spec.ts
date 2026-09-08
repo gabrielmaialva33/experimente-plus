@@ -2,7 +2,7 @@ import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 
-import ReconcileUserIdentities from '#database/migrations/1788556800200_reconcile_user_identity_checks'
+import ReconcileUserIdentities from '#tests/fixtures/legacy_migrations/1788556800200_reconcile_user_identity_checks'
 import { UserFactory } from '#database/factories/user_factory'
 
 const migrationName = 'user_identity_reconciliation_test'
