@@ -1,3 +1,4 @@
+import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 import router from '@adonisjs/core/services/router'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
@@ -26,7 +27,10 @@ const InertiaSettingsController = () => import('#modules/web/controllers/setting
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   `${resource}.${action}`
 
-const demoPagesEnabled = env.get('DEMO_PAGES_ENABLED', env.get('NODE_ENV') === 'development')
+const demoPagesEnabled = env.get(
+  'DEMO_PAGES_ENABLED',
+  deploymentEnvironment(env.get('DEPLOYMENT_ENV')) === 'development'
+)
 
 router
   .get('/login', [InertiaAuthController, 'showLogin'])

@@ -1,3 +1,4 @@
+import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 import type { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 import type { NextFn } from '@adonisjs/core/types/http'
@@ -56,7 +57,10 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
         url: env.get('APP_URL', `http://${env.get('HOST')}:${env.get('PORT')}`),
         sourceUrl: env.get('APP_SOURCE_URL') ?? null,
         environment,
-        demoPagesEnabled: env.get('DEMO_PAGES_ENABLED', environment === 'development'),
+        demoPagesEnabled: env.get(
+          'DEMO_PAGES_ENABLED',
+          deploymentEnvironment(env.get('DEPLOYMENT_ENV')) === 'development'
+        ),
       },
       // Validation errors (inputErrorsBag) merged with the errors controllers
       // flash manually via `session.flash('errors', {...})` — e.g. `general`

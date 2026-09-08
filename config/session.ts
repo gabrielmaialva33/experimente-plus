@@ -1,5 +1,5 @@
 import env from '#start/env'
-import app from '@adonisjs/core/services/app'
+import { isHostedDeployment } from '#shared/utils/deployment_environment'
 import { defineConfig, stores } from '@adonisjs/session'
 
 const sessionConfig = defineConfig({
@@ -25,7 +25,7 @@ const sessionConfig = defineConfig({
   cookie: {
     path: '/',
     httpOnly: true,
-    secure: app.inProduction,
+    secure: isHostedDeployment(env.get('DEPLOYMENT_ENV')),
     sameSite: 'lax',
   },
 

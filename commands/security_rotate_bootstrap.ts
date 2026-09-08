@@ -1,3 +1,5 @@
+import env from '#start/env'
+import { isHostedDeployment } from '#shared/utils/deployment_environment'
 import { fileURLToPath } from 'node:url'
 
 import { BaseCommand, flags } from '@adonisjs/core/ace'
@@ -41,7 +43,7 @@ export default class SecurityRotateBootstrap extends BaseCommand {
         userIds: parseBootstrapUserIds(this.userIds),
         outputPath: this.output,
         applicationRoot: fileURLToPath(this.app.appRoot),
-        requiredHostMountDirectory: this.app.inProduction
+        requiredHostMountDirectory: isHostedDeployment(env.get('DEPLOYMENT_ENV'))
           ? BOOTSTRAP_CREDENTIAL_HOST_DIRECTORY
           : undefined,
       })

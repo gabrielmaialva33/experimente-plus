@@ -42,7 +42,7 @@ test.group('Benefit presentation origin', () => {
     )
     assert.equal(
       resolveBenefitPresentationOrigin({
-        environment: 'test',
+        environment: 'development',
         configuredBaseUrl: '',
         appUrl: 'https://ignored-in-test.example',
         requestOrigin: 'http://localhost:3333/',

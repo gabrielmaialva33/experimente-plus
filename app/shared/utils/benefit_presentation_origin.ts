@@ -1,10 +1,12 @@
+import {
+  isHostedDeployment,
+  type DeploymentEnvironment,
+} from '#shared/utils/deployment_environment'
 export const BENEFIT_PRESENTATION_BASE_URL_KEY = 'BENEFIT_PRESENTATION_BASE_URL'
 export const APP_URL_KEY = 'APP_URL'
 
-type RuntimeEnvironment = 'development' | 'production' | 'test'
-
 interface BenefitPresentationOriginOptions {
-  environment: RuntimeEnvironment
+  environment: DeploymentEnvironment
   configuredBaseUrl?: string
   appUrl?: string
   requestOrigin?: string
@@ -39,7 +41,7 @@ export function normalizeHttpOrigin(
   }
 
   if (options.requireHttps && url.protocol !== 'https:') {
-    throw new Error(`${source} must use HTTPS in production`)
+    throw new Error(`${source} must use HTTPS in homologation or production`)
   }
 
   return url.origin
@@ -51,17 +53,17 @@ export function configuredBenefitPresentationOrigin({
   appUrl,
 }: BenefitPresentationOriginOptions): string | undefined {
   const normalizeConfiguredOrigin = (value: string, source: string) =>
-    normalizeHttpOrigin(value, source, { requireHttps: environment === 'production' })
+    normalizeHttpOrigin(value, source, { requireHttps: isHostedDeployment(environment) })
 
   if (configuredBaseUrl?.trim()) {
     return normalizeConfiguredOrigin(configuredBaseUrl, BENEFIT_PRESENTATION_BASE_URL_KEY)
   }
 
-  if (environment !== 'production') return undefined
+  if (!isHostedDeployment(environment)) return undefined
 
   if (!appUrl?.trim()) {
     throw new Error(
-      `${APP_URL_KEY} must define an absolute HTTP(S) origin in production when ${BENEFIT_PRESENTATION_BASE_URL_KEY} is absent`
+      `${APP_URL_KEY} must define an absolute HTTP(S) origin in homologation or production when ${BENEFIT_PRESENTATION_BASE_URL_KEY} is absent`
     )
   }
 
@@ -81,7 +83,7 @@ export function resolveBenefitPresentationOrigin(
   if (configuredOrigin) return configuredOrigin
 
   if (!options.requestOrigin) {
-    throw new Error('A trusted request origin is required outside production')
+    throw new Error('A trusted request origin is required in development')
   }
 
   return normalizeHttpOrigin(options.requestOrigin, 'Request origin')

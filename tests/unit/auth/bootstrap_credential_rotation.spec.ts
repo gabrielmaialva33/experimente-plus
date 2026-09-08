@@ -1,3 +1,5 @@
+import env from '#start/env'
+import { mock } from 'node:test'
 import { chmod, mkdtemp, readFile, rename, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -55,7 +57,12 @@ test.group('Bootstrap credential rotation contract', () => {
     )
   })
 
-  test('pins production output to the host-mounted recovery directory', async ({ assert }) => {
+  test('pins hosted output to the host-mounted recovery directory', async ({ assert, cleanup }) => {
+    const original = env.get.bind(env)
+    const envMock = mock.method(env, 'get', (key: string, fallback?: string) =>
+      key === 'DEPLOYMENT_ENV' ? 'homologation' : (original(key) ?? fallback)
+    )
+    cleanup(() => envMock.mock.restore())
     let receivedOptions: Record<string, unknown> | undefined
     const command = Object.create(SecurityRotateBootstrap.prototype) as SecurityRotateBootstrap
     Object.assign(command, {
@@ -63,7 +70,7 @@ test.group('Bootstrap credential rotation contract', () => {
       output: `${BOOTSTRAP_CREDENTIAL_HOST_DIRECTORY}/bootstrap-test.json`,
       app: {
         appRoot: pathToFileURL(`${process.cwd()}/`),
-        inProduction: true,
+        inProduction: false,
         container: {
           async make() {
             return {

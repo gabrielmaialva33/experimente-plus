@@ -1,3 +1,5 @@
+import env from '#start/env'
+import { isHostedDeployment } from '#shared/utils/deployment_environment'
 import app from '@adonisjs/core/services/app'
 import { ExceptionHandler, type HttpContext } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
@@ -41,7 +43,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * In debug mode, the exception handler will display verbose errors
    * with pretty printed stack traces.
    */
-  protected debug = !app.inProduction
+  protected debug = !app.inProduction && !isHostedDeployment(env.get('DEPLOYMENT_ENV'))
 
   /**
    * Status pages are used to display a custom HTML pages for certain error

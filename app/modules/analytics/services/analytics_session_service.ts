@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
-import app from '@adonisjs/core/services/app'
+import { isHostedDeployment } from '#shared/utils/deployment_environment'
 
 import { ANALYTICS_SESSION_COOKIE } from '#modules/analytics/interfaces/analytics_interface'
 import AnalyticsPrivacyService from '#modules/analytics/services/analytics_privacy_service'
@@ -24,7 +24,7 @@ export default class AnalyticsSessionService {
       context.response.encryptedCookie(ANALYTICS_SESSION_COOKIE, sessionId, {
         httpOnly: true,
         sameSite: 'lax',
-        secure: app.inProduction,
+        secure: isHostedDeployment(env.get('DEPLOYMENT_ENV')),
         path: '/',
         maxAge: `${days}d`,
       })

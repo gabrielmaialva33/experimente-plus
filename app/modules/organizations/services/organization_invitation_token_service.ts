@@ -1,3 +1,4 @@
+import { isHostedDeployment } from '#shared/utils/deployment_environment'
 import { createHmac, randomBytes } from 'node:crypto'
 import { DateTime } from 'luxon'
 
@@ -25,8 +26,8 @@ export default class OrganizationInvitationTokenService {
       return configured
     }
 
-    if (env.get('NODE_ENV') === 'production') {
-      throw new Error('ORGANIZATION_INVITATION_SECRET is required in production')
+    if (isHostedDeployment(env.get('DEPLOYMENT_ENV'))) {
+      throw new Error('ORGANIZATION_INVITATION_SECRET is required in homologation or production')
     }
 
     return env.get('APP_KEY')

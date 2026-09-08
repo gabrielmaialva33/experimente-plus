@@ -10,6 +10,7 @@
 */
 
 import { Env } from '@adonisjs/core/env'
+import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 
 import {
   assertBenefitPresentationOriginConfiguration,
@@ -31,6 +32,7 @@ function benefitPresentationBaseUrl(key: string, value?: string): string | undef
 
 const env = await Env.create(new URL('../', import.meta.url), {
   NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
+  DEPLOYMENT_ENV: (_key: string, value?: string) => deploymentEnvironment(value),
   PORT: Env.schema.number(),
   HOST: Env.schema.string({ format: 'host' }),
   LOG_LEVEL: Env.schema.string(),
@@ -174,12 +176,15 @@ const env = await Env.create(new URL('../', import.meta.url), {
 })
 
 assertBenefitPresentationOriginConfiguration({
-  environment: env.get('NODE_ENV'),
+  environment: env.get('DEPLOYMENT_ENV'),
   configuredBaseUrl: env.get('BENEFIT_PRESENTATION_BASE_URL'),
   appUrl: env.get('APP_URL'),
 })
 
-if (env.get('NODE_ENV') === 'production' && env.get('PAYMENT_PROVIDER') === 'fake') {
+if (
+  deploymentEnvironment(env.get('DEPLOYMENT_ENV')) === 'production' &&
+  env.get('PAYMENT_PROVIDER') === 'fake'
+) {
   throw new Error('Fake payments are forbidden in production')
 }
 

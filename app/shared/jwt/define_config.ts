@@ -1,3 +1,5 @@
+import env from '#start/env'
+import { isHostedDeployment } from '#shared/utils/deployment_environment'
 import { type symbols } from '@adonisjs/auth'
 import { type GuardConfigProvider } from '@adonisjs/auth/types'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -35,7 +37,7 @@ export function jwtGuard<UserProvider extends JwtUserProviderContract<unknown>>(
         cookieOptions: {
           path: '/',
           httpOnly: true,
-          secure: app.inProduction,
+          secure: isHostedDeployment(env.get('DEPLOYMENT_ENV')),
           sameSite: 'lax',
         },
         content: config.content,

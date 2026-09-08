@@ -6,7 +6,7 @@ import env from '#start/env'
 export default class BenefitPresentationOriginService {
   resolve(request: HttpContext['request']): string {
     return resolveBenefitPresentationOrigin({
-      environment: env.get('NODE_ENV'),
+      environment: env.get('DEPLOYMENT_ENV'),
       configuredBaseUrl: env.get('BENEFIT_PRESENTATION_BASE_URL'),
       appUrl: env.get('APP_URL'),
       requestOrigin: `${request.protocol()}://${request.host()}`,
