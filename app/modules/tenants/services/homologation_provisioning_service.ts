@@ -393,7 +393,7 @@ export default class HomologationProvisioningService {
                 'Publicação explícita de conteúdo fictício pelo provisionamento de homologação',
             })
             .save()
-          for (const [event_type, from_status, to_status] of [
+          for (const [eventType, fromStatus, toStatus] of [
             ['created', null, 'draft'],
             ['submitted', 'draft', 'pending_review'],
             ['approved', 'pending_review', 'approved'],
@@ -404,9 +404,9 @@ export default class HomologationProvisioningService {
                 tenant_id: tenant.id,
                 establishment_id: establishment.id,
                 revision_id: revision.id,
-                event_type,
-                from_status,
-                to_status,
+                event_type: eventType,
+                from_status: fromStatus,
+                to_status: toStatus,
                 actor_id: administrator,
                 metadata: {
                   source: ACTION,
