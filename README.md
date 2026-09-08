@@ -164,6 +164,15 @@ e ajuste os aliases para `#modules/*` e `#shared/*`.
 
 As portas podem ser alteradas no `.env`.
 
+### Provisionamento de homologação
+
+A instalação de homologação usa o comando explícito `homologation:provision`, com três
+contas fornecidas por arquivo privado, sem senhas determinísticas ou impressão de
+credenciais. Ele cria conteúdo demonstrativo publicado e os três cenários de benefício;
+a reexecução preserva contas, moderação e histórico financeiro. Exige
+`DEPLOYMENT_ENV=homologation` e pagamentos sandbox. Procedimento e comando para a imagem
+compilada no [runbook de recriação](docs/runbooks/homologation_baseline_recreation.md#provisionamento-próprio-de-homologação).
+
 ### Contas de desenvolvimento
 
 O seeder cria três contas determinísticas para percorrer o piloto completo:
