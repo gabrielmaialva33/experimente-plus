@@ -23,6 +23,10 @@ export interface WalletBenefit {
 
 export interface WalletPass {
   access: {
+    offer_id?: number | null
+    product_type?: 'edition' | 'offer'
+    usage_starts_at?: string
+    usage_ends_at?: string
     id: number
     source: string
     status: string

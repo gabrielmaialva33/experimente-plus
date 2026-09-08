@@ -97,7 +97,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
         aria-label="Resumo da carteira"
         className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4"
       >
-        <SummaryItem label="Edições" value={summary.passes} />
+        <SummaryItem label="Acessos" value={summary.passes} />
         <SummaryItem label="Benefícios" value={summary.benefits} />
         <SummaryItem label="Disponíveis" value={summary.available} />
         <SummaryItem label="Utilizações concluídas" value={summary.redeemed} />
@@ -109,7 +109,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
             headingLevel={2}
             icon={TicketCheck}
             title="Sua carteira ainda está vazia"
-            description="Quando a operação conceder acesso a uma edição para sua conta, os benefícios aparecerão aqui."
+            description="Após receber acesso a um pacote ou voucher avulso, os benefícios aparecerão aqui."
           >
             <Button asChild variant="outline">
               <Link href="/cidades">Explorar estabelecimentos</Link>
@@ -126,7 +126,11 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                     <MapPin className="size-3.5" aria-hidden="true" />
                     {edition.city.name} · {edition.city.state_code}
                   </p>
-                  <h2 className="mt-2 text-xl font-semibold tracking-tight">{edition.name}</h2>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight">
+                    {access.offer_id
+                      ? 'Voucher avulso · ' + (benefits[0]?.title ?? edition.name)
+                      : edition.name}
+                  </h2>
                   {edition.description ? (
                     <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
                       {edition.description}
@@ -136,7 +140,8 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                 <dl className="shrink-0 text-sm sm:text-end">
                   <dt className="text-xs text-muted-foreground">Período de utilização</dt>
                   <dd className="mt-1 font-medium">
-                    {formatDate(edition.usage_starts_at)} — {formatDate(edition.usage_ends_at)}
+                    {formatDate(access.usage_starts_at ?? edition.usage_starts_at)} —{' '}
+                    {formatDate(access.usage_ends_at ?? edition.usage_ends_at)}
                   </dd>
                 </dl>
               </CardHeader>

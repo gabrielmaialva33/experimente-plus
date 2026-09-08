@@ -108,6 +108,25 @@ const receipt: RedemptionReceipt = {
 }
 
 describe('consumer wallet pages', () => {
+  it('identifies a standalone voucher separately from the edition package', () => {
+    const single = structuredClone(walletWithBenefit.passes[0])
+    single.access.id = 8
+    single.access.offer_id = 11
+    single.access.product_type = 'offer'
+    render(
+      <WalletPage
+        wallet={{
+          summary: { ...walletWithBenefit.summary, passes: 2, benefits: 2 },
+          passes: [walletWithBenefit.passes[0], single],
+        }}
+      />
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Voucher avulso · Café cortesia' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Edição Norte do Paraná' })).toBeInTheDocument()
+  })
+
   it('uses the canonical empty state and honest access copy', () => {
     const { container } = render(<WalletPage wallet={emptyWallet} />)
 
