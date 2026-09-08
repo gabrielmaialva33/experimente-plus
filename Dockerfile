@@ -1,35 +1,44 @@
 # syntax=docker/dockerfile:1
-#
-# Multi-stage image to run the AdonisJS v7 app in a container (local/dev infra).
-# Build: `docker compose build` (or `docker build -t experimente-plus .`).
-#
 ARG NODE_VERSION=24.13.0
 
-# --- Base: node + pnpm + toolchain for native modules (argon2, better-sqlite3) ---
+# The runtime never inherits the native compilation toolchain.
 FROM node:${NODE_VERSION}-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=/pnpm:$PATH
 RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
+WORKDIR /app
+
+FROM base AS toolchain
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
+# Use the headers already shipped with the exact Node image, not a nodejs.org
+# download during node-gyp. Bound native jobs independently of pnpm lifecycles.
+ENV npm_config_nodedir=/usr/local
+ENV npm_config_jobs=2
+ENV MAKEFLAGS=-j2
+RUN test -f /usr/local/include/node/node.h
 
-# --- Build: install all deps and compile the app into ./build ---
-FROM base AS build
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+FROM toolchain AS build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
+RUN --mount=type=cache,id=experimente-pnpm-node24,target=/pnpm/store,sharing=locked \
+  pnpm install --frozen-lockfile --child-concurrency=1
 COPY . .
-RUN pnpm build
+# V8 heap budget for the build only; this is not a container memory limit.
+RUN NODE_OPTIONS=--max-old-space-size=2048 pnpm build
 
-# --- Production: only the compiled output + production deps ---
+# Dependency installation is keyed only by manifests, not application source.
+# A source-only release reuses this layer instead of rebuilding native modules.
+FROM toolchain AS production-deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
+RUN --mount=type=cache,id=experimente-pnpm-node24,target=/pnpm/store,sharing=locked \
+  pnpm install --prod --frozen-lockfile --child-concurrency=1
+
 FROM base AS production
 ENV NODE_ENV=production
-# The compiled app already carries package.json + pnpm-lock.yaml; the
-# pnpm-workspace.yaml is copied so `allowBuilds` lets the native modules build.
 COPY --from=build /app/build ./
-COPY pnpm-workspace.yaml ./
-RUN pnpm install --prod --frozen-lockfile
+COPY --from=production-deps /app/node_modules ./node_modules
+COPY pnpm-workspace.yaml .pnpmfile.cjs ./
 EXPOSE 3333
-# Migrations are a one-shot deploy phase; the long-running service starts only HTTP.
+# Migrations stay in the one-shot deploy phase; startup serves only HTTP.
 CMD ["node", "bin/server.js"]
