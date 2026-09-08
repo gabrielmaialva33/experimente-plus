@@ -266,6 +266,10 @@ test.group('Documentation', () => {
     assert.isFalse(edition.additionalProperties)
     assert.sameMembers(edition.required!, [
       'id',
+      'edition_id',
+      'offer_id',
+      'product_type',
+      'establishment',
       'name',
       'description',
       'city',
@@ -292,6 +296,10 @@ test.group('Documentation', () => {
       '#/components/schemas/PaymentMethod'
     )
     assert.deepEqual(schemas.PaymentMethod.enum, ['pix', 'card'])
+    assert.sameMembers(schemas.PurchaseCatalog.required!, ['editions', 'offers'])
+    assert.equal(schemas.PurchasableOffer.properties?.product_type.const, 'offer')
+    assert.equal(schemas.PurchasableOffer.properties?.offer_id.type, 'integer')
+    assert.equal(schemas.PurchaseRequest.properties?.offer_id.minimum, 1)
     assert.equal(edition.properties?.status.const, 'published')
     assert.equal(edition.properties?.purchasable.const, true)
   })

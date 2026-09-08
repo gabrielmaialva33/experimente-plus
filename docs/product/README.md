@@ -90,6 +90,8 @@ Uma decisão deste diretório só deve virar migration, model, rota ou interface
 
 Decisões aceitas que afetem schema também devem possuir ADR quando forem estruturais. A fundação pode avançar para o domínio correspondente somente depois desses dois registros estarem consistentes.
 
-## EP-14 — compra de edição
+## EP-14 — pacote da cidade e voucher avulso
 
-O dono aceitou o [ADR-0024](../architecture/decisions/0024-compra-de-edicao-e-concessao-por-pagamento.md): compra avulsa da edição inteira, sem SKU por oferta, com acesso somente após pagamento confirmado. A descoberta pública de D-003 continua livre. O backend é agnóstico de provedor; a escolha comercial foi explicitamente deferida. Adaptadores Mercado Pago e falso determinístico não significam abertura de vendas reais. O [runbook](../runbooks/purchases.md) registra operação, recuperação e pré-condições comerciais. Assinaturas, recorrência e os demais cortes não sucedidos do ADR-0022 continuam fora de escopo.
+O [ADR-0024 aceito](../architecture/decisions/0024-compra-de-edicao-e-concessao-por-pagamento.md) originalmente vende a edição inteira; a escolha posterior de Stripe está registrada nele. Em 08/09/2026, o dono autorizou a extensão para comprar diretamente uma oferta da loja ou o pacote, descrita primeiro na [proposta ADR-0025](../architecture/decisions/0025-voucher-avulso-e-baseline-de-homologacao.md). A implementação mantém edição como campanha da cidade e adiciona escopo opcional de oferta em compra/acesso. Status documental da proposta não é promovido por inferência.
+
+A descoberta pública de D-003 continua livre. Confirmação autenticada é condição para acesso, cotas pertencem ao acesso/oferta e reembolso nunca apaga usos. Preço avulso permite restituir sua compra, mas não determina rateio automático de pacote com desconto. Assinaturas e recorrência continuam fora deste corte. O [runbook de compras](../runbooks/purchases.md) descreve os dois produtos; a exceção de consolidação exige [recriar a homologação](../runbooks/homologation_baseline_recreation.md), operação exclusiva do dono.

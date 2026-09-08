@@ -32,6 +32,10 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 | [ADR-0024](0024-compra-de-edicao-e-concessao-por-pagamento.md) | Compra de edição e concessão por pagamento | EP-14, porta agnóstica, confirmação, bloqueio, estorno e conciliação |
 
+## Propostas com execução expressamente autorizada
+
+- [ADR-0025 — Voucher avulso e baseline de homologação](0025-voucher-avulso-e-baseline-de-homologacao.md): extensão EP-14 redigida antes do código; status proposto, implementação autorizada na tarefa de 08/09/2026. Sucede parcialmente o produto/reembolso do ADR-0024 e registra a exceção de consolidação. Banco do piloto exige recriação pelo dono, nunca upgrade automático sobre o histórico anterior.
+
 ## Regra de evolução
 
 - Decisão estrutural nova recebe um ADR antes da migration correspondente.
@@ -56,5 +60,5 @@ EP-10 — acesso e carteira                    implementado e validado
 EP-11 — apresentação e resgate               implementado e validado
 EP-12 — API móvel consumer-first              implementado e validado
 EP-13 — cliente móvel                         decidido, implementação pendente
-EP-14 — compra de edição                      backend implementado e validado localmente; homologação comercial pendente
+EP-14 — edição e voucher avulso                backend implementado; ADR-0025 proposto com execução autorizada; recriação/homologação comercial pelo dono
 ```

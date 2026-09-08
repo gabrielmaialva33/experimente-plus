@@ -180,6 +180,8 @@ Senha:    experimente123
 > pela internet. Elas são configuráveis por `DEV_ADMIN_*`, `DEV_PARTNER_*` e `DEV_CUSTOMER_*`.
 > Os dados regionais, estabelecimentos, ofertas e acessos criados pelo seeder são fictícios.
 
+O seed mantém edições gratuitas/cortesias e acrescenta pacote Londrina de 4990 centavos e voucher avulso de 1490 centavos. Capas são ilustrações originais determinísticas de 1200×800, armazenadas no Drive configurado, com checksum/versionamento; não fotos de terceiros. O [runbook](docs/runbooks/purchases.md#cenário-de-desenvolvimento) explica configuração fake e reexecução.
+
 O seeder é `static environment = ['development']`: com `NODE_ENV=production` ele é ignorado. Além desse filtro Lucid, a execução exige `DEPLOYMENT_ENV=development` antes de acessar o banco, inclusive em chamadas diretas.
 
 ---
@@ -331,16 +333,18 @@ também exige esse SHA como argumento único. As exclusões de credenciais, `.en
 
 ## Migrations antes da versão 1.0
 
+**Exceção expressa de 08/09/2026:** o dono autorizou consolidar o histórico da homologação para a extensão de voucher avulso. Esta baseline tem **51 migrations**, de 59 anteriores. O piloto terá de ser recriado do zero pelo dono; não aplicar este checkout sobre o banco antigo. O [runbook de recriação](docs/runbooks/homologation_baseline_recreation.md) lista fusões, preservação de histórico financeiro e retorno ao banco/código anteriores. A regra geral abaixo continua válida fora desta exceção.
+
 A consolidação na migration `create_*` original só se aplica a migrations que nunca chegaram a
 um ambiente persistente. Desde o primeiro deploy em piloto ou produção, o histórico aplicado é
 append-only, mesmo antes da versão 1.0. Alterações de tabelas, constraints, índices, funções e
 triggers já implantados exigem uma nova migration forward; editar o arquivo aplicado não atualiza
 o banco.
 
-O contrato de `benefit_redemptions.receipt_code` é reconciliado pela migration forward
-`1788556800100_reconcile_benefit_receipt_codes.ts`: valida os valores existentes antes de aplicar
+No histórico anterior à baseline, o contrato de `benefit_redemptions.receipt_code` era reconciliado pela migration forward
+`1788556800100_reconcile_benefit_receipt_codes.ts` (agora em `tests/fixtures/legacy_migrations/`): validava os valores existentes antes de aplicar
 `varchar(20) NOT NULL` e o check `^EXP-[0-9A-F]{16}$`. Dados inválidos abortam sem truncamento ou
-normalização; bancos existentes não precisam ser recriados para receber esse reparo. Os cenários
+normalização. Esse reparo isolado dispensava recriação; a nova baseline consolidada exige banco vazio. Os cenários
 e a janela estão no [runbook dos contratos persistidos](docs/runbooks/persistent_schema_reconciliation.md).
 
 Correções forward devem funcionar sobre o schema antigo, sobre uma instalação limpa e sobre

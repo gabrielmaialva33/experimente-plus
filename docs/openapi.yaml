@@ -1099,9 +1099,35 @@ components:
       properties:
         access:
           type: object
-          required: [id, source, status, granted_at, availability]
+          required:
+            [
+              id,
+              offer_id,
+              product_type,
+              usage_starts_at,
+              usage_ends_at,
+              source,
+              status,
+              granted_at,
+              availability,
+            ]
           additionalProperties: false
           properties:
+            usage_starts_at:
+              type: string
+              format: date-time
+              description: Início efetivo do acesso, interseção com a oferta no produto avulso.
+            usage_ends_at:
+              type: string
+              format: date-time
+              description: Fim efetivo do acesso, interseção com a oferta no produto avulso.
+            offer_id:
+              type: [integer, 'null']
+              minimum: 1
+              description: NULL representa o pacote da edição; ID limita a compra/acesso exclusivamente a esta oferta.
+            product_type:
+              type: string
+              enum: [edition, offer]
             id:
               type: integer
               minimum: 1
@@ -3994,12 +4020,25 @@ components:
           items:
             $ref: '#/components/schemas/PilotFeedback'
 
+    PurchaseEstablishment:
+      type: object
+      additionalProperties: false
+      required: [id, public_name, slug]
+      properties:
+        id:
+          type: integer
+        public_name:
+          type: string
+        slug:
+          type: [string, 'null']
+
     PurchaseOfferSnapshot:
       type: object
       additionalProperties: false
       required:
         - id
         - establishment_id
+        - establishment
         - title
         - description
         - terms
@@ -4020,6 +4059,8 @@ components:
           type: integer
         establishment_id:
           type: integer
+        establishment:
+          $ref: '#/components/schemas/PurchaseEstablishment'
         title:
           type: string
         description:
@@ -4068,6 +4109,10 @@ components:
       type: object
       additionalProperties: false
       required:
+        - product_type
+        - offer_id
+        - amount_cents
+        - currency
         - name
         - description
         - usage_starts_at
@@ -4077,6 +4122,18 @@ components:
         - terms_version
         - offers
       properties:
+        offer_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: NULL representa o pacote da edição; ID limita a compra/acesso exclusivamente a esta oferta.
+        product_type:
+          type: string
+          enum: [edition, offer]
+        amount_cents:
+          type: integer
+          minimum: 1
+        currency:
+          const: BRL
         name:
           type: string
         description:
@@ -4131,6 +4188,8 @@ components:
       required:
         - id
         - edition_id
+        - offer_id
+        - product_type
         - amount_cents
         - currency
         - status
@@ -4145,6 +4204,13 @@ components:
         - created_at
         - refunds
       properties:
+        offer_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: NULL representa o pacote da edição; ID limita a compra/acesso exclusivamente a esta oferta.
+        product_type:
+          type: string
+          enum: [edition, offer]
         id:
           type: string
           format: uuid
@@ -4218,6 +4284,10 @@ components:
         - terms_version
         - method
       properties:
+        offer_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: NULL representa o pacote da edição; ID limita a compra/acesso exclusivamente a esta oferta.
         edition_id:
           type: integer
           minimum: 1
@@ -4324,7 +4394,12 @@ components:
       additionalProperties: false
       required:
         - editions
+        - offers
       properties:
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchasableOffer'
         editions:
           type: array
           maxItems: 100
@@ -4335,6 +4410,10 @@ components:
       additionalProperties: false
       required:
         - id
+        - edition_id
+        - offer_id
+        - product_type
+        - establishment
         - name
         - description
         - city
@@ -4349,6 +4428,14 @@ components:
         - snapshot
         - purchasable
       properties:
+        edition_id:
+          type: integer
+        offer_id:
+          type: 'null'
+        product_type:
+          const: edition
+        establishment:
+          type: 'null'
         id:
           type: integer
         name:
@@ -4389,7 +4476,93 @@ components:
           type: array
           minItems: 1
           uniqueItems: true
-          description: Meios habilitados na configuração do servidor para esta edição e provedor. Copiar um destes valores para PurchaseRequest.method. Não garante aprovação nem disponibilidade transitória do PSP. Edições sem meios habilitados são omitidas.
+          description: Meios habilitados na configuração do servidor para este produto, preço e provedor. Copiar um destes valores para PurchaseRequest.method. Não garante aprovação nem disponibilidade transitória do PSP. Produtos sem meios habilitados são omitidos.
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+        amount_cents:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+          const: BRL
+        snapshot:
+          $ref: '#/components/schemas/PurchaseSnapshot'
+        purchasable:
+          type: boolean
+          const: true
+    PurchasableOffer:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - edition_id
+        - offer_id
+        - product_type
+        - establishment
+        - name
+        - description
+        - city
+        - status
+        - sales_starts_at
+        - sales_ends_at
+        - usage_starts_at
+        - usage_ends_at
+        - payment_methods
+        - amount_cents
+        - currency
+        - snapshot
+        - purchasable
+      properties:
+        edition_id:
+          type: integer
+        offer_id:
+          type: integer
+          minimum: 1
+        product_type:
+          const: offer
+        establishment:
+          $ref: '#/components/schemas/PurchaseEstablishment'
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        city:
+          type: object
+          additionalProperties: false
+          required: [id, name, slug, state_code, timezone]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            slug:
+              type: string
+            state_code:
+              type: string
+            timezone:
+              type: string
+        status:
+          type: string
+          const: published
+        sales_starts_at:
+          type: string
+          format: date-time
+        sales_ends_at:
+          type: string
+          format: date-time
+        usage_starts_at:
+          type: string
+          format: date-time
+        usage_ends_at:
+          type: string
+          format: date-time
+        payment_methods:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          description: Meios habilitados na configuração do servidor para este produto, preço e provedor. Copiar um destes valores para PurchaseRequest.method. Não garante aprovação nem disponibilidade transitória do PSP. Produtos sem meios habilitados são omitidos.
           items:
             $ref: '#/components/schemas/PaymentMethod'
         amount_cents:
@@ -10743,19 +10916,22 @@ paths:
       tags:
         - Purchases
       operationId: purchaseCatalog
-      summary: Vitrine pública de edições compráveis, sem login ou aquisição prévia
+      summary: Vitrine pública de pacotes e vouchers avulsos, sem login ou aquisição prévia
       description: >-
-        Operação resolvida pelo hostname confiável. Até 100 edições publicadas com preço
+        Operação resolvida pelo hostname confiável. Até 100 edições de origem, publicadas, com produtos de preço
         positivo em BRL, venda iniciada e ainda aberta, uso ainda não encerrado,
         ao menos uma oferta ativa de unidade publicada e meio de pagamento habilitado.
         Pré-venda é permitida quando a venda está aberta e o uso começa no futuro.
-        Edições sem meios disponíveis são omitidas; nenhuma resulta em editions vazio com HTTP 200.
+        Pacotes aparecem em editions e vouchers avulsos em offers, com preços e snapshots próprios.
+        Produtos sem meios disponíveis são omitidos; ambas as listas vazias mantêm HTTP 200.
+        Offer_id NULL representa pacote; ID limita a compra a uma oferta.
+        A janela de uso avulsa é a interseção da edição com a oferta; venda termina até o fim desse uso.
         Somente dados públicos da edição, cidade e ofertas; não inclui titular, pedidos ou dados do PSP.
         O catálogo de descoberta permanece público e independente da compra e da disponibilidade do PSP.
       security: []
       responses:
         '200':
-          description: Edições elegíveis; lista vazia quando nenhuma está disponível.
+          description: Pacotes e vouchers elegíveis; listas vazias quando nenhum está disponível.
           content:
             application/json:
               schema:
