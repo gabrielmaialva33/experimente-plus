@@ -53,63 +53,87 @@ export default class PurchaseService {
       .where('sales_starts_at', '<=', now.toJSDate())
       .where('sales_ends_at', '>', now.toJSDate())
       .whereColumn('sales_ends_at', '<=', 'usage_ends_at')
-      .where('price_cents', '>', 0)
       .where('currency', 'BRL')
+      .where((q) =>
+        q
+          .where('price_cents', '>', 0)
+          .orWhereHas('offers', (o) => o.where('standalone_price_cents', '>', 0))
+      )
       .preload('city')
       .orderBy('id')
       .limit(100)
-    const results = []
+    const packages = []
+    const singles = []
     for (const edition of editions) {
-      const paymentMethods = this.paymentMethods.forEdition(edition)
-      if (!paymentMethods.length) continue
-      const snapshot = await this.snapshot(edition)
-      if (snapshot.offers.length)
-        results.push({
-          id: edition.id,
-          name: edition.name,
-          description: edition.description,
-          city: {
-            id: edition.city.id,
-            name: edition.city.name,
-            slug: edition.city.slug,
-            state_code: edition.city.state_code,
-            timezone: edition.city.timezone,
-          },
-          status: edition.status,
-          sales_starts_at: snapshot.sales_starts_at,
-          sales_ends_at: snapshot.sales_ends_at,
-          usage_starts_at: snapshot.usage_starts_at,
-          usage_ends_at: snapshot.usage_ends_at,
-          payment_methods: paymentMethods,
-          amount_cents: edition.price_cents,
-          currency: edition.currency,
-          snapshot,
-          purchasable: true,
-        })
+      const packageSnapshot = await this.snapshot(edition)
+      if (this.sellable(edition, packageSnapshot)) {
+        const methods = this.paymentMethods.forEdition(edition, packageSnapshot.amount_cents)
+        if (methods.length) packages.push(this.catalogProduct(edition, packageSnapshot, methods))
+      }
+      for (const offer of packageSnapshot.offers) {
+        const snapshot = await this.snapshot(edition, undefined, offer.id)
+        const methods = this.paymentMethods.forEdition(edition, snapshot.amount_cents)
+        if (this.sellable(edition, snapshot) && methods.length)
+          singles.push(this.catalogProduct(edition, snapshot, methods))
+      }
     }
-    return { editions: results }
+    return { editions: packages, offers: singles }
   }
-  private sellable(edition: BenefitEdition) {
+
+  private catalogProduct(
+    edition: BenefitEdition,
+    snapshot: PurchaseSnapshot,
+    methods: Array<'pix' | 'card'>
+  ) {
+    return {
+      id: snapshot.offer_id ?? edition.id,
+      edition_id: edition.id,
+      offer_id: snapshot.offer_id,
+      product_type: snapshot.product_type,
+      name: snapshot.name,
+      description: snapshot.description,
+      city: {
+        id: edition.city.id,
+        name: edition.city.name,
+        slug: edition.city.slug,
+        state_code: edition.city.state_code,
+        timezone: edition.city.timezone,
+      },
+      establishment: snapshot.offer_id ? snapshot.offers[0].establishment : null,
+      status: edition.status,
+      sales_starts_at: snapshot.sales_starts_at,
+      sales_ends_at: snapshot.sales_ends_at,
+      usage_starts_at: snapshot.usage_starts_at,
+      usage_ends_at: snapshot.usage_ends_at,
+      payment_methods: methods,
+      amount_cents: snapshot.amount_cents,
+      currency: snapshot.currency,
+      snapshot,
+      purchasable: true,
+    }
+  }
+
+  private sellable(edition: BenefitEdition, snapshot: PurchaseSnapshot) {
     const now = DateTime.utc()
     return (
       edition.status === 'published' &&
-      edition.price_cents > 0 &&
-      edition.currency === 'BRL' &&
-      Boolean(
-        edition.sales_starts_at &&
-        edition.sales_ends_at &&
-        edition.sales_starts_at <= now &&
-        now < edition.sales_ends_at &&
-        edition.sales_ends_at <= edition.usage_ends_at &&
-        now < edition.usage_ends_at
-      )
+      snapshot.amount_cents > 0 &&
+      snapshot.currency === 'BRL' &&
+      snapshot.offers.length > 0 &&
+      Boolean(snapshot.sales_starts_at && snapshot.sales_ends_at) &&
+      DateTime.fromISO(snapshot.sales_starts_at) <= now &&
+      now < DateTime.fromISO(snapshot.sales_ends_at) &&
+      now < DateTime.fromISO(snapshot.usage_ends_at) &&
+      DateTime.fromISO(snapshot.usage_starts_at) < DateTime.fromISO(snapshot.usage_ends_at) &&
+      DateTime.fromISO(snapshot.sales_ends_at) <= DateTime.fromISO(snapshot.usage_ends_at)
     )
   }
   private async snapshot(
     edition: BenefitEdition,
-    client?: TransactionClientContract
+    client?: TransactionClientContract,
+    offerId: number | null = null
   ): Promise<PurchaseSnapshot> {
-    const offers = await BenefitOffer.query({ client })
+    const query = BenefitOffer.query({ client })
       .where('tenant_id', edition.tenant_id)
       .where('edition_id', edition.id)
       .where('status', 'active')
@@ -119,14 +143,31 @@ export default class PurchaseService {
           .whereNotNull('published_revision_id')
           .whereNot('business_status', 'permanently_closed')
       )
+      .where((q) => q.whereNull('ends_at').orWhere('ends_at', '>', DateTime.utc().toJSDate()))
+      .preload('establishment', (q) => q.preload('published_revision'))
       .orderBy('id')
+    if (offerId !== null) query.where('id', offerId)
+    const offers = await query
+    const selected = offerId === null ? null : offers[0]
+    const amount = offerId === null ? edition.price_cents : (selected?.standalone_price_cents ?? 0)
+    const usageStart = selected?.starts_at
+      ? DateTime.max(edition.usage_starts_at, selected.starts_at)
+      : edition.usage_starts_at
+    const usageEnd = selected?.ends_at
+      ? DateTime.min(edition.usage_ends_at, selected.ends_at)
+      : edition.usage_ends_at
+    const salesEnd = edition.sales_ends_at ? DateTime.min(edition.sales_ends_at, usageEnd) : null
     const details = {
-      name: edition.name,
-      description: edition.description,
-      usage_starts_at: edition.usage_starts_at.toISO()!,
-      usage_ends_at: edition.usage_ends_at.toISO()!,
+      product_type: offerId === null ? ('edition' as const) : ('offer' as const),
+      offer_id: offerId,
+      amount_cents: amount,
+      currency: edition.currency,
+      name: selected?.title ?? edition.name,
+      description: selected?.description ?? edition.description,
+      usage_starts_at: usageStart.toISO()!,
+      usage_ends_at: usageEnd.toISO()!,
       sales_starts_at: edition.sales_starts_at?.toISO() ?? '',
-      sales_ends_at: edition.sales_ends_at?.toISO() ?? '',
+      sales_ends_at: salesEnd?.toISO() ?? '',
       offers: offers.map((o) => ({
         id: o.id,
         title: o.title,
@@ -143,6 +184,12 @@ export default class PurchaseService {
         on_premise_only: o.on_premise_only,
         minimum_party_size: o.minimum_party_size,
         establishment_id: o.establishment_id,
+        establishment: {
+          id: o.establishment_id,
+          public_name:
+            o.establishment.published_revision?.public_name ?? 'Estabelecimento participante',
+          slug: o.establishment.published_revision?.slug ?? null,
+        },
         terms: o.terms,
         max_redemptions_per_access: o.max_redemptions_per_access,
       })),
@@ -151,7 +198,7 @@ export default class PurchaseService {
       ...details,
       terms_version: purchaseHash({
         ...details,
-        amount_cents: edition.price_cents,
+        amount_cents: amount,
         currency: edition.currency,
       }),
     }
@@ -160,6 +207,7 @@ export default class PurchaseService {
     const keyHash = purchaseKey(key)
     const requestHash = purchaseHash([
       input.edition_id,
+      input.offer_id ?? null,
       input.amount_cents,
       input.terms_version,
       input.method,
@@ -195,16 +243,17 @@ export default class PurchaseService {
         .where('id', input.edition_id)
         .forUpdate()
         .first()
-      if (!edition || !this.sellable(edition))
-        throw new BadRequestException('Edition is not available for purchase')
-      if (!this.paymentMethods.forEdition(edition).includes(input.method))
+      if (!edition) throw new BadRequestException('Edition is not available for purchase')
+      const snapshot = await this.snapshot(edition, client, input.offer_id ?? null)
+      if (!this.sellable(edition, snapshot))
+        throw new BadRequestException('Product is not available for purchase')
+      if (!this.paymentMethods.forEdition(edition, snapshot.amount_cents).includes(input.method))
         throw new BadRequestException(
           'Payment method is not available for this edition; refresh the catalog'
         )
-      const snapshot = await this.snapshot(edition, client)
       if (
         !snapshot.offers.length ||
-        input.amount_cents !== edition.price_cents ||
+        input.amount_cents !== snapshot.amount_cents ||
         input.terms_version !== snapshot.terms_version
       )
         throw new BadRequestException('Quote changed; review the edition again')
@@ -213,6 +262,7 @@ export default class PurchaseService {
       if (
         await BenefitAccess.query({ client })
           .where({ tenant_id: tenantId, edition_id: edition.id, user_id: actor.id })
+          .whereRaw('COALESCE(offer_id, 0) = ?', [input.offer_id ?? 0])
           .first()
       )
         throw new BadRequestException(
@@ -221,6 +271,7 @@ export default class PurchaseService {
       const pending = await this.repository
         .purchases(client)
         .where({ tenant_id: tenantId, edition_id: edition.id, user_id: actor.id })
+        .whereRaw('COALESCE(offer_id, 0) = ?', [input.offer_id ?? 0])
         .whereIn('status', ['pending', 'paid', 'review'])
         .first()
       if (pending)
@@ -230,7 +281,7 @@ export default class PurchaseService {
       if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 60)
         throw new Error('Invalid purchase quote duration')
       const expires = new Date(
-        Math.min(Date.now() + minutes * 60000, edition.sales_ends_at!.toMillis())
+        Math.min(Date.now() + minutes * 60000, DateTime.fromISO(snapshot.sales_ends_at).toMillis())
       )
       await this.repository.insert(
         'purchases',
@@ -238,11 +289,12 @@ export default class PurchaseService {
           id,
           tenant_id: tenantId,
           edition_id: edition.id,
+          offer_id: input.offer_id ?? null,
           user_id: actor.id,
           key_hash: keyHash,
           request_hash: requestHash,
           snapshot: JSON.stringify(snapshot),
-          amount_cents: edition.price_cents,
+          amount_cents: snapshot.amount_cents,
           currency: edition.currency,
           method: input.method,
           provider: provider.name,
@@ -266,6 +318,8 @@ export default class PurchaseService {
         purchase,
         'created',
         {
+          offer_id: purchase.offer_id,
+          product_type: snapshot.product_type,
           amount_cents: purchase.amount_cents,
           currency: purchase.currency,
           terms_version: snapshot.terms_version,
@@ -309,6 +363,8 @@ export default class PurchaseService {
     return {
       id: p.id,
       edition_id: p.edition_id,
+      offer_id: p.offer_id,
+      product_type: p.offer_id === null ? 'edition' : 'offer',
       amount_cents: p.amount_cents,
       currency: p.currency,
       status: p.status,

@@ -1,6 +1,10 @@
 import type { PaymentInput, PaymentObservation } from '#modules/purchases/interfaces/payment_port'
 
 export interface PurchaseSnapshot {
+  product_type: 'edition' | 'offer'
+  offer_id: number | null
+  amount_cents: number
+  currency: string
   name: string
   description: string | null
   usage_starts_at: string
@@ -23,6 +27,7 @@ export interface PurchaseSnapshot {
     on_premise_only: boolean
     minimum_party_size: number
     establishment_id: number
+    establishment: { id: number; public_name: string; slug: string | null }
     title: string
     terms: string | null
     max_redemptions_per_access: number
@@ -32,6 +37,7 @@ export interface Purchase {
   id: string
   tenant_id: number
   edition_id: number
+  offer_id: number | null
   user_id: number
   key_hash: string
   request_hash: string
@@ -81,6 +87,7 @@ export interface PurchaseCommand {
   lease_token: string
 }
 export interface CreatePurchaseInput extends PaymentInput {
+  offer_id?: number | null
   edition_id: number
   amount_cents: number
   terms_version: string

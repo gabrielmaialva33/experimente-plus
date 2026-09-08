@@ -10,8 +10,8 @@ import PaymentProviderService from '#modules/purchases/services/payment_provider
 export default class PaymentMethodsService {
   constructor(private providers: PaymentProviderService) {}
 
-  forEdition(edition: BenefitEdition): PaymentMethod[] {
-    if (edition.currency !== 'BRL' || edition.price_cents <= 0) return []
+  forEdition(edition: BenefitEdition, amountCents = edition.price_cents): PaymentMethod[] {
+    if (edition.currency !== 'BRL' || amountCents <= 0) return []
     try {
       // Constructing the configured port never calls the PSP or exposes its account/secrets.
       const provider = this.providers.get()

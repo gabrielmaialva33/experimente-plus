@@ -2,6 +2,7 @@ import vine from '@vinejs/vine'
 
 export const purchaseValidator = vine.compile(
   vine.object({
+    offer_id: vine.number().positive().withoutDecimals().nullable().optional(),
     edition_id: vine.number().positive().withoutDecimals(),
     amount_cents: vine.number().positive().withoutDecimals().max(2147483647),
     terms_version: vine.string().regex(/^[a-f0-9]{64}$/),

@@ -1,3 +1,4 @@
+import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import {
   InvalidPaymentWebhookException,
   PurchaseConflictException,
@@ -371,7 +372,24 @@ export default class PurchaseProcessingService {
         .first()
       const prior = await BenefitAccess.query({ client })
         .where({ tenant_id: p.tenant_id, user_id: p.user_id, edition_id: p.edition_id })
+        .whereRaw('COALESCE(offer_id, 0) = ?', [p.offer_id ?? 0])
         .first()
+      const selectedOffer =
+        p.offer_id === null
+          ? null
+          : await BenefitOffer.query({ client })
+              .where({ id: p.offer_id, edition_id: p.edition_id, tenant_id: p.tenant_id })
+              .whereIn('status', ['active', 'paused'])
+              .whereHas('establishment', (q) =>
+                q
+                  .where('lifecycle_status', 'active')
+                  .whereNotNull('published_revision_id')
+                  .whereNot('business_status', 'permanently_closed')
+              )
+              .first()
+      const scopeDeliverable =
+        p.offer_id === null ||
+        (selectedOffer && (!selectedOffer.ends_at || selectedOffer.ends_at > DateTime.utc()))
       const refund = await this.repository
         .refunds(client)
         .where('purchase_id', p.id)
@@ -394,6 +412,7 @@ export default class PurchaseProcessingService {
         ['published', 'paused'].includes(edition.status) &&
         edition.usage_ends_at > DateTime.utc() &&
         !prior &&
+        scopeDeliverable &&
         !refund &&
         p.issue !== 'cancel_requested' &&
         !refunded
@@ -402,6 +421,7 @@ export default class PurchaseProcessingService {
           {
             tenant_id: p.tenant_id,
             edition_id: p.edition_id,
+            offer_id: p.offer_id,
             user_id: p.user_id,
             source: 'payment',
             status: 'active',
@@ -423,7 +443,7 @@ export default class PurchaseProcessingService {
         await this.repository.audit(
           p,
           'access_granted',
-          { access_id: created.id, source: 'verified_payment' },
+          { access_id: created.id, offer_id: p.offer_id, source: 'verified_payment' },
           client
         )
       } else {
