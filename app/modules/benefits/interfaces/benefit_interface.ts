@@ -44,6 +44,7 @@ namespace IBenefit {
    * tenant and audit columns deliberately stay on the server-side model.
    */
   export interface PortalOffer {
+    standalone_price_cents?: number | null
     id: number
     edition_id: number
     title: string
@@ -102,6 +103,7 @@ namespace IBenefit {
   }
 
   export interface CreateOfferPayload {
+    standalone_price_cents?: number | null
     edition_id: number
     title: string
     description: string
@@ -121,6 +123,7 @@ namespace IBenefit {
   }
 
   export interface UpdateOfferPayload {
+    standalone_price_cents?: number | null
     title?: string
     description?: string
     benefit_type?: Type

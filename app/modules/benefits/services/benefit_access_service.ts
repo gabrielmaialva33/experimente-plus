@@ -51,15 +51,39 @@ export default class BenefitAccessService {
       accessId = await db.transaction(async (client) => {
         const edition = await this.getGrantableEdition(tenantId, payload.edition_id, client)
         const holder = await this.findHolderForTenant(tenantId, email, client)
+        if (payload.offer_id !== null && payload.offer_id !== undefined) {
+          const offer = await BenefitOffer.query({ client })
+            .where({
+              id: payload.offer_id,
+              tenant_id: tenantId,
+              edition_id: edition.id,
+            })
+            .first()
+          if (
+            !offer ||
+            !['active', 'paused'].includes(offer.status) ||
+            (offer.ends_at && offer.ends_at <= DateTime.utc())
+          )
+            throw new BadRequestException('Offer is not available for access grants')
+        }
 
-        if (await this.accessRepository.findActive(tenantId, edition.id, holder.id, client)) {
-          throw new BadRequestException('This user already has active access to the edition')
+        if (
+          await this.accessRepository.findActive(
+            tenantId,
+            edition.id,
+            holder.id,
+            client,
+            payload.offer_id ?? null
+          )
+        ) {
+          throw new BadRequestException('This user already has active access to this product')
         }
 
         const access = await this.accessRepository.create(
           {
             tenant_id: tenantId,
             edition_id: edition.id,
+            offer_id: payload.offer_id ?? null,
             user_id: holder.id,
             source,
             status: 'active',
@@ -82,7 +106,7 @@ export default class BenefitAccessService {
         databaseError.code === '23505' &&
         databaseError.constraint === 'benefit_accesses_active_holder_unique'
       ) {
-        throw new BadRequestException('This user already has active access to the edition')
+        throw new BadRequestException('This user already has active access to this product')
       }
       if (
         databaseError.code === '23505' &&
@@ -100,6 +124,7 @@ export default class BenefitAccessService {
       resourceId: accessId,
       metadata: {
         edition_id: payload.edition_id,
+        offer_id: payload.offer_id ?? null,
         email,
         source,
       },
@@ -153,11 +178,12 @@ export default class BenefitAccessService {
     holder: User
   ): Promise<IBenefitAccess.WalletProjection> {
     const accesses = await this.accessRepository.listForHolder(tenantId, holder.id)
-    const latestByEdition = new Map<number, BenefitAccess>()
+    const latestByScope = new Map<string, BenefitAccess>()
 
     for (const access of accesses) {
-      if (!latestByEdition.has(access.edition_id)) {
-        latestByEdition.set(access.edition_id, access)
+      const scope = [access.edition_id, access.offer_id ?? 'edition'].join(':')
+      if (!latestByScope.has(scope)) {
+        latestByScope.set(scope, access)
       }
     }
 
@@ -166,19 +192,37 @@ export default class BenefitAccessService {
       accesses.map((access) => access.id)
     )
     const now = DateTime.utc()
-    const passes = [...latestByEdition.values()].map((access) => {
+    const passes = [...latestByScope.values()].map((access) => {
       const financiallyBlocked = blocked.has(access.id)
-      const availability =
+      const selectedOffer =
+        access.offer_id === null
+          ? null
+          : access.edition.offers.find((offer) => offer.id === access.offer_id)
+      const usageStartsAt = selectedOffer?.starts_at
+        ? DateTime.max(access.edition.usage_starts_at, selectedOffer.starts_at)
+        : access.edition.usage_starts_at
+      const usageEndsAt = selectedOffer?.ends_at
+        ? DateTime.min(access.edition.usage_ends_at, selectedOffer.ends_at)
+        : access.edition.usage_ends_at
+      let availability =
         financiallyBlocked && access.status === 'active'
           ? 'paused'
           : this.resolvePassAvailability(access, now)
-      const benefits = access.edition.offers.map((offer) =>
-        this.projectBenefit(access, offer, availability, now)
-      )
+      if (selectedOffer)
+        availability = this.resolveOfferAvailability(access, selectedOffer, availability, now)
+      const benefits = access.edition.offers
+        .filter((offer) =>
+          access.offer_id === null ? offer.status === 'active' : access.offer_id === offer.id
+        )
+        .map((offer) => this.projectBenefit(access, offer, availability, now))
 
       return {
         access: {
           id: access.id,
+          offer_id: access.offer_id,
+          product_type: access.offer_id === null ? 'edition' : 'offer',
+          usage_starts_at: usageStartsAt.toISO()!,
+          usage_ends_at: usageEndsAt.toISO()!,
           source: access.source,
           status: access.status,
           granted_at: access.granted_at.toISO()!,
@@ -331,6 +375,13 @@ export default class BenefitAccessService {
     now: DateTime
   ): IBenefitAccess.Availability {
     if (passAvailability !== 'available') return passAvailability
+    if (offer.status === 'archived') return 'expired'
+    if (offer.status !== 'active') return 'paused'
+    if (
+      offer.establishment.lifecycle_status !== 'active' ||
+      offer.establishment.business_status === 'permanently_closed'
+    )
+      return 'paused'
     if (offer.starts_at && now < offer.starts_at) return 'upcoming'
     if (offer.ends_at && now > offer.ends_at) return 'expired'
 

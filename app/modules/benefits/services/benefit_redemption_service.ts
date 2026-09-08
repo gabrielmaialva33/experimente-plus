@@ -351,7 +351,11 @@ export default class BenefitRedemptionService {
       .where('id', offerId)
     if (lock) offerQuery.forUpdate()
     const offer = await offerQuery.first()
-    if (!offer || offer.edition_id !== access.edition_id) {
+    if (
+      !offer ||
+      offer.edition_id !== access.edition_id ||
+      (access.offer_id !== null && access.offer_id !== offer.id)
+    ) {
       throw new NotFoundException('Benefit not found')
     }
 
@@ -495,7 +499,7 @@ export default class BenefitRedemptionService {
       id: redemption.id,
       receipt_code: redemption.receipt_code,
       redemption_number: redemption.redemption_number,
-      redeemed_at: redemption.redeemed_at.toISO()!,
+      redeemed_at: redemption.redeemed_at.toUTC().toISO()!,
       edition: {
         id: redemption.edition_id,
         name: redemption.edition_name_snapshot,

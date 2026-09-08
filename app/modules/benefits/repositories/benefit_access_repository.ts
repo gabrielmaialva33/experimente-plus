@@ -20,7 +20,6 @@ export default class BenefitAccessRepository {
       .preload('edition', (editionQuery) => {
         editionQuery.preload('city').preload('offers', (offerQuery) => {
           offerQuery
-            .where('status', 'active')
             .preload('establishment', (establishmentQuery) => {
               establishmentQuery.preload('published_revision')
             })
@@ -44,11 +43,13 @@ export default class BenefitAccessRepository {
     tenantId: number,
     editionId: number,
     userId: number,
-    client?: TransactionClientContract
+    client?: TransactionClientContract,
+    offerId: number | null = null
   ): Promise<BenefitAccess | null> {
     return BenefitAccess.query({ client })
       .where('tenant_id', tenantId)
       .where('edition_id', editionId)
+      .whereRaw('COALESCE(offer_id, 0) = ?', [offerId ?? 0])
       .where('user_id', userId)
       .where('status', 'active')
       .first()

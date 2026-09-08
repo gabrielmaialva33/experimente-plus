@@ -16,6 +16,7 @@ import OrganizationPolicyService from '#modules/organizations/services/organizat
 import type User from '#modules/users/models/user'
 
 type NormalizedOffer = {
+  standalone_price_cents: number | null
   title: string
   description: string
   benefit_type: IBenefit.Type
@@ -61,6 +62,7 @@ export default class BenefitOfferService {
     return offers.map((offer) => ({
       id: offer.id,
       edition_id: offer.edition_id,
+      standalone_price_cents: offer.standalone_price_cents,
       title: offer.title,
       description: offer.description,
       benefit_type: offer.benefit_type,
@@ -451,7 +453,14 @@ export default class BenefitOfferService {
         : this.parseOptionalDate(payload.ends_at, 'Offer end')
     this.validateOfferWindow(startsAt, endsAt, edition)
 
+    const standalonePrice =
+      payload.standalone_price_cents === undefined
+        ? (current?.standalone_price_cents ?? null)
+        : payload.standalone_price_cents
+    if (standalonePrice !== null)
+      this.normalizeIntegerInRange(standalonePrice, 'Standalone price', 1, 2147483647)
     return {
+      standalone_price_cents: standalonePrice,
       title: this.normalizeRequiredText(payload.title ?? current?.title ?? '', 'Offer title'),
       description: this.normalizeRequiredText(
         payload.description ?? current?.description ?? '',

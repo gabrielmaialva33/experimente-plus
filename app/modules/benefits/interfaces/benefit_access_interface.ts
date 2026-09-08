@@ -24,6 +24,7 @@ namespace IBenefitAccess {
   export type Availability = (typeof WALLET_AVAILABILITY_STATUSES)[number]
 
   export interface GrantPayload {
+    offer_id?: number | null
     edition_id: number
     email: string
     source?: Source
@@ -69,6 +70,10 @@ namespace IBenefitAccess {
 
   export interface WalletPass {
     access: {
+      offer_id?: number | null
+      product_type?: 'edition' | 'offer'
+      usage_starts_at?: string
+      usage_ends_at?: string
       id: number
       source: Source
       status: Status

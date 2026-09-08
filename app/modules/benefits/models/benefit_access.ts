@@ -21,6 +21,9 @@ export default class BenefitAccess extends BaseModel {
   declare edition_id: number
 
   @column()
+  declare offer_id: number | null
+
+  @column()
   declare user_id: number
 
   @column()

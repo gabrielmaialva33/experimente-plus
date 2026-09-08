@@ -38,6 +38,13 @@ export const updateBenefitEditionValidator = vine.compile(
 )
 
 const offerFields = {
+  standalone_price_cents: vine
+    .number()
+    .positive()
+    .withoutDecimals()
+    .max(2147483647)
+    .nullable()
+    .optional(),
   title: vine.string().trim().minLength(2).maxLength(180),
   description: vine.string().trim().minLength(4).maxLength(12000),
   benefit_type: vine.enum(BENEFIT_TYPES),
@@ -67,6 +74,7 @@ export const updateBenefitOfferValidator = vine.compile(
     title: offerFields.title.optional(),
     description: offerFields.description.optional(),
     benefit_type: offerFields.benefit_type.optional(),
+    standalone_price_cents: offerFields.standalone_price_cents,
     discount_percentage: offerFields.discount_percentage,
     discount_amount_cents: offerFields.discount_amount_cents,
     terms: offerFields.terms,

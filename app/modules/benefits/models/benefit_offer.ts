@@ -34,6 +34,9 @@ export default class BenefitOffer extends BaseModel {
   declare benefit_type: IBenefit.Type
 
   @column()
+  declare standalone_price_cents: number | null
+
+  @column()
   declare discount_percentage: number | null
 
   @column()

@@ -4,6 +4,7 @@ import { BENEFIT_ACCESS_SOURCES } from '#modules/benefits/interfaces/benefit_acc
 
 export const grantBenefitAccessValidator = vine.compile(
   vine.object({
+    offer_id: vine.number().positive().withoutDecimals().nullable().optional(),
     edition_id: vine.number().min(1),
     email: vine.string().trim().email().maxLength(254),
     source: vine.enum(BENEFIT_ACCESS_SOURCES).optional(),
