@@ -1,3 +1,5 @@
+import { PaymentConfigurationException } from '#modules/purchases/exceptions'
+import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
@@ -15,8 +17,8 @@ export default class FakePaymentAdapter extends PaymentPort {
   readonly environment = 'test' as const
   constructor() {
     super()
-    if (env.get('NODE_ENV') === 'production')
-      throw new Error('Fake payments are forbidden in production')
+    if (deploymentEnvironment(env.get('DEPLOYMENT_ENV')) === 'production')
+      throw new PaymentConfigurationException('Fake payments are forbidden in production')
   }
   async create(request: PaymentRequest): Promise<PaymentObservation> {
     const id = `fake_${request.id}`

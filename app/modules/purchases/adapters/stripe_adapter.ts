@@ -5,7 +5,11 @@ import type {
   PaymentRequest,
   VerifiedPaymentEvent,
 } from '#modules/purchases/interfaces/payment_port'
-import { PaymentUnavailableException } from '#modules/purchases/exceptions'
+import {
+  PaymentUnavailableException,
+  PaymentConfigurationException,
+  InvalidPaymentWebhookException,
+} from '#modules/purchases/exceptions'
 
 /** Only authenticated PaymentIntent/Charge/Refund reads constitute payment evidence. */
 export default class StripeAdapter extends PaymentPort {
@@ -128,9 +132,11 @@ export default class StripeAdapter extends PaymentPort {
     body: unknown,
     _query: Record<string, unknown>
   ): VerifiedPaymentEvent {
+    if (!this.webhookSecret)
+      throw new PaymentConfigurationException('Stripe webhook verification is not configured')
     try {
-      if (!this.webhookSecret || typeof body !== 'string' || !headers['stripe-signature'])
-        throw new Error('Missing signature configuration or raw payload')
+      if (typeof body !== 'string' || !headers['stripe-signature'])
+        throw new Error('Missing signature or raw payload')
       // Explicit trust boundary: unmodified bytes, endpoint secret, SDK signature and timestamp check.
       const event = this.client.webhooks.constructEvent(
         body,
@@ -153,7 +159,7 @@ export default class StripeAdapter extends PaymentPort {
         throw new Error('Unsupported event resource')
       return { key: event.id, resourceId }
     } catch {
-      throw new PaymentUnavailableException('Stripe webhook could not be verified')
+      throw new InvalidPaymentWebhookException('Stripe webhook could not be verified')
     }
   }
 

@@ -1,3 +1,4 @@
+import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 import { randomUUID } from 'node:crypto'
 import app from '@adonisjs/core/services/app'
 import { DateTime } from 'luxon'
@@ -18,8 +19,13 @@ export type PurchaseFixtureOptions = Omit<BenefitFlowScenarioOptions, 'withRedem
 
 /** Aggregate factory: preserves the real command, webhook, audit and grant paths. */
 export async function createPurchaseFixture(options: PurchaseFixtureOptions = {}) {
-  if (env.get('NODE_ENV') === 'production' || env.get('PAYMENT_PROVIDER', 'disabled') !== 'fake') {
-    throw new Error('Purchase factories require development/test with PAYMENT_PROVIDER=fake')
+  if (
+    deploymentEnvironment(env.get('DEPLOYMENT_ENV')) !== 'development' ||
+    env.get('PAYMENT_PROVIDER', 'disabled') !== 'fake'
+  ) {
+    throw new Error(
+      'Purchase factories require DEPLOYMENT_ENV=development with PAYMENT_PROVIDER=fake'
+    )
   }
   const { access: courtesy, ...s } = await createBenefitFlowScenario({
     ...options,

@@ -1,4 +1,7 @@
-import { PurchaseConflictException } from '#modules/purchases/exceptions'
+import {
+  InvalidPaymentWebhookException,
+  PurchaseConflictException,
+} from '#modules/purchases/exceptions'
 import NotFoundException from '#exceptions/not_found_exception'
 import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
@@ -29,6 +32,8 @@ export default class PurchaseProcessingService {
     body: unknown,
     query: Record<string, unknown>
   ) {
+    if (provider === 'stripe' && !headers['stripe-signature'])
+      throw new InvalidPaymentWebhookException('Stripe webhook signature is required')
     const port = this.providers.get()
     if (provider !== port.name) throw new NotFoundException('Payment provider is not enabled')
     const event = port.verifyWebhook(headers, body, query)

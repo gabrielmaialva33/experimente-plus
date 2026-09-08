@@ -1,3 +1,4 @@
+import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 
 import IRole from '#modules/roles/interfaces/role_interface'
@@ -14,6 +15,9 @@ export default class extends BaseSeeder {
   static environment = ['development']
 
   async run() {
+    if (deploymentEnvironment(env.get('DEPLOYMENT_ENV')) !== 'development') {
+      throw new Error('Development seeding requires DEPLOYMENT_ENV=development')
+    }
     const user = await User.updateOrCreate(
       { email: env.get('DEV_ADMIN_EMAIL', 'admin@experimente.local') },
       {
