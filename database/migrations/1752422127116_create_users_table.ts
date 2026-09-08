@@ -18,6 +18,8 @@ export default class extends BaseSchema {
         'users_username_canonical_check'
       )
       table.string('password').notNullable()
+      table.integer('credential_version').notNullable().defaultTo(1)
+      table.check('credential_version > 0', [], 'users_credential_version_positive_check')
 
       table.boolean('is_deleted').defaultTo(false)
 

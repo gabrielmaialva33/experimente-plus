@@ -1,12 +1,13 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
-/** EP-14: forward-only addition; never rewrites the published benefits schema. */
+/** Canonical homologation baseline (ADR-0025): requires a new database, never an in-place upgrade. */
 export default class extends BaseSchema {
   async up() {
     this.schema.createTable('purchases', (t) => {
       t.uuid('id').primary()
       t.integer('tenant_id').notNullable()
       t.integer('edition_id').notNullable()
+      t.integer('offer_id').nullable()
       t.integer('user_id').notNullable()
       t.string('key_hash', 64).notNullable()
       t.string('request_hash', 64).notNullable()
@@ -36,6 +37,10 @@ export default class extends BaseSchema {
       t.foreign(['edition_id', 'tenant_id'])
         .references(['id', 'tenant_id'])
         .inTable('benefit_editions')
+        .onDelete('RESTRICT')
+      t.foreign(['offer_id', 'edition_id', 'tenant_id'])
+        .references(['id', 'edition_id', 'tenant_id'])
+        .inTable('benefit_offers')
         .onDelete('RESTRICT')
       t.foreign(['user_id', 'tenant_id'])
         .references(['user_id', 'tenant_id'])
@@ -124,6 +129,9 @@ export default class extends BaseSchema {
       t.uuid('purchase_id').nullable().references('id').inTable('purchases').onDelete('RESTRICT')
       t.timestamp('received_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.timestamp('processed_at', { useTz: true }).nullable()
+      t.timestamp('checked_at', { useTz: true }).nullable()
+      t.integer('attempts').notNullable().defaultTo(0)
+      t.string('issue', 80).nullable()
       t.unique(['provider', 'account', 'environment', 'event_key'])
     })
     this.schema.createTable('purchase_events', (t) => {
@@ -141,9 +149,37 @@ export default class extends BaseSchema {
       t.uuid('purchase_id').notNullable().unique()
       t.jsonb('state').notNullable()
     })
+    this.schema.createTable('purchase_settlements', (t) => {
+      t.uuid('id').primary()
+      t.integer('tenant_id').notNullable().references('id').inTable('tenants').onDelete('RESTRICT')
+      t.uuid('purchase_id').nullable().references('id').inTable('purchases').onDelete('RESTRICT')
+      t.string('provider', 32).notNullable()
+      t.string('provider_account', 100).notNullable()
+      t.string('provider_environment', 16).notNullable()
+      t.string('provider_id', 150).notNullable()
+      t.string('statement_reference', 150).notNullable()
+      t.string('line_reference', 150).notNullable()
+      t.string('request_hash', 64).notNullable()
+      t.string('currency', 3).notNullable()
+      t.integer('gross_cents').notNullable()
+      t.integer('fee_cents').notNullable()
+      t.integer('net_cents').notNullable()
+      t.integer('refunded_cents').notNullable()
+      t.timestamp('settled_at', { useTz: true }).notNullable()
+      t.integer('recorded_by').notNullable().references('id').inTable('users').onDelete('RESTRICT')
+      t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
+      t.unique([
+        'provider',
+        'provider_account',
+        'provider_environment',
+        'statement_reference',
+        'line_reference',
+      ])
+      t.check("currency = 'BRL' AND gross_cents >= 0 AND fee_cents >= 0 AND refunded_cents >= 0")
+    })
     this.defer(async (db) => {
       await db.rawQuery(
-        `CREATE UNIQUE INDEX purchases_live_holder_unique ON purchases(tenant_id,edition_id,user_id) WHERE status IN ('pending','paid','review')`
+        `CREATE UNIQUE INDEX purchases_live_holder_unique ON purchases(tenant_id,edition_id,user_id,COALESCE(offer_id,0)) WHERE status IN ('pending','paid','review')`
       )
       await db.rawQuery(
         `CREATE UNIQUE INDEX purchase_refunds_processing_unique ON purchase_refunds(purchase_id) WHERE status IN ('review','approved','processing')`
@@ -154,6 +190,47 @@ export default class extends BaseSchema {
       )
       await db.rawQuery(
         `CREATE TRIGGER purchase_events_immutable BEFORE UPDATE OR DELETE ON purchase_events FOR EACH ROW EXECUTE FUNCTION purchase_events_immutable()`
+      )
+      await db.rawQuery(
+        `CREATE TRIGGER purchase_settlements_immutable BEFORE UPDATE OR DELETE ON purchase_settlements FOR EACH ROW EXECUTE FUNCTION purchase_events_immutable()`
+      )
+      await db.rawQuery(`CREATE FUNCTION protect_purchase_identity() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+        IF TG_OP = 'UPDATE' THEN
+        IF (to_jsonb(NEW) - ARRAY['status','access_id','provider_id','payment_input','instructions','paid_at','checked_at','refunded_cents','issue','updated_at']) IS DISTINCT FROM
+           (to_jsonb(OLD) - ARRAY['status','access_id','provider_id','payment_input','instructions','paid_at','checked_at','refunded_cents','issue','updated_at']) THEN
+          RAISE EXCEPTION 'Purchase commercial identity is immutable';
+        END IF;
+        IF OLD.access_id IS NOT NULL AND NEW.access_id IS DISTINCT FROM OLD.access_id THEN RAISE EXCEPTION 'Purchase access identity is immutable'; END IF;
+        IF OLD.provider_id IS NOT NULL AND NEW.provider_id IS DISTINCT FROM OLD.provider_id THEN RAISE EXCEPTION 'Purchase provider identity is immutable'; END IF;
+        IF NEW.refunded_cents < OLD.refunded_cents THEN RAISE EXCEPTION 'Refunded money cannot decrease'; END IF;
+        END IF;
+        IF NEW.access_id IS NOT NULL AND NOT EXISTS (
+          SELECT 1 FROM benefit_accesses a WHERE a.id = NEW.access_id
+            AND a.tenant_id = NEW.tenant_id AND a.user_id = NEW.user_id
+            AND a.edition_id = NEW.edition_id AND a.offer_id IS NOT DISTINCT FROM NEW.offer_id
+        ) THEN RAISE EXCEPTION 'Purchase access scope mismatch' USING ERRCODE = '23514'; END IF;
+        RETURN NEW;
+      END; $$`)
+      await db.rawQuery(
+        `CREATE TRIGGER protect_purchase_identity BEFORE INSERT OR UPDATE ON purchases FOR EACH ROW EXECUTE FUNCTION protect_purchase_identity()`
+      )
+      await db.rawQuery(`CREATE FUNCTION protect_purchased_benefit_terms() RETURNS trigger LANGUAGE plpgsql AS $$ DECLARE edition integer; BEGIN
+        IF TG_TABLE_NAME = 'benefit_editions' THEN edition := OLD.id; ELSE edition := OLD.edition_id; END IF;
+        PERFORM id FROM benefit_editions WHERE id = edition FOR UPDATE;
+        IF EXISTS(SELECT 1 FROM purchases p WHERE p.edition_id = edition AND p.status IN ('pending','paid','review')) THEN
+          IF TG_TABLE_NAME = 'benefit_editions' THEN
+            IF ROW(NEW.usage_starts_at,NEW.usage_ends_at,NEW.city_id) IS DISTINCT FROM ROW(OLD.usage_starts_at,OLD.usage_ends_at,OLD.city_id) THEN RAISE EXCEPTION 'Purchased validity requires compensation before changing'; END IF;
+          ELSE
+            IF (to_jsonb(NEW) - ARRAY['status','activated_at','archived_at','updated_at','standalone_price_cents']) IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['status','activated_at','archived_at','updated_at','standalone_price_cents']) THEN RAISE EXCEPTION 'Purchased offer terms require compensation before changing'; END IF;
+          END IF;
+        END IF;
+        RETURN NEW;
+      END; $$`)
+      await db.rawQuery(
+        `CREATE TRIGGER protect_purchased_edition_terms BEFORE UPDATE ON benefit_editions FOR EACH ROW EXECUTE FUNCTION protect_purchased_benefit_terms()`
+      )
+      await db.rawQuery(
+        `CREATE TRIGGER protect_purchased_offer_terms BEFORE UPDATE ON benefit_offers FOR EACH ROW EXECUTE FUNCTION protect_purchased_benefit_terms()`
       )
     })
   }

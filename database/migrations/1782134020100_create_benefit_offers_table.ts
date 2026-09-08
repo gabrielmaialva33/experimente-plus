@@ -12,6 +12,13 @@ export default class extends BaseSchema {
       table.string('title', 180).notNullable()
       table.text('description').notNullable()
       table.string('benefit_type', 32).notNullable()
+      table.integer('standalone_price_cents').nullable()
+      table.check(
+        'standalone_price_cents IS NULL OR standalone_price_cents > 0',
+        [],
+        'benefit_offers_standalone_price_check'
+      )
+      table.unique(['id', 'edition_id', 'tenant_id'], 'benefit_offers_scope_unique')
       table.integer('discount_percentage').unsigned().nullable()
       table.integer('discount_amount_cents').unsigned().nullable()
       table.text('terms').nullable()

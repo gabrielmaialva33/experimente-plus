@@ -1,5 +1,7 @@
 # Reconciliação do schema do catálogo
 
+> Histórico anterior à baseline de 08/09/2026: os reparos citados abaixo foram arquivados em `tests/fixtures/legacy_migrations/` para manter regressões de bancos legados; não são migrations executáveis deste checkout. As definições canônicas estão nas migrations de criação. Para o piloto atual, a autorização do dono exige [recriação controlada](homologation_baseline_recreation.md), e não aplicação deste roteiro antigo sobre o novo código.
+
 ## Motivo
 
 O commit `15bf8a9` adicionou `attribute_slugs` à migration

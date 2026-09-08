@@ -112,6 +112,22 @@ export default class extends BaseSchema {
         'benefit_redemptions_type_check'
       )
     })
+    this.defer(async (db) => {
+      await db.rawQuery(`CREATE FUNCTION validate_redemption_access_scope() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM benefit_accesses a WHERE a.id = NEW.access_id
+            AND a.tenant_id = NEW.tenant_id AND a.edition_id = NEW.edition_id AND a.user_id = NEW.user_id
+            AND (a.offer_id IS NULL OR a.offer_id = NEW.offer_id)
+        ) OR NOT EXISTS (
+          SELECT 1 FROM benefit_offers o WHERE o.id = NEW.offer_id AND o.edition_id = NEW.edition_id
+            AND o.tenant_id = NEW.tenant_id AND o.establishment_id = NEW.establishment_id
+        ) THEN RAISE EXCEPTION 'Redemption is outside the access scope' USING ERRCODE = '23514'; END IF;
+        RETURN NEW;
+      END; $$`)
+      await db.rawQuery(
+        'CREATE TRIGGER validate_redemption_access_scope BEFORE INSERT OR UPDATE ON benefit_redemptions FOR EACH ROW EXECUTE FUNCTION validate_redemption_access_scope()'
+      )
+    })
   }
 
   async down() {

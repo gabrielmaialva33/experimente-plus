@@ -8,6 +8,12 @@ export default class extends BaseSchema {
       table.increments('id')
       table.integer('tenant_id').unsigned().notNullable()
       table.integer('edition_id').unsigned().notNullable()
+      table.integer('offer_id').nullable()
+      table
+        .foreign(['offer_id', 'edition_id', 'tenant_id'], 'benefit_accesses_offer_scope_foreign')
+        .references(['id', 'edition_id', 'tenant_id'])
+        .inTable('benefit_offers')
+        .onDelete('RESTRICT')
       table.integer('user_id').unsigned().notNullable()
       table.string('source', 24).notNullable().defaultTo('manual')
       table.string('status', 24).notNullable().defaultTo('active')
@@ -84,7 +90,7 @@ export default class extends BaseSchema {
     this.defer(async (db) => {
       await db.rawQuery(`
         CREATE UNIQUE INDEX benefit_accesses_active_holder_unique
-        ON benefit_accesses (tenant_id, edition_id, user_id)
+        ON benefit_accesses (tenant_id, edition_id, user_id, COALESCE(offer_id, 0))
         WHERE status = 'active'
       `)
       await db.rawQuery(`
@@ -92,6 +98,16 @@ export default class extends BaseSchema {
         ON benefit_accesses (tenant_id, source, external_reference)
         WHERE external_reference IS NOT NULL
       `)
+      await db.rawQuery(`CREATE FUNCTION protect_benefit_access_scope() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+        IF ROW(NEW.tenant_id, NEW.edition_id, NEW.offer_id, NEW.user_id)
+          IS DISTINCT FROM ROW(OLD.tenant_id, OLD.edition_id, OLD.offer_id, OLD.user_id) THEN
+          RAISE EXCEPTION 'Benefit access scope is immutable' USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+      END; $$`)
+      await db.rawQuery(
+        'CREATE TRIGGER protect_benefit_access_scope BEFORE UPDATE ON benefit_accesses FOR EACH ROW EXECUTE FUNCTION protect_benefit_access_scope()'
+      )
     })
   }
 
