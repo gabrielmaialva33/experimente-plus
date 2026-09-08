@@ -28,14 +28,14 @@ const cases: Array<{
     isOpenNow: false,
     availabilityType: 'regular_hours',
     label: 'Fechado agora',
-    tone: 'bg-muted',
+    tone: 'bg-status-neutral',
   },
   {
     businessStatus: 'open',
     isOpenNow: false,
     availabilityType: 'always_open',
     label: 'Fechado agora',
-    tone: 'bg-muted',
+    tone: 'bg-status-neutral',
   },
   {
     businessStatus: 'open',
@@ -48,7 +48,7 @@ const cases: Array<{
     businessStatus: 'open',
     isOpenNow: false,
     label: 'Consulte o atendimento',
-    tone: 'bg-muted',
+    tone: 'bg-status-neutral',
   },
   {
     businessStatus: 'temporarily_closed',
@@ -61,7 +61,7 @@ const cases: Array<{
     businessStatus: 'permanently_closed',
     isOpenNow: true,
     label: 'Encerrado permanentemente',
-    tone: 'bg-muted',
+    tone: 'bg-status-neutral',
   },
 ]
 

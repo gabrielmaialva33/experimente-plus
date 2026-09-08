@@ -2,6 +2,8 @@ import { Link } from '@inertiajs/react'
 import { ChevronRight, Compass, MapPin } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { ChoiceIndicator } from '~/components/ui/choice'
+
 import { PublicShell } from '~/components/public'
 import { cn } from '~/lib/utils'
 
@@ -49,7 +51,7 @@ export function CatalogShell({
 
   return (
     <PublicShell title={title} description={description} image={image}>
-      <section className="border-b bg-card">
+      <section className="border-b bg-background">
         <div className="app-container py-8 sm:py-10">
           {breadcrumbs.length > 0 ? (
             <nav aria-label="Caminho de navegação" className="mb-6">
@@ -62,10 +64,12 @@ export function CatalogShell({
                         href={item.href}
                         className="rounded-sm outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                       >
+                        <ChoiceIndicator />
                         {item.label}
                       </Link>
                     ) : (
                       <span aria-current="page" className="text-foreground">
+                        <ChoiceIndicator />
                         {item.label}
                       </span>
                     )}
@@ -95,7 +99,7 @@ export function CatalogShell({
 
           {contextualLinks.length > 0 ? (
             <nav aria-label="Navegação do catálogo da cidade" className="mt-7">
-              <div className="inline-flex rounded-md border bg-background p-1">
+              <div className="inline-flex gap-1 rounded-md border border-choice-border bg-choice-background p-1">
                 {contextualLinks.map((item) => {
                   const selected = item.section === activeSection
 
@@ -104,13 +108,10 @@ export function CatalogShell({
                       key={item.href}
                       href={item.href}
                       aria-current={selected ? 'location' : undefined}
-                      className={cn(
-                        'rounded-sm px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
-                        selected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      )}
+                      data-selected={selected}
+                      className="choice-control min-h-11 rounded-sm px-3 py-2 text-sm"
                     >
+                      <ChoiceIndicator />
                       {item.label}
                     </Link>
                   )

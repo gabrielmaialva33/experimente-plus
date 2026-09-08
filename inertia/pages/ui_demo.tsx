@@ -344,8 +344,8 @@ export default function UiDemoPage() {
                 <BarChart
                   data={chartData}
                   bars={[
-                    { dataKey: 'revenue', name: 'Revenue', color: 'hsl(var(--primary))' },
-                    { dataKey: 'expenses', name: 'Expenses', color: 'hsl(var(--destructive))' },
+                    { dataKey: 'revenue', name: 'Revenue', color: 'var(--primary)' },
+                    { dataKey: 'expenses', name: 'Expenses', color: 'var(--destructive)' },
                   ]}
                   xAxisKey="month"
                   title="Revenue vs Expenses"

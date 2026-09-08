@@ -40,7 +40,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
                     'flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
                     selected
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   )}
                 >
                   <Icon className="size-4" />

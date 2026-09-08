@@ -51,7 +51,7 @@ export default function EstablishmentGrid({
             aria-describedby={`${paidPlacement ? `${sponsorshipId} ` : ''}${statusId}`}
             className="group block min-w-0 rounded-lg outline-none transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
-            <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors group-hover:border-primary/45 motion-reduce:transition-none">
+            <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
               {entry.cover ? (
                 <img
                   src={entry.cover.url}

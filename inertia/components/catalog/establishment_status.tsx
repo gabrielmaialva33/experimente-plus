@@ -23,7 +23,7 @@ export function EstablishmentStatus({
   size = 'md',
   className,
 }: EstablishmentStatusProps) {
-  let colors = 'border-border bg-muted text-muted-foreground'
+  let colors = 'border-status-neutral-border bg-status-neutral text-status-neutral-foreground'
 
   if (businessStatus === 'temporarily_closed') {
     colors = 'border-warning/30 bg-warning-soft text-warning-accent'

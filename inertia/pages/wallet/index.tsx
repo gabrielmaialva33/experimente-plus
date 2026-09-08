@@ -162,10 +162,10 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                         state === 'available' && benefit.offer_id > 0 && benefit.access_id > 0
 
                       return (
-                        <Card key={benefit.key} className="h-full bg-background">
+                        <Card key={benefit.key} className="h-full bg-card">
                           <CardContent className="flex h-full flex-col p-5">
                             <div className="flex items-start justify-between gap-3">
-                              <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-card text-muted-foreground">
                                 <Store className="size-4" aria-hidden="true" />
                               </span>
                               <Badge variant={meta.variant} appearance="light">
@@ -174,7 +174,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                               </Badge>
                             </div>
 
-                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.1em] text-cta-accent">
                               {benefitLabel(benefit)}
                             </p>
                             <h3 className="mt-1 text-lg font-semibold">{benefit.title}</h3>
@@ -198,7 +198,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                                   </Link>
                                 </Button>
                               ) : (
-                                <p className="rounded-md border bg-muted/40 px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
+                                <p className="rounded-md border bg-status-neutral px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
                                   {state === 'redeemed'
                                     ? 'Todas as utilizações foram concluídas.'
                                     : 'Este benefício não pode ser apresentado agora.'}

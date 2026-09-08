@@ -46,7 +46,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
           href={pageHref(path, query, currentPage - 1, perPage)}
           preserveScroll
           aria-label="Página anterior"
-          className={cn(directionClassName, 'hover:border-primary/40 hover:text-primary')}
+          className={cn(directionClassName, 'hover:border-primary hover:text-primary')}
         >
           <ChevronLeft aria-hidden="true" className="size-4" /> Anterior
         </Link>
@@ -86,7 +86,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
               href={pageHref(path, query, page, perPage)}
               preserveScroll
               aria-label={`Ir para a página ${page}`}
-              className={cn(pageClassName, 'bg-card hover:border-primary/40 hover:text-primary')}
+              className={cn(pageClassName, 'bg-card hover:border-primary hover:text-primary')}
             >
               {page}
             </Link>
@@ -105,7 +105,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
           href={pageHref(path, query, currentPage + 1, perPage)}
           preserveScroll
           aria-label="Próxima página"
-          className={cn(directionClassName, 'hover:border-primary/40 hover:text-primary')}
+          className={cn(directionClassName, 'hover:border-primary hover:text-primary')}
         >
           Próxima <ChevronRight aria-hidden="true" className="size-4" />
         </Link>

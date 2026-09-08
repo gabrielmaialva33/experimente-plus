@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react'
 import { Building2, CalendarClock, Check, CircleAlert, Clock3, Info, MapPin } from 'lucide-react'
 
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import { CatalogWeeklyHours } from '~/components/catalog/catalog_weekly_hours'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { EstablishmentActions } from '~/components/catalog/establishment_actions'
 import { EstablishmentStatus } from '~/components/catalog/establishment_status'
@@ -13,11 +14,9 @@ import {
   availabilityLabel,
   catalogDetail,
   formatCatalogAddress,
-  weekdayLabel,
   type CatalogAttribute,
   type CatalogDetail,
   type CatalogHistoricalDetail,
-  type CatalogHour,
 } from '~/lib/catalog'
 import { cn } from '~/lib/utils'
 
@@ -88,15 +87,6 @@ function formatAttribute(attribute: CatalogAttribute): string {
   return `${attribute.value}${attribute.unit ? ` ${attribute.unit}` : ''}`
 }
 
-function groupedHours(hours: CatalogHour[]): Array<{ weekday: number; intervals: CatalogHour[] }> {
-  return Array.from({ length: 7 }, (_, weekday) => ({
-    weekday,
-    intervals: hours
-      .filter((hour) => hour.weekday === weekday)
-      .sort((left, right) => left.sortOrder - right.sortOrder),
-  }))
-}
-
 function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }) {
   return (
     <CatalogShell
@@ -136,7 +126,6 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
   const primaryCategory =
     detail.categories.find((category) => category.isPrimary) ?? detail.categories[0]
   const gallery = detail.media.filter((media) => media.url !== detail.cover?.url).slice(0, 6)
-  const schedule = groupedHours(detail.weeklyHours)
   const locationLabel = [detail.city.name, detail.city.stateCode].filter(Boolean).join(' — ')
 
   const structuredData = {
@@ -259,8 +248,8 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
                     className={cn(
                       'rounded-md border px-2.5 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
                       category.isPrimary
-                        ? 'border-primary/20 bg-primary-soft text-primary-accent hover:bg-primary-soft/75'
-                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                        ? 'border-primary/20 bg-primary-soft text-primary-accent hover:bg-primary-soft'
+                        : 'bg-choice-background text-choice-foreground hover:bg-accent'
                     )}
                   >
                     {category.name}
@@ -298,7 +287,7 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
                 {gallery.map((media) => (
                   <figure
                     key={media.url}
-                    className="min-w-0 overflow-hidden rounded-md border bg-muted"
+                    className="min-w-0 overflow-hidden rounded-md border bg-card"
                   >
                     <img
                       src={media.url}
@@ -335,7 +324,7 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
               </div>
               <dl className="mt-5 grid gap-3 sm:grid-cols-2">
                 {detail.attributes.map((attribute) => (
-                  <div key={attribute.key} className="rounded-md border bg-background p-4">
+                  <div key={attribute.key} className="rounded-md border bg-card p-4">
                     <dt className="text-sm font-medium">{attribute.name}</dt>
                     <dd className="mt-1.5 text-sm leading-6 text-muted-foreground">
                       {formatAttribute(attribute)}
@@ -368,26 +357,7 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
               </div>
 
               {detail.availabilityType === 'regular_hours' ? (
-                <div className="mt-5 divide-y rounded-md border bg-background px-4">
-                  {schedule.map(({ weekday, intervals }) => (
-                    <div
-                      key={weekday}
-                      className="grid gap-1 py-3 text-sm sm:grid-cols-[9rem_1fr] sm:gap-4"
-                    >
-                      <span className="font-medium">{weekdayLabel(weekday)}</span>
-                      <span className="text-muted-foreground sm:text-end">
-                        {intervals.length === 0
-                          ? 'Fechado'
-                          : intervals
-                              .map(
-                                (interval) =>
-                                  `${interval.opensAt}–${interval.closesAt}${interval.spansNextDay ? ' (+1 dia)' : ''}`
-                              )
-                              .join(' · ')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <CatalogWeeklyHours hours={detail.weeklyHours} timeZone={detail.city.timezone} />
               ) : (
                 <div className="mt-5 flex items-start gap-3 rounded-md border bg-primary-soft p-4 text-sm">
                   <Info className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -408,7 +378,7 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
                     {detail.specialDays.map((day) => (
                       <div
                         key={day.date}
-                        className="flex flex-col gap-1 rounded-md border bg-background px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-1 rounded-md border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                       >
                         <span className="font-medium">
                           {formatDate(day.date, detail.city.timezone) ?? day.date}
@@ -428,7 +398,7 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
               ) : null}
             </section>
           ) : (
-            <section className="rounded-lg border bg-muted/45 p-5 sm:p-6">
+            <section className="rounded-lg border bg-status-neutral p-5 sm:p-6">
               <div className="flex items-start gap-3">
                 <CircleAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
                 <div>

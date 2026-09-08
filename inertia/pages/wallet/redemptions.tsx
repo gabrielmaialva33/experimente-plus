@@ -65,7 +65,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
                   <span className="flex size-9 items-center justify-center rounded-md border bg-success-soft text-success-accent">
                     <CheckCircle2 className="size-4" aria-hidden="true" />
                   </span>
-                  <code className="rounded-md border bg-muted px-2 py-1 text-xs font-semibold">
+                  <code className="rounded-md border bg-card px-2 py-1 text-xs font-semibold">
                     {redemption.receipt_code}
                   </code>
                 </div>

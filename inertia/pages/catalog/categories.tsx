@@ -60,12 +60,12 @@ export default function CatalogCategories({ catalog }: CatalogCategoriesProps) {
                   aria-labelledby={`category-${category.slug}`}
                   className="group rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <article className="flex h-full min-w-0 flex-col rounded-lg border bg-card p-5 transition-colors group-hover:border-primary/45 motion-reduce:transition-none sm:p-6">
+                  <article className="flex h-full min-w-0 flex-col rounded-lg border bg-card p-5 transition-colors group-hover:border-primary motion-reduce:transition-none sm:p-6">
                     <div className="flex items-start justify-between gap-4">
                       <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-base font-semibold text-primary-accent">
                         {category.name.charAt(0).toLocaleUpperCase('pt-BR')}
                       </span>
-                      <span className="rounded-md border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+                      <span className="rounded-md border bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
                         {category.establishmentsCount}{' '}
                         {category.establishmentsCount === 1 ? 'opção' : 'opções'}
                       </span>

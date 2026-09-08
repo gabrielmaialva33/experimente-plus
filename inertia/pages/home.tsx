@@ -63,7 +63,7 @@ export default function Home() {
       title="Experimente+ — Lugares e serviços da sua região"
       description="Encontre restaurantes, cafés, cultura, bem-estar e serviços locais em cidades do Norte do Paraná."
     >
-      <section className="border-b bg-primary-soft/35">
+      <section className="border-b bg-background">
         <div className="app-container grid gap-10 py-12 sm:py-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:items-center lg:py-20">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold text-primary-accent">
@@ -106,7 +106,7 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <p className="border-t bg-muted/50 px-5 py-4 text-xs leading-5 text-muted-foreground sm:px-6">
+              <p className="border-t px-5 py-4 text-xs leading-5 text-muted-foreground sm:px-6">
                 O conteúdo público passa por revisão antes de aparecer no catálogo.
               </p>
             </CardContent>
@@ -149,30 +149,28 @@ export default function Home() {
         </ul>
       </section>
 
-      <section aria-labelledby="how-title" className="border-y bg-primary text-primary-foreground">
+      <section aria-labelledby="how-title" className="border-y bg-background text-foreground">
         <div className="app-container py-12 sm:py-14">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-primary-foreground/85">Como funciona</p>
+            <p className="text-sm font-semibold text-foreground">Como funciona</p>
             <h2 id="how-title" className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
               Da cidade até o contato
             </h2>
           </div>
 
-          <ol className="mt-8 grid border-y border-primary-foreground/25 lg:grid-cols-3">
+          <ol className="mt-8 grid border-y border-border lg:grid-cols-3">
             {discoverySteps.map((step, index) => (
               <li
                 key={step.title}
                 className={`py-5 lg:p-6 ${
-                  index > 0 ? 'border-t border-primary-foreground/25 lg:border-l lg:border-t-0' : ''
+                  index > 0 ? 'border-t border-border lg:border-l lg:border-t-0' : ''
                 }`}
               >
-                <span className="text-sm font-bold text-primary-foreground/85">
+                <span className="text-sm font-bold text-foreground">
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <h3 className="mt-3 font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-primary-foreground/85">
-                  {step.description}
-                </p>
+                <p className="mt-2 text-sm leading-6 text-foreground">{step.description}</p>
               </li>
             ))}
           </ol>

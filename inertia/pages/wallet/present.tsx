@@ -77,11 +77,11 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
             </p>
 
             <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-md border bg-muted/35 p-4">
+              <div className="rounded-md border bg-card p-4">
                 <dt className="text-xs text-muted-foreground">Edição</dt>
                 <dd className="mt-1 font-medium">{benefit.edition_name}</dd>
               </div>
-              <div className="rounded-md border bg-muted/35 p-4">
+              <div className="rounded-md border bg-card p-4">
                 <dt className="text-xs text-muted-foreground">Utilizações restantes</dt>
                 <dd className="mt-1 font-medium tabular-nums">{benefit.remaining_redemptions}</dd>
               </div>
@@ -105,7 +105,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center border-t bg-muted/30 p-5 sm:p-7 lg:border-l lg:border-t-0">
+          <div className="flex flex-col items-center justify-center border-t bg-card p-5 sm:p-7 lg:border-l lg:border-t-0">
             <div className="w-full max-w-[18rem] rounded-md border bg-white p-3">
               <img
                 src={presentation.qr_data_url}

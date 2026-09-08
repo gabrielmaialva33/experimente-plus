@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react'
 import { RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
+import { AppliedFilterChip, FilterChip } from '~/components/ui/choice'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import type { CatalogCategory, CatalogSearchQuery } from '~/lib/catalog'
@@ -165,17 +166,14 @@ export function CatalogSearchForm({
 
         <div className="grid gap-1.5">
           <span className="text-sm font-medium">Disponibilidade</span>
-          <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-md border border-input bg-background px-3 text-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
-            <input
-              type="checkbox"
-              name="open_now"
-              value="true"
-              checked={openNow}
-              onChange={(event) => setOpenNow(event.target.checked)}
-              className="size-4 rounded border-input accent-primary"
-            />
+          <FilterChip
+            name="open_now"
+            value="true"
+            checked={openNow}
+            onChange={(event) => setOpenNow(event.target.checked)}
+          >
             Aberto agora
-          </label>
+          </FilterChip>
         </div>
 
         <input type="hidden" name="per_page" value={perPage} />
@@ -199,24 +197,14 @@ export function CatalogSearchForm({
           className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4 text-xs"
         >
           {effectiveCategoryLabel ? (
-            <span className="rounded-md border border-primary/20 bg-primary-soft px-2.5 py-1.5 font-medium text-primary-accent">
-              Categoria: {effectiveCategoryLabel}
-            </span>
+            <AppliedFilterChip>Categoria: {effectiveCategoryLabel}</AppliedFilterChip>
           ) : null}
-          {query.q ? (
-            <span className="rounded-md border bg-muted px-2.5 py-1.5 text-muted-foreground">
-              Busca: “{query.q}”
-            </span>
-          ) : null}
-          {query.openNow ? (
-            <span className="rounded-md border bg-muted px-2.5 py-1.5 text-muted-foreground">
-              Aberto agora
-            </span>
-          ) : null}
+          {query.q ? <AppliedFilterChip>Busca: “{query.q}”</AppliedFilterChip> : null}
+          {query.openNow ? <AppliedFilterChip>Aberto agora</AppliedFilterChip> : null}
           {query.sort !== 'relevance' ? (
-            <span className="rounded-md border bg-muted px-2.5 py-1.5 text-muted-foreground">
+            <AppliedFilterChip>
               Ordenação: {query.sort === 'name' ? 'alfabética' : 'mais recentes'}
-            </span>
+            </AppliedFilterChip>
           ) : null}
           {hasActiveFilters ? (
             <Link

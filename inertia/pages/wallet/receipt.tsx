@@ -50,7 +50,7 @@ export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
         </CardHeader>
 
         <CardContent className="space-y-5">
-          <div className="rounded-md border bg-muted/35 p-4 text-center">
+          <div className="rounded-md border bg-card p-4 text-center">
             <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
               Código do comprovante
             </p>
@@ -85,7 +85,7 @@ export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
             </section>
           ) : null}
 
-          <div className="flex items-start gap-3 rounded-md border bg-muted/35 p-4 text-sm leading-6 text-muted-foreground">
+          <div className="flex items-start gap-3 rounded-md border bg-card p-4 text-sm leading-6 text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
             Este comprovante foi criado pelo servidor no momento da confirmação do estabelecimento.
           </div>

@@ -31,7 +31,7 @@ export function PublicMobileNavigation() {
             'flex min-h-13 flex-col items-center justify-center gap-1 rounded-md px-1 text-[0.68rem] font-semibold transition-colors',
             active
               ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
           )
 
           return item.method === 'post' ? (

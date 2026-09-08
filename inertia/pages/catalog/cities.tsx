@@ -46,7 +46,7 @@ export default function CatalogCities({ catalog }: CatalogCitiesProps) {
                 aria-labelledby={`city-${city.slug}`}
                 className="group rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <article className="flex h-full flex-col rounded-lg border bg-card p-5 transition-colors group-hover:border-primary/45 motion-reduce:transition-none sm:p-6">
+                <article className="flex h-full flex-col rounded-lg border bg-card p-5 transition-colors group-hover:border-primary motion-reduce:transition-none sm:p-6">
                   <div className="flex items-start justify-between gap-4">
                     <span className="flex size-10 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
                       <MapPinned aria-hidden="true" className="size-5" />

@@ -4,6 +4,9 @@ import { screen, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { CatalogShell } from '~/components/catalog/catalog_shell'
+import { ConsumerShell } from '~/components/consumer/consumer_shell'
+
 import { PublicHeader } from '~/components/public/public_header'
 import { PublicMobileNavigation } from '~/components/public/public_mobile_navigation'
 import { PublicShell } from '~/components/public/public_shell'
@@ -64,6 +67,52 @@ afterEach(() => {
 })
 
 describe('public discovery experience', () => {
+  function expectPaper(element: Element) {
+    // JSDOM does not compile Tailwind: guard the actual rendered band classes,
+    // including responsive overrides, rather than a snapshot of the source file.
+    const fills = Array.from(element.classList).filter((name) => /(?:^|:)bg-/.test(name))
+    expect(fills.every((name) => name === 'bg-background')).toBe(true)
+    expect(element.getAttribute('style') ?? '').not.toMatch(/background/i)
+  }
+
+  it('keeps every home band on one paper while retaining bounded white content cards', () => {
+    const { container } = render(<Home />)
+    expect(screen.getByRole('main').parentElement).toHaveClass('bg-background')
+    const bands = container.querySelectorAll('header, footer, main > section')
+    expect(bands.length).toBeGreaterThanOrEqual(6)
+    bands.forEach(expectPaper)
+    expect(screen.getByRole('banner')).toHaveClass('bg-background')
+    expect(screen.getByRole('contentinfo')).toHaveClass('bg-background')
+    expect(screen.getByRole('navigation', { name: 'Navegação móvel' })).toHaveClass('bg-background')
+    expect(container.querySelector('main .bg-card')).not.toBeNull()
+    expect(container.querySelector('main .bg-surface-context, main .bg-muted')).toBeNull()
+  })
+
+  it('keeps discovery chrome and title on the same paper', () => {
+    const { container } = render(
+      <CatalogShell title="Londrina" description="Descoberta pública">
+        <article className="rounded-lg border bg-card">Conteúdo</article>
+      </CatalogShell>
+    )
+    container.querySelectorAll('header, footer, main > section').forEach(expectPaper)
+    expect(screen.getByRole('banner')).toHaveClass('bg-background')
+    expect(screen.getByRole('main').querySelector(':scope > section')).toHaveClass('bg-background')
+    expect(screen.getByRole('article')).toHaveClass('bg-card')
+  })
+
+  it('keeps wallet chrome on paper instead of turning fixed navigation into a colored band', () => {
+    const { container } = render(
+      <ConsumerShell>
+        <h1>Carteira</h1>
+      </ConsumerShell>
+    )
+    expect(screen.getByRole('banner')).toHaveClass('bg-background')
+    expect(screen.getByRole('navigation', { name: 'Navegação principal' })).toHaveClass(
+      'bg-background'
+    )
+    container.querySelectorAll('header, main').forEach(expectPaper)
+  })
+
   it('keeps the guest header compact and free of duplicate actions', () => {
     pageState.url = '/cidades/londrina'
 
@@ -256,12 +305,7 @@ describe('public discovery experience', () => {
     expect(categoryItems[1]).toHaveClass('border-t', 'sm:border-t-0', 'sm:border-l')
     expect(categoryItems[2]).toHaveClass('border-t', 'lg:border-t-0', 'lg:border-l')
     expect(categoryItems[2]).not.toHaveClass('sm:border-t-0')
-    expect(categoryItems[3]).toHaveClass(
-      'border-t',
-      'sm:border-l',
-      'lg:border-t-0',
-      'lg:border-l'
-    )
+    expect(categoryItems[3]).toHaveClass('border-t', 'sm:border-l', 'lg:border-t-0', 'lg:border-l')
     expect(content.getByText('Como funciona')).toBeVisible()
     expect(content.getByText(/A publicação depende de revisão\./)).toBeVisible()
     expect(container.querySelector('main')?.textContent).not.toMatch(/\b(melhor|exclusiv[oa])\b/i)
@@ -269,13 +313,16 @@ describe('public discovery experience', () => {
     const header = screen.getByRole('banner')
     const footer = screen.getByRole('contentinfo')
     const mobileNavigation = screen.getByRole('navigation', { name: 'Navegação móvel' })
-    expect(within(header).queryByRole('link', { name: 'Cadastrar negócio' })).not.toBeInTheDocument()
-    expect(within(footer).queryByRole('link', { name: 'Cadastrar negócio' })).not.toBeInTheDocument()
+    expect(
+      within(header).queryByRole('link', { name: 'Cadastrar negócio' })
+    ).not.toBeInTheDocument()
+    expect(
+      within(footer).queryByRole('link', { name: 'Cadastrar negócio' })
+    ).not.toBeInTheDocument()
     expect(within(footer).queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
-    expect(within(mobileNavigation).getByRole('link', { name: 'Cadastrar negócio' })).toHaveAttribute(
-      'href',
-      '/register'
-    )
+    expect(
+      within(mobileNavigation).getByRole('link', { name: 'Cadastrar negócio' })
+    ).toHaveAttribute('href', '/register')
     expect(container.querySelectorAll('a[href="/register"]')).toHaveLength(2)
   })
 
@@ -293,8 +340,7 @@ describe('public discovery experience', () => {
 
     expect(sources).not.toMatch(/bg-gradient|backdrop-blur|blur-3xl|shadow-(?:xl|2xl)/)
     expect(sources).not.toMatch(/\b(?:melhor|exclusiv[oa])\b/i)
-    expect(homeSource).not.toMatch(/text-primary-foreground\/(?:70|75)/)
-    expect(homeSource.match(/text-primary-foreground\/85/g)).toHaveLength(3)
+    expect(homeSource).not.toMatch(/text-primary-foreground\/\d+/)
     expect(homeSource.match(/href="\/cidades"/g)).toHaveLength(1)
     expect(homeSource.match(/href="\/register"/g)).toHaveLength(1)
 

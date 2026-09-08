@@ -71,10 +71,7 @@ export function AuthSplitLayout({
           {footer ? <div className="mt-5 text-center text-sm">{footer}</div> : null}
 
           {contextTitle || contextDescription ? (
-            <aside
-              className="mt-6 rounded-lg border bg-muted/40 p-4"
-              aria-label="Sobre este acesso"
-            >
+            <aside className="mt-6 rounded-lg border bg-muted p-4" aria-label="Sobre este acesso">
               <div className="flex items-start gap-3">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-primary">
                   <ShieldCheck className="size-4" aria-hidden="true" />
