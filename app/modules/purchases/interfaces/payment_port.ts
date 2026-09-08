@@ -17,6 +17,7 @@ export interface PaymentObservation {
 }
 export interface PaymentInput {
   email: string
+  name?: string
   card_token?: string
   payment_method_id?: string
   document_type?: string
@@ -41,7 +42,8 @@ export abstract class PaymentPort {
   abstract readonly environment: 'test' | 'live'
   abstract create(request: PaymentRequest): Promise<PaymentObservation>
   abstract find(reference: string): Promise<PaymentObservation | null>
-  abstract get(id: string): Promise<PaymentObservation>
+  // The worker may reuse its previously authenticated confirmation time after PSP event retention.
+  abstract get(id: string, knownPaidAt?: string): Promise<PaymentObservation>
   abstract refund(id: string, amountCents: number, key: string): Promise<void>
   abstract cancel(id: string, key: string): Promise<void>
   abstract verifyWebhook(

@@ -61,7 +61,12 @@ const env = await Env.create(new URL('../', import.meta.url), {
   ANALYTICS_SESSION_COOKIE_DAYS: Env.schema.number.optional(),
   DEMO_PAGES_ENABLED: Env.schema.boolean.optional(),
 
-  PAYMENT_PROVIDER: Env.schema.enum.optional(['disabled', 'fake', 'mercado_pago'] as const),
+  PAYMENT_PROVIDER: Env.schema.enum.optional([
+    'disabled',
+    'fake',
+    'mercado_pago',
+    'stripe',
+  ] as const),
   PAYMENT_METHODS: Env.schema.enum.optional(['none', 'pix', 'card', 'pix,card'] as const),
   PAYMENT_ENVIRONMENT: Env.schema.enum.optional(['test', 'live'] as const),
   PURCHASE_AUTO_REFUND_UNUSED: Env.schema.boolean.optional(),
@@ -69,6 +74,12 @@ const env = await Env.create(new URL('../', import.meta.url), {
   MERCADO_PAGO_ACCOUNT_ID: Env.schema.string.optional(),
   MERCADO_PAGO_ACCESS_TOKEN: Env.schema.string.optional(),
   MERCADO_PAGO_WEBHOOK_SECRET: Env.schema.string.optional(),
+  STRIPE_ACCOUNT_ID: Env.schema.string.optional(),
+  STRIPE_PUBLISHABLE_KEY: Env.schema.string.optional(),
+  STRIPE_SECRET_KEY: Env.schema.string.optional(),
+  STRIPE_RESTRICTED_KEY: Env.schema.string.optional(),
+  STRIPE_ENVIRONMENT: Env.schema.enum.optional(['test', 'live'] as const),
+  STRIPE_WEBHOOK_SECRET: Env.schema.string.optional(),
 
   DEV_ADMIN_NAME: Env.schema.string.optional(),
   DEV_ADMIN_USERNAME: Env.schema.string.optional(),

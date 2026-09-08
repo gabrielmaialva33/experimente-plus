@@ -107,8 +107,9 @@ export default class PurchasesController {
           'x-signature': request.header('x-signature'),
           'x-request-id': request.header('x-request-id'),
           'x-fake-signature': request.header('x-fake-signature'),
+          'stripe-signature': request.header('stripe-signature'),
         },
-        request.body(),
+        params.provider === 'stripe' ? request.raw() : request.body(),
         request.qs()
       )
     )

@@ -73,7 +73,16 @@ export default class PurchaseProcessingService {
         })
       try {
         // Signed notifications only identify a resource. State is fetched from the authenticated PSP.
-        const observed = await port.get(event.resource_id)
+        const known = (await this.repository
+          .purchases()
+          .where({
+            provider: port.name,
+            provider_account: port.account,
+            provider_environment: port.environment,
+            provider_id: event.resource_id,
+          })
+          .first()) as Purchase | undefined
+        const observed = await port.get(event.resource_id, known?.paid_at?.toISOString())
         if (!/^[0-9a-f-]{36}$/i.test(observed.reference)) continue
         await db.transaction(async (client) => {
           const p = await this.repository.get(observed.reference, client, true)
@@ -209,7 +218,7 @@ export default class PurchaseProcessingService {
         input,
       })
     } else {
-      observed = await port.get(p.provider_id)
+      observed = await port.get(p.provider_id, p.paid_at?.toISOString())
       if (!this.matches(p, observed))
         return this.quarantine(p, command, 'provider_identity_or_amount_mismatch')
       if (command.kind === 'refund') {
@@ -228,14 +237,14 @@ export default class PurchaseProcessingService {
             .where('id', r.id)
             .update({ status: 'processing', updated_at: new Date() })
           await port.refund(p.provider_id, r.amount_cents, r.id)
-          observed = await port.get(p.provider_id)
+          observed = await port.get(p.provider_id, p.paid_at?.toISOString())
           // Accepted asynchronously is not refunded. Retain command/hold until a later observation.
           if (observed.refundedCents < r.baseline_refunded_cents + r.amount_cents)
             throw new Error('Refund is pending')
         }
       } else if (command.kind === 'cancel' && observed.state === 'pending') {
         await port.cancel(p.provider_id, 'cancel:' + p.id)
-        observed = await port.get(p.provider_id)
+        observed = await port.get(p.provider_id, p.paid_at?.toISOString())
         if (observed.state === 'pending') throw new Error('Cancellation is pending')
       }
     }

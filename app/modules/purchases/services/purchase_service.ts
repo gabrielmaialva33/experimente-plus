@@ -251,6 +251,7 @@ export default class PurchaseService {
           expires_at: expires,
           payment_input: encryption.encrypt({
             email: actor.email,
+            name: actor.full_name,
             card_token: input.card_token,
             payment_method_id: input.payment_method_id,
             document_type: input.document_type,
