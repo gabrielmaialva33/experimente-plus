@@ -10847,6 +10847,8 @@ paths:
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
         '429':
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '500':
+          description: Configuração do provedor inválida; requer intervenção operacional.
         '503':
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
       parameters:
@@ -11422,7 +11424,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PurchaseAccepted'
         '400':
-          description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+          description: Assinatura Stripe ausente, inválida ou expirada; nenhum evento entra no inbox.
         '401':
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
         '403':
@@ -11435,6 +11437,8 @@ paths:
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
         '429':
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
+        '500':
+          description: Configuração do provedor inválida; requer intervenção operacional, sem aceitar o evento.
         '503':
           description: Requisição recusada; nenhuma concessão é inferida pelo cliente.
       parameters:
@@ -11474,10 +11478,10 @@ paths:
       description:
         'Mercado Pago Payments: HMAC SHA-256 de id/data.id, x-request-id e ts, com x-signature
         e tolerância de 5 minutos. GET autenticado no PSP verifica conta, live_mode, valor, moeda e referência.
-        Fake apenas development/test usa assinatura derivada da configuração local. Retorno 202 confirma
+        Fake apenas DEPLOYMENT_ENV development/homologation usa assinatura derivada da configuração local. Retorno 202 confirma
         persistência, não pagamento. Stripe valida Stripe-Signature sobre o corpo bruto com o segredo
         do endpoint e tolerância de 300 segundos; somente o worker consulta PaymentIntent, Charge e
-        Refund autenticados. Sem segredo de webhook o endpoint Stripe recusa notificações.'
+        Refund autenticados. Sem segredo de webhook o endpoint Stripe recusa notificações. Respostas não 2xx, inclusive 4xx, podem provocar reentrega pelo Stripe.'
       requestBody:
         required: true
         content:

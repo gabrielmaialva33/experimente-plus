@@ -4,13 +4,36 @@ Contrato aceito: [ADR-0024](../architecture/decisions/0024-compra-de-edicao-e-co
 
 ## Configuração e seleção
 
-- `PAYMENT_PROVIDER=disabled` é o padrão. `fake` habilita simulação persistida, apenas development/test; a inicialização recusa fake em produção. `mercado_pago` seleciona o adaptador real. Não há fallback silencioso entre provedores.
+- `PAYMENT_PROVIDER=disabled` é o padrão. `fake` permite simulação em implantação development/homologation e é recusado em production, inclusive na inicialização. `stripe` seleciona o provedor escolhido pelo dono; `mercado_pago` mantém o adaptador anterior. Não há fallback silencioso entre provedores.
 - `PAYMENT_METHODS` aceita `none`, `pix`, `card` ou `pix,card`. Fake usa `pix,card` por padrão; Mercado Pago usa `none` até habilitação explícita dos meios homologados na conta. A configuração representa capacidade comercial habilitada, não uma consulta de saúde do PSP. Provedor desabilitado ou configuração incompleta produz vitrine vazia, sem chamada externa. A criação revalida o meio; cliente deve copiar um valor de `payment_methods`, nunca presumir Pix/cartão. Replays idempotentes continuam retornando a intenção original mesmo após desabilitar um meio.
 - `PAYMENT_ENVIRONMENT` aceita `test`/`live`. Mercado Pago valida `live_mode` e `collector_id` de cada pagamento contra ambiente e conta gravados na compra. Configuração divergente bloqueia processamento; trocar fornecedor não migra compras antigas automaticamente.
 - O adaptador real exige `MERCADO_PAGO_ACCOUNT_ID`, `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET` fornecidos pelo mecanismo seguro do ambiente. Não colocar valores em repositório, fixtures ou logs. Testes do adaptador injetam transporte local e dados sintéticos gerados durante a execução; não acessam a rede.
 - `PURCHASE_QUOTE_MINUTES`: 15 por padrão, entre 0 e 60 exclusivos/inclusivos respectivamente, limitada ao fim da venda. Ajustar somente após aprovação operacional. Preço e todas as condições são congelados na compra; o hash de termos deve vir da vitrine atual.
 - `PURCHASE_AUTO_REFUND_UNUSED=false` por padrão. Ativar somente depois da aprovação da política comercial. Mesmo ativa, qualquer resgate exige análise humana. Pagamento que não pode entregar acesso é compensado automaticamente independentemente dessa política.
 - Dados mínimos de tokenização são cifrados com a chave da aplicação até a recuperação/criação do pagamento; apagados após observação conciliada. A chave deve sobreviver à retomada do worker. PAN/CVV não fazem parte do contrato.
+
+## Ambiente de implantação (decisão de 08/09/2026)
+
+`DEPLOYMENT_ENV` define a política de negócio, independentemente de `NODE_ENV`, que continua selecionando execução compilada, logs e modo de teste. Valores aceitos: `development`, `homologation`, `production`. **Ausência assume production**, mesmo com runtime development/test; valor inválido impede inicialização. Não inferir ambiente pelo tenant, hostname ou chave do PSP.
+
+| Implantação  | Pagamentos                                                                | Proteções                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| development  | Fake, Stripe test/live conforme configuração explícita                    | HTTP local permitido; polling Stripe pode operar sem segredo de webhook, mas o endpoint não aceita eventos sem verificação        |
+| homologation | Fake ou provedor real em test/live, com ambientes consistentes            | HTTPS canônico, cookies Secure, segredo de webhook Stripe e segredo independente de convites; sem seed/factory de desenvolvimento |
+| production   | Fake proibido; provedor real exige live; chave Stripe usada deve ser live | Mesmas proteções de host público; configuração ausente/inconsistente bloqueia operação                                            |
+
+**A VPS de homologação deve receber `DEPLOYMENT_ENV=homologation`**, mantendo `NODE_ENV=production`, `PAYMENT_PROVIDER=stripe`, `PAYMENT_ENVIRONMENT=test` e `STRIPE_ENVIRONMENT=test` enquanto a integração for sandbox. O mesmo ambiente deve chegar ao servidor HTTP e ao worker. Conferir `APP_URL` HTTPS (ou `BENEFIT_PRESENTATION_BASE_URL` canônica), `STRIPE_ACCOUNT_ID`, chave secreta e segredo do endpoint de webhook pelo mecanismo seguro de configuração, sem imprimir seus valores. Reiniciar/recriar processos pelo fluxo de deploy controlado; esta mudança não aplica configuração remotamente.
+
+`STRIPE_SECRET_KEY` precisa corresponder ao modo test/live. O endpoint de homologação exige `STRIPE_WEBHOOK_SECRET`; não dispensar assinatura para contornar erro de configuração. O SDK verifica corpo bruto, assinatura e timestamp antes do inbox. O worker continua obtendo evidência autenticada do PSP, fora dos locks; `pnpm ace purchases:process` também recupera pagamentos sem webhook em desenvolvimento.
+
+### Diagnóstico HTTP do webhook
+
+- **400**: Stripe sem assinatura, assinatura inválida/expirada ou evento incompatível. Nenhum registro no inbox. Ausência do header é rejeitada antes de instanciar o provedor.
+- **500**: configuração do servidor inválida/desabilitada, ambiente/chave divergente ou verificação de webhook não configurada. Exige intervenção do operador; não é indisponibilidade transitória do PSP. Não contém valores de configuração.
+- **503**: falha transitória de transporte ou impossibilidade de verificar evidência autenticada ao consultar o PSP, preservando retry durável. O recebimento de webhook não consulta a rede.
+- **202**: sinal verificado persistido idempotentemente; não concede acesso. Mercado Pago/fake mantêm 401 para assinatura rejeitada, 404 para provedor não habilitado e 409 para conflito de identidade do evento.
+
+**4xx não garante fim das reentregas do Stripe**: o provedor pode reenviar após qualquer resposta não 2xx. A distinção acima classifica corretamente a falha; não é um controle remoto da política de retries. Não responder 2xx a evento não verificado para silenciar retries. Corrigir configuração/segredo no servidor e revisar tentativas no painel; recuperar também por polling autenticado, sem inserir manualmente corpos rejeitados. [Documentação oficial de webhooks e retries](https://docs.stripe.com/webhooks), consultada em 08/09/2026.
 
 ## Fluxo e rotas
 
@@ -50,13 +73,13 @@ O `development_seeder` mantém as duas edições gratuitas e suas cortesias. Acr
 Somente em ambiente **local de desenvolvimento**, com os destinos de PostgreSQL/Redis previamente conferidos:
 
 ```bash
-PAYMENT_PROVIDER=fake PAYMENT_METHODS=pix,card pnpm ace db:seed
-PAYMENT_PROVIDER=fake PAYMENT_METHODS=pix,card pnpm dev
+DEPLOYMENT_ENV=development PAYMENT_PROVIDER=fake PAYMENT_METHODS=pix,card pnpm ace db:seed
+DEPLOYMENT_ENV=development PAYMENT_PROVIDER=fake PAYMENT_METHODS=pix,card pnpm dev
 ```
 
-O seeder não altera `.env` nem habilita cobranças. É preciso selecionar o mesmo adaptador falso no servidor e nos comandos de processamento. A vitrine pública retorna a edição e os meios configurados. O cliente autenticado inicia a compra com o meio anunciado; depois, `pnpm ace purchases:process` prepara a simulação e `pnpm ace purchases:simulate <id-da-compra>` confirma pelo fluxo durável, com `PAYMENT_PROVIDER=fake` também nesses processos. O cliente demonstrativo mantém cortesias nas edições gratuitas e só recebe acesso à adicional após confirmação. Não executar esse seeder em produção nem em host de demonstração acessível pela internet; o filtro `environment = ['development']` continua no seeder.
+O seeder não altera `.env` nem habilita cobranças. É preciso selecionar o mesmo adaptador falso no servidor e nos comandos de processamento. A vitrine pública retorna a edição e os meios configurados. O cliente autenticado inicia a compra com o meio anunciado; depois, `pnpm ace purchases:process` prepara a simulação e `pnpm ace purchases:simulate <id-da-compra>` confirma pelo fluxo durável, com `PAYMENT_PROVIDER=fake` também nesses processos. O cliente demonstrativo mantém cortesias nas edições gratuitas e só recebe acesso à adicional após confirmação. Não executar esse seeder em produção nem em host de demonstração acessível pela internet; o filtro Lucid `environment = ['development']` continua, junto da validação explícita de `DEPLOYMENT_ENV=development` antes de acessar o banco.
 
-As factories de compras ficam em `database/factories/scenarios/purchase_flow_factory.ts`, seguindo a composição de `benefit_flow_factory.ts`. Como compras usam interfaces/repositório SQL, sem model Lucid, esses cenários usam os serviços reais com o adaptador falso em vez de introduzir models de produção apenas para fabricar linhas. Requerem development/test, `PAYMENT_PROVIDER=fake` e Pix habilitado; não acessam o PSP real.
+As factories de compras ficam em `database/factories/scenarios/purchase_flow_factory.ts`, seguindo a composição de `benefit_flow_factory.ts`. Como compras usam interfaces/repositório SQL, sem model Lucid, esses cenários usam os serviços reais com o adaptador falso em vez de introduzir models de produção apenas para fabricar linhas. Requerem `DEPLOYMENT_ENV=development` (também com `NODE_ENV=test`), `PAYMENT_PROVIDER=fake` e Pix habilitado; não acessam o PSP real.
 
 - `createPurchaseFixture(options)`: operação, usuários, edição/oferta compráveis, cotação e helpers `create()`, `paid()` e `notify(id)`. Não concede cortesia à edição de compra.
 - `createPurchaseFlowScenario({ state })`: `pending`, `paid`, `failed`, `cancelled`, `review` ou `refunded`; retorna `purchase` e `access` atual (nulo até concessão). `review` representa confirmação com data inconsistente, aguardando compensação durável; `refunded` representa devolução externa integral observada.

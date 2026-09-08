@@ -295,3 +295,14 @@ O adaptador Stripe usa PaymentIntents, Charge, Refunds e consulta autenticada de
 A integração inicial é **sandbox**. Pix em conta brasileira está sujeito a convite/habilitação do Stripe; não é anunciado automaticamente. Cartão usa PaymentMethod tokenizado; o contrato cliente atual ainda não completa desafios 3DS, portanto o adaptador os recusa sem conceder acesso. Abertura de vendas reais, habilitação de Pix, experiência de autenticação adicional, entidade vendedora e políticas comerciais continuam exigindo preparação própria.
 
 Fontes oficiais consultadas em 8 de setembro de 2026: [Pix](https://docs.stripe.com/payments/pix), [idempotência](https://docs.stripe.com/api/idempotent_requests), [assinatura](https://docs.stripe.com/webhooks/signature), [reembolsos](https://docs.stripe.com/refunds), [eventos e retenção](https://docs.stripe.com/api/events/list).
+
+## Registro complementar — ambiente de negócio (08/09/2026)
+
+Por decisão do dono, a VPS atual é homologação, embora execute runtime compilado com
+`NODE_ENV=production`. A política comercial passa a depender exclusivamente de
+`DEPLOYMENT_ENV`: development, homologation ou production. Ausência assume production;
+valor inválido impede inicialização. Somente production proíbe fake e exige evidência live,
+com chave Stripe correspondente. Homologation permite sandbox, sem dispensar HTTPS, cookies
+seguros, segredo de webhook ou consulta autenticada pelo worker. Seeder e factories de
+desenvolvimento não são permitidos em homologação. Esta distinção complementa a escolha Stripe
+e preserva todas as invariantes de concessão, idempotência, locks e restituição aceitas acima.

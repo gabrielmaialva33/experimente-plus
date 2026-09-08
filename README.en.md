@@ -181,7 +181,7 @@ Password: experimente123
 > `DEV_CUSTOMER_*`. The regional data, establishments, offers, and accesses the seeder creates are
 > fictional.
 
-The seeder is `static environment = ['development']`: it is skipped under `NODE_ENV=production`.
+The seeder is `static environment = ['development']`: it is skipped under `NODE_ENV=production`. Direct execution also requires `DEPLOYMENT_ENV=development` before database access.
 
 ---
 
@@ -223,14 +223,17 @@ pnpm ace db:seed         # deterministic development data
 Optional secrets fall back to `APP_KEY` during development only. Production must use long,
 independent values stored outside the repository.
 
-The origin embedded in a QR code follows a closed precedence chain:
-`BENEFIT_PRESENTATION_BASE_URL`; then, only in production, `APP_URL`; and the trusted request
-protocol/host only during development or tests. In production, the selected origin must use
-`https://`; `http://` is limited to development and tests. The variables must contain only an
-absolute origin, without credentials, path, query, or fragment. Production startup fails when no
-valid canonical HTTPS origin is available, preventing `Host` or `X-Forwarded-Host` from controlling
-the validation link. The local `docker-compose.yml` defaults to `NODE_ENV=development`, while
-`docker-compose.vps.yml` pins `NODE_ENV=production`.
+Business deployment is `DEPLOYMENT_ENV=development|homologation|production`. Missing means
+production; invalid values abort startup. `NODE_ENV` remains the runtime mode: the homologation
+VPS uses `NODE_ENV=production` with **`DEPLOYMENT_ENV=homologation`**. Homologation accepts
+Stripe test payments while retaining public-host protections. Business production rejects fake
+and test payments. Local/test configurations explicitly use `DEPLOYMENT_ENV=development`.
+See the [purchase runbook](docs/runbooks/purchases.md) for deployment requirements and webhook errors.
+
+QR origins use `BENEFIT_PRESENTATION_BASE_URL`, followed by `APP_URL` in homologation/production;
+only development may derive an origin from the trusted request. Both hosted environments require
+a canonical HTTPS origin without credentials, path, query or fragment during startup. Both use
+Secure cookies and suppress debug details, independently of the Compose runtime setting.
 
 > [!IMPORTANT]
 > The public resolver reads the **first hostname label**. On `experimente-plus.example.com` it looks

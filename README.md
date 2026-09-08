@@ -180,7 +180,7 @@ Senha:    experimente123
 > pela internet. Elas são configuráveis por `DEV_ADMIN_*`, `DEV_PARTNER_*` e `DEV_CUSTOMER_*`.
 > Os dados regionais, estabelecimentos, ofertas e acessos criados pelo seeder são fictícios.
 
-O seeder é `static environment = ['development']`: com `NODE_ENV=production` ele é ignorado.
+O seeder é `static environment = ['development']`: com `NODE_ENV=production` ele é ignorado. Além desse filtro Lucid, a execução exige `DEPLOYMENT_ENV=development` antes de acessar o banco, inclusive em chamadas diretas.
 
 ---
 
@@ -222,14 +222,19 @@ pnpm ace db:seed         # dados determinísticos de desenvolvimento
 Os segredos opcionais usam `APP_KEY` como fallback apenas durante o desenvolvimento. Produção deve
 utilizar valores longos, independentes e armazenados fora do repositório.
 
-A origem incorporada ao QR segue uma precedência fechada: `BENEFIT_PRESENTATION_BASE_URL`; depois,
-somente em produção, `APP_URL`; e protocolo/host confiáveis da requisição apenas em desenvolvimento
-ou teste. Em produção, a origem selecionada deve usar `https://`; `http://` fica restrito ao
-desenvolvimento e aos testes. As variáveis devem conter somente uma origem absoluta, sem
-credenciais, caminho, query ou fragmento. O bootstrap de produção falha quando nenhuma origem
-canônica HTTPS válida está disponível, evitando que `Host` ou `X-Forwarded-Host` controle o link de
-validação. O `docker-compose.yml` local usa `NODE_ENV=development` por padrão, enquanto
-`docker-compose.vps.yml` fixa `NODE_ENV=production`.
+O ambiente de negócio é `DEPLOYMENT_ENV=development|homologation|production`; ausência
+assume production e valor inválido impede inicialização. `NODE_ENV` permanece o modo de runtime:
+a VPS usa `NODE_ENV=production` e **`DEPLOYMENT_ENV=homologation`** enquanto for homologação.
+Homologação aceita Stripe test, mas exige as proteções de host público. Produção de negócio proíbe
+fake e pagamentos test. Configure `DEPLOYMENT_ENV=development` no ambiente local e de testes;
+os arquivos de exemplo/teste já o declaram. Veja a matriz e os requisitos no
+[runbook de compras](docs/runbooks/purchases.md#ambiente-de-implantação-decisão-de-08092026).
+
+A origem incorporada ao QR segue a precedência: `BENEFIT_PRESENTATION_BASE_URL`; depois,
+em homologation/production, `APP_URL`; e protocolo/host confiáveis da requisição apenas em
+development. Os dois ambientes públicos exigem origem canônica HTTPS, sem credenciais, caminho,
+query ou fragmento, desde a inicialização. Cookies são Secure em ambos; debug não expõe detalhes
+nesses ambientes. O filtro de runtime do Compose permanece independente dessa política.
 
 > [!IMPORTANT]
 > O resolver público lê o **primeiro rótulo do hostname**. Em `experimente-plus.exemplo.com` ele

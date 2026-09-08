@@ -136,8 +136,8 @@ interpolação (`--env-file`) e compara, sem imprimir valores, o fingerprint can
 ambiente efetivo com o ambiente do único container HTTP em execução. Os defaults vêm da mesma
 imagem imutável; somente `HOST`, `PORT` e `TRUST_PROXY`, fixados pelo Compose HTTP e irrelevantes ao
 comando, são excluídos da comparação. Assim, inclusive qualquer variável `PG*` divergente aborta
-antes da rotação. Todos os arquivos temporários root-only são removidos pelo `trap`. O comando de
-produção aceita apenas um arquivo novo, filho direto do caminho host-only, depois de validar
+antes da rotação. Todos os arquivos temporários root-only são removidos pelo `trap`. Com `DEPLOYMENT_ENV=homologation` ou `production` (independentemente de `NODE_ENV`), o comando
+aceita apenas um arquivo novo, filho direto do caminho host-only, depois de validar
 diretório `0700`, marker regular `0400`, proprietário, tamanho e conteúdo. O mesmo inode e hash do
 marker são revalidados antes do commit do banco.
 
