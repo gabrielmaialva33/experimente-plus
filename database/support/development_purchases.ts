@@ -52,6 +52,7 @@ export async function seedDevelopmentPurchases(tenant: Tenant, administrator: Us
         tenant_id: tenant.id,
         edition_id: edition.id,
         establishment_id: revision.establishment_id,
+        standalone_price_cents: 1490,
         title: 'Petisco em dobro — edição de compra local',
         description: 'Peça um petisco participante e receba outro de valor igual ou menor.',
         benefit_type: 'buy_one_get_one',

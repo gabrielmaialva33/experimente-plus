@@ -1,3 +1,11 @@
+import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import {
+  developmentIllustration,
+  DEVELOPMENT_MEDIA_WIDTH,
+  DEVELOPMENT_MEDIA_HEIGHT,
+  type DevelopmentIllustration,
+} from '#database/support/development_media'
 import { createHash } from 'node:crypto'
 
 import drive from '@adonisjs/drive/services/main'
@@ -87,8 +95,7 @@ interface VenueSeed {
   longitude: number
   hours: HourSeed[]
   attributes: AttributeSeed[]
-  media_base64: string
-  media_checksum: string
+  media_scene: DevelopmentIllustration
   media_alt_text: string
   media_caption: string
 }
@@ -162,10 +169,8 @@ const VENUES: VenueSeed[] = [
         value_decimal: 42.5,
       },
     ],
-    media_base64:
-      'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFUlEQVR42mO82uLIgA0wMeAA9JAAAPG2AabwMWbPAAAAAElFTkSuQmCC',
-    media_checksum: '6978382b237cb82dc4fd28216090139f0ba50c56e3cda890e38056eda8202bcb',
-    media_alt_text: 'Fachada em tons quentes do Café Aurora em Cornélio Procópio',
+    media_scene: 'coffee',
+    media_alt_text: 'Ilustração demonstrativa original de uma xícara de café; loja fictícia',
     media_caption: 'Cafés especiais e confeitaria artesanal no centro da cidade.',
   },
   {
@@ -228,10 +233,8 @@ const VENUES: VenueSeed[] = [
         value_integer: 18,
       },
     ],
-    media_base64:
-      'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFUlEQVR42mO0jy1mwAaYGHAAekgAAKCSARtNyVKtAAAAAElFTkSuQmCC',
-    media_checksum: 'bdabe4bc9515194914d88a058e260db47cb7f93652afd62c206a6bf271af94a0',
-    media_alt_text: 'Salão do Bar Estação 43 preparado para uma noite de música ao vivo',
+    media_scene: 'petiscos',
+    media_alt_text: 'Ilustração demonstrativa original de petiscos e bebida; loja fictícia',
     media_caption: 'Petiscos regionais, cervejas artesanais e música ao vivo.',
   },
   {
@@ -294,10 +297,8 @@ const VENUES: VenueSeed[] = [
         value_url: 'https://padariaprimavera.local/cardapio',
       },
     ],
-    media_base64:
-      'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFUlEQVR42mOMdnZgwAaYGHAAekgAAISNAOrNAIELAAAAAElFTkSuQmCC',
-    media_checksum: '76aed40130800102d6465a96415a33e34ec7ea5ec11a9c53a147640556994cc9',
-    media_alt_text: 'Balcão da Padaria Primavera com pães artesanais recém-assados',
+    media_scene: 'bakery',
+    media_alt_text: 'Ilustração demonstrativa original de pães artesanais; loja fictícia',
     media_caption: 'Panificação artesanal e café da manhã todos os dias.',
   },
 ]
@@ -381,23 +382,35 @@ async function seedVenue(
         created_by: rootUser.id,
       })
 
-  establishment.organization_id = organization.id
-  establishment.lifecycle_status = 'active'
-  establishment.business_status = 'open'
-  establishment.suspended_at = null
-  establishment.archived_at = null
-  await establishment.save()
+  const prepared = await prepareSeedMedia(tenant, venue)
+  if (establishment.published_revision_id) {
+    const sameComposition = await EstablishmentRevisionMedia.query()
+      .where('revision_id', establishment.published_revision_id)
+      .whereHas('asset', (q) =>
+        q
+          .where('checksum_sha256', prepared.checksum)
+          .whereHas('file', (f) => f.where('file_name', prepared.key))
+      )
+      .first()
+    // Never rewrite an already published revision or reset a moderation decision on rerun.
+    if (sameComposition) return
+  }
+  const latest = await EstablishmentRevision.query()
+    .where('establishment_id', establishment.id)
+    .orderBy('version', 'desc')
+    .first()
+  const nextVersion = (latest?.version ?? 0) + 1
 
   const revision = await EstablishmentRevision.updateOrCreate(
     {
       tenant_id: tenant.id,
       establishment_id: establishment.id,
-      version: 1,
+      version: nextVersion,
     },
     {
       tenant_id: tenant.id,
       establishment_id: establishment.id,
-      version: 1,
+      version: nextVersion,
       status: 'approved',
       city_id: city.id,
       public_name: venue.public_name,
@@ -411,7 +424,7 @@ async function seedVenue(
       instagram: venue.instagram,
       booking_url: null,
       availability_type: 'regular_hours',
-      based_on_revision_id: null,
+      based_on_revision_id: establishment.published_revision_id,
       created_by: rootUser.id,
       submitted_at: APPROVED_AT,
       reviewed_by: rootUser.id,
@@ -455,11 +468,14 @@ async function seedVenue(
   await seedAttributes(tenant, revision, category, venue.attributes)
   await seedHours(tenant, revision, venue.hours)
   await seedSpecialClosure(tenant, revision)
-  await seedMedia(tenant, rootUser, establishment, revision, venue)
+  await seedMedia(tenant, rootUser, establishment, revision, venue, prepared)
 
-  establishment.published_revision_id = revision.id
-  await establishment.save()
-  await seedRevisionEvents(tenant, rootUser, establishment, revision)
+  await db.transaction(async (client) => {
+    await seedRevisionEvents(tenant, rootUser, establishment, revision, client)
+    establishment.useTransaction(client)
+    establishment.published_revision_id = revision.id
+    await establishment.save()
+  })
 }
 
 async function seedAttributes(
@@ -589,7 +605,8 @@ async function seedRevisionEvents(
   tenant: Tenant,
   rootUser: User,
   establishment: Establishment,
-  revision: EstablishmentRevision
+  revision: EstablishmentRevision,
+  client: TransactionClientContract
 ): Promise<void> {
   const events = [
     {
@@ -655,7 +672,8 @@ async function seedRevisionEvents(
         reason: event.reason,
         metadata: event.metadata,
         created_at: APPROVED_AT,
-      }
+      },
+      { client }
     )
   }
 }
@@ -665,20 +683,12 @@ async function seedMedia(
   rootUser: User,
   establishment: Establishment,
   revision: EstablishmentRevision,
-  venue: VenueSeed
+  venue: VenueSeed,
+  prepared: Awaited<ReturnType<typeof prepareSeedMedia>>
 ): Promise<void> {
-  const buffer = Buffer.from(venue.media_base64, 'base64')
-  const checksum = createHash('sha256').update(buffer).digest('hex')
-  if (checksum !== venue.media_checksum) {
-    throw new Error(`Development media checksum mismatch for ${venue.slug}`)
-  }
+  const { buffer, checksum, key, url } = prepared
 
-  const disk = drive.use()
-  const key = `seed/media/${tenant.id}/${venue.slug}/cover.png`
-  await disk.put(key, buffer)
-  const url = env.get('DRIVE_DISK') === 'fs' ? `/uploads/${key}` : await disk.getUrl(key)
-
-  const storedFile = await StoredFile.updateOrCreate(
+  const storedFile = await StoredFile.firstOrCreate(
     { tenant_id: tenant.id, file_name: key },
     {
       tenant_id: tenant.id,
@@ -692,7 +702,7 @@ async function seedMedia(
     }
   )
 
-  const asset = await MediaAsset.updateOrCreate(
+  const asset = await MediaAsset.firstOrCreate(
     { file_id: storedFile.id },
     {
       tenant_id: tenant.id,
@@ -702,8 +712,8 @@ async function seedMedia(
       file_extension: 'png',
       mime_type: 'image/png',
       checksum_sha256: checksum,
-      width: 8,
-      height: 6,
+      width: DEVELOPMENT_MEDIA_WIDTH,
+      height: DEVELOPMENT_MEDIA_HEIGHT,
       created_by: rootUser.id,
     }
   )
@@ -758,4 +768,25 @@ async function seedMedia(
       created_at: APPROVED_AT,
     }
   )
+}
+
+async function prepareSeedMedia(tenant: Tenant, venue: VenueSeed) {
+  const buffer = developmentIllustration(venue.media_scene)
+  const checksum = createHash('sha256').update(buffer).digest('hex')
+  const key = [
+    'seed/media/v2',
+    env.get('DRIVE_DISK'),
+    tenant.id,
+    venue.slug,
+    checksum + '.png',
+  ].join('/')
+  try {
+    const disk = drive.use()
+    await disk.put(key, buffer, { contentType: 'image/png' })
+    const url = await disk.getUrl(key)
+    return { buffer, checksum, key, url }
+  } catch {
+    // Cloud SDK errors may carry signed headers; never print credentials or raw responses.
+    throw new Error('Development illustration storage failed')
+  }
 }
