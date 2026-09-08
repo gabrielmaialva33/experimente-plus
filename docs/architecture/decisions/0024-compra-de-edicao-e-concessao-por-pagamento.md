@@ -285,3 +285,13 @@ Registro das escolhas do dono (o registro de aceitação acima prevalece sobre a
 | Marco e operação                 | EP-14 aceito; definir responsável financeiro, frequência/SLA de conciliação, retenção e autorização futura do piloto pago.                                                |
 
 O ADR está **aceito**; pendências comerciais não o tornam proposto novamente. A unidade vendida, o corte técnico, venda versus uso e o bloqueio estão aprovados. Provedor/conta, vendedor, preços efetivos, prazos de política comercial e operação continuam pendentes; nenhuma escolha comercial é inferida do schema ou da existência do adaptador.
+
+## Registro posterior — escolha do provedor em 8 de setembro de 2026
+
+O dono do produto escolheu **Stripe**, substituindo o adiamento comercial registrado em 7 de setembro. A recomendação original de Mercado Pago acima permanece como histórico, assim como seu adaptador. A arquitetura continua agnóstica via `PaymentPort`; a escolha atual não altera concessão, locks, idempotência, bloqueio financeiro, cotas ou catálogo público.
+
+O adaptador Stripe usa PaymentIntents, Charge, Refunds e consulta autenticada de eventos de confirmação. O SDK oficial verifica a assinatura do corpo bruto do webhook; a notificação apenas entra na caixa durável, sem conceder acesso. `purchases:process` também consulta o provedor sem webhook. O horário do evento de confirmação, e não a criação do PaymentIntent, decide a validade da cotação. O horário já verificado é persistido para reconciliações posteriores à retenção de eventos; evidência inicial indisponível exige retry/análise, nunca data inventada.
+
+A integração inicial é **sandbox**. Pix em conta brasileira está sujeito a convite/habilitação do Stripe; não é anunciado automaticamente. Cartão usa PaymentMethod tokenizado; o contrato cliente atual ainda não completa desafios 3DS, portanto o adaptador os recusa sem conceder acesso. Abertura de vendas reais, habilitação de Pix, experiência de autenticação adicional, entidade vendedora e políticas comerciais continuam exigindo preparação própria.
+
+Fontes oficiais consultadas em 8 de setembro de 2026: [Pix](https://docs.stripe.com/payments/pix), [idempotência](https://docs.stripe.com/api/idempotent_requests), [assinatura](https://docs.stripe.com/webhooks/signature), [reembolsos](https://docs.stripe.com/refunds), [eventos e retenção](https://docs.stripe.com/api/events/list).

@@ -4231,10 +4231,12 @@ components:
         method:
           $ref: '#/components/schemas/PaymentMethod'
         card_token:
+          description: Token opaco do PSP. Para Stripe, ID de PaymentMethod de cartão criado pelo SDK cliente; nunca PAN/CVV. Este corte não completa desafios 3DS.
           type: string
           maxLength: 512
           writeOnly: true
         payment_method_id:
+          description: Para Stripe usar card; para Mercado Pago, o identificador do meio tokenizado.
           type: string
           pattern: ^[a-zA-Z0-9_-]{1,60}$
         document_type:
@@ -11443,12 +11445,18 @@ paths:
             enum:
               - fake
               - mercado_pago
+              - stripe
         - name: x-signature
           in: header
           required: false
           schema:
             type: string
         - name: x-request-id
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: Stripe-Signature
           in: header
           required: false
           schema:
@@ -11467,13 +11475,35 @@ paths:
         'Mercado Pago Payments: HMAC SHA-256 de id/data.id, x-request-id e ts, com x-signature
         e tolerância de 5 minutos. GET autenticado no PSP verifica conta, live_mode, valor, moeda e referência.
         Fake apenas development/test usa assinatura derivada da configuração local. Retorno 202 confirma
-        persistência, não pagamento.'
+        persistência, não pagamento. Stripe valida Stripe-Signature sobre o corpo bruto com o segredo
+        do endpoint e tolerância de 300 segundos; somente o worker consulta PaymentIntent, Charge e
+        Refund autenticados. Sem segredo de webhook o endpoint Stripe recusa notificações.'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               oneOf:
+                - type: object
+                  additionalProperties: true
+                  required: [id, type, data, livemode, created]
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                      pattern: '^(payment_intent|charge|refund)\.'
+                    livemode:
+                      type: boolean
+                    created:
+                      type: integer
+                    data:
+                      type: object
+                      required: [object]
+                      properties:
+                        object:
+                          type: object
+                          additionalProperties: true
                 - type: object
                   additionalProperties: true
                   required:
