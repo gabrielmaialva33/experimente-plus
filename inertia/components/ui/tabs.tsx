@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { ChoiceIndicator } from '~/components/ui/choice'
 import { cn } from '~/lib/utils'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { Tabs as TabsPrimitive } from 'radix-ui'
@@ -7,9 +8,9 @@ import { Tabs as TabsPrimitive } from 'radix-ui'
 const tabsListVariants = cva('flex items-center shrink-0', {
   variants: {
     variant: {
-      default: 'bg-accent p-1',
+      default: 'border border-choice-border bg-choice-background p-1',
       button: '',
-      line: 'border-b border-border',
+      line: 'border-b border-choice-border',
     },
     shape: {
       default: '',
@@ -77,15 +78,13 @@ const tabsListVariants = cva('flex items-center shrink-0', {
 
 // Variants for TabsTrigger
 const tabsTriggerVariants = cva(
-  'shrink-0 cursor-pointer whitespace-nowrap inline-flex justify-center items-center font-medium ring-offset-background transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:shrink-0 [&_svg]:text-muted-foreground [&:hover_svg]:text-primary [&[data-state=active]_svg]:text-primary',
+  'min-h-11 shrink-0 cursor-pointer whitespace-nowrap inline-flex justify-center items-center font-medium ring-offset-background transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        default:
-          'text-muted-foreground data-[state=active]:bg-background hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-xs data-[state=active]:shadow-black/5',
-        button:
-          'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg text-accent-foreground hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground',
-        line: 'border-b-2 text-muted-foreground border-transparent data-[state=active]:border-primary hover:text-primary data-[state=active]:text-primary data-[state=active]:border-primary data-[state=active]:text-primary',
+        default: 'choice-control',
+        button: 'choice-control',
+        line: 'choice-control rounded-md',
       },
       size: {
         lg: 'gap-2.5 [&_svg]:size-5 text-sm',
@@ -165,7 +164,11 @@ function TabsList({
   )
 }
 
-function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+function TabsTrigger({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   const { variant, size } = React.useContext(TabsContext)
 
   return (
@@ -173,7 +176,10 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
       data-slot="tabs-trigger"
       className={cn(tabsTriggerVariants({ variant, size }), className)}
       {...props}
-    />
+    >
+      <ChoiceIndicator />
+      {children}
+    </TabsPrimitive.Trigger>
   )
 }
 

@@ -29,7 +29,7 @@ export function EmptyState({
       className={cn('flex flex-col items-center justify-center px-6 py-12 text-center', className)}
     >
       {Icon && (
-        <span className="mb-4 flex size-11 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+        <span className="mb-4 flex size-11 items-center justify-center rounded-md border border-border bg-content-absent text-content-absent-foreground">
           <Icon className="size-5" aria-hidden="true" />
         </span>
       )}

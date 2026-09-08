@@ -28,12 +28,12 @@ interface PieChartProps {
 }
 
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  'var(--primary)',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ]
 
 export function PieChart({
@@ -72,11 +72,11 @@ export function PieChart({
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'var(--background)',
+                border: '1px solid var(--border)',
                 borderRadius: 'var(--radius)',
               }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'var(--foreground)' }}
             />
             {showLegend && <Legend />}
           </RechartsPieChart>

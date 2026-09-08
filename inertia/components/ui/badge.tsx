@@ -68,7 +68,7 @@ const badgeVariants = cva(
       {
         variant: 'secondary',
         appearance: 'outline',
-        className: 'border-border bg-secondary/60 text-secondary-foreground',
+        className: 'border-border bg-secondary text-secondary-foreground',
       },
       {
         variant: 'success',

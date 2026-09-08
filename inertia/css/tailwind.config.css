@@ -6,7 +6,7 @@
 /*
  * Experimente+ foundation contract.
  *
- * Role values live in app.css as HSL channels. This layer only exposes those
+ * Role values live in app.css as complete OKLCH colors. This layer only exposes those
  * roles to Tailwind, so components never need palette-specific colors.
  */
 @theme inline {
@@ -17,50 +17,77 @@
 
   --container-app: 80rem;
 
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-primary-soft: hsl(var(--primary-soft));
-  --color-primary-accent: hsl(var(--primary-accent));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-cta: hsl(var(--cta));
-  --color-cta-foreground: hsl(var(--cta-foreground));
-  --color-cta-soft: hsl(var(--cta-soft));
-  --color-cta-accent: hsl(var(--cta-accent));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-destructive-soft: hsl(var(--destructive-soft));
-  --color-destructive-accent: hsl(var(--destructive-accent));
-  --color-success: hsl(var(--success));
-  --color-success-foreground: hsl(var(--success-foreground));
-  --color-success-soft: hsl(var(--success-soft));
-  --color-success-accent: hsl(var(--success-accent));
-  --color-warning: hsl(var(--warning));
-  --color-warning-foreground: hsl(var(--warning-foreground));
-  --color-warning-soft: hsl(var(--warning-soft));
-  --color-warning-accent: hsl(var(--warning-accent));
-  --color-info: hsl(var(--info));
-  --color-info-foreground: hsl(var(--info-foreground));
-  --color-info-soft: hsl(var(--info-soft));
-  --color-info-accent: hsl(var(--info-accent));
+  --color-surface-context: var(--surface-context);
+  --color-context-foreground: var(--context-foreground);
+  --color-cta-hover: var(--cta-hover);
+  --color-content-absent: var(--content-absent);
+  --color-content-absent-foreground: var(--content-absent-foreground);
+  --color-content-absent-border: var(--content-absent-border);
+  --color-temporal-emphasis: var(--temporal-emphasis);
+  --color-temporal-emphasis-foreground: var(--temporal-emphasis-foreground);
+  --color-temporal-emphasis-border: var(--temporal-emphasis-border);
+  --color-choice-border: var(--choice-border);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-foreground: var(--status-neutral-foreground);
+  --color-status-neutral-border: var(--status-neutral-border);
+  --color-choice-background: var(--choice-background);
+  --color-choice-foreground: var(--choice-foreground);
+  --color-choice-selected: var(--choice-selected);
+  --color-choice-selected-foreground: var(--choice-selected-foreground);
+  --color-choice-selected-border: var(--choice-selected-border);
+  --color-action-secondary: var(--action-secondary);
+  --color-action-secondary-foreground: var(--action-secondary-foreground);
+  --color-action-secondary-border: var(--action-secondary-border);
+  --color-scrim: var(--scrim);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-accent: var(--primary-accent);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-cta: var(--cta);
+  --color-cta-foreground: var(--cta-foreground);
+  --color-cta-soft: var(--cta-soft);
+  --color-cta-accent: var(--cta-accent);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-accent: var(--destructive-accent);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-accent: var(--success-accent);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-accent: var(--warning-accent);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-info-accent: var(--info-accent);
 
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: var(--radius);
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 8px);
 
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);

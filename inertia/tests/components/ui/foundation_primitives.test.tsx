@@ -56,8 +56,8 @@ describe('foundation primitives', () => {
   it('uses a solid, contrast-safe interaction color for the CTA variant', () => {
     const classes = buttonVariants({ variant: 'cta' })
 
-    expect(classes).toContain('hover:bg-cta-accent')
-    expect(classes).toContain('data-[state=open]:bg-cta-accent')
+    expect(classes).toContain('hover:bg-cta-hover')
+    expect(classes).toContain('data-[state=open]:bg-cta-hover')
     expect(classes).not.toContain('bg-cta/')
   })
 

@@ -5,53 +5,68 @@
     color-scheme: light;
 
     /*
+     * OKLCH foundation: L = lightness, C = chroma, h = hue (sRGB gamut).
      * Regional identity in two brand colors: a deep institutional blue carries
      * structure (navigation, headers, eyebrows, links) and a warm orange is
-     * reserved for action — primary CTA, benefit badges, prices. Blue covers
-     * area; orange stays scarce so it keeps its pull.
+     * reserved for action — primary CTA, benefit badges, prices. One paper canvas and white content cards
+     * carry content; accents appear where navigation, conversion or state needs them.
      */
-    --background: 210 30% 98%;
-    --foreground: 215 30% 13%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 30% 13%;
+    /* E0 canvas → E1 content → E2 transient overlay. Opaque, no decorative depth. */
+    --surface-base: oklch(0.969195527 0.003425761 247.858256445);
+    --surface-raised: oklch(1 0 0);
+    --surface-overlay: var(--surface-raised);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 30% 13%;
+    /* Compatibility aliases: sections always share E0; no editorial beige band. */
+    --surface-context: var(--background);
+    --context-foreground: var(--foreground);
 
-    --primary: 211 74% 28%;
-    --primary-foreground: 0 0% 100%;
-    --primary-soft: 211 58% 94%;
-    --primary-accent: 211 74% 28%;
+    --background: var(--surface-base);
+    --foreground: oklch(0.25 0.012 255);
 
-    --secondary: 212 26% 94%;
-    --secondary-foreground: 214 32% 20%;
+    --card: var(--surface-raised);
+    --card-foreground: var(--foreground);
 
-    --muted: 212 22% 95%;
-    --muted-foreground: 215 14% 42%;
+    --popover: var(--surface-overlay);
+    --popover-foreground: var(--foreground);
 
-    --accent: 211 58% 94%;
-    --accent-foreground: 211 74% 28%;
+    --primary: oklch(0.391842381 0.105523416 253.364477316);
+    --primary-hover: oklch(0.34 0.092 253.364477316);
+    --primary-foreground: oklch(1 0 0);
+    --primary-soft: oklch(0.958 0.019 253.364477316);
+    --primary-accent: var(--primary);
+
+    --secondary: var(--card);
+    --secondary-foreground: var(--foreground);
+
+    --muted: oklch(0.941476798 0.007996977 253.85459596);
+    --muted-foreground: oklch(0.46 0.015 255);
+
+    --accent: var(--primary-soft);
+    --accent-foreground: var(--primary-accent);
 
     /* Action color. `cta` is the solid fill; `soft`/`accent` are the tinted pair. */
-    --cta: 20 92% 40%;
-    --cta-foreground: 0 0% 100%;
-    --cta-soft: 24 92% 95%;
-    --cta-accent: 18 88% 33%;
+    --cta: oklch(0.652931129 0.173621111 46.045497295);
+    --cta-hover: oklch(0.7 0.155 46.045497295);
+    --cta-foreground: oklch(0.22 0.028 46.045497295);
+    --cta-soft: oklch(0.95 0.025 46.045497295);
+    --cta-accent: oklch(0.45 0.105 46.045497295);
 
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 0 78% 95%;
-    --destructive-accent: 0 72% 38%;
+    --destructive: oklch(0.51 0.18 28);
+    --destructive-hover: oklch(0.45 0.16 28);
+    --destructive-foreground: oklch(1 0 0);
+    --destructive-soft: oklch(0.96 0.018 28);
+    --destructive-accent: oklch(0.44 0.15 28);
 
-    --border: 213 22% 88%;
+    --border: oklch(0.84 0.008 255);
     /* Interactive boundaries meet 3:1 without making decorative separators heavy. */
-    --input: 213 20% 58%;
-    --ring: 211 74% 38%;
+    --input: oklch(0.57 0.012 255);
+    --ring: oklch(0.45 0.12 253.364477316);
 
-    --radius: 0.625rem;
-    --elevation-raised: 0 1px 2px hsl(var(--foreground) / 0.08);
-    --elevation-overlay: 0 18px 48px -18px hsl(var(--foreground) / 0.28);
+    --scrim: oklch(0.133386 0.015892 273.521);
+    --radius: 0.75rem;
+    --elevation-raised: none;
+    --elevation-overlay: 0 2px 0 var(--border);
 
     /* Shared baseline reserved by the public shell and occupied by its mobile navigation. */
     --public-mobile-navigation-reserve: 4.5rem;
@@ -64,101 +79,152 @@
      * success = open now; muted = closed/unknown/historical; warning = temporary
      * closure; info = appointment-only. primary and cta keep their action roles.
      */
-    --success: 146 65% 30%;
-    --success-foreground: 0 0% 100%;
-    --success-soft: 146 45% 93%;
-    --success-accent: 146 65% 27%;
+    --success: oklch(0.49 0.115 155);
+    --success-foreground: oklch(1 0 0);
+    --success-soft: oklch(0.956 0.027 155);
+    --success-accent: oklch(0.43 0.1 155);
 
-    --warning: 38 92% 45%;
-    --warning-foreground: 28 90% 14%;
-    --warning-soft: 43 96% 90%;
-    --warning-accent: 28 88% 28%;
+    --warning: oklch(0.79 0.14 80);
+    --warning-foreground: oklch(0.29 0.05 65);
+    --warning-soft: oklch(0.96 0.035 85);
+    --warning-accent: oklch(0.43 0.075 65);
 
-    --info: 196 82% 34%;
-    --info-foreground: 0 0% 100%;
-    --info-soft: 196 65% 92%;
-    --info-accent: 196 82% 29%;
+    --info: oklch(0.48 0.085 230);
+    --info-foreground: oklch(1 0 0);
+    --info-soft: oklch(0.957 0.022 230);
+    --info-accent: oklch(0.43 0.075 230);
 
-    --chart-1: 211 74% 38%;
-    --chart-2: 20 92% 48%;
-    --chart-3: 196 80% 40%;
-    --chart-4: 158 55% 38%;
-    --chart-5: 264 55% 55%;
+    --chart-1: oklch(0.482999 0.136144 253.911);
+    --chart-2: oklch(0.643847 0.197989 40.1886);
+    --chart-3: oklch(0.600557 0.115234 230.003);
+    --chart-4: oklch(0.603664 0.11314 164.187);
+    --chart-5: oklch(0.542357 0.187441 298.325);
+    /* Separate absence, temporal emphasis, operational status and selection. */
+    --content-absent: oklch(0.875 0.006 255);
+    --content-absent-foreground: oklch(0.43 0.02 255);
+    --content-absent-border: oklch(0.55 0.02 255);
+    --temporal-emphasis: oklch(0.988 0.004 255);
+    --temporal-emphasis-foreground: oklch(0.34 0.015 255);
+    --temporal-emphasis-border: oklch(0.55 0.025 255);
+    --choice-border: oklch(0.6 0.045 253.364477316);
+    --status-neutral: var(--muted);
+    --status-neutral-foreground: var(--muted-foreground);
+    --status-neutral-border: var(--border);
+    --choice-background: var(--card);
+    --choice-foreground: var(--foreground);
+    --choice-selected: var(--primary-soft);
+    --choice-selected-foreground: var(--primary-accent);
+    --choice-selected-border: var(--primary);
+    --action-secondary: var(--background);
+    --action-secondary-foreground: var(--foreground);
+    --action-secondary-border: var(--input);
   }
 
   .dark {
     color-scheme: dark;
 
     /*
-     * Dark keeps the same roles, lifted for contrast: the deep blue would read
-     * as background here, so `primary` brightens and takes dark navy text.
+     * Cool indigo surfaces, warm readable content. Blue still signals navigation;
+     * orange conversion. Raised surfaces increase tone and chroma, not blur.
      */
-    --background: 214 34% 9%;
-    --foreground: 210 28% 96%;
 
-    --card: 214 30% 12%;
-    --card-foreground: 210 28% 96%;
+    /* E0 canvas → E1 content → E2 transient overlay. Opaque, no decorative depth. */
+    --surface-base: oklch(0.190579 0.018873 275.681);
+    --surface-raised: oklch(0.254256 0.036457 274.849);
+    --surface-overlay: oklch(0.311724 0.056823 274.068);
 
-    --popover: 214 30% 12%;
-    --popover-foreground: 210 28% 96%;
+    /* Compatibility aliases: sections always share E0; no editorial beige band. */
+    --surface-context: var(--background);
+    --context-foreground: var(--foreground);
 
-    --primary: 211 80% 62%;
-    --primary-foreground: 214 45% 10%;
-    --primary-soft: 212 34% 20%;
-    --primary-accent: 211 82% 76%;
+    --background: var(--surface-base);
+    --foreground: oklch(0.972339 0.004673 84.5636);
 
-    --secondary: 214 22% 18%;
-    --secondary-foreground: 210 28% 96%;
+    --card: var(--surface-raised);
+    --card-foreground: oklch(0.972339 0.004673 84.5636);
 
-    --muted: 214 20% 17%;
-    --muted-foreground: 214 14% 66%;
+    --popover: var(--surface-overlay);
+    --popover-foreground: oklch(0.972339 0.004673 84.5636);
 
-    --accent: 212 34% 20%;
-    --accent-foreground: 211 82% 76%;
+    --primary: oklch(0.743392 0.110862 251.054);
+    --primary-hover: oklch(0.81028 0.080506 250.516);
+    --primary-foreground: oklch(0.191511 0.034882 274.072);
+    --primary-soft: oklch(0.331538 0.04734 250.976);
+    --primary-accent: oklch(0.825784 0.081948 250.514);
 
-    --cta: 22 94% 56%;
-    --cta-foreground: 22 62% 10%;
-    --cta-soft: 20 42% 18%;
-    --cta-accent: 24 94% 68%;
+    --secondary: oklch(0.254256 0.036457 274.849);
+    --secondary-foreground: oklch(0.972339 0.004673 84.5636);
 
-    --destructive: 0 68% 54%;
-    --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 0 34% 18%;
-    --destructive-accent: 0 78% 72%;
+    --muted: oklch(0.254256 0.036457 274.849);
+    --muted-foreground: oklch(0.828324 0.024104 84.5932);
 
-    --border: 214 18% 22%;
-    --input: 214 18% 45%;
-    --ring: 211 80% 62%;
+    --accent: oklch(0.331538 0.04734 250.976);
+    --accent-foreground: oklch(0.825784 0.081948 250.514);
 
-    --elevation-raised: 0 1px 2px hsl(0 0% 0% / 0.22);
-    --elevation-overlay: 0 18px 48px -18px hsl(0 0% 0% / 0.65);
+    --cta: oklch(0.747823 0.15366 48.8186);
+    --cta-hover: oklch(0.836053 0.093504 58.4456);
+    --cta-foreground: oklch(0.221969 0.038615 49.8432);
+    --cta-soft: oklch(0.331312 0.049114 53.907);
+    --cta-accent: oklch(0.836053 0.093504 58.4456);
 
-    --success: 145 62% 48%;
-    --success-foreground: 214 34% 9%;
-    --success-soft: 145 30% 17%;
-    --success-accent: 145 62% 65%;
+    --destructive: oklch(0.690037 0.157955 22.0757);
+    --destructive-hover: oklch(0.759377 0.1158 20.1165);
+    --destructive-foreground: oklch(0.200316 0.034587 20.5948);
+    --destructive-soft: oklch(0.315933 0.059434 20.9791);
+    --destructive-accent: oklch(0.812146 0.095733 19.3507);
 
-    --warning: 38 90% 56%;
-    --warning-foreground: 28 90% 12%;
-    --warning-soft: 38 35% 18%;
-    --warning-accent: 40 90% 70%;
+    --border: oklch(0.410811 0.063788 274.616);
+    --input: oklch(0.681873 0.045602 276.24);
+    --ring: oklch(0.743392 0.110862 251.054);
 
-    --info: 196 84% 60%;
-    --info-foreground: 214 34% 9%;
-    --info-soft: 196 34% 18%;
-    --info-accent: 196 84% 72%;
+    --elevation-raised: none;
+    --elevation-overlay: 0 2px 0 var(--border);
 
-    --chart-1: 211 80% 62%;
-    --chart-2: 22 94% 60%;
-    --chart-3: 196 84% 58%;
-    --chart-4: 158 58% 52%;
-    --chart-5: 264 70% 68%;
+    --success: oklch(0.784753 0.160935 154.357);
+    --success-foreground: oklch(0.190579 0.018873 275.681);
+    --success-soft: oklch(0.350415 0.048455 157.136);
+    --success-accent: oklch(0.871761 0.101829 157.856);
+
+    --warning: oklch(0.823357 0.138274 78.2444);
+    --warning-foreground: oklch(0.265459 0.05917 57.8617);
+    --warning-soft: oklch(0.347772 0.040173 80.4926);
+    --warning-accent: oklch(0.894623 0.092856 84.1027);
+
+    --info: oklch(0.802723 0.106996 224.388);
+    --info-foreground: oklch(0.190579 0.018873 275.681);
+    --info-soft: oklch(0.338604 0.038788 223.55);
+    --info-accent: oklch(0.871998 0.070834 222.52);
+
+    --chart-1: oklch(0.679133 0.140663 251.962);
+    --chart-2: oklch(0.725074 0.169254 47.5318);
+    --chart-3: oklch(0.75134 0.129544 227.307);
+    --chart-4: oklch(0.755915 0.142212 164.125);
+    --chart-5: oklch(0.65502 0.168272 300.277);
+    /* Separate absence, temporal emphasis, operational status and selection. */
+    --content-absent: oklch(0.22 0.006 255);
+    --content-absent-foreground: oklch(0.83 0.015 255);
+    --content-absent-border: oklch(0.46 0.018 255);
+    --temporal-emphasis: oklch(0.36 0.015 255);
+    --temporal-emphasis-foreground: oklch(0.9 0.015 255);
+    --temporal-emphasis-border: oklch(0.7 0.025 255);
+    --choice-border: oklch(0.7 0.045 253.59);
+    --status-neutral: var(--muted);
+    --status-neutral-foreground: var(--muted-foreground);
+    --status-neutral-border: var(--border);
+    --choice-background: var(--card);
+    --choice-foreground: var(--foreground);
+    --choice-selected: var(--primary-soft);
+    --choice-selected-foreground: var(--primary-accent);
+    --choice-selected-border: var(--primary);
+    --action-secondary: var(--background);
+    --action-secondary-foreground: var(--foreground);
+    --action-secondary-border: var(--input);
   }
 }
 
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    border-color: var(--border);
   }
 
   html {
@@ -185,8 +251,8 @@
 
   body {
     min-height: 100%;
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: var(--font-sans);
     font-feature-settings:
       'rlig' 1,
@@ -195,8 +261,8 @@
   }
 
   ::selection {
-    background-color: hsl(var(--primary) / 0.22);
-    color: hsl(var(--foreground));
+    background-color: color-mix(in srgb, var(--primary) 22%, transparent);
+    color: var(--foreground);
   }
 
   /* Custom scrollbar styling */
@@ -206,16 +272,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background-color: hsl(var(--muted));
+    background-color: var(--background);
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
+    background-color: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
   }
 
   /*
@@ -249,4 +315,35 @@ html,
 body {
   min-height: 100%;
   width: 100%;
+}
+
+/* One selection grammar across tabs, segments and filter chips. Shape follows purpose. */
+@utility choice-control {
+  @apply inline-flex items-center justify-center gap-2 border-2 border-choice-border bg-choice-background text-choice-foreground font-medium outline-none transition-colors;
+
+  & .choice-marker {
+    opacity: 0;
+  }
+
+  &:is(
+    [data-selected='true'],
+    [data-state='active'],
+    [aria-selected='true'],
+    [aria-pressed='true'],
+    [aria-current='location']
+  ) {
+    @apply border-choice-selected-border bg-choice-selected text-choice-selected-foreground font-bold;
+
+    & .choice-marker {
+      opacity: 1;
+    }
+  }
+
+  &:is(:hover, :focus-visible, :focus-within) {
+    @apply border-choice-selected-border;
+  }
+
+  &:is(:focus-visible, :focus-within) {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
 }

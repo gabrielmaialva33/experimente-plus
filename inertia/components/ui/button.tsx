@@ -11,13 +11,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-foreground hover:bg-primary/92 data-[state=open]:bg-primary/92',
-        cta: 'bg-cta text-cta-foreground hover:bg-cta-accent data-[state=open]:bg-cta-accent',
+          'bg-primary text-primary-foreground hover:bg-primary-hover data-[state=open]:bg-primary-hover',
+        cta: 'bg-cta text-cta-foreground hover:bg-cta-hover data-[state=open]:bg-cta-hover',
         mono: 'bg-foreground text-background hover:bg-foreground/90 data-[state=open]:bg-foreground/90',
         destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/92 data-[state=open]:bg-destructive/92',
+          'bg-destructive text-destructive-foreground hover:bg-destructive-hover data-[state=open]:bg-destructive-hover',
         secondary:
-          'border-border bg-secondary text-secondary-foreground hover:bg-secondary/75 data-[state=open]:bg-secondary/75',
+          'border-border bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground',
+        contact:
+          'rounded-md border-action-secondary-border bg-action-secondary text-action-secondary-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent',
         outline:
           'border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent',
         dashed:
@@ -58,7 +60,7 @@ const buttonVariants = cva(
       mode: {
         default: '',
         icon: 'shrink-0 p-0',
-        link: 'h-auto border-transparent bg-transparent p-0 text-primary hover:bg-transparent hover:text-primary/85 data-[state=open]:bg-transparent',
+        link: 'h-auto border-transparent bg-transparent p-0 text-primary hover:bg-transparent hover:text-primary-accent data-[state=open]:bg-transparent',
         input:
           'justify-start font-normal hover:bg-background data-[state=open]:bg-background focus-visible:border-ring aria-invalid:border-destructive aria-invalid:ring-destructive/25 in-data-[invalid=true]:border-destructive in-data-[invalid=true]:ring-destructive/25',
       },

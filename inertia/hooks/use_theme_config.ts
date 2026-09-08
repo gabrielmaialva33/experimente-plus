@@ -80,7 +80,7 @@ export function useThemeConfig() {
 
     // Apply color
     const colorValue = THEME_COLORS[newConfig.color][isDark ? 'dark' : 'light']
-    root.style.setProperty('--primary', colorValue)
+    root.style.setProperty('--primary', `hsl(${colorValue})`)
 
     // Apply radius
     root.style.setProperty('--radius', THEME_RADIUS[newConfig.radius])

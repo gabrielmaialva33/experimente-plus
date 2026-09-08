@@ -22,7 +22,7 @@ const cardVariants = cva('flex flex-col items-stretch rounded-lg text-card-foreg
   variants: {
     variant: {
       default: 'border border-border bg-card',
-      accent: 'border border-border bg-muted/60 p-1',
+      accent: 'border border-border bg-muted p-1',
     },
   },
   defaultVariants: {

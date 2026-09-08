@@ -56,16 +56,16 @@ export function BarChart({
             <XAxis
               dataKey={xAxisKey}
               className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fill: 'var(--muted-foreground)' }}
             />
-            <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+            <YAxis className="text-xs" tick={{ fill: 'var(--muted-foreground)' }} />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'var(--background)',
+                border: '1px solid var(--border)',
                 borderRadius: 'var(--radius)',
               }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'var(--foreground)' }}
             />
             {showLegend && <Legend />}
             {bars.map((bar, index) => (
@@ -73,7 +73,7 @@ export function BarChart({
                 key={bar.dataKey}
                 dataKey={bar.dataKey}
                 name={bar.name || bar.dataKey}
-                fill={bar.color || `hsl(var(--chart-${index + 1}))`}
+                fill={bar.color || `var(--chart-${index + 1})`}
                 stackId={stacked ? 'stack' : undefined}
               />
             ))}
