@@ -1,4 +1,5 @@
 import { BaseCommand, flags } from '@adonisjs/core/ace'
+import router from '@adonisjs/core/services/router'
 import { fileURLToPath } from 'node:url'
 import HomologationProvisioningService from '#modules/tenants/services/homologation_provisioning_service'
 import {
@@ -23,6 +24,8 @@ export default class ProvisionHomologation extends BaseCommand {
       const service = await this.app.container.make(HomologationProvisioningService)
       service.assertEnvironment()
       const config = await readProvisioningConfig(this.config, fileURLToPath(this.app.appRoot))
+      // Ace has no HTTP server to commit the routes. Drive fs uses named routes for public URLs.
+      router.commit()
       const result = await service.run(config)
       // Only public IDs/counts: never echo configuration, emails, passwords or raw errors.
       this.logger.success(JSON.stringify(result))
