@@ -287,6 +287,7 @@ test.group('Benefits', (group) => {
     )
     assert.exists(portalOffer)
     assert.sameMembers(Object.keys(portalOffer!), [
+      'standalone_price_cents',
       'id',
       'edition_id',
       'title',

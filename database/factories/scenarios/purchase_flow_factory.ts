@@ -15,7 +15,9 @@ import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import type { Purchase } from '#modules/purchases/models/purchase'
 
-export type PurchaseFixtureOptions = Omit<BenefitFlowScenarioOptions, 'withRedemption'>
+export type PurchaseFixtureOptions = Omit<BenefitFlowScenarioOptions, 'withRedemption'> & {
+  product?: 'edition' | 'offer'
+}
 
 /** Aggregate factory: preserves the real command, webhook, audit and grant paths. */
 export async function createPurchaseFixture(options: PurchaseFixtureOptions = {}) {
@@ -39,16 +41,21 @@ export async function createPurchaseFixture(options: PurchaseFixtureOptions = {}
     sales_ends_at: DateTime.utc().plus({ hours: 1 }),
   })
   await s.edition.save()
+  if (options.product === 'offer') await s.offer.merge({ standalone_price_cents: 1290 }).save()
   const service = await app.container.make(PurchaseService)
   const processor = await app.container.make(PurchaseProcessingService)
   const repo = new PurchaseRepository()
   const fake = new FakePaymentAdapter()
   const catalog = await service.catalog(s.tenant.slug + '.experimente.test')
-  const quote = catalog.editions.find((e) => e.id === s.edition.id)
+  const quote =
+    options.product === 'offer'
+      ? catalog.offers.find((o) => o.offer_id === s.offer.id)
+      : catalog.editions.find((e) => e.id === s.edition.id)
   if (!quote?.payment_methods.includes('pix'))
     throw new Error('Purchase factories require Pix enabled in the local storefront')
   const input = {
     edition_id: s.edition.id,
+    offer_id: options.product === 'offer' ? s.offer.id : null,
     amount_cents: quote.amount_cents,
     terms_version: quote.snapshot.terms_version,
     method: 'pix' as const,
