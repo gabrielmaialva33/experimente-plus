@@ -78,7 +78,8 @@ test.group('Homologation provisioning', (group) => {
     const path = join(dir, 'private.json')
     const input = configuration()
     await writeFile(path, JSON.stringify(input), { mode: 0o600 })
-    assert.equal((await readProvisioningConfig(path, app.makePath())).tenantSlug, input.tenantSlug)
+    const loaded = await readProvisioningConfig(path, app.makePath())
+    assert.equal(loaded.tenantSlug, input.tenantSlug)
     await chmod(path, 0o644)
     await assert.rejects(() => readProvisioningConfig(path, app.makePath()), /0600/)
     await chmod(path, 0o600)
@@ -175,13 +176,11 @@ test.group('Homologation provisioning', (group) => {
       revoked_at: new Date(),
       revocation_reason: 'test',
     })
-    await EstablishmentRevisionMedia.query()
-      .where('media_asset_id', assets[0].id)
-      .update({
-        moderation_status: 'quarantined',
-        is_cover: false,
-        review_notes: 'Quarantined by test moderator',
-      })
+    await EstablishmentRevisionMedia.query().where('media_asset_id', assets[0].id).update({
+      moderation_status: 'quarantined',
+      is_cover: false,
+      review_notes: 'Quarantined by test moderator',
+    })
     const edition = await BenefitEdition.findOrFail(receipt.editionIds[1])
     const originalEnd = edition.usage_ends_at.toISO()
     input.accounts.customer.password = randomBytes(32).toString('base64url') + 'aB7'
@@ -191,12 +190,13 @@ test.group('Homologation provisioning', (group) => {
     await edition.refresh()
     assert.equal(user.password, hashBefore)
     assert.equal(edition.usage_ends_at.toISO(), originalEnd)
-    assert.equal((await BenefitAccess.findOrFail(receipt.courtesyAccessId)).status, 'revoked')
-    assert.equal(
-      (await EstablishmentRevisionMedia.findByOrFail('media_asset_id', assets[0].id))
-        .moderation_status,
-      'quarantined'
+    const revoked = await BenefitAccess.findOrFail(receipt.courtesyAccessId)
+    assert.equal(revoked.status, 'revoked')
+    const quarantined = await EstablishmentRevisionMedia.findByOrFail(
+      'media_asset_id',
+      assets[0].id
     )
+    assert.equal(quarantined.moderation_status, 'quarantined')
     assert.lengthOf(await BenefitOffer.query().where('tenant_id', receipt.tenantId), 4)
   })
 
