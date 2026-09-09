@@ -4298,6 +4298,7 @@ components:
         terms_version:
           type: string
           pattern: ^[a-f0-9]{64}$
+          description: Copiar literalmente products[].terms_version da vitrine pública. SHA-256 hexadecimal minúsculo de 64 caracteres; não é data, número sequencial ou versão do app. Cotação desatualizada é recusada com 400 e requer nova consulta.
         method:
           $ref: '#/components/schemas/PaymentMethod'
         card_token:
@@ -4393,14 +4394,29 @@ components:
       type: object
       additionalProperties: false
       required:
+        - products
         - editions
         - offers
       properties:
+        products:
+          type: array
+          description: Lista canônica completa de produtos elegíveis, pacotes seguidos de avulsos. Distinguir por product_type; id sozinho não é único entre tipos. Usar edition_id e offer_id na compra.
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/PurchasableEdition'
+              - $ref: '#/components/schemas/PurchasableOffer'
+            discriminator:
+              propertyName: product_type
+              mapping:
+                edition: '#/components/schemas/PurchasableEdition'
+                offer: '#/components/schemas/PurchasableOffer'
         offers:
+          description: Subconjunto de products com product_type=offer, mantido por compatibilidade.
           type: array
           items:
             $ref: '#/components/schemas/PurchasableOffer'
         editions:
+          description: Subconjunto de products com product_type=edition, mantido por compatibilidade. Não representa a vitrine inteira.
           type: array
           maxItems: 100
           items:
@@ -4425,6 +4441,7 @@ components:
         - payment_methods
         - amount_cents
         - currency
+        - terms_version
         - snapshot
         - purchasable
       properties:
@@ -4485,6 +4502,10 @@ components:
         currency:
           type: string
           const: BRL
+        terms_version:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          description: SHA-256 hexadecimal minúsculo de 64 caracteres, idêntico a snapshot.terms_version. Copiar literalmente para PurchaseRequest.terms_version; não calcular nem inventar uma versão no cliente.
         snapshot:
           $ref: '#/components/schemas/PurchaseSnapshot'
         purchasable:
@@ -4510,6 +4531,7 @@ components:
         - payment_methods
         - amount_cents
         - currency
+        - terms_version
         - snapshot
         - purchasable
       properties:
@@ -4571,6 +4593,10 @@ components:
         currency:
           type: string
           const: BRL
+        terms_version:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          description: SHA-256 hexadecimal minúsculo de 64 caracteres, idêntico a snapshot.terms_version. Copiar literalmente para PurchaseRequest.terms_version; não calcular nem inventar uma versão no cliente.
         snapshot:
           $ref: '#/components/schemas/PurchaseSnapshot'
         purchasable:
@@ -10922,8 +10948,12 @@ paths:
         positivo em BRL, venda iniciada e ainda aberta, uso ainda não encerrado,
         ao menos uma oferta ativa de unidade publicada e meio de pagamento habilitado.
         Pré-venda é permitida quando a venda está aberta e o uso começa no futuro.
-        Pacotes aparecem em editions e vouchers avulsos em offers, com preços e snapshots próprios.
-        Produtos sem meios disponíveis são omitidos; ambas as listas vazias mantêm HTTP 200.
+        products é a lista canônica dos dois tipos, discriminados por product_type (edition ou offer).
+        editions e offers são subconjuntos preservados por compatibilidade, com preços e snapshots próprios.
+        Cada produto expõe terms_version diretamente (igual a snapshot.terms_version): SHA-256 hexadecimal
+        minúsculo de 64 caracteres, que o cliente copia literalmente para o POST de compra, junto de
+        edition_id, offer_id, amount_cents e um dos payment_methods. Cotação alterada exige nova consulta.
+        Produtos sem meios disponíveis são omitidos; listas vazias mantêm HTTP 200.
         Offer_id NULL representa pacote; ID limita a compra a uma oferta.
         A janela de uso avulsa é a interseção da edição com a oferta; venda termina até o fim desse uso.
         Somente dados públicos da edição, cidade e ofertas; não inclui titular, pedidos ou dados do PSP.
