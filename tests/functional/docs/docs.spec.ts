@@ -281,6 +281,7 @@ test.group('Documentation', () => {
       'payment_methods',
       'amount_cents',
       'currency',
+      'terms_version',
       'snapshot',
       'purchasable',
     ])
@@ -296,7 +297,20 @@ test.group('Documentation', () => {
       '#/components/schemas/PaymentMethod'
     )
     assert.deepEqual(schemas.PaymentMethod.enum, ['pix', 'card'])
-    assert.sameMembers(schemas.PurchaseCatalog.required!, ['editions', 'offers'])
+    assert.sameMembers(schemas.PurchaseCatalog.required!, ['products', 'editions', 'offers'])
+    assert.deepEqual(schemas.PurchaseCatalog.properties?.products.items?.oneOf, [
+      { $ref: '#/components/schemas/PurchasableEdition' },
+      { $ref: '#/components/schemas/PurchasableOffer' },
+    ])
+    for (const name of [
+      'PurchasableEdition',
+      'PurchasableOffer',
+      'PurchaseSnapshot',
+      'PurchaseRequest',
+    ]) {
+      assert.include(schemas[name].required!, 'terms_version')
+      assert.equal(schemas[name].properties?.terms_version.pattern, '^[a-f0-9]{64}$')
+    }
     assert.equal(schemas.PurchasableOffer.properties?.product_type.const, 'offer')
     assert.equal(schemas.PurchasableOffer.properties?.offer_id.type, 'integer')
     assert.equal(schemas.PurchaseRequest.properties?.offer_id.minimum, 1)
