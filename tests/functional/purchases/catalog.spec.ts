@@ -50,9 +50,13 @@ test.group('Public purchasable edition storefront', (group) => {
       'payment_methods',
       'amount_cents',
       'currency',
+      'terms_version',
       'snapshot',
       'purchasable',
     ])
+    assert.deepEqual(response.body().products, response.body().editions)
+    assert.match(edition.terms_version, /^[a-f0-9]{64}$/)
+    assert.equal(edition.terms_version, edition.snapshot.terms_version)
     assert.equal(edition.id, s.edition.id)
     assert.equal(edition.name, s.edition.name)
     assert.equal(edition.description, s.edition.description)
@@ -112,7 +116,7 @@ test.group('Public purchasable edition storefront', (group) => {
         .get('/api/v1/catalog/benefit-editions')
         .header('host', s.tenant.slug + '.experimente.test')
       response.assertStatus(200)
-      assert.deepEqual(response.body(), { editions: [], offers: [] })
+      assert.deepEqual(response.body(), { products: [], editions: [], offers: [] })
     }
   })
 
@@ -129,7 +133,7 @@ test.group('Public purchasable edition storefront', (group) => {
         .get('/api/v1/catalog/benefit-editions')
         .header('host', s.tenant.slug + '.experimente.test')
       response.assertStatus(200)
-      assert.deepEqual(response.body(), { editions: [], offers: [] })
+      assert.deepEqual(response.body(), { products: [], editions: [], offers: [] })
     }
     await s.edition.merge({ status: 'published', published_at: DateTime.utc() }).save()
     await s.offer.merge({ status: 'paused' }).save()
@@ -137,7 +141,7 @@ test.group('Public purchasable edition storefront', (group) => {
       .get('/api/v1/catalog/benefit-editions')
       .header('host', s.tenant.slug + '.experimente.test')
     response.assertStatus(200)
-    assert.deepEqual(response.body(), { editions: [], offers: [] })
+    assert.deepEqual(response.body(), { products: [], editions: [], offers: [] })
   })
 
   test('no enabled methods or unavailable provider yields an anonymous empty storefront, preserving discovery', async ({
@@ -155,7 +159,7 @@ test.group('Public purchasable edition storefront', (group) => {
         .get('/api/v1/catalog/benefit-editions')
         .header('host', s.tenant.slug + '.experimente.test')
       response.assertStatus(200)
-      assert.deepEqual(response.body(), { editions: [], offers: [] })
+      assert.deepEqual(response.body(), { products: [], editions: [], offers: [] })
       const discovery = await client
         .get('/api/v1/catalog/cities')
         .header('host', s.tenant.slug + '.experimente.test')
@@ -182,7 +186,7 @@ test.group('Public purchasable edition storefront', (group) => {
     const input = {
       edition_id: edition.id,
       amount_cents: edition.amount_cents,
-      terms_version: edition.snapshot.terms_version,
+      terms_version: edition.terms_version,
       method: edition.payment_methods[0],
     }
     const key = randomUUID()

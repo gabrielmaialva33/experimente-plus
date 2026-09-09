@@ -69,9 +69,26 @@ test.group('Standalone vouchers and edition packages', (group) => {
       .get('/api/v1/catalog/benefit-editions')
       .header('host', f.s.tenant.slug + '.experimente.test')
     response.assertStatus(200)
-    const { editions, offers } = response.body()
+    const { products, editions, offers } = response.body()
     assert.lengthOf(editions, 1)
     assert.lengthOf(offers, 1)
+    assert.deepEqual(products, [...editions, ...offers])
+    assert.sameMembers(
+      products.map((product: { product_type: string }) => product.product_type),
+      ['edition', 'offer']
+    )
+    const product = products.find(
+      (candidate: { product_type: string }) => candidate.product_type === 'offer'
+    )!
+    assert.match(product.terms_version, /^[a-f0-9]{64}$/)
+    assert.equal(product.terms_version, product.snapshot.terms_version)
+    const input = {
+      edition_id: product.edition_id,
+      offer_id: product.offer_id,
+      amount_cents: product.amount_cents,
+      terms_version: product.terms_version,
+      method: product.payment_methods[0],
+    }
     assert.equal(offers[0].amount_cents, 1290)
     assert.notEqual(offers[0].amount_cents, editions[0].amount_cents)
     assert.equal(offers[0].product_type, 'offer')
@@ -81,19 +98,19 @@ test.group('Standalone vouchers and edition packages', (group) => {
     assert.deepEqual(offers[0].payment_methods, ['pix', 'card'])
     assert.notInclude(JSON.stringify(response.body()), f.s.users.holder.email)
     const key = randomUUID()
-    const send = (input: object) =>
+    const send = (body: object) =>
       client
         .post('/api/v1/me/purchases')
         .loginAs(f.s.users.holder)
         .header('x-tenant-id', String(f.s.tenant.id))
         .header('idempotency-key', key)
-        .json(input)
-    const created = await send(f.input)
+        .json(body)
+    const created = await send(input)
     created.assertStatus(202)
-    const replay = await send(f.input)
+    const replay = await send(input)
     replay.assertStatus(202)
     assert.deepEqual(replay.body(), created.body())
-    const conflict = await send({ ...f.input, offer_id: null })
+    const conflict = await send({ ...input, offer_id: null })
     conflict.assertStatus(409)
     const pending = await f.repo.get(created.body().id)
     assert.isNull(pending!.access_id)
@@ -111,6 +128,43 @@ test.group('Standalone vouchers and edition packages', (group) => {
       await f.repo.events().where({ purchase_id: pending!.id, action: 'access_granted' }),
       1
     )
+  })
+
+  test('public standalone terms match the validator and cannot be replaced by package or malformed terms', async ({
+    client,
+    assert,
+  }) => {
+    const f = await createPurchaseFixture({ product: 'offer' })
+    const response = await client
+      .get('/api/v1/catalog/benefit-editions')
+      .header('host', f.s.tenant.slug + '.experimente.test')
+    response.assertStatus(200)
+    const { products } = response.body()
+    const product = products.find((p: { product_type: string }) => p.product_type === 'offer')!
+    const edition = products.find((p: { product_type: string }) => p.product_type === 'edition')!
+    assert.notEqual(product.terms_version, edition.terms_version)
+    const input = {
+      edition_id: product.edition_id,
+      offer_id: product.offer_id,
+      amount_cents: product.amount_cents,
+      method: product.payment_methods[0],
+    }
+    const send = (terms: object) =>
+      client
+        .post('/api/v1/me/purchases')
+        .loginAs(f.s.users.holder)
+        .header('x-tenant-id', String(f.s.tenant.id))
+        .header('idempotency-key', randomUUID())
+        .json({ ...input, ...terms })
+    for (const terms of [{}, { terms_version: 'v1' }, { terms_version: 'A'.repeat(64) }]) {
+      const invalid = await send(terms)
+      invalid.assertStatus(422)
+    }
+    const stale = await send({ terms_version: edition.terms_version })
+    stale.assertStatus(400)
+    assert.include(JSON.stringify(stale.body()), 'Quote changed')
+    const accepted = await send({ terms_version: product.terms_version })
+    accepted.assertStatus(202)
   })
 
   test('wallet preserves independent scopes and every presentation path rejects an unpurchased offer', async ({
