@@ -23,9 +23,7 @@ import EstablishmentRevisionMedia from '#modules/media/models/establishment_revi
 import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitOffer from '#modules/benefits/models/benefit_offer'
-import PurchaseService from '#modules/purchases/services/purchase_service'
 import PurchaseProcessingService from '#modules/purchases/services/purchase_processing_service'
-import PurchaseRepository from '#modules/purchases/repositories/purchase_repository'
 import FakePaymentAdapter from '#modules/purchases/adapters/fake_payment_adapter'
 import { useFakePayments } from '#tests/helpers/fake_payments'
 
@@ -95,7 +93,7 @@ test.group('Homologation provisioning', (group) => {
     assert.throws(() => parseProvisioningConfig(input), 'Invalid provisioning configuration')
   })
 
-  test('provisions complete public media, package and single-offer purchases; replay preserves credentials, moderation, revocation and paid terms', async ({
+  test('provisions 1 package and 2 singles with public terms; authenticated HTTP purchases grant matching scopes and replay preserves the baseline', async ({
     assert,
     client,
     cleanup,
@@ -140,35 +138,78 @@ test.group('Homologation provisioning', (group) => {
       .get('/api/v1/catalog/cities/londrina/establishments')
       .header('host', input.tenantSlug + '.experimente.test')
     catalog.assertStatus(200)
-    const purchases = await app.container.make(PurchaseService)
-    const quote = await purchases.catalog(input.tenantSlug + '.experimente.test')
-    assert.lengthOf(quote.editions, 1)
-    assert.lengthOf(quote.offers, 2)
     const response = await client
       .get('/api/v1/catalog/benefit-editions')
       .header('host', input.tenantSlug + '.experimente.test')
     response.assertStatus(200)
+    const { products, editions, offers } = response.body()
+    assert.lengthOf(editions, 1)
+    assert.lengthOf(offers, 2)
+    assert.lengthOf(products, 3)
+    assert.deepEqual(products, [...editions, ...offers])
+    assert.sameMembers(
+      products.map((product: { product_type: string }) => product.product_type),
+      ['edition', 'offer', 'offer']
+    )
+    for (const product of products) {
+      assert.match(product.terms_version, /^[a-f0-9]{64}$/)
+      assert.equal(product.terms_version, product.snapshot.terms_version)
+      assert.isNotEmpty(product.payment_methods)
+      assert.equal(product.amount_cents, product.product_type === 'offer' ? 1490 : 4990)
+    }
+    const login = await client.post('/api/v1/sessions/sign-in').json({
+      uid: input.accounts.customer.email,
+      password: input.accounts.customer.password,
+    })
+    login.assertStatus(200)
+    const token = login.body().auth.access_token
     const processor = await app.container.make(PurchaseProcessingService)
-    for (const product of [quote.editions[0], quote.offers[0]]) {
-      const purchase = await purchases.create(receipt.tenantId, user, randomUUID(), {
+    for (const product of products) {
+      // The purchase body uses only the anonymous storefront; authentication resolves membership.
+      const body = {
         edition_id: product.edition_id,
-        offer_id: product.snapshot.offer_id ?? undefined,
+        offer_id: product.offer_id,
         amount_cents: product.amount_cents,
-        terms_version: product.snapshot.terms_version,
+        terms_version: product.terms_version,
         method: product.payment_methods[0],
-        email: user.email,
-      })
+      }
+      const key = randomUUID()
+      const send = () =>
+        client
+          .post('/api/v1/me/purchases')
+          .bearerToken(token)
+          .header('idempotency-key', key)
+          .json(body)
+      const created = await send()
+      created.assertStatus(202)
+      const id = created.body().id
+      const pending = await client.get('/api/v1/me/purchases/' + id).bearerToken(token)
+      pending.assertStatus(200)
+      assert.equal(pending.body().status, 'pending')
+      assert.isNull(pending.body().access_id)
       await processor.drain()
-      await new FakePaymentAdapter().simulate('fake_' + purchase.id, {
+      await new FakePaymentAdapter().simulate('fake_' + id, {
         state: 'paid',
         paidAt: new Date().toISOString(),
       })
       await processor.reconcile()
       await processor.drain()
-      const paid = (await new PurchaseRepository().get(purchase.id))!
-      assert.equal(paid.status, 'paid')
-      assert.isNotNull(paid.access_id)
+      const paid = await client.get('/api/v1/me/purchases/' + id).bearerToken(token)
+      paid.assertStatus(200)
+      assert.equal(paid.body().status, 'paid')
+      assert.isNotNull(paid.body().access_id)
+      const access = await BenefitAccess.findOrFail(paid.body().access_id)
+      assert.equal(access.offer_id, product.offer_id)
+      assert.equal(access.edition_id, product.edition_id)
+      const replay = await send()
+      replay.assertStatus(202)
+      assert.deepEqual(replay.body(), created.body())
     }
+    const afterPurchases = await client
+      .get('/api/v1/catalog/benefit-editions')
+      .header('host', input.tenantSlug + '.experimente.test')
+    afterPurchases.assertStatus(200)
+    assert.deepEqual(afterPurchases.body(), response.body())
     const hashBefore = user.password
     await BenefitAccess.query().where('id', receipt.courtesyAccessId).update({
       status: 'revoked',
