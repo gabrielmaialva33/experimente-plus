@@ -77,7 +77,9 @@ export default class PurchaseService {
           singles.push(this.catalogProduct(edition, snapshot, methods))
       }
     }
-    return { editions: packages, offers: singles }
+    // Canonical storefront: clients select by product_type, without merging lists themselves.
+    // Preserve the original scoped collections for existing consumers.
+    return { products: [...packages, ...singles], editions: packages, offers: singles }
   }
 
   private catalogProduct(
@@ -108,6 +110,7 @@ export default class PurchaseService {
       payment_methods: methods,
       amount_cents: snapshot.amount_cents,
       currency: snapshot.currency,
+      terms_version: snapshot.terms_version,
       snapshot,
       purchasable: true,
     }
