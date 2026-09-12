@@ -185,8 +185,12 @@ Senha:    experimente123
 ```
 
 > [!WARNING]
-> Essas credenciais existem apenas para o ambiente local e nunca devem alcançar um host acessível
-> pela internet. Elas são configuráveis por `DEV_ADMIN_*`, `DEV_PARTNER_*` e `DEV_CUSTOMER_*`.
+> O seed continua exclusivo de desenvolvimento, configurável por `DEV_ADMIN_*`, `DEV_PARTNER_*` e `DEV_CUSTOMER_*`.
+> Produção de negócio nunca admite este provisionamento de teste. Na homologação, a exceção
+> deliberada usa somente `homologation:provision-test-accounts --allow-test-accounts`, com
+> senhas fornecidas em arquivo privado e recibo sem credenciais; veja o
+> [passo opcional do runbook](docs/runbooks/homologation_baseline_recreation.md#contas-de-teste-opcionais).
+> O provisionamento nominal mantém a recusa de `.local`; não mudar DEPLOYMENT_ENV para contornar guardas.
 > Os dados regionais, estabelecimentos, ofertas e acessos criados pelo seeder são fictícios.
 
 O seed mantém edições gratuitas/cortesias e acrescenta pacote Londrina de 4990 centavos e voucher avulso de 1490 centavos. Capas são ilustrações originais determinísticas de 1200×800, armazenadas no Drive configurado, com checksum/versionamento; não fotos de terceiros. O [runbook](docs/runbooks/purchases.md#cenário-de-desenvolvimento) explica configuração fake e reexecução.
