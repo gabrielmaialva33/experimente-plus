@@ -18,7 +18,10 @@ export interface HomologationProvisioningConfig {
 /** Do not attach input, causes or validation-library payloads to this error. */
 export class ProvisioningError extends Error {}
 
-export function parseProvisioningConfig(value: unknown): HomologationProvisioningConfig {
+export function parseProvisioningConfig(
+  value: unknown,
+  testAccounts = false
+): HomologationProvisioningConfig {
   const fail = () => {
     throw new ProvisioningError('Invalid provisioning configuration')
   }
@@ -43,13 +46,13 @@ export function parseProvisioningConfig(value: unknown): HomologationProvisionin
       typeof a.email !== 'string' ||
       a.email.length > 254 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email) ||
-      /\.local$/i.test(a.email) ||
+      (!testAccounts && /\.local$/i.test(a.email)) ||
       typeof a.password !== 'string' ||
-      a.password.length < 20 ||
+      a.password.length < (testAccounts ? 8 : 20) ||
       a.password.length > 128 ||
-      !/[a-z]/.test(a.password) ||
-      !/[A-Z]/.test(a.password) ||
-      !/[0-9]/.test(a.password)
+      !a.password.trim() ||
+      (!testAccounts &&
+        (!/[a-z]/.test(a.password) || !/[A-Z]/.test(a.password) || !/[0-9]/.test(a.password)))
     )
       return fail()
     accounts[kind] = {
@@ -60,14 +63,18 @@ export function parseProvisioningConfig(value: unknown): HomologationProvisionin
   }
   if (
     new Set(ACCOUNT_KINDS.map((k) => accounts[k].email)).size !== 3 ||
-    new Set(ACCOUNT_KINDS.map((k) => accounts[k].password)).size !== 3
+    (!testAccounts && new Set(ACCOUNT_KINDS.map((k) => accounts[k].password)).size !== 3)
   )
     return fail()
   return { tenantSlug: input.tenantSlug, tenantName: input.tenantName.trim(), accounts }
 }
 
 /** One-shot private configuration, never a CLI password argument or a committed fixture. */
-export async function readProvisioningConfig(path: string, applicationRoot: string) {
+export async function readProvisioningConfig(
+  path: string,
+  applicationRoot: string,
+  testAccounts = false
+) {
   if (!isAbsolute(path))
     throw new ProvisioningError(
       'Configuration must be an absolute private file outside the application'
@@ -88,7 +95,7 @@ export async function readProvisioningConfig(path: string, applicationRoot: stri
       (process.getuid && stat.uid !== process.getuid())
     )
       throw new Error()
-    return parseProvisioningConfig(JSON.parse(await file.readFile('utf8')))
+    return parseProvisioningConfig(JSON.parse(await file.readFile('utf8')), testAccounts)
   } catch {
     throw new ProvisioningError(
       'Configuration must be valid JSON in an owned, non-symlink, mode 0600 private file outside the application'

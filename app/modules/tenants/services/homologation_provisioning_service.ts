@@ -117,39 +117,11 @@ export default class HomologationProvisioningService {
         const concurrent = await Tenant.query({ client }).where('slug', config.tenantSlug).first()
         if (concurrent)
           return { created: false, ...(await this.replay(concurrent, config, client)) }
-        // Never adopt an existing account and silently elevate it.
-        const emails = ACCOUNT_KINDS.map((kind) => config.accounts[kind].email)
-        if (await client.from('users').whereIn('email', emails).first())
-          throw new ProvisioningError(
-            'Configured identities already exist; provisioning never adopts or elevates existing accounts'
-          )
-        const adminRole = await Role.query({ client }).where('slug', 'admin').firstOrFail()
-        const userRole = await Role.query({ client }).where('slug', 'user').firstOrFail()
         const tenant = await Tenant.create(
           { slug: config.tenantSlug, name: config.tenantName, is_active: true },
           { client }
         )
-        const users = {} as Record<AccountKind, User>
-        for (const kind of ACCOUNT_KINDS) {
-          const account = config.accounts[kind]
-          const user = await User.create(
-            {
-              full_name: account.fullName,
-              email: account.email,
-              password: account.password,
-              username: null,
-              is_deleted: false,
-            },
-            { client }
-          )
-          await user
-            .related('roles')
-            .attach([kind === 'administrator' ? adminRole.id : userRole.id])
-          await user
-            .related('tenants')
-            .attach({ [tenant.id]: { role: kind === 'administrator' ? 'owner' : 'member' } })
-          users[kind] = user
-        }
+        const users = await this.createAccounts(config, tenant.id, 'admin', client)
         const now = DateTime.utc()
         const administrator = users.administrator.id
         const region = await Region.create(
@@ -220,19 +192,7 @@ export default class HomologationProvisioningService {
           },
           { client }
         )
-        for (const kind of ['administrator', 'partner'] as const)
-          await OrganizationMember.create(
-            {
-              tenant_id: tenant.id,
-              organization_id: organization.id,
-              user_id: users[kind].id,
-              role: kind === 'administrator' ? 'owner' : 'admin',
-              status: 'active',
-              invited_by: administrator,
-              joined_at: now,
-            },
-            { client }
-          )
+        await this.attachOrganization(users, tenant.id, organization.id, client)
 
         const establishmentIds: number[] = []
         for (const image of images) {
@@ -472,20 +432,7 @@ export default class HomologationProvisioningService {
             offerIds.push(offer.id)
           }
         }
-        const access = await BenefitAccess.create(
-          {
-            tenant_id: tenant.id,
-            edition_id: editions[0].id,
-            user_id: users.customer.id,
-            source: 'courtesy',
-            status: 'active',
-            external_reference: ACTION + ':' + tenant.id,
-            granted_by: administrator,
-            granted_at: now,
-            notes: 'Cortesia demonstrativa; reexecução não restaura cotas nem revogações',
-          },
-          { client }
-        )
+        const access = await this.grantCourtesy(users, tenant.id, editions[0].id, ACTION, client)
         const receipt: ProvisioningReceipt = {
           tenantId: tenant.id,
           accounts: { administrator, partner: users.partner.id, customer: users.customer.id },
@@ -518,15 +465,228 @@ export default class HomologationProvisioningService {
     }
   }
 
+  /** This exception is console-only and must be asserted before even reading private input. */
+  assertTestAccountsEnvironment(allowTestAccounts: boolean) {
+    const deployment = env.get('DEPLOYMENT_ENV')
+    if (deployment !== 'homologation' && deployment !== 'development')
+      throw new ProvisioningError(
+        'Test accounts require DEPLOYMENT_ENV=homologation or development; production, missing and invalid environments are refused'
+      )
+    if (allowTestAccounts !== true)
+      throw new ProvisioningError(
+        'Explicit --allow-test-accounts is required; creates a global root test account'
+      )
+  }
+
+  async provisionTestAccounts(input: HomologationProvisioningConfig, allowTestAccounts: boolean) {
+    this.assertTestAccountsEnvironment(allowTestAccounts)
+    const config = parseProvisioningConfig(input, true)
+    const action = 'homologation.test-accounts.v1'
+    try {
+      return await db.transaction(async (client) => {
+        await client.rawQuery('select pg_advisory_xact_lock(?, hashtext(?))', [
+          14026,
+          config.tenantSlug,
+        ])
+        const tenant = await Tenant.query({ client })
+          .where('slug', config.tenantSlug)
+          .where('is_active', true)
+          .first()
+        if (!tenant || tenant.name !== config.tenantName)
+          throw new ProvisioningError(
+            'An active provisioned tenant with matching name and slug is required'
+          )
+        const previous = await AuditLog.query({ client })
+          .where('resource', 'tenants')
+          .where('resource_id', tenant.id)
+          .where('action', action)
+          .first()
+        if (previous)
+          return { created: false, ...(await this.replay(tenant, config, client, action)) }
+        const baseline = await AuditLog.query({ client })
+          .where('resource', 'tenants')
+          .where('resource_id', tenant.id)
+          .where('action', ACTION)
+          .first()
+        if (!baseline?.metadata)
+          throw new ProvisioningError(
+            'Run homologation:provision first; test accounts never create or adopt a baseline'
+          )
+        const original = baseline.metadata as ProvisioningReceipt
+        const courtesy = await BenefitAccess.query({ client })
+          .where('id', original.courtesyAccessId)
+          .where('tenant_id', tenant.id)
+          .where('source', 'courtesy')
+          .firstOrFail()
+        const edition = await BenefitEdition.query({ client })
+          .where('id', courtesy.edition_id)
+          .where('tenant_id', tenant.id)
+          .where('status', 'published')
+          .where('usage_starts_at', '<=', DateTime.utc().toJSDate())
+          .where('usage_ends_at', '>', DateTime.utc().toJSDate())
+          .first()
+        if (!edition)
+          throw new ProvisioningError(
+            'Baseline courtesy edition is not usable; manage its campaign explicitly'
+          )
+        const establishments = await Establishment.query({ client })
+          .whereIn('id', original.establishmentIds)
+          .where('tenant_id', tenant.id)
+          .where('lifecycle_status', 'active')
+          .whereNotNull('published_revision_id')
+          .whereNot('business_status', 'permanently_closed')
+        const organizationIds = [
+          ...new Set(establishments.map((establishment) => establishment.organization_id)),
+        ]
+        if (organizationIds.length !== 1)
+          throw new ProvisioningError(
+            'Baseline must have one active organization with published establishments'
+          )
+        const organization = await Organization.query({ client })
+          .where('id', organizationIds[0])
+          .where('tenant_id', tenant.id)
+          .where('status', 'active')
+          .firstOrFail()
+        const offers = await BenefitOffer.query({ client })
+          .where('tenant_id', tenant.id)
+          .where('edition_id', edition.id)
+          .where('status', 'active')
+          .whereIn(
+            'establishment_id',
+            establishments.map((establishment) => establishment.id)
+          )
+          .where((query) =>
+            query.whereNull('ends_at').orWhere('ends_at', '>', DateTime.utc().toJSDate())
+          )
+        if (!offers.length) throw new ProvisioningError('Baseline has no active courtesy benefit')
+        const users = await this.createAccounts(config, tenant.id, 'root', client)
+        await this.attachOrganization(users, tenant.id, organization.id, client)
+        const access = await this.grantCourtesy(users, tenant.id, edition.id, action, client)
+        const receipt: ProvisioningReceipt = {
+          tenantId: tenant.id,
+          accounts: {
+            administrator: users.administrator.id,
+            partner: users.partner.id,
+            customer: users.customer.id,
+          },
+          establishmentIds: establishments.map((establishment) => establishment.id),
+          editionIds: [edition.id],
+          offerIds: offers.map((offer) => offer.id),
+          courtesyAccessId: access.id,
+        }
+        await AuditLog.create(
+          {
+            user_id: users.administrator.id,
+            resource: 'tenants',
+            resource_id: tenant.id,
+            action,
+            context: 'console',
+            result: 'granted',
+            reason:
+              'Explicit non-production test accounts; global root and private operator-supplied credentials',
+            metadata: receipt,
+          },
+          { client }
+        )
+        return { created: true, ...receipt }
+      })
+    } catch (error) {
+      if (error instanceof ProvisioningError) throw error
+      throw new ProvisioningError(
+        'Test account provisioning failed; verify privately and rerun with the same configuration'
+      )
+    }
+  }
+
+  private async createAccounts(
+    config: HomologationProvisioningConfig,
+    tenantId: number,
+    administratorRole: 'admin' | 'root',
+    client: TransactionClientContract
+  ) {
+    const emails = ACCOUNT_KINDS.map((kind) => config.accounts[kind].email)
+    if (await client.from('users').whereIn('email', emails).first())
+      throw new ProvisioningError(
+        'Configured identities already exist; provisioning never adopts or elevates existing accounts'
+      )
+    const adminRole = await Role.query({ client }).where('slug', administratorRole).firstOrFail()
+    const userRole = await Role.query({ client }).where('slug', 'user').firstOrFail()
+    const users = {} as Record<AccountKind, User>
+    for (const kind of ACCOUNT_KINDS) {
+      const account = config.accounts[kind]
+      const user = await User.create(
+        {
+          full_name: account.fullName,
+          email: account.email,
+          password: account.password,
+          username: null,
+          is_deleted: false,
+        },
+        { client }
+      )
+      await user.related('roles').attach([kind === 'administrator' ? adminRole.id : userRole.id])
+      await user
+        .related('tenants')
+        .attach({ [tenantId]: { role: kind === 'administrator' ? 'owner' : 'member' } })
+      users[kind] = user
+    }
+    return users
+  }
+
+  private async attachOrganization(
+    users: Record<AccountKind, User>,
+    tenantId: number,
+    organizationId: number,
+    client: TransactionClientContract
+  ) {
+    for (const kind of ['administrator', 'partner'] as const)
+      await OrganizationMember.create(
+        {
+          tenant_id: tenantId,
+          organization_id: organizationId,
+          user_id: users[kind].id,
+          role: kind === 'administrator' ? 'owner' : 'admin',
+          status: 'active',
+          invited_by: users.administrator.id,
+          joined_at: DateTime.utc(),
+        },
+        { client }
+      )
+  }
+
+  private async grantCourtesy(
+    users: Record<AccountKind, User>,
+    tenantId: number,
+    editionId: number,
+    action: string,
+    client: TransactionClientContract
+  ) {
+    return BenefitAccess.create(
+      {
+        tenant_id: tenantId,
+        edition_id: editionId,
+        user_id: users.customer.id,
+        source: 'courtesy',
+        status: 'active',
+        external_reference: action + ':' + tenantId,
+        granted_by: users.administrator.id,
+        granted_at: DateTime.utc(),
+        notes: 'Cortesia demonstrativa; reexecução não restaura cotas nem revogações',
+      },
+      { client }
+    )
+  }
+
   private async replay(
     tenant: Tenant,
     config: HomologationProvisioningConfig,
-    client?: TransactionClientContract
+    client?: TransactionClientContract,
+    action = ACTION
   ): Promise<ProvisioningReceipt> {
     const marker = await AuditLog.query({ client })
       .where('resource', 'tenants')
       .where('resource_id', tenant.id)
-      .where('action', ACTION)
+      .where('action', action)
       .first()
     if (!marker?.metadata)
       throw new ProvisioningError(
