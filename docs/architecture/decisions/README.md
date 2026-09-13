@@ -32,6 +32,8 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 | [ADR-0024](0024-compra-de-edicao-e-concessao-por-pagamento.md) | Compra de edição e concessão por pagamento | EP-14, porta agnóstica, confirmação, bloqueio, estorno e conciliação |
 
+- [ADR-0026 — Mapa regional Protomaps em R2](0026-mapa-regional-protomaps-r2-ou-google.md): opção A aceita pelo dono em 11/09/2026; estilo e runbook preparados. Publicação, CORS, validação nativa/visual e custo real continuam pendentes.
+
 ## Propostas com execução expressamente autorizada
 
 - [ADR-0025 — Voucher avulso e baseline de homologação](0025-voucher-avulso-e-baseline-de-homologacao.md): extensão EP-14 redigida antes do código; status proposto, implementação autorizada na tarefa de 08/09/2026. Sucede parcialmente o produto/reembolso do ADR-0024 e registra a exceção de consolidação. Banco do piloto exige recriação pelo dono, nunca upgrade automático sobre o histórico anterior.
