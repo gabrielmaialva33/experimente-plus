@@ -244,3 +244,29 @@ zoom 6 enquanto a câmera abre no zoom 11 — a causa medida do mapa sem detalhe
 aparência, rótulos, acentos, atribuição e bordas do recorte; desempenho de rede frio/quente e bytes
 por sessão; cobertura territorial final; periodicidade de atualização, retenção e responsável
 operacional; e consumo e custo reais. Publicação verificada não é prova de renderização nem de custo.
+
+### Validação em aparelho Android — mesma data
+
+O mapa publicado foi executado em hardware real (Samsung SM-A576B, Android 16, `arm64-v8a`) a partir
+de um build de desenvolvimento. O [runbook](../../runbooks/regional_map_publication.md) registra
+ambiente e evidência. Isso **encerra** a dúvida central deste ADR: a causa medida do mapa sem detalhe
+era o tileset de demonstração terminar no zoom 6, e o basemap regional renderiza malha viária na
+câmera inicial, com nomes de rua, POIs e edificações entre os zooms 11 e 15. Os glyphs publicados
+atendem o português: `Iapó`, `Itajaí`, `São Luiz`, `Ibiporã` e `Sabará` aparecem corretos. Os pins do
+catálogo desenham sobre os tiles e a descoberta continua funcionando sem autenticação.
+
+**Uma pendência foi encerrada e outra mudou de natureza:**
+
+- **Atribuição — encerrada:** este ADR pedia verificar que o app não oculta a atribuição. A
+  verificação mostrou que ocultava: a fonte do estilo declara Protomaps e OpenStreetMap, mas o
+  diálogo nativo do MapLibre Android exibia somente OpenStreetMap. O app passou a ler a atribuição
+  declarada na fonte do estilo e a desenhá-la sobre o mapa, mantendo o diálogo nativo e seu link de
+  licença. Conferido no mesmo aparelho.
+- **Cobertura das três cidades:** não é mais questão do basemap. A homologação expõe apenas Londrina
+  no catálogo, então Cornélio Procópio e Bandeirantes não são alcançáveis pelo seletor de cidade do
+  app. Provisionar essas cidades é decisão do dono.
+
+**Continuam abertos:** iOS, que não foi executado; desempenho de rede frio e quente, bytes por sessão
+e comportamento com rede ruim; consumo e custo reais; periodicidade de atualização, retenção e
+responsável operacional. Uma renderização correta em um aparelho com Wi-Fi bom não mede desempenho
+nem custo.

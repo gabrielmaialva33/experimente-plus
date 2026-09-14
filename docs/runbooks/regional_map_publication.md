@@ -417,3 +417,49 @@ pins, atribuição Protomaps/OpenStreetMap, bordas do recorte); medição de car
 bytes e requisições por sessão e comportamento com rede ruim; consumo e custo reais no R2; e
 definição de periodicidade de atualização, retenção e responsável operacional. Publicação verificada
 e alias promovido **não** são prova de renderização, desempenho ou custo.
+
+## Validação em aparelho real — 14/09/2026
+
+Primeira execução do mapa publicado em hardware, não em emulador. Encerra parte da pendência de
+validação visual que as entregas anteriores mantiveram aberta por não haver aparelho disponível.
+
+**Ambiente medido:** Samsung SM-A576B, Android 16, ABI `arm64-v8a`, conectado por USB. Build de
+desenvolvimento gerado por `expo run:android` com o JDK que o `mise.toml` do app fixa (Temurin 21),
+`compileSdk` 36, NDK 27.1.12297006, `assembleDebug` restrito a `arm64-v8a`. O aparelho estava em modo
+avião com Wi-Fi reativado, sem rota para o IP de LAN da estação: o bundler foi alcançado por
+`adb reverse tcp:8081 tcp:8081` pelo próprio cabo. O basemap **não** passou por esse túnel — veio da
+internet do aparelho, com ida ao domínio público medida em 22,5 ms.
+
+| Requisito                                    | Resultado observado na tela                                                                                     |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Detalhe de rua na câmera inicial (zoom 11)   | Malha viária de Londrina renderizada. É a correção direta do fallback, cujo tileset terminava no zoom 6.          |
+| Faixa de zoom 11 a 15                        | Nomes de rua individuais, rótulos de POI e footprints de edificação.                                             |
+| Acentuação dos rótulos                       | Correta: `Iapó`, `Itajaí`, `São Luiz`, `Ibiporã`, `Sabará`, `Seminário`. Os glyphs publicados atendem o português. |
+| Pins do catálogo sobre o basemap             | Estabelecimento publicado pela API desenhado sobre os tiles, com a seleção de renderer existente.                |
+| Descoberta sem autenticação                  | Preservada: lista e mapa funcionam deslogado.                                                                    |
+
+### Atribuição incompleta no cliente — encontrada e corrigida
+
+A fonte do estilo declara `Protomaps` **e** `OpenStreetMap contributors`. O diálogo nativo de
+atribuição do MapLibre Android exibiu apenas `© OPENSTREETMAP`: **o crédito Protomaps não chegava à
+tela**. O ADR-0026 pedia verificar que o app não oculta essa atribuição, e a verificação mostrou que
+ocultava. A obrigação de crédito descrita neste runbook é de licença, não de estética.
+
+O app passou a ler a atribuição declarada na própria fonte do estilo e a desenhá-la sobre o mapa,
+preservando o diálogo nativo, que carrega o link de licença. Fixar o nome do produtor no app seria
+falso sempre que `EXPO_PUBLIC_MAP_STYLE_URL` apontasse para outro estilo — o fallback de demonstração
+traz dados OpenStreetMap sem produtor —, e leitura falha recai na linha de base OpenStreetMap em vez
+de não creditar ninguém. Conferido no mesmo aparelho: o crédito aparece sobre o basemap regional.
+
+### Cobertura das outras duas cidades — bloqueada por dados, não pelo mapa
+
+`GET /api/v1/catalog/cities` na homologação devolve **apenas Londrina**, com dois estabelecimentos.
+Cornélio Procópio e Bandeirantes não podem ser validadas pelo seletor de cidade do app enquanto não
+forem provisionadas. O recorte do basemap cobre as três cidades e os tiles já haviam sido conferidos
+em entrega anterior; o bloqueio é de dados de catálogo e a decisão de provisionar é do dono.
+
+### O que esta validação não mede
+
+Não foram medidos carregamento frio e quente, bytes ou requisições por sessão, comportamento com rede
+ruim ou indisponível, consumo e custo reais no R2, nem comportamento em iOS. Renderizar corretamente
+uma vez, em um aparelho, com Wi-Fi bom, não é medição de desempenho nem de custo.
