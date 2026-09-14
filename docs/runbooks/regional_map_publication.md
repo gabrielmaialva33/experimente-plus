@@ -343,3 +343,77 @@ Executado em 11/09/2026 BRT / 12/09/2026 UTC, neste checkout, sem aplicação HT
 O estilo formatado mede **122.497 bytes**, SHA-256 `49fbacc67ff011fd5aa73815f09aac5fcfd2dc1bfd03a42fee1b7fab07b0a82b`. Glyphs, sprites, três licenças e estilo somam **17.857.122 bytes**, sem o manifesto e sem o PMTiles. Somando o extrato z15 anteriormente medido, a composição resulta em **30.680.397 bytes**, antes do manifesto: é soma de arquivos, não medição de tráfego ou custo. Não foi baixado o planeta, repetido o extrato do operador, criado pacote de sistema ou alterada dependência do projeto.
 
 O ensaio descobriu que a regra `tmp/` de `.prettierignore` pulava o JSON temporário. O comando reproduzível inclui `--ignore-path /dev/null`; depois disso, `cmp` confirmou igualdade byte a byte. A primeira contagem pelos blobs do Git também foi substituída pela medição materializada dos glyphs (symlinks), descrita acima. Temporários desta entrega foram removidos depois de registrar as medições. Não há prova nesta etapa de publicação, CORS resolvido, renderização em aparelho, desempenho ou custo real.
+
+## Publicação, promoção e validação executadas — 14/09/2026
+
+Executado na estação do operador. A credencial R2 do backend foi lida do `.env` para o ambiente do
+processo `aws` e mapeada para `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`; não foi impressa, não foi
+persistida em perfil e não foi repassada a outro agente. O bloco 4 (upload da release) **não** foi
+reexecutado: os objetos de `20260911-v1` já existiam de entrega anterior. Foram executados o bloco 5
+(validação pública) e o bloco 6 (promoção do alias), que até então tinham apenas sintaxe conferida.
+
+| Ensaio executado                                                            | Saída real / resultado                                                                                                                              |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Verificação completa do manifesto: GET de **todos** os 1.033 objetos        | bytes e SHA-256 idênticos ao manifesto em **todos**; nenhuma resposta trouxe `Content-Encoding`; **30.680.397 bytes**; 24,8 s com 16 conexões.        |
+| Range no PMTiles real, com `Origin` da web de homologação                   | `206`; `content-range: bytes 0-15/12823275`; `accept-ranges: bytes`; `etag`; `cache-control: public,max-age=31536000,immutable`; sem transformação. |
+| Preflight `OPTIONS` no PMTiles, com `Access-Control-Request-Headers: range` | `204`; `access-control-allow-methods: GET, HEAD`; `access-control-allow-headers: range`; `access-control-max-age: 86400`.                            |
+| `access-control-expose-headers` nas respostas GET                          | `etag,content-range,accept-ranges,content-length` — os quatro exigidos pelo bloco 5.                                                                |
+| Promoção do alias, bloco 6                                                 | `style.json` da release copiado para `maps/norte-parana/style.json`, `content-type: application/json`, `cache-control: public,max-age=300,must-revalidate`. |
+| `cmp` alias × release, e alias × artefato versionado do repositório         | exit **0** nos dois. SHA-256 `49fbacc67ff011fd5aa73815f09aac5fcfd2dc1bfd03a42fee1b7fab07b0a82b`, **122.497 bytes**.                                 |
+| Referências internas do alias                                              | glyphs, sprite e source apontam exclusivamente para `20260911-v1`; nenhuma chave mutável referenciada.                                               |
+
+A cadeia de proveniência fica fechada e verificável: `resources/maps/norte-parana/style.json` no
+repositório, o objeto da release imutável e o objeto servido pelo alias público são **o mesmo byte a
+byte**. O alias passou de `404` para `200` nesta entrega.
+
+### Diferença 403/206 entre clientes — causa identificada
+
+O ADR-0026 registrou como pendência investigar essa diferença **se reaparecer**. Reapareceu: a
+primeira verificação do manifesto recebeu `403` em **todos** os 1.033 objetos usando Python `urllib`,
+enquanto `curl` obtinha `200`/`206` nos mesmos objetos no mesmo momento. A causa é uma regra de borda
+por **User-Agent**, não Range, CORS, credencial, cache ou limite de taxa. Mesma URL, variando apenas o UA:
+
+| User-Agent enviado                        | Resposta |
+| ----------------------------------------- | -------- |
+| `Python-urllib/3.13`                      | **403**  |
+| `Python-urllib/3.11`                      | **403**  |
+| `Python-urllib/3.13 extra` (com sufixo)   | **403**  |
+| `extra Python-urllib/3.13` (com prefixo)  | `200`    |
+| `python-requests/2.32`, `Python/3.13`, `urllib/3.13` | `200` |
+| `okhttp/4.12.0` (transporte Android)      | `200`    |
+| `CFNetwork/1568 Darwin/24.0.0` (iOS)      | `200`    |
+| `MapLibreNative/11.3.8 Android`           | `200`    |
+| Chrome, `curl`, `Go-http-client`, `undici`, UA vazio | `200` |
+
+A regra casa o UA **ancorado no início** da string, é independente da versão do Python e o `403` é
+reprodutível (3/3). **Consequência operacional delimitada:** nenhum transporte real de cliente é
+afetado — Android, iOS, navegador e a própria CLI passam. O risco é de **ferramentaria**: qualquer
+script de verificação ou job de CI que use `urllib` com o UA padrão recebe `403` e pode ser lido como
+falha de publicação. Definir `User-Agent` explícito nesses scripts. Isto não foi medido como regra de
+bot do provedor nem foi alterada nenhuma configuração de borda para chegar a esta conclusão.
+
+### Alcance da regra de CORS
+
+O cabeçalho `access-control-allow-origin` é devolvido **apenas** para
+`https://experimente-plus.mahina.fun`. Origens de terceiros, a própria origem de mídia e
+`http://localhost:8081` recebem resposta **sem** cabeçalho CORS:
+
+| `Origin` enviado                      | `access-control-allow-origin` |
+| ------------------------------------- | ----------------------------- |
+| `https://experimente-plus.mahina.fun` | ecoa a origem                 |
+| `https://exemplo-terceiro.invalid`    | ausente                       |
+| `http://localhost:8081`               | ausente                       |
+| `https://midia-experimente.mahina.fun` | ausente                       |
+
+Isso é suficiente para o cliente móvel nativo, que não passa por CORS. Duas consequências reais:
+`expo start --web` na porta padrão **não** carregará o mapa, e um eventual renderer web em outra
+origem exigirá incluir essa origem na regra antes de funcionar. Nenhuma alteração de configuração do
+bucket foi feita nesta entrega.
+
+### O que continua pendente
+
+Validação visual em Android e iOS reais (zoom 11–15 nas três cidades, acentos nos rótulos, ruas,
+pins, atribuição Protomaps/OpenStreetMap, bordas do recorte); medição de carregamento frio/quente,
+bytes e requisições por sessão e comportamento com rede ruim; consumo e custo reais no R2; e
+definição de periodicidade de atualização, retenção e responsável operacional. Publicação verificada
+e alias promovido **não** são prova de renderização, desempenho ou custo.

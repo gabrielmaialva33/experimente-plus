@@ -216,3 +216,31 @@ O [runbook de publicação](../../runbooks/regional_map_publication.md) fixa fer
 Para esta entrega, o estilo fica em R2: JSON imutável por release e alias estável promovido por último, sem endpoint da API nem dependência runtime nova no RN. Glyphs e sprites também ficam no R2. Foram medidos **17.711.598 bytes em 1.024 PBFs materializados**, mais **14.290 bytes em quatro sprites grayscale v4**; symlinks upstream precisam ser resolvidos antes do upload. Esse volume não é tráfego por sessão ou preço. O runbook registra fontes, licenças, hashes e alternativas de hospedagem, incluindo o GET inicial adicional em relação a um estilo embutido.
 
 **Pendências preservadas:** publicar e validar Range no PMTiles real; configurar e testar CORS (o PNG medido não tinha headers); investigar 403 se reaparecer; validar Android/iOS, aparência, labels, atribuição e desempenho de rede; aprovar cobertura territorial final; definir atualização, retenção e responsável; medir consumo e custo real. O tamanho dos assets agora foi medido, mas nenhuma dessas outras pendências foi encerrada implicitamente. Os extratos não foram regenerados nesta etapa para não duplicar o trabalho do operador.
+
+## Publicação validada e alias promovido — 14/09/2026, Brasília
+
+O [runbook de publicação](../../runbooks/regional_map_publication.md) registra o recibo completo com
+as saídas reais. Resumo do que esta data **encerra**, com medição:
+
+- **Publicar e validar Range no PMTiles real:** encerrado. `206` no objeto real com
+  `content-range: bytes 0-15/12823275`, `accept-ranges`, `etag` e sem `Content-Encoding`. Os 1.033
+  objetos do manifesto foram baixados e conferidos por bytes e SHA-256, sem divergência.
+- **Configurar e testar CORS:** encerrado para o alcance medido. Preflight `OPTIONS` responde `204`
+  com `GET, HEAD` e `range`; os GETs expõem `etag,content-range,accept-ranges,content-length`. A
+  regra atende **somente** `https://experimente-plus.mahina.fun`; `http://localhost:8081` e origens
+  de terceiros não recebem cabeçalho CORS.
+- **Investigar a diferença 403/206 se reaparecer:** encerrado. Reapareceu e a causa foi isolada: uma
+  regra de borda por User-Agent ancorada em `Python-urllib/`, independente de versão e reprodutível.
+  Os transportes reais — okhttp no Android, CFNetwork no iOS, MapLibre, navegador, `curl` — retornam
+  `200`. É risco de ferramentaria, não de cliente.
+- **Promoção do alias:** executada. `maps/norte-parana/style.json` passou de `404` a `200`, servindo
+  bytes idênticos ao artefato versionado do repositório e à release imutável `20260911-v1`.
+
+O cliente móvel foi configurado no mesmo dia: `EXPO_PUBLIC_MAP_STYLE_URL` passou a apontar para o
+alias no `.env` local do app, corrigindo o fallback `demotiles.maplibre.org` cujo tileset termina no
+zoom 6 enquanto a câmera abre no zoom 11 — a causa medida do mapa sem detalhe descrita neste ADR.
+
+**Continuam pendentes, sem encerramento implícito:** validação visual em Android e iOS reais;
+aparência, rótulos, acentos, atribuição e bordas do recorte; desempenho de rede frio/quente e bytes
+por sessão; cobertura territorial final; periodicidade de atualização, retenção e responsável
+operacional; e consumo e custo reais. Publicação verificada não é prova de renderização nem de custo.
