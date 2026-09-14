@@ -38,6 +38,12 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 - [ADR-0025 — Voucher avulso e baseline de homologação](0025-voucher-avulso-e-baseline-de-homologacao.md): extensão EP-14 redigida antes do código; status proposto, implementação autorizada na tarefa de 08/09/2026. Sucede parcialmente o produto/reembolso do ADR-0024 e registra a exceção de consolidação. Banco do piloto exige recriação pelo dono, nunca upgrade automático sobre o histórico anterior.
 
+## Propostas aguardando decisão do dono
+
+Nenhuma migration, model, rota ou interface deve ser escrita a partir destas antes da aceitação explícita.
+
+- [ADR-0027 — Avaliações, respostas do parceiro e moderação de conteúdo](0027-avaliacoes-respostas-e-moderacao-de-conteudo.md): marco EP-15, domínio inexistente hoje. A decisão central é parametrizar por tenant todos os valores que produto e instrumento contratual mantêm em aberto — comprovação de visita, limites de texto e mídia, limite diário, intervalo e prazo de edição —, para que a definição pendente vire configuração e não redesenho. Registra divergência real quanto a vídeo e HEIC frente ao ADR-0014 aceito.
+
 ## Regra de evolução
 
 - Decisão estrutural nova recebe um ADR antes da migration correspondente.
@@ -63,4 +69,5 @@ EP-11 — apresentação e resgate               implementado e validado
 EP-12 — API móvel consumer-first              implementado e validado
 EP-13 — cliente móvel                         decidido, implementação pendente
 EP-14 — edição e voucher avulso                backend implementado; ADR-0025 proposto com execução autorizada; recriação/homologação comercial pelo dono
+EP-15 — avaliações e moderação de conteúdo     ADR-0027 proposto; aguarda decisão do dono, sem implementação
 ```
