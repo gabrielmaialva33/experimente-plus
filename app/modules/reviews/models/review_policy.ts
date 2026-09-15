@@ -38,6 +38,9 @@ export default class ReviewPolicy extends BaseModel {
   @column()
   declare edit_window_days: number
 
+  @column()
+  declare report_moderation_days: number
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 

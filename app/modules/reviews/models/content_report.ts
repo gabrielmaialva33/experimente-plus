@@ -23,7 +23,7 @@ export default class ContentReport extends BaseModel {
   declare target_id: number
 
   @column()
-  declare reporter_id: number
+  declare reporter_id: number | null
 
   @column()
   declare reason: IReview.ReportReason
@@ -46,6 +46,28 @@ export default class ContentReport extends BaseModel {
   @column()
   declare resolution_notes: string | null
 
+  @column()
+  declare protocol_number: string
+
+  @column()
+  declare is_anonymous: boolean
+
+  /** Hashes only: the report recognises repetition, never the person. */
+  @column({ serializeAs: null })
+  declare reporter_ip_hash: string | null
+
+  @column({ serializeAs: null })
+  declare reporter_token_hash: string | null
+
+  @column()
+  declare assigned_to: number | null
+
+  @column.dateTime()
+  declare due_at: DateTime | null
+
+  @column.dateTime()
+  declare sla_notified_at: DateTime | null
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 
@@ -60,4 +82,7 @@ export default class ContentReport extends BaseModel {
 
   @belongsTo(() => User, { foreignKey: 'resolved_by' })
   declare resolver: BelongsTo<typeof User>
+
+  @belongsTo(() => User, { foreignKey: 'assigned_to' })
+  declare assignee: BelongsTo<typeof User>
 }

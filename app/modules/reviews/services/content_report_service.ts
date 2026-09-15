@@ -1,4 +1,5 @@
 import { inject } from '@adonisjs/core'
+import { randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 
@@ -11,12 +12,14 @@ import type ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
 import ContentReportRepository from '#modules/reviews/repositories/content_report_repository'
+import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
 import type User from '#modules/users/models/user'
 
 @inject()
 export default class ContentReportService {
   constructor(
     private reportRepository: ContentReportRepository,
+    private policyRepository: ReviewPolicyRepository,
     private organizationPolicy: OrganizationPolicyService
   ) {}
 
@@ -40,15 +43,26 @@ export default class ContentReportService {
         throw new BadRequestException('You have already reported this content')
       }
 
+      const policy = await this.policyRepository.getForTenant(tenantId, client)
+
       const report = await this.reportRepository.create(
         {
           tenant_id: tenantId,
+          protocol_number: this.buildProtocolNumber(),
           target_type: payload.target_type,
           target_id: payload.target_id,
           reporter_id: actor.id,
+          is_anonymous: false,
+          reporter_ip_hash: null,
+          reporter_token_hash: null,
           reason: payload.reason,
           details: payload.details?.trim() || null,
           status: 'pending',
+          assigned_to: null,
+          // The deadline comes from the tenant's policy, never a constant: it is
+          // one of the values the contracting party has yet to settle.
+          due_at: DateTime.now().plus({ days: policy.report_moderation_days }),
+          sla_notified_at: null,
           resolved_by: null,
           resolved_at: null,
           resolution_action: null,
@@ -59,6 +73,16 @@ export default class ContentReportService {
 
       return report
     })
+  }
+
+  /**
+   * Human-facing identifier the reporter can quote later. Random suffix rather
+   * than a sequence so the protocol does not disclose how many reports exist.
+   */
+  private buildProtocolNumber(): string {
+    const day = DateTime.now().toFormat('yyyyLLdd')
+    const suffix = randomBytes(4).toString('hex').toUpperCase()
+    return `DEN-${day}-${suffix}`
   }
 
   async listReports(tenantId: number, actor: User, query: IReview.ListReportsQuery) {
