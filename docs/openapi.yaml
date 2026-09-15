@@ -4836,6 +4836,369 @@ components:
               id:
                 type: integer
 
+    ReviewPolicy:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - min_text_length
+        - max_text_length
+        - max_photos
+        - max_videos
+        - require_visit_proof
+        - daily_limit_per_user
+        - min_edit_interval_minutes
+        - edit_window_days
+        - auto_publish
+        - require_moderation_for_negative
+        - negative_score_threshold
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        min_text_length:
+          type: integer
+        max_text_length:
+          type: integer
+        max_photos:
+          type: integer
+        max_videos:
+          type: integer
+        require_visit_proof:
+          type: boolean
+        daily_limit_per_user:
+          type: integer
+        min_edit_interval_minutes:
+          type: integer
+        edit_window_days:
+          type: integer
+        auto_publish:
+          type: boolean
+        require_moderation_for_negative:
+          type: boolean
+        negative_score_threshold:
+          type: integer
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    EstablishmentReviewReply:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - review_id
+        - user_id
+        - organization_id
+        - body
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        review_id:
+          type: integer
+        user_id:
+          type: integer
+        organization_id:
+          type: integer
+        body:
+          type: string
+        status:
+          type: string
+          enum: [published, hidden]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    EstablishmentReview:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - establishment_id
+        - user_id
+        - rating
+        - status
+        - visit_verified
+        - edit_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        establishment_id:
+          type: integer
+        user_id:
+          type: integer
+        redemption_id:
+          type:
+            - integer
+            - 'null'
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type:
+            - string
+            - 'null'
+        comment:
+          type:
+            - string
+            - 'null'
+        photos:
+          type: array
+          items:
+            type: string
+        videos:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [published, hidden, pending_moderation]
+        visit_verified:
+          type: boolean
+        edit_count:
+          type: integer
+        last_edited_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        reply:
+          $ref: '#/components/schemas/EstablishmentReviewReply'
+
+    ContentReport:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - reporter_id
+        - target_type
+        - target_id
+        - reason
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        reporter_id:
+          type: integer
+        target_type:
+          type: string
+          enum: [review, review_reply]
+        target_id:
+          type: integer
+        reason:
+          type: string
+          enum: [inappropriate, spam, fake, offensive, privacy_violation, other]
+        details:
+          type:
+            - string
+            - 'null'
+        status:
+          type: string
+          enum: [pending, in_review, resolved, dismissed]
+        moderator_id:
+          type:
+            - integer
+            - 'null'
+        resolution_notes:
+          type:
+            - string
+            - 'null'
+        resolved_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    CreateReviewRequest:
+      type: object
+      required:
+        - establishment_id
+        - rating
+      properties:
+        establishment_id:
+          type: integer
+          minimum: 1
+        redemption_id:
+          type: integer
+          minimum: 1
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        comment:
+          type: string
+        photos:
+          type: array
+          items:
+            type: string
+        videos:
+          type: array
+          items:
+            type: string
+
+    UpdateReviewRequest:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        comment:
+          type: string
+        photos:
+          type: array
+          items:
+            type: string
+        videos:
+          type: array
+          items:
+            type: string
+
+    CreateReplyRequest:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          type: string
+
+    CreateReportRequest:
+      type: object
+      required:
+        - target_type
+        - target_id
+        - reason
+      properties:
+        target_type:
+          type: string
+          enum: [review, review_reply]
+        target_id:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          enum: [inappropriate, spam, fake, offensive, privacy_violation, other]
+        details:
+          type: string
+
+    ResolveReportRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [resolved, dismissed]
+        resolution_notes:
+          type: string
+        hide_content:
+          type: boolean
+
+    UpdateReviewPolicyRequest:
+      type: object
+      properties:
+        min_text_length:
+          type: integer
+          minimum: 0
+        max_text_length:
+          type: integer
+          minimum: 1
+        max_photos:
+          type: integer
+          minimum: 0
+        max_videos:
+          type: integer
+          minimum: 0
+        require_visit_proof:
+          type: boolean
+        daily_limit_per_user:
+          type: integer
+          minimum: 1
+        min_edit_interval_minutes:
+          type: integer
+          minimum: 0
+        edit_window_days:
+          type: integer
+          minimum: 1
+        auto_publish:
+          type: boolean
+        require_moderation_for_negative:
+          type: boolean
+        negative_score_threshold:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    PaginatedReviewsResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstablishmentReview'
+        meta:
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+
+    PaginatedContentReportsResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentReport'
+        meta:
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+
   parameters:
     TenantHeader:
       name: x-tenant-id
@@ -5442,6 +5805,12 @@ tags:
 
   - name: Pilot Feedback
     description: Authenticated pilot observations and the private administrative triage queue.
+
+  - name: Reviews
+    description: Establishment consumer reviews, visit verification, partner responses, and tenant review policies.
+
+  - name: Content Moderation
+    description: User content reporting and administrative resolution queue.
 
 paths:
   /api/v1/pilot-feedback:
@@ -11742,3 +12111,394 @@ paths:
                       type: string
                     event_id:
                       type: string
+
+  /api/v1/catalog/establishments/{establishmentId}/reviews:
+    get:
+      operationId: getCatalogEstablishmentReviews
+      summary: List published reviews for an establishment
+      description: Public regional discovery. Returns published reviews and their partner reply if present.
+      tags: [Reviews, Catalog]
+      security: []
+      parameters:
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/perPageParam'
+        - in: query
+          name: rating
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - in: query
+          name: verified_only
+          schema:
+            type: boolean
+        - in: query
+          name: order_by
+          schema:
+            type: string
+            enum: [recent, highest_rating, lowest_rating]
+            default: recent
+      responses:
+        '200':
+          description: Paginated published reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReviewsResponse'
+        '404':
+          description: Establishment not found or not published
+
+  /api/v1/catalog/reviews/{id}:
+    get:
+      operationId: getCatalogReview
+      summary: Get a single published review
+      tags: [Reviews, Catalog]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Published review details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReview'
+        '404':
+          description: Review not found or not published
+
+  /api/v1/me/reviews:
+    get:
+      operationId: getMyReviews
+      summary: List authenticated user's reviews
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/perPageParam'
+      responses:
+        '200':
+          description: Paginated user reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReviewsResponse'
+        '401':
+          description: Authentication required
+    post:
+      operationId: createMyReview
+      summary: Create a review for an establishment
+      description: Enforces tenant review policy rules (limits, text length, visit proof if required).
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReview'
+        '400':
+          description: Policy validation failed or redemption not valid
+        '401':
+          description: Authentication required
+        '404':
+          description: Establishment not found
+        '409':
+          description: User already reviewed this establishment
+        '422':
+          description: Validation failed
+
+  /api/v1/me/reviews/{id}:
+    put:
+      operationId: updateMyReview
+      summary: Update an existing review by author
+      description: Allowed within the edit window and interval defined in tenant policy.
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewRequest'
+      responses:
+        '200':
+          description: Review updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReview'
+        '400':
+          description: Edit window expired, minimum interval not reached, or policy limits exceeded
+        '401':
+          description: Authentication required
+        '403':
+          description: Not the author of this review
+        '404':
+          description: Review not found
+        '422':
+          description: Validation failed
+    delete:
+      operationId: deleteMyReview
+      summary: Delete an existing review by author
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '204':
+          description: Review deleted
+        '401':
+          description: Authentication required
+        '403':
+          description: Not the author of this review
+        '404':
+          description: Review not found
+
+  /api/v1/portal/reviews/{reviewId}/replies:
+    post:
+      operationId: createPortalReviewReply
+      summary: Reply to a review as establishment partner
+      description: Requires organization membership (owner/admin/editor) on the organization owning the establishment.
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReplyRequest'
+      responses:
+        '201':
+          description: Reply published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReviewReply'
+        '401':
+          description: Authentication required
+        '403':
+          description: Not authorized to reply for this establishment
+        '404':
+          description: Review not found
+        '409':
+          description: Reply already exists for this review
+        '422':
+          description: Validation failed
+    put:
+      operationId: updatePortalReviewReply
+      summary: Update existing partner reply
+      description: Requires organization membership (owner/admin/editor) on the organization owning the establishment.
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReplyRequest'
+      responses:
+        '200':
+          description: Reply updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablishmentReviewReply'
+        '401':
+          description: Authentication required
+        '403':
+          description: Not authorized to reply for this establishment
+        '404':
+          description: Reply not found
+        '422':
+          description: Validation failed
+
+  /api/v1/content-reports:
+    post:
+      operationId: createContentReport
+      summary: Report a review or reply for moderation
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReportRequest'
+      responses:
+        '201':
+          description: Content report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentReport'
+        '401':
+          description: Authentication required
+        '404':
+          description: Target content not found
+        '409':
+          description: Target content already reported by this user
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/content-reports:
+    get:
+      operationId: getAdminContentReports
+      summary: List content reports for moderation queue
+      description: Requires global role moderator, admin, or root.
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/perPageParam'
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, in_review, resolved, dismissed]
+        - in: query
+          name: target_type
+          schema:
+            type: string
+            enum: [review, review_reply]
+      responses:
+        '200':
+          description: Paginated content reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedContentReportsResponse'
+        '401':
+          description: Authentication required
+        '403':
+          description: Moderator, admin, or root role required
+
+  /api/v1/admin/content-reports/{id}/resolve:
+    post:
+      operationId: resolveAdminContentReport
+      summary: Resolve or dismiss a content report
+      description: Requires global role moderator, admin, or root. Optionally hides the reported content.
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveReportRequest'
+      responses:
+        '200':
+          description: Content report resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentReport'
+        '401':
+          description: Authentication required
+        '403':
+          description: Moderator, admin, or root role required
+        '404':
+          description: Content report not found
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/review-policy:
+    get:
+      operationId: getAdminReviewPolicy
+      summary: Get tenant review policy
+      description: Requires admin or root role.
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Tenant review policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPolicy'
+        '401':
+          description: Authentication required
+        '403':
+          description: Admin or root role required
+    put:
+      operationId: updateAdminReviewPolicy
+      summary: Update tenant review policy
+      description: Requires admin or root role.
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewPolicyRequest'
+      responses:
+        '200':
+          description: Tenant review policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPolicy'
+        '401':
+          description: Authentication required
+        '403':
+          description: Admin or root role required
+        '422':
+          description: Validation failed
+
