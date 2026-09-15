@@ -77,10 +77,22 @@ export default class EstablishmentReviewService {
         if (!payload.redemption_id) {
           throw new BadRequestException('Proof of visit redemption is required for this operation')
         }
-        await this.validateRedemption(tenantId, payload.redemption_id, actor.id, payload.establishment_id, client)
+        await this.validateRedemption(
+          tenantId,
+          payload.redemption_id,
+          actor.id,
+          payload.establishment_id,
+          client
+        )
         redemptionId = payload.redemption_id
       } else if (payload.redemption_id) {
-        await this.validateRedemption(tenantId, payload.redemption_id, actor.id, payload.establishment_id, client)
+        await this.validateRedemption(
+          tenantId,
+          payload.redemption_id,
+          actor.id,
+          payload.establishment_id,
+          client
+        )
         redemptionId = payload.redemption_id
       }
 
@@ -176,11 +188,7 @@ export default class EstablishmentReviewService {
     })
   }
 
-  async listPublic(
-    tenantId: number,
-    establishmentId: number,
-    query: IReview.ListReviewsQuery
-  ) {
+  async listPublic(tenantId: number, establishmentId: number, query: IReview.ListReviewsQuery) {
     return this.reviewRepository.paginateForEstablishment(tenantId, establishmentId, query)
   }
 
@@ -192,11 +200,7 @@ export default class EstablishmentReviewService {
     return review
   }
 
-  async listMyReviews(
-    tenantId: number,
-    actor: User,
-    query: IReview.ListReviewsQuery
-  ) {
+  async listMyReviews(tenantId: number, actor: User, query: IReview.ListReviewsQuery) {
     return this.reviewRepository.paginateForUser(tenantId, actor.id, query)
   }
 
@@ -206,11 +210,7 @@ export default class EstablishmentReviewService {
     return trimmed.length > 0 ? trimmed : null
   }
 
-  private validateTextLength(
-    comment: string | null,
-    minLength: number,
-    maxLength: number
-  ): void {
+  private validateTextLength(comment: string | null, minLength: number, maxLength: number): void {
     if (comment === null) {
       if (minLength > 0) {
         throw new BadRequestException(`Review text must be at least ${minLength} characters`)

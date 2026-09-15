@@ -27,11 +27,7 @@ export default class extends BaseSchema {
         .inTable('tenants')
         .onDelete('CASCADE')
 
-      table.check(
-        'min_text_length <= max_text_length',
-        [],
-        'review_policies_text_length_check'
-      )
+      table.check('min_text_length <= max_text_length', [], 'review_policies_text_length_check')
       table.check('max_text_length >= 0', [], 'review_policies_max_text_length_check')
       table.check('max_photos >= 0', [], 'review_policies_max_photos_check')
       table.check('max_videos >= 0', [], 'review_policies_max_videos_check')

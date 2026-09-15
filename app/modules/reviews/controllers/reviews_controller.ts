@@ -81,21 +81,12 @@ export default class ReviewsController {
   async updateReply({ tenant, auth, params, request }: HttpContext) {
     const { reviewId } = await reviewReplyParamsValidator.validate(params)
     const payload = await request.validateUsing(createReplyValidator)
-    return this.replyService.updateReply(
-      tenant!.id,
-      reviewId,
-      auth.getUserOrFail(),
-      payload
-    )
+    return this.replyService.updateReply(tenant!.id, reviewId, auth.getUserOrFail(), payload)
   }
 
   async report({ tenant, auth, request, response }: HttpContext) {
     const payload = await request.validateUsing(createReportValidator)
-    const report = await this.reportService.createReport(
-      tenant!.id,
-      auth.getUserOrFail(),
-      payload
-    )
+    const report = await this.reportService.createReport(tenant!.id, auth.getUserOrFail(), payload)
     return response.created(report)
   }
 

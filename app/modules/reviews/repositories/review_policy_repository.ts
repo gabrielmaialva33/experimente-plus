@@ -9,13 +9,8 @@ export default class ReviewPolicyRepository extends LucidRepository<typeof Revie
     super(ReviewPolicy)
   }
 
-  async getForTenant(
-    tenantId: number,
-    client?: TransactionClientContract
-  ): Promise<ReviewPolicy> {
-    const existing = await ReviewPolicy.query({ client })
-      .where('tenant_id', tenantId)
-      .first()
+  async getForTenant(tenantId: number, client?: TransactionClientContract): Promise<ReviewPolicy> {
+    const existing = await ReviewPolicy.query({ client }).where('tenant_id', tenantId).first()
 
     if (existing) {
       return existing

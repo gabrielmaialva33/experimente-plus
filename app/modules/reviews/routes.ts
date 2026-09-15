@@ -12,9 +12,7 @@ router
   ])
   .use(throttle)
 
-router
-  .get('/api/v1/catalog/reviews/:id', [ReviewsController, 'showPublic'])
-  .use(throttle)
+router.get('/api/v1/catalog/reviews/:id', [ReviewsController, 'showPublic']).use(throttle)
 
 router
   .group(() => {

@@ -53,7 +53,10 @@ export default class extends BaseSchema {
         ['tenant_id', 'establishment_id', 'status', 'created_at'],
         'establishment_reviews_establishment_status_index'
       )
-      table.index(['tenant_id', 'user_id', 'created_at'], 'establishment_reviews_user_created_index')
+      table.index(
+        ['tenant_id', 'user_id', 'created_at'],
+        'establishment_reviews_user_created_index'
+      )
       table.index(
         ['tenant_id', 'status', 'created_at'],
         'establishment_reviews_status_created_index'

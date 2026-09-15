@@ -90,11 +90,7 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     return rows.paginate(page, perPage)
   }
 
-  async paginateForUser(
-    tenantId: number,
-    userId: number,
-    query: IReview.ListReviewsQuery
-  ) {
+  async paginateForUser(tenantId: number, userId: number, query: IReview.ListReviewsQuery) {
     const rows = EstablishmentReview.query()
       .where('tenant_id', tenantId)
       .where('user_id', userId)
@@ -116,10 +112,7 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     return rows.paginate(page, perPage)
   }
 
-  async paginateForTenant(
-    tenantId: number,
-    query: IReview.ListReviewsQuery
-  ) {
+  async paginateForTenant(tenantId: number, query: IReview.ListReviewsQuery) {
     const rows = EstablishmentReview.query()
       .where('tenant_id', tenantId)
       .preload('establishment')

@@ -25,10 +25,7 @@ export default class extends BaseSchema {
         .inTable('tenants')
         .onDelete('CASCADE')
       table
-        .foreign(
-          ['review_id', 'tenant_id'],
-          'establishment_review_replies_review_tenant_foreign'
-        )
+        .foreign(['review_id', 'tenant_id'], 'establishment_review_replies_review_tenant_foreign')
         .references(['id', 'tenant_id'])
         .inTable('establishment_reviews')
         .onDelete('CASCADE')

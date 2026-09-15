@@ -47,10 +47,7 @@ export default class ContentReportRepository extends LucidRepository<typeof Cont
       .first()
   }
 
-  async paginateForTenant(
-    tenantId: number,
-    query: IReview.ListReportsQuery
-  ) {
+  async paginateForTenant(tenantId: number, query: IReview.ListReportsQuery) {
     const rows = ContentReport.query()
       .where('tenant_id', tenantId)
       .preload('reporter', (userQuery) => {

@@ -47,10 +47,7 @@ export namespace IReview {
     'archived',
   ] as const
 
-  export const CANONICAL_REPLY_STATUSES: readonly ReplyStatus[] = [
-    'published',
-    'hidden',
-  ] as const
+  export const CANONICAL_REPLY_STATUSES: readonly ReplyStatus[] = ['published', 'hidden'] as const
 
   export const CANONICAL_REPORT_TARGET_TYPES: readonly ReportTargetType[] = [
     'review',

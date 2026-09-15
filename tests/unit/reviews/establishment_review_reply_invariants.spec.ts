@@ -12,7 +12,9 @@ test.group('Establishment review reply invariants (ADR-0027)', () => {
     assert.isFalse(IReview.isReplyStatus('draft'))
   })
 
-  test('EstablishmentReviewReply model maps to establishment_review_replies table', ({ assert }) => {
+  test('EstablishmentReviewReply model maps to establishment_review_replies table', ({
+    assert,
+  }) => {
     assert.equal(EstablishmentReviewReply.table, 'establishment_review_replies')
     const reply = new EstablishmentReviewReply()
     reply.tenant_id = 1

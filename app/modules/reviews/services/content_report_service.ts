@@ -61,11 +61,7 @@ export default class ContentReportService {
     })
   }
 
-  async listReports(
-    tenantId: number,
-    actor: User,
-    query: IReview.ListReportsQuery
-  ) {
+  async listReports(tenantId: number, actor: User, query: IReview.ListReportsQuery) {
     await this.organizationPolicy.requirePlatformModerator(actor)
     return this.reportRepository.paginateForTenant(tenantId, query)
   }

@@ -29,8 +29,7 @@ test.group('Review policy defaults and invariants (ADR-0027)', () => {
     assert.equal(IReview.DEFAULT_REVIEW_POLICY.min_text_length, 0)
     assert.equal(IReview.DEFAULT_REVIEW_POLICY.max_text_length, 1000)
     assert.isTrue(
-      IReview.DEFAULT_REVIEW_POLICY.min_text_length <=
-        IReview.DEFAULT_REVIEW_POLICY.max_text_length
+      IReview.DEFAULT_REVIEW_POLICY.min_text_length <= IReview.DEFAULT_REVIEW_POLICY.max_text_length
     )
   })
 
