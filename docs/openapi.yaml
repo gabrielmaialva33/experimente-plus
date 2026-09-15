@@ -12501,4 +12501,3 @@ paths:
           description: Admin or root role required
         '422':
           description: Validation failed
-
