@@ -9,7 +9,10 @@ test.group('Canonical homologation baseline', () => {
   }) => {
     const entries = await readdir(app.makePath('database/migrations'))
     const files = entries.filter((name) => name.endsWith('.ts')).sort()
-    assert.lengthOf(files, 51)
+    // Raise this deliberately, never to make a red suite green: the count is the
+    // guard that a migration only joins the canonical baseline by decision.
+    // 51 canonical + 4 from the review domain of ADR-0027.
+    assert.lengthOf(files, 55)
     assert.isFalse(files.some((name) => /1788556800|178881480[123]/.test(name)))
     const history = await db.from('adonis_schema').select('name')
     assert.lengthOf(history, files.length)

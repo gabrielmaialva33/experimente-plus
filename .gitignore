@@ -38,3 +38,5 @@ database/schema.ts
 
 # AdonisJS generated types
 .adonisjs
+.env.backup*
+storage/seed/
