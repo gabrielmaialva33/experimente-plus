@@ -49,6 +49,21 @@ Nota inteira obrigatória de 1 a 5. Texto opcional, dentro dos limites parametri
 
 `content_reports`, com alvo tipado (`review`, `reply`, `establishment`) e motivo enumerado. Uma única fila serve a todos os conteúdos denunciáveis, seguindo o padrão de issues e histórico append-only do ADR-0015. Criar uma fila por tipo de conteúdo multiplicaria moderação sem ganho.
 
+**Revisão de 15/09/2026 — quatro elementos incorporados de desenho externo.** Um projeto irmão da mesma família de stack resolve denúncia com quatro ideias que esta proposta não previa e que valem mais que o custo de implementá-las agora, enquanto a tabela ainda não chegou a ambiente persistente:
+
+| Elemento              | Por que entra                                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Número de protocolo   | Sem ele o denunciante não tem como acompanhar o que reportou, e a operação não tem identificador humano para conversar sobre um caso.                           |
+| Denúncia anônima      | O escopo contratado prevê fluxo de denúncia sem qualificá-lo; exigir identidade suprime justamente a denúncia que mais importa.                                 |
+| Hash do denunciante   | Permite deduplicar e limitar abuso **sem armazenar quem denunciou**, coerente com a postura de privacidade do ADR-0017, que já evita identificador bruto.        |
+| Prazo de moderação    | Sem prazo, uma denúncia fica parada indefinidamente sem que nada no sistema perceba. Com `due_at` e marca de aviso, o atraso é observável.                      |
+
+Consequências de modelo: `content_reports` ganha protocolo único por tenant, sinalizador de anonimato, hashes de origem e de token do denunciante — nunca o valor em claro —, prazo e marca de aviso de prazo, responsável atribuído e descrição de desfecho. O denunciante autenticado continua identificado; o anônimo existe apenas como hash.
+
+Deliberadamente **não** se adota a taxonomia do projeto de origem: subtipos, setor e comissão pertencem ao domínio dele, não a este. Copiar taxonomia alheia é como transplantes se estragam.
+
+O prazo é operação, não obrigação contratual: o escopo coloca moderação humana contínua fora da entrega. O campo existe para que a operação do contratante possa medir, e seu valor entra na política por tenant, não em constante no código.
+
 ### 4. Parametrização é a decisão central deste ADR
 
 Todos os valores em aberto viram **política configurável por tenant**, em `review_policies`, com defaults versionados e auditáveis:
@@ -63,6 +78,7 @@ Todos os valores em aberto viram **política configurável por tenant**, em `rev
 | limite de avaliações por dia     | 5                | questão aberta               |
 | intervalo mínimo entre edições   | 1 hora           | questão aberta               |
 | prazo para editar                | 30 dias          | questão aberta               |
+| prazo de moderação de denúncia   | 5 dias           | incorporado em 15/09/2026    |
 
 Os defaults **não são a decisão do dono**: são ponto de partida para que a funcionalidade exista e seja testável antes das definições. Quando o dono definir, muda-se configuração, não schema nem regra de negócio. Essa é a razão de o desenho ser assim: a definição pendente não pode virar redesenho.
 
@@ -118,6 +134,10 @@ Exigidos pela regra de mudança do README de decisões:
 9. Política de comprovação de visita desligada aceita avaliação sem resgate; ligada, recusa sem resgate e aceita com resgate pertencente ao mesmo usuário e estabelecimento.
 10. Limites de caracteres, fotos e vídeos são lidos da política do tenant, não de constante em código; alterar a política altera a validação sem deploy.
 11. Escrita exige autenticação; leitura pública de avaliações e médias funciona sem sessão e sem membership, conforme ADR-0003.
+12. Denúncia recebe protocolo único por tenant, e o mesmo protocolo identifica o caso em toda consulta posterior.
+13. Denúncia anônima é aceita sem identificar o autor; nenhuma rota, projeção ou log expõe identidade a partir dela.
+14. Duas denúncias anônimas da mesma origem sobre o mesmo alvo são reconhecidas como repetição pelo hash, sem que o valor em claro seja persistido.
+15. Denúncia sem desfecho após o prazo da política fica observável como atrasada, e o prazo vem da política do tenant, não de constante em código.
 
 ## Pendências que dependem do dono, sem encerramento implícito
 
