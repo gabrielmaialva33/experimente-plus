@@ -12,6 +12,9 @@ export type PublicHealthResponse = {
     database: {
       healthy: boolean
     }
+    redis: {
+      healthy: boolean
+    }
   }
 }
 
@@ -83,8 +86,18 @@ function isDatabaseCheck(check: HealthCheckReport['checks'][number]): boolean {
   return Boolean(check.meta?.connection)
 }
 
+/**
+ * The limiter stores its counters in Redis, so a Redis outage turns most of the
+ * public API into 500 while the process stays up. Reporting it separately is
+ * what turns "unhealthy" into something an operator can act on.
+ */
+function isRedisCheck(check: HealthCheckReport['checks'][number]): boolean {
+  return check.name.toLowerCase().includes('redis')
+}
+
 export function buildHealthResponse(report: HealthCheckReport): PublicHealthResponse {
   const databaseChecks = report.checks.filter(isDatabaseCheck)
+  const redisChecks = report.checks.filter(isRedisCheck)
 
   return {
     healthy: report.isHealthy,
@@ -92,6 +105,9 @@ export function buildHealthResponse(report: HealthCheckReport): PublicHealthResp
       database: {
         healthy:
           databaseChecks.length > 0 && databaseChecks.every((check) => check.status !== 'error'),
+      },
+      redis: {
+        healthy: redisChecks.length > 0 && redisChecks.every((check) => check.status !== 'error'),
       },
     },
   }
@@ -101,6 +117,9 @@ const unavailableHealthResponse = (): PublicHealthResponse => ({
   healthy: false,
   services: {
     database: {
+      healthy: false,
+    },
+    redis: {
       healthy: false,
     },
   },

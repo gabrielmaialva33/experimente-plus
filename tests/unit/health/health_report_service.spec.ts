@@ -100,7 +100,7 @@ test.group('Health report service', () => {
     assert.equal(outcome.statusCode, 503)
     assert.deepEqual(outcome.body, {
       healthy: false,
-      services: { database: { healthy: false } },
+      services: { database: { healthy: false }, redis: { healthy: false } },
     })
     assert.equal(outcome.diagnostic?.kind, 'failure')
     assert.equal(activeTimers.size, 0)

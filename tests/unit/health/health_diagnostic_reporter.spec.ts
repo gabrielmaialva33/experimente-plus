@@ -50,7 +50,10 @@ function reportOutcome(
     statusCode: status === 'error' ? 503 : 200,
     body: {
       healthy: report.isHealthy,
-      services: { database: { healthy: status !== 'error' } },
+      services: {
+        database: { healthy: status !== 'error' },
+        redis: { healthy: status !== 'error' },
+      },
     },
     diagnostic: status === 'ok' ? undefined : { kind: 'report', report },
   }
