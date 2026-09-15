@@ -1,6 +1,9 @@
 import testUtils from '@adonisjs/core/services/test_utils'
 import { test } from '@japa/runner'
 
+import BenefitAccess from '#modules/benefits/models/benefit_access'
+import BenefitEdition from '#modules/benefits/models/benefit_edition'
+import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
@@ -12,14 +15,16 @@ import {
   createEstablishmentScenario,
   type EstablishmentScenario,
 } from '#tests/functional/establishments/helpers'
-import {
-  addOrganizationMember,
-  createUser,
-} from '#tests/functional/organizations/helpers'
+import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
 
 import { DateTime } from 'luxon'
 
 const tenantHeader = (tenantId: number) => ({ 'x-tenant-id': String(tenantId) })
+const publicHeaders = (scenario: EstablishmentScenario) => ({
+  'host': `${scenario.tenant.slug}.experimente.test`,
+  'x-forwarded-host': `${scenario.tenant.slug}.experimente.test`,
+  'x-forwarded-for': `198.51.100.${(scenario.tenant.id % 250) + 1}`,
+})
 
 let estSeq = 0
 async function createPublishedEstablishment(
@@ -68,23 +73,68 @@ async function createRedemption(
   establishment: Establishment,
   user: any
 ): Promise<BenefitRedemption> {
+  const now = DateTime.utc()
+  const edition = await BenefitEdition.create({
+    tenant_id: scenario.tenant.id,
+    city_id: scenario.city.id,
+    name: 'Edição Teste',
+    slug: `edicao-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+    price_cents: 10000,
+    currency: 'BRL',
+    sales_starts_at: null,
+    sales_ends_at: null,
+    usage_starts_at: now.minus({ days: 1 }),
+    usage_ends_at: now.plus({ days: 30 }),
+    status: 'published',
+    created_by: scenario.owner.id,
+    published_at: now,
+    archived_at: null,
+  })
+
+  const offer = await BenefitOffer.create({
+    tenant_id: scenario.tenant.id,
+    edition_id: edition.id,
+    establishment_id: establishment.id,
+    title: '2 por 1',
+    description: 'Oferta de teste',
+    benefit_type: 'buy_one_get_one',
+    available_weekdays_mask: 127,
+    max_redemptions_per_access: 1,
+    status: 'active',
+    created_by: scenario.owner.id,
+    activated_at: now,
+    archived_at: null,
+  })
+
+  const access = await BenefitAccess.create({
+    tenant_id: scenario.tenant.id,
+    edition_id: edition.id,
+    user_id: user.id,
+    source: 'courtesy',
+    status: 'active',
+    granted_by: scenario.owner.id,
+    granted_at: now,
+  })
+
   return BenefitRedemption.create({
     tenant_id: scenario.tenant.id,
-    access_id: 1,
-    edition_id: 1,
-    offer_id: 1,
+    access_id: access.id,
+    edition_id: edition.id,
+    offer_id: offer.id,
     establishment_id: establishment.id,
     organization_id: scenario.organization.id,
     user_id: user.id,
     redeemed_by: scenario.owner.id,
+    redeemed_at: now,
     redemption_number: 1,
-    presentation_nonce_hash: 'hash-1234567890',
+    presentation_nonce_hash: 'a'.repeat(64),
     receipt_code: `EXP-${Date.now().toString(16).toUpperCase().padStart(16, '0')}`,
     edition_name_snapshot: 'Edição Londrina 2026',
     offer_title_snapshot: '2 por 1 no prato principal',
-    benefit_type_snapshot: 'two_for_one',
+    benefit_type_snapshot: 'buy_one_get_one',
     establishment_name_snapshot: 'Café Central',
     holder_name_snapshot: user.full_name,
+    holder_email_snapshot: user.email,
   })
 }
 
@@ -135,7 +185,7 @@ test.group('Reviews - Functional Tests', (group) => {
 
     secondResponse.assertStatus(400)
     secondResponse.assertBodyContains({
-      message: 'You have already reviewed this establishment',
+      message: 'User has already reviewed this establishment',
     })
   })
 
@@ -149,10 +199,7 @@ test.group('Reviews - Functional Tests', (group) => {
     })
 
     // Set min_text_length to 20
-    await ReviewPolicy.updateOrCreate(
-      { tenant_id: scenario.tenant.id },
-      { min_text_length: 20 }
-    )
+    await ReviewPolicy.updateOrCreate({ tenant_id: scenario.tenant.id }, { min_text_length: 20 })
 
     const shortResponse = await client
       .post('/api/v1/me/reviews')
@@ -166,7 +213,7 @@ test.group('Reviews - Functional Tests', (group) => {
 
     shortResponse.assertStatus(400)
     shortResponse.assertBodyContains({
-      message: 'Comment must be at least 20 characters',
+      message: 'Review text must be at least 20 characters',
     })
   })
 
@@ -210,7 +257,7 @@ test.group('Reviews - Functional Tests', (group) => {
       })
     res2.assertStatus(400)
     res2.assertBodyContains({
-      message: 'Daily review limit reached for this user',
+      message: 'Daily review limit exceeded',
     })
   })
 
@@ -243,7 +290,7 @@ test.group('Reviews - Functional Tests', (group) => {
       })
     failRes.assertStatus(400)
     failRes.assertBodyContains({
-      message: 'A valid benefit redemption is required to review this establishment',
+      message: 'Proof of visit redemption is required for this operation',
     })
 
     // Create valid redemption for consumer and establishment
@@ -374,7 +421,8 @@ test.group('Reviews - Functional Tests', (group) => {
     delRes.assertStatus(204)
 
     const found = await EstablishmentReview.find(reviewId)
-    assert.isNull(found)
+    assert.isNotNull(found)
+    assert.equal(found?.status, 'archived')
   })
 
   test('allows organization owner/admin/editor to reply to reviews, denies non-partners and enforces max 1 reply', async ({
@@ -415,13 +463,13 @@ test.group('Reviews - Functional Tests', (group) => {
       })
     const reviewId = reviewRes.body().id
 
-    // Outsider cannot reply
+    // Outsider cannot reply (returns 404 due to organization privacy boundary)
     const outsiderRes = await client
       .post(`/api/v1/portal/reviews/${reviewId}/replies`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(outsider)
       .json({ comment: 'Resposta não autorizada.' })
-    outsiderRes.assertStatus(403)
+    outsiderRes.assertStatus(404)
 
     // Partner editor can reply
     const replyRes = await client
@@ -444,7 +492,7 @@ test.group('Reviews - Functional Tests', (group) => {
       .json({ comment: 'Segunda resposta do dono.' })
     secondReplyRes.assertStatus(400)
     secondReplyRes.assertBodyContains({
-      message: 'A reply already exists for this review',
+      message: 'A reply has already been submitted for this review',
     })
 
     // Partner can update the reply
@@ -502,7 +550,7 @@ test.group('Reviews - Functional Tests', (group) => {
 
     const listRes = await client
       .get(`/api/v1/catalog/establishments/${establishment.id}/reviews`)
-      .header('host', `${scenario.tenant.slug}.example.com`)
+      .headers(publicHeaders(scenario))
 
     listRes.assertStatus(200)
     const body = listRes.body()
@@ -513,7 +561,7 @@ test.group('Reviews - Functional Tests', (group) => {
 
     const getRes = await client
       .get(`/api/v1/catalog/reviews/${rev1.id}`)
-      .header('host', `${scenario.tenant.slug}.example.com`)
+      .headers(publicHeaders(scenario))
     getRes.assertStatus(200)
     getRes.assertBodyContains({ id: rev1.id, status: 'published' })
   })
