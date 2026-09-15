@@ -83,6 +83,24 @@ const env = await Env.create(new URL('../', import.meta.url), {
   STRIPE_ENVIRONMENT: Env.schema.enum.optional(['test', 'live'] as const),
   STRIPE_WEBHOOK_SECRET: Env.schema.string.optional(),
 
+  /*
+  |----------------------------------------------------------
+  | Concierge IA — ADR-0029
+  |----------------------------------------------------------
+  | Provider and models are configuration, never constants: the instrument
+  | treats a later change of model or provider as a new contract, and a model
+  | the catalogue lists can still answer 404.
+  */
+  CONCIERGE_ENABLED: Env.schema.boolean.optional(),
+  CONCIERGE_BASE_URL: Env.schema.string.optional(),
+  CONCIERGE_PRIMARY_MODEL: Env.schema.string.optional(),
+  CONCIERGE_FALLBACK_MODEL: Env.schema.string.optional(),
+  CONCIERGE_TIMEOUT_MS: Env.schema.number.optional(),
+  CONCIERGE_MAX_OUTPUT_TOKENS: Env.schema.number.optional(),
+  CONCIERGE_MAX_CATALOG_ITEMS: Env.schema.number.optional(),
+  CONCIERGE_DAILY_LIMIT_PER_USER: Env.schema.number.optional(),
+  NVIDIA_API_KEY: Env.schema.string.optional(),
+
   DEV_ADMIN_NAME: Env.schema.string.optional(),
   DEV_ADMIN_USERNAME: Env.schema.string.optional(),
   DEV_ADMIN_EMAIL: Env.schema.string.optional(),
