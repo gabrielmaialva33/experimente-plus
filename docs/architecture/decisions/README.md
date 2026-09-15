@@ -42,6 +42,8 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 - [ADR-0028 — Experiências, eventos e itens de vitrine](0028-experiencias-eventos-e-itens-de-vitrine.md): marco EP-16, domínio inexistente hoje; execução do desenho estrutural autorizada em 15/09/2026. Resolve cinco tensões levantadas antes do código: a colisão do termo "oferta" com o significado comercial do ADR-0019, a proibição de registrar este conteúdo no workflow de revisão da unidade, a aprovação como política por tenant e não workflow fixo, o significado técnico de editar, desativar e excluir sem destruir auditoria, e a dependência explícita da projeção pública.
 
+- [ADR-0029 — Concierge IA ancorado no catálogo](0029-concierge-ia-ancorado-no-catalogo.md): marco EP-17, domínio inexistente hoje; execução do desenho estrutural autorizada em 15/09/2026. Redigida depois de medir o provedor real: um modelo inventou um lugar ausente da lista, outro vazou o próprio raciocínio no conteúdo, houve `529` de sobrecarga e modelos listados que respondem `404`. Daí a decisão central — o modelo compõe linguagem e nunca é fonte de fato, e uma validação determinística contra o catálogo remove o que ele inventar. Fronteira de assunto é recusa em código, não instrução ao modelo, e o módulo não tem caminho de escrita.
+
 ## Regra de evolução
 
 - Decisão estrutural nova recebe um ADR antes da migration correspondente.
@@ -69,4 +71,5 @@ EP-13 — cliente móvel                         decidido, implementação pende
 EP-14 — edição e voucher avulso                backend implementado; ADR-0025 proposto com execução autorizada; recriação/homologação comercial pelo dono
 EP-15 — avaliações e moderação de conteúdo     ADR-0027 proposto com execução autorizada; parâmetros pendentes do contratante
 EP-16 — conteúdo próprio do parceiro           ADR-0028 proposto com execução autorizada; parâmetros pendentes do contratante
+EP-17 — assistência de descoberta              ADR-0029 proposto com execução autorizada; limites de consumo pendentes do contratante
 ```
