@@ -1,6 +1,6 @@
 # ADR 0027 — Avaliações, respostas do parceiro e moderação de conteúdo do explorador
 
-**Status:** proposto
+**Status:** proposto, com execução autorizada
 
 **Data:** 14 de setembro de 2026
 
@@ -9,6 +9,10 @@
 **Relacionados:** [ADR-0003](0003-catalogo-publico-sem-membership.md), [ADR-0007](0007-rbac-global-com-policies-de-dominio.md), [ADR-0012](0012-estabelecimentos-estaveis-e-revisoes-publicas.md), [ADR-0014](0014-midia-estavel-e-composicao-versionada.md), [ADR-0015](0015-submissao-moderacao-e-publicacao-atomica.md), [ADR-0016](0016-catalogo-publico-projecao-e-resolucao-de-operacao.md) e [ADR-0022](0022-contrato-api-movel-consumer-first.md)
 
 **Dono da decisão:** dono do produto. Esta é uma **proposta redigida antes do código**; nada aqui se declara aceito por inferência. A regra do [README de decisões](README.md) exige aceitação explícita, impacto e dono definidos, inclusão em marco e cenários de teste identificados antes de virar migration, model, rota ou interface.
+
+**Autorização de execução — 15/09/2026:** a construção do desenho estrutural descrito abaixo foi expressamente autorizada. Isso cobre as decisões de modelo: a que agregado a avaliação pertence, a separação da resposta do parceiro, a fila única de denúncia, a parametrização por tenant, o vínculo anulável de comprovação de visita, o efeito do banimento e a origem dos agregados na projeção. **Não** cobre os valores dos parâmetros: eles permanecem pendentes de definição do contratante, e os defaults da tabela abaixo existem para tornar a funcionalidade construível e testável antes dessa definição, nunca como decisão dele registrada por inferência.
+
+**Ponto que carece de confirmação explícita:** a leitura de que existe **uma avaliação por par usuário-estabelecimento, editável**, é interpretação do escopo contratado, não texto literal dele. O escopo fala em limite diário, intervalo entre edições e prazo para editar, o que descreve edição de uma avaliação por lugar. Se o contratante pretender múltiplas avaliações do mesmo usuário sobre o mesmo lugar ao longo do tempo, o modelo muda e esta decisão precisa ser revista antes da migration correspondente.
 
 ## Contexto
 
