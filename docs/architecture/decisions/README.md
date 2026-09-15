@@ -40,6 +40,8 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 - [ADR-0027 — Avaliações, respostas do parceiro e moderação de conteúdo](0027-avaliacoes-respostas-e-moderacao-de-conteudo.md): marco EP-15, domínio inexistente hoje; execução do desenho estrutural autorizada em 15/09/2026. A decisão central é parametrizar por tenant todos os valores que produto e instrumento contratual mantêm em aberto — comprovação de visita, limites de texto e mídia, limite diário, intervalo e prazo de edição —, para que a definição pendente vire configuração e não redesenho. Os valores desses parâmetros continuam pendentes do contratante; os defaults não são decisão dele. Registra divergência real quanto a vídeo e HEIC frente ao ADR-0014 aceito, e sinaliza que a leitura de uma avaliação por par usuário-estabelecimento carece de confirmação explícita.
 
+- [ADR-0028 — Experiências, eventos e itens de vitrine](0028-experiencias-eventos-e-itens-de-vitrine.md): marco EP-16, domínio inexistente hoje; execução do desenho estrutural autorizada em 15/09/2026. Resolve cinco tensões levantadas antes do código: a colisão do termo "oferta" com o significado comercial do ADR-0019, a proibição de registrar este conteúdo no workflow de revisão da unidade, a aprovação como política por tenant e não workflow fixo, o significado técnico de editar, desativar e excluir sem destruir auditoria, e a dependência explícita da projeção pública.
+
 ## Regra de evolução
 
 - Decisão estrutural nova recebe um ADR antes da migration correspondente.
@@ -66,4 +68,5 @@ EP-12 — API móvel consumer-first              implementado e validado
 EP-13 — cliente móvel                         decidido, implementação pendente
 EP-14 — edição e voucher avulso                backend implementado; ADR-0025 proposto com execução autorizada; recriação/homologação comercial pelo dono
 EP-15 — avaliações e moderação de conteúdo     ADR-0027 proposto com execução autorizada; parâmetros pendentes do contratante
+EP-16 — conteúdo próprio do parceiro           ADR-0028 proposto com execução autorizada; parâmetros pendentes do contratante
 ```
