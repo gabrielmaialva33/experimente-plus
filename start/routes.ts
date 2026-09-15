@@ -67,3 +67,4 @@ router
   .use(throttle)
 
 import '#modules/purchases/routes'
+import '#modules/reviews/routes'

@@ -27,7 +27,10 @@ export namespace IReview {
     updated_at?: Date
   }
 
-  export const DEFAULT_REVIEW_POLICY: Omit<ReviewPolicyAttributes, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> = {
+  export const DEFAULT_REVIEW_POLICY: Omit<
+    ReviewPolicyAttributes,
+    'id' | 'tenant_id' | 'created_at' | 'updated_at'
+  > = {
     require_visit_proof: false,
     min_text_length: 0,
     max_text_length: 1000,
@@ -94,6 +97,62 @@ export namespace IReview {
 
   export function isReportStatus(value: string): value is ReportStatus {
     return (CANONICAL_REPORT_STATUSES as readonly string[]).includes(value)
+  }
+
+  export interface CreateReviewPayload {
+    establishment_id: number
+    rating: number
+    comment?: string | null
+    redemption_id?: number | null
+    photos_count?: number
+  }
+
+  export interface UpdateReviewPayload {
+    rating?: number
+    comment?: string | null
+    photos_count?: number
+  }
+
+  export interface CreateReplyPayload {
+    comment: string
+  }
+
+  export interface CreateReportPayload {
+    target_type: ReportTargetType
+    target_id: number
+    reason: ReportReason
+    details?: string | null
+  }
+
+  export interface ResolveReportPayload {
+    status: 'resolved' | 'dismissed'
+    resolution_action?: string | null
+    resolution_notes?: string | null
+  }
+
+  export interface UpdateReviewPolicyPayload {
+    require_visit_proof?: boolean
+    min_text_length?: number
+    max_text_length?: number
+    max_photos?: number
+    max_videos?: number
+    daily_limit_per_user?: number
+    min_edit_interval_minutes?: number
+    edit_window_days?: number
+  }
+
+  export interface ListReviewsQuery {
+    page?: number
+    per_page?: number
+    rating?: number
+    status?: ReviewStatus
+  }
+
+  export interface ListReportsQuery {
+    page?: number
+    per_page?: number
+    status?: ReportStatus
+    target_type?: ReportTargetType
   }
 }
 
