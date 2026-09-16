@@ -68,3 +68,4 @@ router
 
 import '#modules/purchases/routes'
 import '#modules/reviews/routes'
+import '#modules/concierge/routes'

@@ -6944,6 +6944,75 @@ paths:
         '404':
           description: Public operation could not be resolved
 
+  /api/v1/catalog/concierge:
+    post:
+      operationId: askCatalogConcierge
+      summary: Ask the discovery assistant about places published in the catalogue
+      description: >-
+        Answers from the published catalogue only. Every place named in the
+        reply is checked against the items handed to the model and anything
+        else is removed, so the assistant cannot present a place that does not
+        exist. Subjects outside discovery receive a fixed refusal without
+        consulting any model, and the module has no write path: it never
+        reserves, purchases or confirms anything.
+      tags: [Catalog]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+                city:
+                  type: string
+                  maxLength: 120
+                  description: Restricts grounding to one city of the operation
+      responses:
+        '200':
+          description: >-
+            An answer grounded in the catalogue, a fixed refusal for a subject
+            outside discovery, or a degraded reply carrying the catalogue when
+            no model could be consulted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [outcome, text, items, model]
+                properties:
+                  outcome:
+                    type: string
+                    enum: [grounded, degraded, refused]
+                  text:
+                    type: string
+                    nullable: true
+                    description: Absent on a degraded reply, which carries items only
+                  items:
+                    type: array
+                    description: Catalogue places backing the reply, in order
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        kind: { type: string, enum: [establishment] }
+                        name: { type: string }
+                        city: { type: string }
+                        district: { type: string, nullable: true }
+                        category: { type: string, nullable: true }
+                  model:
+                    type: string
+                    nullable: true
+                    description: Null when no model was consulted
+        '422':
+          description: Question missing or outside the accepted length
+        '404':
+          description: Public operation could not be resolved
+
   /api/v1/catalog/cities:
     get:
       operationId: listPublicCities
