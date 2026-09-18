@@ -5,6 +5,11 @@ import router from '@adonisjs/core/services/router'
 import { test } from '@japa/runner'
 import { parse } from 'yaml'
 
+import ContentReport from '#modules/reviews/models/content_report'
+import EstablishmentReview from '#modules/reviews/models/establishment_review'
+import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
+import ReviewPolicy from '#modules/reviews/models/review_policy'
+
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'trace'] as const
 type HttpMethod = (typeof HTTP_METHODS)[number]
 
@@ -317,6 +322,73 @@ test.group('Documentation', () => {
     assert.equal(edition.properties?.status.const, 'published')
     assert.equal(edition.properties?.purchasable.const, true)
   })
+  test('reviews document the columns the models actually have, and only those', async ({
+    assert,
+  }) => {
+    // The reviews contract was written before the tables settled and drifted from
+    // them: it promised `title`, `photos` as URLs and `visit_verified`, none of
+    // which exist, while hiding `photos_count`, `edited_at` and the author. The
+    // mobile client generates its types from this file, so the drift reached the
+    // app as fields that are always undefined. Deriving the expectation from the
+    // models is what keeps a later column from repeating it.
+    const specification = await readOpenApi()
+    const schemas = specification.components!.schemas!
+
+    const serialisable = (model: {
+      $columnsDefinitions: Map<string, { serializeAs: string | null }>
+    }) =>
+      [...model.$columnsDefinitions.entries()]
+        .filter(([, definition]) => definition.serializeAs !== null)
+        .map(([, definition]) => definition.serializeAs!)
+
+    const documented = (name: string, relations: string[] = []) =>
+      Object.keys(schemas[name].properties!).filter((property) => !relations.includes(property))
+
+    assert.sameMembers(
+      documented('EstablishmentReview', ['author', 'reply']),
+      serialisable(EstablishmentReview)
+    )
+    assert.sameMembers(
+      documented('EstablishmentReviewReply'),
+      serialisable(EstablishmentReviewReply)
+    )
+    assert.sameMembers(documented('ContentReport'), serialisable(ContentReport))
+    assert.sameMembers(documented('ReviewPolicy'), serialisable(ReviewPolicy))
+
+    // A report may name its author only to moderation. The hashes exist to
+    // recognise repetition from the same origin, never to reveal who wrote it,
+    // so they must stay out of the model's serialisation and out of this file.
+    for (const hidden of ['reporter_ip_hash', 'reporter_token_hash']) {
+      assert.equal(ContentReport.$columnsDefinitions.get(hidden)?.serializeAs, null)
+      assert.notProperty(schemas.ContentReport.properties!, hidden)
+    }
+
+    // The public listing shows a name; it must not become a route to the email.
+    assert.sameMembers(Object.keys(schemas.ReviewAuthor.properties!), [
+      'id',
+      'full_name',
+      'username',
+    ])
+    assert.equal(
+      schemas.EstablishmentReview.properties?.author.$ref,
+      '#/components/schemas/ReviewAuthor'
+    )
+
+    // Every documented query parameter has to be one the validator accepts, or
+    // the document promises a filter that is silently dropped.
+    const listing = operationAt(
+      specification,
+      '/api/v1/catalog/establishments/{establishmentId}/reviews',
+      'get'
+    )
+    assert.sameMembers(
+      (listing?.parameters ?? [])
+        .map((parameter) => ('name' in parameter ? parameter.name : undefined))
+        .filter((name): name is string => name !== undefined),
+      ['establishmentId', 'rating']
+    )
+  })
+
   test('should serve the Redoc documentation page', async ({ client, assert }) => {
     const response = await client.get('/docs')
 

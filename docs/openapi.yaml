@@ -3496,6 +3496,7 @@ components:
         - categories
         - cover
         - is_sponsored
+        - reviews
         - published_at
         - updated_at
       properties:
@@ -3529,12 +3530,35 @@ components:
           additionalProperties: true
         is_sponsored:
           type: boolean
+        reviews:
+          $ref: '#/components/schemas/CatalogReviewSummary'
         published_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    CatalogReviewSummary:
+      description: >-
+        Public rating of the place, read from the catalogue projection rather
+        than from a live count (ADR-0027). The average is null while nothing has
+        been published; zero would read as the worst possible score.
+      type: object
+      additionalProperties: false
+      required:
+        - count
+        - average
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        average:
+          type:
+            - number
+            - 'null'
+          minimum: 1
+          maximum: 5
 
     CatalogSearchResult:
       type: object
@@ -3559,6 +3583,7 @@ components:
     CatalogEstablishmentDetailProjection:
       type: object
       required:
+        - id
         - slug
         - name
         - short_description
@@ -3575,9 +3600,13 @@ components:
         - media
         - cover
         - is_sponsored
+        - reviews
         - published_at
         - updated_at
       properties:
+        id:
+          description: Stable establishment identity, required to post a review about it.
+          type: integer
         slug:
           type: string
         name:
@@ -3626,6 +3655,8 @@ components:
           additionalProperties: true
         is_sponsored:
           type: boolean
+        reviews:
+          $ref: '#/components/schemas/CatalogReviewSummary'
         published_at:
           type: string
           format: date-time
@@ -4842,23 +4873,24 @@ components:
       required:
         - id
         - tenant_id
+        - require_visit_proof
         - min_text_length
         - max_text_length
         - max_photos
         - max_videos
-        - require_visit_proof
         - daily_limit_per_user
         - min_edit_interval_minutes
         - edit_window_days
-        - auto_publish
-        - require_moderation_for_negative
-        - negative_score_threshold
+        - report_moderation_days
+        - created_at
         - updated_at
       properties:
         id:
           type: integer
         tenant_id:
           type: integer
+        require_visit_proof:
+          type: boolean
         min_text_length:
           type: integer
         max_text_length:
@@ -4867,52 +4899,77 @@ components:
           type: integer
         max_videos:
           type: integer
-        require_visit_proof:
-          type: boolean
         daily_limit_per_user:
           type: integer
         min_edit_interval_minutes:
           type: integer
         edit_window_days:
           type: integer
-        auto_publish:
-          type: boolean
-        require_moderation_for_negative:
-          type: boolean
-        negative_score_threshold:
+        report_moderation_days:
+          description: Deadline, in days, for a report to be answered by moderation.
           type: integer
+        created_at:
+          type: string
+          format: date-time
         updated_at:
           type:
             - string
             - 'null'
           format: date-time
 
+    ReviewAuthor:
+      description: >-
+        Identity shown next to a published review. Only these fields leave the
+        operation: the email and every other user attribute stay behind.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - full_name
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        username:
+          type:
+            - string
+            - 'null'
+
     EstablishmentReviewReply:
       type: object
       additionalProperties: false
       required:
         - id
+        - tenant_id
         - review_id
-        - user_id
         - organization_id
-        - body
+        - user_id
+        - comment
         - status
         - created_at
         - updated_at
       properties:
         id:
           type: integer
-        review_id:
+        tenant_id:
           type: integer
-        user_id:
+        review_id:
           type: integer
         organization_id:
           type: integer
-        body:
+        user_id:
+          type: integer
+        comment:
           type: string
         status:
           type: string
           enum: [published, hidden]
+        edited_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -4932,8 +4989,8 @@ components:
         - user_id
         - rating
         - status
-        - visit_verified
-        - edit_count
+        - photos_count
+        - videos_count
         - created_at
         - updated_at
       properties:
@@ -4942,10 +4999,15 @@ components:
         tenant_id:
           type: integer
         establishment_id:
+          description: Stable establishment identity, not a published revision.
           type: integer
         user_id:
           type: integer
         redemption_id:
+          description: >-
+            Redemption that proves the visit, when the tenant policy requires or
+            the author supplies one. Null keeps the review; losing the proof does
+            not erase what was written.
           type:
             - integer
             - 'null'
@@ -4953,30 +5015,23 @@ components:
           type: integer
           minimum: 1
           maximum: 5
-        title:
-          type:
-            - string
-            - 'null'
         comment:
           type:
             - string
             - 'null'
-        photos:
-          type: array
-          items:
-            type: string
-        videos:
-          type: array
-          items:
-            type: string
         status:
           type: string
           enum: [published, hidden, pending_moderation]
-        visit_verified:
-          type: boolean
-        edit_count:
+        photos_count:
+          description: >-
+            Number of photos attached. The media pipeline of ADR-0014 owns the
+            files; the review carries the count, never the URLs.
           type: integer
-        last_edited_at:
+          minimum: 0
+        videos_count:
+          type: integer
+          minimum: 0
+        edited_at:
           type:
             - string
             - 'null'
@@ -4989,6 +5044,11 @@ components:
             - string
             - 'null'
           format: date-time
+        author:
+          description: >-
+            Present on the public routes. Absent from the author's own listing,
+            where the author is the person asking.
+          $ref: '#/components/schemas/ReviewAuthor'
         reply:
           $ref: '#/components/schemas/EstablishmentReviewReply'
 
@@ -4998,11 +5058,12 @@ components:
       required:
         - id
         - tenant_id
-        - reporter_id
         - target_type
         - target_id
         - reason
         - status
+        - protocol_number
+        - is_anonymous
         - created_at
         - updated_at
       properties:
@@ -5010,13 +5071,16 @@ components:
           type: integer
         tenant_id:
           type: integer
-        reporter_id:
-          type: integer
         target_type:
           type: string
           enum: [review, review_reply]
         target_id:
           type: integer
+        reporter_id:
+          description: Null when the report is anonymous.
+          type:
+            - integer
+            - 'null'
         reason:
           type: string
           enum: [inappropriate, spam, fake, offensive, privacy_violation, other]
@@ -5027,19 +5091,43 @@ components:
         status:
           type: string
           enum: [pending, in_review, resolved, dismissed]
-        moderator_id:
+        protocol_number:
+          description: Unique per operation; what the reporter quotes to follow up.
+          type: string
+        is_anonymous:
+          type: boolean
+        assigned_to:
           type:
             - integer
             - 'null'
-        resolution_notes:
+        due_at:
+          description: Moderation deadline, derived from the tenant policy.
           type:
             - string
+            - 'null'
+          format: date-time
+        sla_notified_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        resolved_by:
+          type:
+            - integer
             - 'null'
         resolved_at:
           type:
             - string
             - 'null'
           format: date-time
+        resolution_action:
+          type:
+            - string
+            - 'null'
+        resolution_notes:
+          type:
+            - string
+            - 'null'
         created_at:
           type: string
           format: date-time
@@ -5051,6 +5139,7 @@ components:
 
     CreateReviewRequest:
       type: object
+      additionalProperties: false
       required:
         - establishment_id
         - rating
@@ -5058,56 +5147,53 @@ components:
         establishment_id:
           type: integer
           minimum: 1
-        redemption_id:
-          type: integer
-          minimum: 1
         rating:
           type: integer
           minimum: 1
           maximum: 5
-        title:
-          type: string
         comment:
-          type: string
-        photos:
-          type: array
-          items:
-            type: string
-        videos:
-          type: array
-          items:
-            type: string
+          type:
+            - string
+            - 'null'
+        redemption_id:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+        photos_count:
+          type: integer
+          minimum: 0
 
     UpdateReviewRequest:
       type: object
+      additionalProperties: false
       properties:
         rating:
           type: integer
           minimum: 1
           maximum: 5
-        title:
-          type: string
         comment:
-          type: string
-        photos:
-          type: array
-          items:
-            type: string
-        videos:
-          type: array
-          items:
-            type: string
+          type:
+            - string
+            - 'null'
+        photos_count:
+          type: integer
+          minimum: 0
 
     CreateReplyRequest:
       type: object
+      additionalProperties: false
       required:
-        - body
+        - comment
       properties:
-        body:
+        comment:
           type: string
+          minLength: 1
+          maxLength: 4000
 
     CreateReportRequest:
       type: object
+      additionalProperties: false
       required:
         - target_type
         - target_id
@@ -5123,55 +5209,61 @@ components:
           type: string
           enum: [inappropriate, spam, fake, offensive, privacy_violation, other]
         details:
-          type: string
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 4000
 
     ResolveReportRequest:
       type: object
+      additionalProperties: false
       required:
         - status
       properties:
         status:
           type: string
           enum: [resolved, dismissed]
+        resolution_action:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 40
         resolution_notes:
-          type: string
-        hide_content:
-          type: boolean
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 4000
 
     UpdateReviewPolicyRequest:
       type: object
+      additionalProperties: false
       properties:
+        require_visit_proof:
+          type: boolean
         min_text_length:
           type: integer
           minimum: 0
         max_text_length:
           type: integer
-          minimum: 1
+          minimum: 0
         max_photos:
           type: integer
           minimum: 0
         max_videos:
           type: integer
           minimum: 0
-        require_visit_proof:
-          type: boolean
         daily_limit_per_user:
           type: integer
-          minimum: 1
+          minimum: 0
         min_edit_interval_minutes:
           type: integer
           minimum: 0
         edit_window_days:
           type: integer
-          minimum: 1
-        auto_publish:
-          type: boolean
-        require_moderation_for_negative:
-          type: boolean
-        negative_score_threshold:
-          type: integer
-          minimum: 1
-          maximum: 5
+          minimum: 0
 
     PaginatedReviewsResponse:
       type: object
@@ -12185,7 +12277,10 @@ paths:
     get:
       operationId: getCatalogEstablishmentReviews
       summary: List published reviews for an establishment
-      description: Public regional discovery. Returns published reviews and their partner reply if present.
+      description: >-
+        Public regional discovery. Returns published reviews, newest first, with
+        the author identity of ReviewAuthor and the partner reply when there is
+        one. Ordering is fixed; only the rating filter narrows the list.
       tags: [Reviews, Catalog]
       security: []
       parameters:
@@ -12203,16 +12298,6 @@ paths:
             type: integer
             minimum: 1
             maximum: 5
-        - in: query
-          name: verified_only
-          schema:
-            type: boolean
-        - in: query
-          name: order_by
-          schema:
-            type: string
-            enum: [recent, highest_rating, lowest_rating]
-            default: recent
       responses:
         '200':
           description: Paginated published reviews

@@ -233,11 +233,23 @@ export namespace ICatalog {
     is_discoverable: boolean
     is_sponsored: boolean
     sponsored_priority: number | null
+    reviews_count: number
+    reviews_average: string | number | null
     published_at: string
     public_updated_at: string
     is_open_now: boolean
     relevance_score: number
     total_count: number
+  }
+
+  /**
+   * Public rating, read from the projection and never from a live query
+   * (ADR-0027 §7). `average` is null while nothing has been published: zero
+   * would read as the worst possible score.
+   */
+  export interface ReviewSummary {
+    count: number
+    average: number | null
   }
 
   export interface SearchItemProjection {
@@ -260,6 +272,7 @@ export namespace ICatalog {
     categories: CategoryItem[]
     cover: MediaItem
     is_sponsored: boolean
+    reviews: ReviewSummary
     published_at: string
     updated_at: string
   }
@@ -292,6 +305,12 @@ export namespace ICatalog {
   }
 
   export interface DetailProjection {
+    /**
+     * Stable establishment identity. The catalogue is addressed by slug, but a
+     * review is written against the place itself and carries this id already in
+     * its own public payload — the app cannot post one without it.
+     */
+    id: number
     slug: string
     name: string
     short_description: string | null
@@ -323,6 +342,7 @@ export namespace ICatalog {
     media: MediaItem[]
     cover: MediaItem
     is_sponsored: boolean
+    reviews: ReviewSummary
     published_at: string
     updated_at: string
   }

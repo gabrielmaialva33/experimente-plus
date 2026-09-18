@@ -274,6 +274,7 @@ export default class CatalogService {
       }
 
       return {
+        id: row.establishment_id,
         slug: row.establishment_slug,
         name: row.public_name,
         short_description: row.short_description,
@@ -296,6 +297,7 @@ export default class CatalogService {
         business_status: row.business_status,
         availability_type: row.availability_type,
         is_open_now: row.is_open_now,
+        reviews: this.reviewSummary(row),
         categories: row.categories,
         attributes: row.public_attributes,
         opening_hours: {
@@ -390,8 +392,22 @@ export default class CatalogService {
       categories: row.categories,
       cover: row.cover_media,
       is_sponsored: row.is_sponsored,
+      reviews: this.reviewSummary(row),
       published_at: row.published_at,
       updated_at: row.public_updated_at,
+    }
+  }
+
+  /**
+   * The average arrives from PostgreSQL as a string, because `numeric` returned
+   * as a float would already have lost the rounding the column was given. It is
+   * parsed here, once, at the edge of the payload.
+   */
+  private reviewSummary(row: ICatalog.CatalogRow): ICatalog.ReviewSummary {
+    const average = row.reviews_average
+    return {
+      count: Number(row.reviews_count ?? 0),
+      average: average === null || average === undefined ? null : Number(average),
     }
   }
 

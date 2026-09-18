@@ -1,4 +1,5 @@
 import testUtils from '@adonisjs/core/services/test_utils'
+import db from '@adonisjs/lucid/services/db'
 import { test } from '@japa/runner'
 
 import BenefitAccess from '#modules/benefits/models/benefit_access'
@@ -564,6 +565,74 @@ test.group('Reviews - Functional Tests', (group) => {
       .headers(publicHeaders(scenario))
     getRes.assertStatus(200)
     getRes.assertBodyContains({ id: rev1.id, status: 'published' })
+  })
+
+  test('catalog projection carries the average and count, and a rebuild reproduces them', async ({
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('rev-agg')
+    const establishment = await createPublishedEstablishment(scenario, 'Bar da Media')
+    const authors = await Promise.all([
+      createUser({ prefix: 'a1', tenant: scenario.tenant }),
+      createUser({ prefix: 'a2', tenant: scenario.tenant }),
+      createUser({ prefix: 'a3', tenant: scenario.tenant }),
+    ])
+
+    const aggregate = async () => {
+      const row = await db
+        .from('catalog_establishments')
+        .where('tenant_id', scenario.tenant.id)
+        .where('establishment_id', establishment.id)
+        .select('reviews_count', 'reviews_average')
+        .first()
+      return {
+        count: Number(row.reviews_count),
+        average: row.reviews_average === null ? null : Number(row.reviews_average),
+      }
+    }
+
+    // Nothing published yet: an average of zero would read as the worst
+    // possible score, so the absence of one has to be its own value.
+    assert.deepEqual(await aggregate(), { count: 0, average: null })
+
+    const reviews = []
+    for (const [index, rating] of [5, 4, 2].entries()) {
+      reviews.push(
+        await EstablishmentReview.create({
+          tenant_id: scenario.tenant.id,
+          establishment_id: establishment.id,
+          user_id: authors[index].id,
+          rating,
+          comment: `Avaliacao ${rating}`,
+          status: 'published',
+          photos_count: 0,
+          videos_count: 0,
+        })
+      )
+    }
+
+    assert.deepEqual(await aggregate(), { count: 3, average: 3.7 })
+
+    // Moderation hiding a review corrects the average retroactively; an
+    // incremental counter could not do this without drifting.
+    reviews[2].status = 'hidden'
+    await reviews[2].save()
+    assert.deepEqual(await aggregate(), { count: 2, average: 4.5 })
+
+    await reviews[0].delete()
+    assert.deepEqual(await aggregate(), { count: 1, average: 4 })
+
+    // ADR-0027, scenario 8: a projection rebuilt from nothing reproduces
+    // exactly the current average and count.
+    await db.rawQuery('SELECT catalog_delete_establishment(?, ?)', [
+      scenario.tenant.id,
+      establishment.id,
+    ])
+    await db.rawQuery('SELECT catalog_refresh_establishment(?, ?)', [
+      scenario.tenant.id,
+      establishment.id,
+    ])
+    assert.deepEqual(await aggregate(), { count: 1, average: 4 })
   })
 
   test('content reporting by user and resolution by moderator with content hiding', async ({
