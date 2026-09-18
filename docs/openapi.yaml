@@ -4867,6 +4867,355 @@ components:
               id:
                 type: integer
 
+    PartnerContentStatus:
+      description: >-
+        The lifecycle every kind of partner content shares (ADR-0028). It is
+        independent of the unit's publication workflow: a new approved revision
+        of the establishment neither republishes nor invalidates this content.
+      type: string
+      enum: [draft, pending_review, published, archived]
+
+    PartnerContentSnapshot:
+      description: >-
+        The version the public reads. It is a copy taken at approval, not a
+        reference to the live columns, so editing a published item never changes
+        what is on air before the change is approved.
+      type: object
+      additionalProperties: true
+
+    EstablishmentExperience:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - establishment_id
+        - created_by
+        - title
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        establishment_id:
+          description: Stable establishment identity, never a revision.
+          type: integer
+        created_by:
+          type: integer
+        title:
+          type: string
+          maxLength: 180
+        description:
+          type:
+            - string
+            - 'null'
+        status:
+          $ref: '#/components/schemas/PartnerContentStatus'
+        published_snapshot:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerContentSnapshot'
+            - type: 'null'
+        published_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        archived_by:
+          type:
+            - integer
+            - 'null'
+        archived_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EstablishmentEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - establishment_id
+        - created_by
+        - title
+        - status
+        - starts_at
+        - ends_at
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        establishment_id:
+          type: integer
+        created_by:
+          type: integer
+        title:
+          type: string
+          maxLength: 180
+        description:
+          type:
+            - string
+            - 'null'
+        status:
+          $ref: '#/components/schemas/PartnerContentStatus'
+        starts_at:
+          description: >-
+            Resolved in the city's timezone when it is written, never in the
+            server's or the device's.
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        published_snapshot:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerContentSnapshot'
+            - type: 'null'
+        published_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        archived_by:
+          type:
+            - integer
+            - 'null'
+        archived_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EstablishmentShowcaseItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - establishment_id
+        - created_by
+        - title
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        establishment_id:
+          type: integer
+        created_by:
+          type: integer
+        title:
+          type: string
+          maxLength: 180
+        description:
+          type:
+            - string
+            - 'null'
+        status:
+          $ref: '#/components/schemas/PartnerContentStatus'
+        informational_price_cents:
+          description: >-
+            Displayed, never charged. No purchase route accepts a showcase item
+            as a product, and the platform takes on no commercial obligation for
+            it (ADR-0028).
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+        published_snapshot:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerContentSnapshot'
+            - type: 'null'
+        published_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        archived_by:
+          type:
+            - integer
+            - 'null'
+        archived_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PartnerContent:
+      oneOf:
+        - $ref: '#/components/schemas/EstablishmentExperience'
+        - $ref: '#/components/schemas/EstablishmentEvent'
+        - $ref: '#/components/schemas/EstablishmentShowcaseItem'
+
+    PartnerContentPolicy:
+      description: >-
+        Per-operation configuration. The scope says an event's publication *may*
+        depend on approval, so the requirement is a setting rather than a fixed
+        workflow, and the defaults exist to make the feature buildable before
+        the client decides.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - require_experience_approval
+        - require_event_approval
+        - require_showcase_item_approval
+        - max_media_per_content
+        - min_event_notice_minutes
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        require_experience_approval:
+          type: boolean
+        require_event_approval:
+          type: boolean
+        require_showcase_item_approval:
+          type: boolean
+        max_media_per_content:
+          type: integer
+          minimum: 0
+        min_event_notice_minutes:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreatePartnerContentRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - establishment_id
+        - title
+      properties:
+        establishment_id:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 180
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 4000
+        starts_at:
+          description: Events only.
+          type: string
+          format: date-time
+        ends_at:
+          description: Events only. Must be after `starts_at`.
+          type: string
+          format: date-time
+        informational_price_cents:
+          description: Showcase items only. Displayed, never charged.
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+
+    UpdatePartnerContentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 180
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 4000
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        informational_price_cents:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+
+    UpdatePartnerContentPolicyRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        require_experience_approval:
+          type: boolean
+        require_event_approval:
+          type: boolean
+        require_showcase_item_approval:
+          type: boolean
+        max_media_per_content:
+          type: integer
+          minimum: 0
+        min_event_notice_minutes:
+          type: integer
+          minimum: 0
+
+    PartnerContentListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerContent'
+
+    PaginatedPartnerContentResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerContent'
+        meta:
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+
     ReviewPolicy:
       type: object
       additionalProperties: false
@@ -12272,6 +12621,400 @@ paths:
                       type: string
                     event_id:
                       type: string
+
+  /api/v1/catalog/establishments/{establishmentId}/{kind}:
+    get:
+      operationId: getCatalogEstablishmentPartnerContent
+      summary: List an establishment's published experiences, events or showcase items
+      description: >-
+        Public regional discovery. Returns the approved version of each item —
+        the snapshot, not the live columns — so an edit awaiting approval never
+        changes what the public sees. Events are filtered by their own window
+        and ordered by start, so one that has ended leaves discovery without
+        anyone archiving it.
+      tags: [Partner content, Catalog]
+      security: []
+      parameters:
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+      responses:
+        '200':
+          description: Published partner content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentListResponse'
+        '404':
+          description: Operation could not be resolved from the hostname
+
+  /api/v1/portal/content/{kind}:
+    get:
+      operationId: listPartnerContent
+      summary: List the content of every establishment the actor manages
+      tags: [Partner content]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/perPageParam'
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/PartnerContentStatus'
+        - in: query
+          name: establishment_id
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Paginated content, whatever its status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPartnerContentResponse'
+        '401':
+          description: Authentication required
+        '403':
+          description: No active organization membership
+    post:
+      operationId: createPartnerContent
+      summary: Create a draft
+      description: Content is created as a draft; publishing is a separate act.
+      tags: [Partner content]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePartnerContentRequest'
+      responses:
+        '201':
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '400':
+          description: An event was submitted without a window
+        '401':
+          description: Authentication required
+        '404':
+          description: Establishment not found, or not one the actor manages
+        '422':
+          description: Validation failed
+
+  /api/v1/portal/content/{kind}/{id}:
+    put:
+      operationId: updatePartnerContent
+      summary: Edit content in place
+      description: >-
+        If the operation requires approval and the item is published, the change
+        moves it to `pending_review` **without** taking the approved version off
+        the air.
+      tags: [Partner content]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartnerContentRequest'
+      responses:
+        '200':
+          description: Content updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '400':
+          description: Archived content, or an invalid event window
+        '401':
+          description: Authentication required
+        '404':
+          description: Content not found, or not one the actor manages
+
+  /api/v1/portal/content/{kind}/{id}/submit:
+    post:
+      operationId: submitPartnerContent
+      summary: Ask for the content to become public
+      description: >-
+        Publishes directly when the operation does not require approval for this
+        kind, and otherwise joins the moderation queue.
+      tags: [Partner content]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Published, or awaiting approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '400':
+          description: Already awaiting approval, archived, or below the minimum notice
+        '401':
+          description: Authentication required
+        '404':
+          description: Content not found, or not one the actor manages
+
+  /api/v1/portal/content/{kind}/{id}/archive:
+    post:
+      operationId: archivePartnerContent
+      summary: Withdraw content from the public surfaces
+      description: >-
+        Archives. The row is preserved for history and audit, and the database
+        refuses a physical delete.
+      tags: [Partner content]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Content archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '401':
+          description: Authentication required
+        '404':
+          description: Content not found, or not one the actor manages
+
+  /api/v1/admin/content/{kind}:
+    get:
+      operationId: listPartnerContentForModeration
+      summary: The moderation queue for one operation
+      description: Oldest first, so the queue is worked in the order it formed.
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/perPageParam'
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/PartnerContentStatus'
+        - in: query
+          name: establishment_id
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Paginated content across the operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPartnerContentResponse'
+        '401':
+          description: Authentication required
+        '403':
+          description: Moderator privileges required
+
+  /api/v1/admin/content/{kind}/{id}/approve:
+    post:
+      operationId: approvePartnerContent
+      summary: Approve the version awaiting review
+      description: >-
+        Takes the snapshot the public will read. An administrator reaches this
+        by inheriting the moderator role, so the queue stays a single one.
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Content published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '400':
+          description: The content is not awaiting approval
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content not found
+
+  /api/v1/admin/content/{kind}/{id}/reject:
+    post:
+      operationId: rejectPartnerContent
+      summary: Refuse the version awaiting review
+      description: >-
+        Returns the item to a draft, or to its previously approved version when
+        there is one: refusing an edit is not a reason to take down what was
+        already accepted.
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Version refused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '400':
+          description: The content is not awaiting approval
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content not found
+
+  /api/v1/admin/content/{kind}/{id}/archive:
+    post:
+      operationId: archivePartnerContentAsModerator
+      summary: Withdraw content as an administrator
+      description: >-
+        What the scope calls "excluir". It archives: destroying the trail is the
+        one thing that cannot be undone when a removal turns out to be wrong.
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Content archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content not found
+
+  /api/v1/admin/partner-content-policy:
+    get:
+      operationId: getPartnerContentPolicy
+      summary: Read the operation's partner content policy
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Current policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentPolicy'
+        '403':
+          description: Administrator privileges required
+    put:
+      operationId: updatePartnerContentPolicy
+      summary: Change the operation's partner content policy
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartnerContentPolicyRequest'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentPolicy'
+        '403':
+          description: Administrator privileges required
+        '422':
+          description: Validation failed
 
   /api/v1/catalog/establishments/{establishmentId}/reviews:
     get:

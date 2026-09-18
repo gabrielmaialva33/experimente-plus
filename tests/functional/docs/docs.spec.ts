@@ -5,6 +5,10 @@ import router from '@adonisjs/core/services/router'
 import { test } from '@japa/runner'
 import { parse } from 'yaml'
 
+import EstablishmentEvent from '#modules/partner_content/models/establishment_event'
+import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
+import EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
+import PartnerContentPolicy from '#modules/partner_content/models/partner_content_policy'
 import ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
@@ -387,6 +391,50 @@ test.group('Documentation', () => {
         .filter((name): name is string => name !== undefined),
       ['establishmentId', 'rating']
     )
+  })
+
+  test('partner content documents the columns its tables actually have', async ({ assert }) => {
+    // Same guard as the reviews contract, for the same reason: the mobile and
+    // web clients generate their types from this file, so a column the document
+    // invents is a field that is always undefined on the other side.
+    const specification = await readOpenApi()
+    const schemas = specification.components!.schemas!
+
+    const serialisable = (model: {
+      $columnsDefinitions: Map<string, { serializeAs: string | null }>
+    }) =>
+      [...model.$columnsDefinitions.values()]
+        .filter((definition) => definition.serializeAs !== null)
+        .map((definition) => definition.serializeAs!)
+
+    const pairs = [
+      ['EstablishmentExperience', EstablishmentExperience],
+      ['EstablishmentEvent', EstablishmentEvent],
+      ['EstablishmentShowcaseItem', EstablishmentShowcaseItem],
+      ['PartnerContentPolicy', PartnerContentPolicy],
+    ] as const
+
+    for (const [name, model] of pairs) {
+      assert.sameMembers(Object.keys(schemas[name].properties!), serialisable(model))
+    }
+
+    // The lifecycle is one enum shared by the three kinds, and it has to agree
+    // with the check constraint the tables carry.
+    assert.deepEqual(schemas.PartnerContentStatus.enum, [
+      'draft',
+      'pending_review',
+      'published',
+      'archived',
+    ])
+
+    // A showcase item shows a price and there is no route that charges it.
+    const purchasePaths = Object.keys(specification.paths ?? {}).filter((path) =>
+      /purchase|checkout/i.test(path)
+    )
+    for (const path of purchasePaths) {
+      const body = JSON.stringify(specification.paths![path])
+      assert.notInclude(body, 'ShowcaseItem')
+    }
   })
 
   test('should serve the Redoc documentation page', async ({ client, assert }) => {
