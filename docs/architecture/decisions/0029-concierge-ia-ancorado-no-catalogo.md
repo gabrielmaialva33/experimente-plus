@@ -24,14 +24,14 @@ Hoje não existe nada de IA no backend: nem variável de ambiente, nem módulo.
 
 Em 15/09/2026, contra a API real do provedor escolhido, com um prompt de concierge contendo três estabelecimentos e a pergunta “quero um roteiro de tarde em Londrina”:
 
-| Observação                                                                                  | Consequência de desenho                                                                 |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `nemotron-3.5-lightning` citou **“Centro Histórico”**, lugar ausente da lista fornecida             | Prompt bem escrito **não** basta. A invenção acontece e precisa ser barrada fora do modelo. |
-| Três amostras: `deepseek-v4-flash` citou 3/3 sempre; `nemotron-lightning`, 2/3, 3/3 e 2/3                       | Modelos diferem em aderência ao dado, mas nenhum garante.                                 |
-| Latências entre **2s e 14,5s**, com variação grande no mesmo modelo                         | Chamada síncrona longa num app móvel exige limite de tempo e resposta degradada.          |
-| Uma chamada retornou **HTTP 529**, sobrecarga do provedor                                   | Indisponibilidade não é hipótese; é comportamento observado.                              |
-| Um modelo devolveu o próprio raciocínio dentro do conteúdo: *“Here's a thinking process…”*  | Sem tratamento explícito, o raciocínio do modelo vira texto para o consumidor.            |
-| `google/gemma-3-12b-it` e `moonshotai/kimi-k2.6`, listados no catálogo, responderam **404**                     | Estar listado não significa servível; a configuração precisa ser verificada, não suposta.  |
+| Observação                                                                                  | Consequência de desenho                                                                     |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `nemotron-3.5-lightning` citou **“Centro Histórico”**, lugar ausente da lista fornecida     | Prompt bem escrito **não** basta. A invenção acontece e precisa ser barrada fora do modelo. |
+| Três amostras: `deepseek-v4-flash` citou 3/3 sempre; `nemotron-lightning`, 2/3, 3/3 e 2/3   | Modelos diferem em aderência ao dado, mas nenhum garante.                                   |
+| Latências entre **2s e 14,5s**, com variação grande no mesmo modelo                         | Chamada síncrona longa num app móvel exige limite de tempo e resposta degradada.            |
+| Uma chamada retornou **HTTP 529**, sobrecarga do provedor                                   | Indisponibilidade não é hipótese; é comportamento observado.                                |
+| Um modelo devolveu o próprio raciocínio dentro do conteúdo: _“Here's a thinking process…”_  | Sem tratamento explícito, o raciocínio do modelo vira texto para o consumidor.              |
+| `google/gemma-3-12b-it` e `moonshotai/kimi-k2.6`, listados no catálogo, responderam **404** | Estar listado não significa servível; a configuração precisa ser verificada, não suposta.   |
 
 ## Decisão proposta
 
@@ -85,22 +85,41 @@ O escopo condiciona a personalização aos interesses do Explorador **quando apl
 
 ## Parâmetros por tenant, com defaults
 
-| Parâmetro                         | Default proposto |
-| --------------------------------- | ---------------- |
-| provedor                          | NVIDIA (`integrate.api.nvidia.com`) |
-| modelo primário                   | `deepseek-ai/deepseek-v4-flash-0731` |
-| modelo de reserva                 | `nvidia/nemotron-3.5-lightning-30b-a3b` |
-| limite de tempo por resposta      | 12 segundos      |
-| máximo de itens de catálogo no prompt | 20           |
-| máximo de tokens de saída         | 400              |
-| perguntas por usuário por dia     | 20               |
-| guarda de tópico dedicado         | desligado        |
+| Parâmetro                             | Default proposto                    |
+| ------------------------------------- | ----------------------------------- |
+| provedor                              | NVIDIA (`integrate.api.nvidia.com`) |
+| modelo primário                       | `nvidia/nemotron-3-super-120b-a12b` |
+| modelo de reserva                     | `mistralai/mistral-nemotron`        |
+| limite de tempo por resposta          | 10 segundos                         |
+| máximo de itens de catálogo no prompt | 20                                  |
+| máximo de tokens de saída             | 400                                 |
+| perguntas por usuário por dia         | 20                                  |
+| guarda de tópico dedicado             | desligado                           |
 
 Os defaults **não são decisão do contratante**. Ele ainda deve definir limites de consumo, e o custo do serviço de IA é responsabilidade dele.
 
+### Revisão de 18/09/2026 — os modelos da proposta original duraram três dias
+
+A tabela acima nasceu, em 15/09, com `deepseek-ai/deepseek-v4-flash-0731` como primário, medido então em 3/3 de aderência ao catálogo. Em 18/09, ao configurar a homologação, esse modelo **não respondeu a nenhuma das cinco tentativas**, de dois pontos de rede diferentes, incluindo o prompt trivial "diga ok":
+
+| Modelo                                   | Latência, 3 amostras | Aderência ao catálogo |
+| ---------------------------------------- | -------------------- | --------------------- |
+| `deepseek-ai/deepseek-v4-flash-0731`     | >45s, >45s, >45s     | não avaliável         |
+| `nvidia/nemotron-3-super-120b-a12b`      | 1,9s · 3,3s · 3,8s   | 3/3                   |
+| `mistralai/mistral-nemotron`             | 3,7s · 4,3s · 4,3s   | 3/3                   |
+| `nvidia/nemotron-3.5-lightning-30b-a3b`  | 4,1s · 8,7s · 9,7s   | 3/3                   |
+| `nvidia/nemotron-nano-3-30b-a3b`         | 404                  | não servível          |
+| `nvidia/llama-3.1-nemotron-70b-instruct` | 404                  | não servível          |
+
+A aderência foi medida com três lugares, um deles em outra cidade: acerta quem responde a pergunta sobre Londrina sem citar o de Maringá.
+
+Duas observações valem registro. A primeira é que o `nemotron-3.5-lightning` levou **12,2 segundos** para responder "diga ok" com o raciocínio ligado e **0,6 segundo** com `enable_thinking: false` — vinte vezes mais rápido pelo mesmo resultado visível, o que confirma a decisão 4 por um motivo que não era o esperado quando ela foi escrita.
+
+A segunda é o próprio fato de a tabela ter envelhecido em três dias. É exatamente o que a decisão 5 previu ao manter provedor e modelos em configuração: a troca foi feita por variável de ambiente, sem release, sem migration e sem tocar em uma linha de código do módulo. O caminho degradado sustentou a rota enquanto os modelos não respondiam — a homologação devolveu a lista do catálogo, com `outcome: degraded`, nunca um erro cru.
+
 ## Consequências
 
-Cria dependência de terceiro no caminho de uma tela de consumidor, com latência medida entre 2 e 14,5 segundos. A interface precisa tratar espera e degradação como estados normais, no mesmo padrão dos estados obrigatórios já definidos para o cliente móvel.
+Cria dependência de terceiro no caminho de uma tela de consumidor, com latência medida entre 1,9 e 14,5 segundos, e com modelos que deixam de responder sem aviso. A interface precisa tratar espera e degradação como estados normais, no mesmo padrão dos estados obrigatórios já definidos para o cliente móvel.
 
 A qualidade do Concierge passa a depender da qualidade do catálogo: com poucos estabelecimentos publicados, a resposta é pobre por falta de dado, não por falha do modelo. Na homologação atual, com uma cidade e três estabelecimentos, isso será visível.
 
