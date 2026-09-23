@@ -13,8 +13,10 @@ test.group('Canonical homologation baseline', () => {
     // guard that a migration only joins the canonical baseline by decision.
     // 51 canonical + 4 from ADR-0027 + 1 for its revision + 4 from ADR-0028
     // + 1 for the review aggregates the projection owes ADR-0027 §7
-    // + 1 for the media partner content assigns to its own items.
-    assert.lengthOf(files, 62)
+    // + 1 for the media partner content assigns to its own items
+    // + 5 for the Explorer's own layer of ADR-0030 (favourites, follows,
+    // interests, itineraries and their stops).
+    assert.lengthOf(files, 67)
     assert.isFalse(files.some((name) => /1788556800|178881480[123]/.test(name)))
     const history = await db.from('adonis_schema').select('name')
     assert.lengthOf(history, files.length)

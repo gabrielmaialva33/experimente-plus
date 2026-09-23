@@ -5770,6 +5770,243 @@ components:
         meta:
           $ref: '#/components/schemas/AdministrativePaginationMeta'
 
+    ExplorerEstablishmentCard:
+      description: >-
+        How an establishment appears inside the Explorer's own lists. Built from
+        the discoverable projection, so a withdrawn unit produces no card. The
+        public link is `/cidades/{city_slug}/estabelecimentos/{slug}`; the numeric
+        `id` is an identity for the save endpoints, never an address.
+      type: object
+      additionalProperties: false
+      required: [id, slug, name, city_slug, city_name, cover_url, category]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        slug:
+          type: string
+        name:
+          type: string
+        city_slug:
+          type: string
+        city_name:
+          type: string
+        cover_url:
+          type: [string, 'null']
+        category:
+          type: [string, 'null']
+
+    ExplorerSavedEstablishment:
+      type: object
+      additionalProperties: false
+      required: [id, establishment, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        establishment:
+          $ref: '#/components/schemas/ExplorerEstablishmentCard'
+        created_at:
+          type: string
+          format: date-time
+
+    ExplorerSavedList:
+      description: >-
+        `unavailable` counts saved rows whose establishment is not discoverable
+        right now. They are kept, not returned as navigable items, so the app can
+        say so instead of the save appearing to vanish.
+      type: object
+      additionalProperties: false
+      required: [data, unavailable]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExplorerSavedEstablishment'
+        unavailable:
+          type: integer
+          minimum: 0
+
+    ExplorerSavedStatus:
+      type: object
+      additionalProperties: false
+      required: [favorited, following]
+      properties:
+        favorited:
+          type: boolean
+        following:
+          type: boolean
+
+    ExplorerInterest:
+      type: object
+      additionalProperties: false
+      required: [id, category, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        category:
+          type: object
+          additionalProperties: false
+          required: [id, slug, name, is_active]
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            slug:
+              type: string
+            name:
+              type: string
+            is_active:
+              description: >-
+                A category deactivated after the person chose it stays chosen. It
+                is only no longer offered.
+              type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    ExplorerInterestList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExplorerInterest'
+
+    ReplaceExplorerInterestsRequest:
+      description: The whole set. Choosing interests replaces it rather than toggling one at a time.
+      type: object
+      additionalProperties: false
+      required: [category_ids]
+      properties:
+        category_ids:
+          type: array
+          maxItems: 100
+          items:
+            type: integer
+            minimum: 1
+
+    ExplorerItineraryStop:
+      type: object
+      additionalProperties: false
+      required: [id, position, note, establishment]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        position:
+          type: integer
+          minimum: 0
+        note:
+          type: [string, 'null']
+        establishment:
+          description: >-
+            Null when the stop points at an establishment that left the
+            catalogue. The stop keeps its place: dropping it would rewrite a route
+            its author wrote.
+          oneOf:
+            - $ref: '#/components/schemas/ExplorerEstablishmentCard'
+            - type: 'null'
+
+    ExplorerItinerary:
+      type: object
+      additionalProperties: false
+      required: [id, name, notes, stops, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        notes:
+          type: [string, 'null']
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExplorerItineraryStop'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ExplorerItinerarySummary:
+      type: object
+      additionalProperties: false
+      required: [id, name, notes, stops_count, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        notes:
+          type: [string, 'null']
+        stops_count:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ExplorerItineraryList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExplorerItinerarySummary'
+
+    ExplorerItineraryRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        notes:
+          type: [string, 'null']
+          maxLength: 2000
+
+    ExplorerItineraryStopRequest:
+      type: object
+      additionalProperties: false
+      required: [establishment_id]
+      properties:
+        establishment_id:
+          type: integer
+          minimum: 1
+        note:
+          type: [string, 'null']
+          maxLength: 280
+
+    ReorderExplorerItineraryStopsRequest:
+      description: >-
+        The whole sequence, not a stop and a destination. It must contain
+        exactly the stops of the itinerary, each once.
+      type: object
+      additionalProperties: false
+      required: [stop_ids]
+      properties:
+        stop_ids:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: integer
+            minimum: 1
+
   parameters:
     TenantHeader:
       name: x-tenant-id
@@ -6382,6 +6619,13 @@ tags:
 
   - name: Content Moderation
     description: User content reporting and administrative resolution queue.
+
+  - name: Explorer
+    description: >-
+      The Explorer's own layer (ADR-0030, Anexo I item 10) — favourites,
+      follows, interests and itineraries. Every route belongs to the caller and
+      none is public: which establishments someone favourites or follows is a
+      private preference.
 
 paths:
   /api/v1/pilot-feedback:
@@ -13857,3 +14101,465 @@ paths:
           description: Admin or root role required
         '422':
           description: Validation failed
+
+  /api/v1/me/favorites:
+    get:
+      operationId: listMyFavorites
+      summary: List the establishments the caller favourited
+      description: A private bookmark. No route lists who favourited an establishment.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Discoverable favorites, most recent first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedList'
+        '401':
+          description: Authentication required
+
+  /api/v1/me/favorites/{establishmentId}:
+    put:
+      operationId: favoriteEstablishment
+      summary: Save the establishment as a favorite
+      description: >-
+        Idempotent. Saving twice is the same intent, so a retry after a lost
+        response neither creates a second row nor fails. An establishment that
+        is not discoverable answers 404, exactly like one that does not exist.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Current state of both relations for this establishment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedStatus'
+        '401':
+          description: Authentication required
+        '404':
+          description: Establishment not found or not discoverable
+    delete:
+      operationId: unfavoriteEstablishment
+      summary: Remove the favorite
+      description: >-
+        Does not revalidate the catalogue: a person must be able to drop a saved
+        place precisely when it stopped being available.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Current state of both relations for this establishment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedStatus'
+        '401':
+          description: Authentication required
+
+  /api/v1/me/follows:
+    get:
+      operationId: listMyFollows
+      summary: List the establishments the caller follows
+      description: Distinct from favourites. A follow subscribes to what the establishment publishes and is the relation a future notice would address.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Discoverable follows, most recent first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedList'
+        '401':
+          description: Authentication required
+
+  /api/v1/me/follows/{establishmentId}:
+    put:
+      operationId: followEstablishment
+      summary: Save the establishment as a follow
+      description: >-
+        Idempotent. Saving twice is the same intent, so a retry after a lost
+        response neither creates a second row nor fails. An establishment that
+        is not discoverable answers 404, exactly like one that does not exist.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Current state of both relations for this establishment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedStatus'
+        '401':
+          description: Authentication required
+        '404':
+          description: Establishment not found or not discoverable
+    delete:
+      operationId: unfollowEstablishment
+      summary: Remove the follow
+      description: >-
+        Does not revalidate the catalogue: a person must be able to drop a saved
+        place precisely when it stopped being available.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Current state of both relations for this establishment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedStatus'
+        '401':
+          description: Authentication required
+
+  /api/v1/me/saved/{establishmentId}:
+    get:
+      operationId: getMySavedStatus
+      summary: Whether the caller favourites and follows an establishment
+      description: What an establishment page needs to draw its own two buttons.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: establishmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Both relations for this caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedStatus'
+        '401':
+          description: Authentication required
+
+  /api/v1/me/interests:
+    get:
+      operationId: listMyInterests
+      summary: List the caller's discovery interests
+      description: >-
+        Interests are recorded and returned. They do not change the order of any
+        search in this milestone: personalised ranking is its own domain.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Chosen categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerInterestList'
+        '401':
+          description: Authentication required
+    put:
+      operationId: replaceMyInterests
+      summary: Replace the caller's discovery interests
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceExplorerInterestsRequest'
+      responses:
+        '200':
+          description: The resulting set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerInterestList'
+        '401':
+          description: Authentication required
+        '404':
+          description: A category is not part of this operation
+        '422':
+          description: Validation failed
+
+  /api/v1/me/itineraries:
+    get:
+      operationId: listMyItineraries
+      summary: List the caller's itineraries
+      description: Itineraries are private to their author. There is no public itinerary route.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Itineraries, most recently changed first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItineraryList'
+        '401':
+          description: Authentication required
+    post:
+      operationId: createMyItinerary
+      summary: Create an itinerary
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplorerItineraryRequest'
+      responses:
+        '201':
+          description: Itinerary created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerary'
+        '401':
+          description: Authentication required
+        '422':
+          description: Validation failed
+
+  /api/v1/me/itineraries/{id}:
+    get:
+      operationId: getMyItinerary
+      summary: Show an itinerary with its stops
+      description: >-
+        An itinerary of another person answers 404, never 403, so the reply does
+        not confirm that an identifier exists.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerary'
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary not found
+    put:
+      operationId: updateMyItinerary
+      summary: Rename an itinerary or change its notes
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplorerItineraryRequest'
+      responses:
+        '200':
+          description: The itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerary'
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary not found
+        '422':
+          description: Validation failed
+    delete:
+      operationId: deleteMyItinerary
+      summary: Delete an itinerary and its stops
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary not found
+
+  /api/v1/me/itineraries/{id}/stops:
+    post:
+      operationId: addMyItineraryStop
+      summary: Add a stop at the end of an itinerary
+      description: The same establishment may appear more than once.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplorerItineraryStopRequest'
+      responses:
+        '200':
+          description: The itinerary with the new stop
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerary'
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary or establishment not found
+        '422':
+          description: Validation failed
+
+  /api/v1/me/itineraries/{id}/stops/order:
+    put:
+      operationId: reorderMyItineraryStops
+      summary: Set the order of an itinerary's stops
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderExplorerItineraryStopsRequest'
+      responses:
+        '200':
+          description: The itinerary in its new order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerary'
+        '400':
+          description: The sequence does not contain exactly the itinerary's stops
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary not found
+
+  /api/v1/me/itineraries/{id}/stops/{stopId}:
+    delete:
+      operationId: removeMyItineraryStop
+      summary: Remove a stop from an itinerary
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: stopId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The itinerary without the stop
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerary'
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary or stop not found

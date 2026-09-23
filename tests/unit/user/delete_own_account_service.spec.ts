@@ -4,6 +4,7 @@ import type CredentialInvalidationService from '#modules/auth/services/credentia
 import type PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import type UsersRepository from '#modules/users/repositories/users_repository'
 import type ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
+import type ExplorerService from '#modules/explorer/services/explorer_service'
 import DeleteOwnAccountService from '#modules/users/services/delete_own_account_service'
 
 test.group('DeleteOwnAccountService', () => {
@@ -27,7 +28,8 @@ test.group('DeleteOwnAccountService', () => {
       usersRepository,
       credentialInvalidationService,
       activeRootGuardService,
-      permissionCacheService
+      permissionCacheService,
+      {} as ExplorerService
     )
 
     let failure: unknown

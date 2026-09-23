@@ -7,6 +7,7 @@ import { DateTime } from 'luxon'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import CredentialInvalidationService from '#modules/auth/services/credential_invalidation_service'
+import ExplorerService from '#modules/explorer/services/explorer_service'
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
 import UsersRepository from '#modules/users/repositories/users_repository'
@@ -22,7 +23,8 @@ export default class DeleteOwnAccountService {
     private usersRepository: UsersRepository,
     private credentialInvalidationService: CredentialInvalidationService,
     private activeRootGuardService: ActiveRootGuardService,
-    private permissionCacheService: PermissionCacheService
+    private permissionCacheService: PermissionCacheService,
+    private explorerService: ExplorerService
   ) {}
 
   async run(userId: number, payload: DeleteOwnAccountPayload): Promise<void> {
@@ -80,6 +82,11 @@ export default class DeleteOwnAccountService {
       await this.credentialInvalidationService.run(userId, client, now)
       await client.from('user_roles').where('user_id', userId).delete()
       await client.from('user_permissions').where('user_id', userId).delete()
+      // The user row stays as a tombstone because published content still points
+      // at it. Favourites, follows, interests and itineraries are preferences,
+      // not content, so they go entirely — ADR-0030. A schema cascade from
+      // `users` would never fire here, since nothing deletes that row.
+      await this.explorerService.purgeForUser(userId, client)
     })
 
     await this.permissionCacheService.bumpEpochAfterCommittedMutation()

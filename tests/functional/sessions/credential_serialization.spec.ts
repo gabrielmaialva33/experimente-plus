@@ -25,6 +25,11 @@ import RolesRepository from '#modules/roles/repositories/roles_repository'
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
+import ExplorerCatalogRepository from '#modules/explorer/repositories/explorer_catalog_repository'
+import ExplorerInterestRepository from '#modules/explorer/repositories/explorer_interest_repository'
+import ExplorerItineraryRepository from '#modules/explorer/repositories/explorer_itinerary_repository'
+import ExplorerSavedRepository from '#modules/explorer/repositories/explorer_saved_repository'
+import ExplorerService from '#modules/explorer/services/explorer_service'
 import DeleteOwnAccountService from '#modules/users/services/delete_own_account_service'
 import DeleteUserService from '#modules/users/services/delete_user_service'
 import EditUserService from '#modules/users/services/edit_user_service'
@@ -81,7 +86,13 @@ function createServices() {
       usersRepository,
       credentialInvalidationService,
       activeRootGuardService,
-      new PermissionCacheService(usersRepository)
+      new PermissionCacheService(usersRepository),
+      new ExplorerService(
+        new ExplorerSavedRepository(),
+        new ExplorerInterestRepository(),
+        new ExplorerItineraryRepository(),
+        new ExplorerCatalogRepository()
+      )
     ),
     deleteUser: new DeleteUserService(
       usersRepository,

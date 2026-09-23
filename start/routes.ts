@@ -69,4 +69,5 @@ router
 import '#modules/purchases/routes'
 import '#modules/partner_content/routes'
 import '#modules/reviews/routes'
+import '#modules/explorer/routes'
 import '#modules/concierge/routes'

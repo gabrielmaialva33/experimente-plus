@@ -752,6 +752,62 @@ test.group('Documentation', () => {
     }
   })
 
+  /**
+   * The Explorer's own layer — ADR-0030.
+   *
+   * Checked in both directions, and that is the point. The mobile surface test
+   * above compares a fixed list, so a whole module could be added to the router
+   * with no documentation and every assertion here would still pass — which is
+   * exactly how this module arrived. Here the router is the list.
+   */
+  test('documents every Explorer route, and only private ones', async ({ assert }) => {
+    const specification = await readOpenApi()
+    const explorerPath = /^\/api\/v1\/me\/(favorites|follows|saved|interests|itineraries)/
+
+    const runtime = Object.values(router.toJSON())
+      .flatMap((routes) => routes)
+      .filter((route) => explorerPath.test(route.pattern))
+      .flatMap((route) =>
+        route.methods
+          .filter((method) => method !== 'HEAD')
+          .map((method) => `${method.toLowerCase()} ${route.pattern.replace(/:(\w+)/g, '{$1}')}`)
+      )
+
+    const documented = Object.entries(specification.paths ?? {})
+      .filter(([pathName]) => explorerPath.test(pathName))
+      .flatMap(([pathName, operations]) =>
+        Object.keys(operations as object).map((method) => `${method} ${pathName}`)
+      )
+
+    assert.isAbove(runtime.length, 0)
+    assert.sameMembers(documented, runtime)
+
+    // Which places someone favourites or follows is a private preference.
+    // A documented Explorer operation without authentication would be the
+    // contract saying otherwise.
+    for (const operation of documented) {
+      const [method, pathName] = operation.split(' ')
+      const security = operationAt(specification, pathName, method as HttpMethod)?.security
+      assert.deepEqual(security, [{ bearerAuth: [] }], `${operation} must require a session`)
+    }
+
+    const card = specification.components!.schemas!.ExplorerEstablishmentCard
+    assert.sameMembers(Object.keys(card.properties!), [
+      'id',
+      'slug',
+      'name',
+      'city_slug',
+      'city_name',
+      'cover_url',
+      'category',
+    ])
+    for (const schemaName of Object.keys(specification.components!.schemas!)) {
+      if (!schemaName.startsWith('Explorer')) continue
+      const serialised = JSON.stringify(specification.components!.schemas![schemaName])
+      assert.notMatch(serialised, /"(user_id|email|full_name)"/, `${schemaName} names a person`)
+    }
+  })
+
   test('locks mobile metadata and corrected runtime semantics', async ({ assert }) => {
     const specification = await readOpenApi()
     const schemas = specification.components?.schemas ?? {}
