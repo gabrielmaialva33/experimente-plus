@@ -3,8 +3,8 @@ import { randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 
-import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
+import { DuplicateReportException } from '#modules/reviews/exceptions'
 import Establishment from '#modules/establishments/models/establishment'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import { discoverableEstablishmentExistsSql } from '#modules/catalog/repositories/catalog_discoverability'
@@ -45,7 +45,7 @@ export default class ContentReportService {
       )
 
       if (existing) {
-        throw new BadRequestException('You have already reported this content')
+        throw new DuplicateReportException('You have already reported this content')
       }
 
       const policy = await this.policyRepository.getForTenant(tenantId, client)

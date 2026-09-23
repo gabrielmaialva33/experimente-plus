@@ -824,7 +824,13 @@ test.group('Documentation', () => {
     const schemas = specification.components!.schemas!
     const targets = [...IReview.CANONICAL_REPORT_TARGET_TYPES]
     const statuses = [...IReview.CANONICAL_REPORT_STATUSES]
+    // The reasons drifted too: the document offered `fake` and
+    // `privacy_violation`, which the validator refuses, and the app showed them
+    // as choices that could only end in 422.
+    const reasons = [...IReview.CANONICAL_REPORT_REASONS]
 
+    assert.sameMembers(schemas.CreateReportRequest.properties!.reason.enum!, reasons)
+    assert.sameMembers(schemas.ContentReport.properties!.reason.enum!, reasons)
     assert.sameMembers(schemas.CreateReportRequest.properties!.target_type.enum!, targets)
     assert.sameMembers(schemas.ContentReport.properties!.target_type.enum!, targets)
     assert.sameMembers(schemas.ContentReport.properties!.status.enum!, statuses)

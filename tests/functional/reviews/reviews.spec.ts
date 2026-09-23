@@ -633,7 +633,7 @@ test.group('Reviews - Functional Tests', (group) => {
     reportRes.assertStatus(201)
     const reportId = reportRes.body().id
 
-    // Duplicate report by same user returns 400
+    // Duplicate report by same user is a conflict with what is on record
     const dupRes = await client
       .post('/api/v1/content-reports')
       .headers(tenantHeader(scenario.tenant.id))
@@ -643,7 +643,7 @@ test.group('Reviews - Functional Tests', (group) => {
         target_id: review.id,
         reason: 'offensive',
       })
-    dupRes.assertStatus(400)
+    dupRes.assertStatus(409)
 
     // Regular user cannot access moderation queue
     const nonModRes = await client

@@ -5562,7 +5562,7 @@ components:
             - 'null'
         reason:
           type: string
-          enum: [inappropriate, spam, fake, offensive, privacy_violation, other]
+          enum: [spam, offensive, inappropriate, false_information, conflict_of_interest, harassment, other]
         details:
           type:
             - string
@@ -5686,7 +5686,7 @@ components:
           minimum: 1
         reason:
           type: string
-          enum: [inappropriate, spam, fake, offensive, privacy_violation, other]
+          enum: [spam, offensive, inappropriate, false_information, conflict_of_interest, harassment, other]
         details:
           type:
             - string
