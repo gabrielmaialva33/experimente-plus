@@ -164,10 +164,12 @@ test.group('Automatic moderation (ADR-0031, Anexo I item 9)', (group) => {
     client,
     assert,
   }) => {
+    // The path a real person can take. A report is only accepted for what the
+    // public can see, so the person reports while the review is published; the
+    // author then edits a phone number in, and the rule holds it.
     const { scenario, establishment, author, moderator } = await setup('am-merits')
     const reporter = await createUser({ prefix: 'am-merits-reporter', tenant: scenario.tenant })
-    const review = await writeReview(client, scenario, establishment, author, 'liga 98765-4321')
-    const automatic = await automaticReportFor(scenario.tenant.id, 'review', review.id)
+    const review = await writeReview(client, scenario, establishment, author, 'Atendimento lento.')
     const headers = tenantHeader(scenario.tenant.id)
 
     const personal = await client
@@ -175,6 +177,20 @@ test.group('Automatic moderation (ADR-0031, Anexo I item 9)', (group) => {
       .headers(headers)
       .loginAs(reporter)
       .json({ target_type: 'review', target_id: review.id, reason: 'offensive' })
+    personal.assertStatus(201)
+
+    review.edited_at = DateTime.utc().minus({ days: 1 })
+    await review.save()
+    const edited = await client
+      .put(`/api/v1/me/reviews/${review.id}`)
+      .headers(headers)
+      .loginAs(author)
+      .json({ comment: 'Atendimento lento, liga 98765-4321' })
+    edited.assertStatus(200)
+    await review.refresh()
+    assert.equal(review.status, 'hidden', 'the rule must hold the edited text')
+    const automatic = await automaticReportFor(scenario.tenant.id, 'review', review.id)
+
     await client
       .post(`/api/v1/admin/content-reports/${personal.body().id}/resolve`)
       .headers(headers)
