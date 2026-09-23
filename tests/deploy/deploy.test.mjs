@@ -147,10 +147,16 @@ async function fixture(t, options = {}) {
     start,
     state: async () => JSON.parse(await readFile(join(stateDir, 'mock-state.json'), 'utf8')),
     knownGood: () => readFile(knownGoodPath, 'utf8'),
+    // The mock appends one newline-terminated JSON record per command while the
+    // deploy runs, and this is polled concurrently. Only records already
+    // followed by a newline are complete: the tail after the last one may be a
+    // record still being written. Trimming used to erase that difference, and
+    // a poll landing mid-write parsed half a line — a failure that appeared
+    // only on a loaded machine.
     commands: async () =>
       (await readFile(join(stateDir, 'commands.jsonl'), 'utf8'))
-        .trim()
         .split('\n')
+        .slice(0, -1)
         .filter(Boolean)
         .map((line) => JSON.parse(line)),
   }
