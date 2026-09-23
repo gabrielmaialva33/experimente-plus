@@ -206,53 +206,24 @@ export default class ContentReportService {
       .update({ status: 'published', updated_at: new Date() })
   }
 
+  /**
+   * A report, signed in or anonymous, is only accepted for what the public can
+   * see right now.
+   *
+   * This used to check only that the target existed. A signed-in person —
+   * anyone can sign up — could then ask the server, one number at a time,
+   * whether a hidden review, the review of a banned author, a draft or an item
+   * of a withdrawn establishment was there. The anonymous route was built with
+   * the public-visibility rule from the start; both routes now share it, so a
+   * hidden target answers exactly like a missing one either way.
+   */
   private async validateTargetExists(
     tenantId: number,
     targetType: IReview.ReportTargetType,
     targetId: number,
     client: any
   ): Promise<void> {
-    if (targetType === 'review') {
-      const target = await EstablishmentReview.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', targetId)
-        .first()
-      if (!target) throw new NotFoundException('Report target review not found')
-    } else if (targetType === 'reply') {
-      const target = await EstablishmentReviewReply.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', targetId)
-        .first()
-      if (!target) throw new NotFoundException('Report target reply not found')
-    } else if (targetType === 'establishment') {
-      const target = await Establishment.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', targetId)
-        .first()
-      if (!target) throw new NotFoundException('Report target establishment not found')
-    } else if (IReview.isPartnerContentTarget(targetType)) {
-      await this.requireVisiblePartnerContent(tenantId, targetType, targetId, client)
-    }
-  }
-
-  /**
-   * Partner content is reportable only as the public sees it.
-   *
-   * A report is about something someone read. A draft, an item waiting for
-   * approval, an archived one, or content of an establishment that is not
-   * discoverable was never in front of the reporter, and accepting a report of
-   * it by id would turn the endpoint into a way of asking which identifiers
-   * exist behind the public surface.
-   */
-  private async requireVisiblePartnerContent(
-    tenantId: number,
-    kind: IReview.PartnerContentTarget,
-    id: number,
-    client: any
-  ): Promise<void> {
-    // The rule lives with the other public-visibility rules, which the
-    // anonymous route applies to every kind of target.
-    if (!(await this.publicTargets.isPartnerContentVisible(tenantId, kind, id, client))) {
+    if (!(await this.publicTargets.isVisible(tenantId, targetType, targetId, client))) {
       throw new NotFoundException('Report target not found')
     }
   }

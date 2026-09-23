@@ -186,3 +186,40 @@ test.group('Reporting partner content (ADR-0028, Anexo I item 9)', (group) => {
     legacy.assertStatus(422)
   })
 })
+
+test.group('Signed-in reports follow the public-visibility rule', (group) => {
+  group.each.setup(() => testUtils.db().withGlobalTransaction())
+
+  test('a hidden review answers like a missing one, signed in or not', async ({ client }) => {
+    // The signed-in route used to check only that the target existed, so any
+    // account could ask, one number at a time, what the catalogue hides.
+    const scenario = await createEstablishmentScenario('pcr-signed-hidden')
+    const establishment = await createPublishedEstablishment(scenario)
+    const author = await createUser({ prefix: 'pcr-signed-author', tenant: scenario.tenant })
+    const reporter = await createUser({ prefix: 'pcr-signed-reporter', tenant: scenario.tenant })
+    const hidden = await EstablishmentReview.create({
+      tenant_id: scenario.tenant.id,
+      establishment_id: establishment.id,
+      user_id: author.id,
+      rating: 1,
+      comment: 'Já ocultada pela moderação.',
+      status: 'hidden',
+      photos_count: 0,
+      videos_count: 0,
+    })
+
+    const signedIn = await client
+      .post('/api/v1/content-reports')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(reporter)
+      .json({ target_type: 'review', target_id: hidden.id, reason: 'spam' })
+    signedIn.assertStatus(404)
+
+    const missing = await client
+      .post('/api/v1/content-reports')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(reporter)
+      .json({ target_type: 'review', target_id: 2147480000, reason: 'spam' })
+    missing.assertStatus(404)
+  })
+})
