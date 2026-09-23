@@ -14,7 +14,6 @@ import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
-  isOverdue,
   isReportStatus,
   reportStatusMeta,
   reportTargetLabels,
@@ -26,11 +25,17 @@ interface BackofficeReportsProps {
   reports: unknown
   filters: JsonRecord
   tenant_id: number
+  /** Open reports past their deadline in the whole operation, counted by the server. */
+  overdue_total?: number
 }
 
 const QUEUE_PATH = '/backoffice/reports'
 
-export default function BackofficeReports({ reports, filters }: BackofficeReportsProps) {
+export default function BackofficeReports({
+  reports,
+  filters,
+  overdue_total: overdueTotal = 0,
+}: BackofficeReportsProps) {
   const page = record(reports)
   const rows = collection(page?.data)
   const meta = record(page?.meta)
@@ -54,15 +59,6 @@ export default function BackofficeReports({ reports, filters }: BackofficeReport
     )
   }
 
-  // Counted on what this page holds, and labelled as such: the deadline lives
-  // on the row, so a total across every page would need the server to say it.
-  const overdueHere = rows.filter((row) => {
-    const rowStatus = text(row, 'status', 'pending')
-    return isOverdue(
-      text(row, 'due_at') || null,
-      isReportStatus(rowStatus) ? rowStatus : 'pending'
-    )
-  }).length
 
   const total = numeric(meta, 'total')
   const currentPage = numeric(meta, 'current_page') || 1
@@ -134,10 +130,14 @@ export default function BackofficeReports({ reports, filters }: BackofficeReport
                 Estado atual: {reportStatusMeta[status].label}
               </p>
             </div>
-            {overdueHere > 0 ? (
-              <p className="inline-flex items-center gap-2 rounded-md border border-danger/25 bg-danger/10 px-3 py-1.5 text-sm font-semibold text-danger">
+            {overdueTotal > 0 ? (
+              <p
+                className="inline-flex items-center gap-2 rounded-md border border-danger/25 bg-danger/10 px-3 py-1.5 text-sm font-semibold text-danger"
+                data-testid="overdue-total"
+              >
                 <AlertTriangle aria-hidden="true" className="size-4" />
-                {overdueHere} {overdueHere === 1 ? 'vencida' : 'vencidas'} nesta página
+                {overdueTotal}{' '}
+                {overdueTotal === 1 ? 'denúncia vencida' : 'denúncias vencidas'} na operação
               </p>
             ) : null}
           </div>

@@ -123,6 +123,19 @@ Até esta data a avaliação guardava só os contadores `photos_count` e `videos
 - **Contador do servidor.** `photos_count` passa a ser derivado das fotos existentes e deixa de ser aceito do cliente.
 - **Forma pública fechada.** A resposta traz endereço, dimensões e texto alternativo. Chave de armazenamento como campo, checksum, identificadores do arquivo e do asset e o dono não viajam, e a serialização do modelo é sobrescrita para que uma coluna nova em `media_assets` ou `files` não vaze por padrão.
 
+### Implementação do aviso de prazo — 23/09/2026
+
+`due_at` e `sla_notified_at` existiam desde a entrega, e o segundo nunca era gravado: a fila marcava "Prazo vencido", mas nada avisava ninguém. O cenário 15 pede que o atraso seja observável, e passa a ser em dois lugares.
+
+- **Na fila**, o cabeçalho mostra o total de denúncias vencidas **da operação**, contado pelo servidor. Antes a tela contava só as linhas da página atual, e um caso vencido em outra página ou sob outro filtro não aparecia.
+- **Por mensagem**, o comando `reports:notify-overdue` cita cada denúncia aberta (`pending` ou `under_review`) vencida **uma única vez**, numa mensagem por operação, à equipe de plataforma que tem membership nela. Os destinatários vão em cópia oculta. A mensagem traz protocolo, tipo, motivo, vencimento e atraso — nunca quem denunciou, nunca o texto denunciado, porque um e-mail sai da plataforma e pode ser encaminhado.
+
+É observabilidade, não escalonamento: nada é reatribuído, reenviado ou feito sobre o conteúdo. A moderação humana contínua segue fora do contrato.
+
+A marca é reivindicada por um único `UPDATE … WHERE sla_notified_at IS NULL … RETURNING`, numa transação curta, e o envio acontece depois do commit, sem lock aberto enquanto o servidor de e-mail responde. Duas execuções simultâneas não citam o mesmo caso duas vezes: a segunda espera o lock da linha e encontra a marca já posta. Se o envio falhar, a reivindicação é devolvida e a próxima execução tenta de novo. Operação sem ninguém que possa agir não tem nada marcado, porque a marca significa "uma pessoa foi avisada".
+
+Como `purchases:process` e `analytics:prune`, o comando roda por um agendador do ambiente, que o repositório não instala. O passo do operador está em `docs/runbooks/content_report_deadlines.md`.
+
 ## Consequências
 
 Cria um domínio novo com leitura pública e escrita autenticada, aumentando superfície de abuso: spam, avaliação em massa, conteúdo ofensivo e disputa entre parceiro e consumidor. A fila de moderação humana passa a receber volume que hoje não recebe, e isso é operação contínua — que o escopo contratado coloca **fora** da entrega.
