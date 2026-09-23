@@ -196,12 +196,15 @@ export default class EstablishmentReviewService {
 
   async showPublic(tenantId: number, id: number): Promise<EstablishmentReview> {
     const review = await this.reviewRepository.findById(tenantId, id)
-    // A banned author's review answers exactly like one that does not exist:
-    // otherwise its address would stay a way around the ban (ADR-0027 §6).
+    // A banned author's review, and a review of an establishment that left
+    // the catalogue, answer exactly like one that does not exist: otherwise
+    // their address would stay a way around the ban (ADR-0027 §6) or around
+    // the withdrawal (Anexo I item 14).
     if (
       !review ||
       review.status !== 'published' ||
-      (await this.userBans.isBanned(tenantId, review.user_id))
+      (await this.userBans.isBanned(tenantId, review.user_id)) ||
+      !(await this.reviewRepository.isEstablishmentDiscoverable(tenantId, review.establishment_id))
     ) {
       throw new NotFoundException('Review not found')
     }

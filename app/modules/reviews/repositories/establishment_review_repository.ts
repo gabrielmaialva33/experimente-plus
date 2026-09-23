@@ -1,5 +1,8 @@
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
+import db from '@adonisjs/lucid/services/db'
+
+import { discoverableEstablishmentExistsSql } from '#modules/catalog/repositories/catalog_discoverability'
 import type IReview from '#modules/reviews/interfaces/review_interface'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import LucidRepository from '#shared/lucid/lucid_repository'
@@ -32,6 +35,15 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     }
 
     return query.first()
+  }
+
+  /** Whether the establishment is publicly discoverable right now. */
+  async isEstablishmentDiscoverable(tenantId: number, establishmentId: number): Promise<boolean> {
+    const result = await db.rawQuery(
+      `SELECT EXISTS (${discoverableEstablishmentExistsSql}) AS present`,
+      [tenantId, establishmentId]
+    )
+    return result.rows[0]?.present === true
   }
 
   async findByUserAndEstablishment(
@@ -72,6 +84,12 @@ export default class EstablishmentReviewRepository extends LucidRepository<
       .where('tenant_id', tenantId)
       .where('establishment_id', establishmentId)
       .where('status', 'published')
+      // Reviews belong to the establishment's public page, so they leave with
+      // it: an establishment that was suspended, archived or whose city was
+      // deactivated takes its reviews out of public view too (Anexo I items 8
+      // and 14). The single definition of discoverability decides, as it does
+      // for partner content and the Concierge.
+      .whereRaw(`EXISTS (${discoverableEstablishmentExistsSql})`, [tenantId, establishmentId])
       // A banned author's reviews leave public view without their status being
       // touched (ADR-0027 §6). The aggregate in the projection applies the same
       // rule, so the list and the average can never disagree.
