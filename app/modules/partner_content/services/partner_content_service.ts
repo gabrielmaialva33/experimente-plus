@@ -10,6 +10,7 @@ import CatalogProjectionRepository from '#modules/catalog/repositories/catalog_p
 import Establishment from '#modules/establishments/models/establishment'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
+import PartnerContentEventRepository from '#modules/partner_content/repositories/partner_content_event_repository'
 import PartnerContentPolicyRepository from '#modules/partner_content/repositories/partner_content_policy_repository'
 import PartnerContentRepository from '#modules/partner_content/repositories/partner_content_repository'
 import type User from '#modules/users/models/user'
@@ -26,6 +27,10 @@ import type User from '#modules/users/models/user'
  *   - Nothing is ever deleted. "Desativar" and "excluir" are both archiving,
  *     and the database has a trigger that refuses a physical DELETE, so this is
  *     enforced a second time below the code that means it.
+ *
+ * Every act writes its event to `partner_content_events` inside the same
+ * transaction (ADR-0028 §4), so the history can neither outlive an act that
+ * rolled back nor miss one that committed.
  */
 @inject()
 export default class PartnerContentService {
@@ -33,7 +38,8 @@ export default class PartnerContentService {
     private contentRepository: PartnerContentRepository,
     private policyRepository: PartnerContentPolicyRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private projectionRepository: CatalogProjectionRepository
+    private projectionRepository: CatalogProjectionRepository,
+    private events: PartnerContentEventRepository
   ) {}
 
   async create(
@@ -52,7 +58,7 @@ export default class PartnerContentService {
 
       const attributes = this.attributesFor(kind, payload, {})
 
-      return this.contentRepository.model(kind).create(
+      const content = await this.contentRepository.model(kind).create(
         {
           tenant_id: tenantId,
           establishment_id: establishment.id,
@@ -62,6 +68,11 @@ export default class PartnerContentService {
         } as never,
         { client }
       )
+
+      await this.record(client, kind, content, actor, 'created', null, 'draft', {
+        changes: this.diff({}, this.fieldsOf(kind, content)),
+      })
+      return content
     })
   }
 
@@ -88,6 +99,8 @@ export default class PartnerContentService {
 
       const policy = await this.policyRepository.getForTenant(tenantId, client)
       const needsApproval = this.policyRepository.requiresApproval(policy, kind)
+      const before = this.fieldsOf(kind, content)
+      const fromStatus = content.status
 
       content.useTransaction(client)
       content.merge(this.attributesFor(kind, payload, content) as never)
@@ -98,6 +111,13 @@ export default class PartnerContentService {
 
       this.assertEventWindow(kind, content, policy.min_event_notice_minutes)
       await content.save()
+
+      const changes = this.diff(before, this.fieldsOf(kind, content))
+      if (Object.keys(changes).length > 0 || fromStatus !== content.status) {
+        await this.record(client, kind, content, actor, 'updated', fromStatus, content.status, {
+          changes,
+        })
+      }
       return content
     })
   }
@@ -127,6 +147,7 @@ export default class PartnerContentService {
       content.useTransaction(client)
 
       const requiresApproval = this.policyRepository.requiresApproval(policy, kind)
+      const fromStatus = content.status
 
       if (requiresApproval) {
         content.status = 'pending_review'
@@ -135,6 +156,7 @@ export default class PartnerContentService {
       }
 
       await content.save()
+      await this.record(client, kind, content, actor, 'submitted', fromStatus, content.status)
 
       if (!requiresApproval) {
         await this.projectionRepository.bumpTenantVersion(tenantId, client)
@@ -159,6 +181,7 @@ export default class PartnerContentService {
       this.publish(content, kind)
       await content.save()
       await this.projectionRepository.bumpTenantVersion(tenantId, client)
+      await this.record(client, kind, content, actor, 'approved', 'pending_review', 'published')
       return content
     })
   }
@@ -183,6 +206,7 @@ export default class PartnerContentService {
       content.useTransaction(client)
       content.status = content.published_snapshot ? 'published' : 'draft'
       await content.save()
+      await this.record(client, kind, content, actor, 'rejected', 'pending_review', content.status)
       return content
     })
   }
@@ -222,16 +246,112 @@ export default class PartnerContentService {
         return content
       }
 
+      const fromStatus = content.status
       content.useTransaction(client)
       content.status = 'archived'
       content.archived_by = actor.id
       content.archived_at = DateTime.utc()
       await content.save()
       await this.projectionRepository.bumpTenantVersion(tenantId, client)
+      await this.record(client, kind, content, actor, 'archived', fromStatus, 'archived', {
+        metadata: { as_moderator: asModerator },
+      })
       return content
     }
 
     return outer ? run(outer) : db.transaction(run)
+  }
+
+  /**
+   * An administrator's edit — Anexo I item 7, ADR-0028 §4.
+   *
+   * The administrator reaches this as a moderator (ADR-0007), and a moderator's
+   * edit is already approved: sending it to the queue would mean asking the same
+   * person to approve their own correction. So what happens depends on where the
+   * item is, and each case keeps the partner's own work intact:
+   *
+   *   - published: the live columns and the public snapshot move together, and
+   *     the public reads the correction at once. `published_at` does not move —
+   *     fixing a typo must not push an old item to the top of "Novidades".
+   *   - draft or awaiting approval: only the live columns move. The item stays
+   *     where the partner left it; publishing is a separate act.
+   *   - archived: refused, as it is for the partner.
+   *
+   * Changing an event's dates on published content applies the minimum notice,
+   * because that version becomes public now; any other correction does not.
+   */
+  async adminUpdate(
+    kind: IPartnerContent.ContentKind,
+    tenantId: number,
+    id: number,
+    actor: User,
+    payload: IPartnerContent.UpdatePayload
+  ) {
+    await this.organizationPolicy.requirePlatformModerator(actor)
+
+    return db.transaction(async (client) => {
+      const content = await this.requireContent(kind, tenantId, id, client, true)
+
+      if (content.status === 'archived') {
+        throw new BadRequestException('Archived content cannot be edited')
+      }
+
+      const before = this.fieldsOf(kind, content)
+      content.useTransaction(client)
+      content.merge(this.attributesFor(kind, payload, content) as never)
+
+      const changes = this.diff(before, this.fieldsOf(kind, content))
+      if (Object.keys(changes).length === 0) {
+        return content
+      }
+
+      const datesChanged = 'starts_at' in changes || 'ends_at' in changes
+      const republished = content.status === 'published'
+
+      if (kind === 'event' && datesChanged) {
+        if (republished) {
+          const policy = await this.policyRepository.getForTenant(tenantId, client)
+          this.assertEventWindow(kind, content, policy.min_event_notice_minutes)
+        } else {
+          this.assertEventWindow(kind, content, 0)
+        }
+      }
+
+      if (republished) {
+        content.published_snapshot = this.snapshotOf(kind, content)
+      }
+
+      await content.save()
+
+      if (republished) {
+        await this.projectionRepository.bumpTenantVersion(tenantId, client)
+      }
+
+      await this.record(
+        client,
+        kind,
+        content,
+        actor,
+        'admin_edited',
+        content.status,
+        content.status,
+        {
+          changes,
+          metadata: { republished },
+        }
+      )
+      return content
+    })
+  }
+
+  /**
+   * The history of one item, newest first. Moderators only: it names the people
+   * who acted, and it is never part of any public payload.
+   */
+  async history(kind: IPartnerContent.ContentKind, tenantId: number, id: number, actor: User) {
+    await this.organizationPolicy.requirePlatformModerator(actor)
+    await this.requireContent(kind, tenantId, id, undefined)
+    return this.events.history(tenantId, kind, id)
   }
 
   async listForPartner(
@@ -315,6 +435,15 @@ export default class PartnerContentService {
    * must not follow them until the new version is approved.
    */
   private publish(content: IPartnerContent.ContentRow, kind: IPartnerContent.ContentKind): void {
+    content.published_snapshot = this.snapshotOf(kind, content)
+    content.published_at = DateTime.utc()
+    content.status = 'published'
+  }
+
+  private snapshotOf(
+    kind: IPartnerContent.ContentKind,
+    content: IPartnerContent.ContentRow
+  ): Record<string, unknown> {
     const snapshot: Record<string, unknown> = {
       title: content.title,
       description: content.description,
@@ -332,9 +461,72 @@ export default class PartnerContentService {
       ).informational_price_cents
     }
 
-    content.published_snapshot = snapshot
-    content.published_at = DateTime.utc()
-    content.status = 'published'
+    return snapshot
+  }
+
+  /**
+   * The editable fields of an item, in a comparable form. Instants become UTC
+   * ISO strings so the same moment read back from the database and parsed from
+   * a request compare equal, and never look like a change.
+   */
+  private fieldsOf(
+    kind: IPartnerContent.ContentKind,
+    content: IPartnerContent.ContentRow
+  ): Record<string, unknown> {
+    const instant = (value: unknown) =>
+      value instanceof DateTime ? value.toUTC().toISO() : (value ?? null)
+    const row = content as unknown as Record<string, unknown>
+    const fields: Record<string, unknown> = {
+      title: row.title ?? null,
+      description: row.description ?? null,
+    }
+    if (kind === 'event') {
+      fields.starts_at = instant(row.starts_at)
+      fields.ends_at = instant(row.ends_at)
+    }
+    if (kind === 'showcase_item') {
+      fields.informational_price_cents = row.informational_price_cents ?? null
+    }
+    return fields
+  }
+
+  private diff(
+    before: Record<string, unknown>,
+    after: Record<string, unknown>
+  ): IPartnerContent.FieldChanges {
+    const changes: IPartnerContent.FieldChanges = {}
+    for (const [field, value] of Object.entries(after)) {
+      const previous = before[field] ?? null
+      if (previous !== value) changes[field] = { from: previous, to: value }
+    }
+    return changes
+  }
+
+  private async record(
+    client: TransactionClientContract,
+    kind: IPartnerContent.ContentKind,
+    content: IPartnerContent.ContentRow,
+    actor: User,
+    action: IPartnerContent.EventAction,
+    fromStatus: IPartnerContent.ContentStatus | null,
+    toStatus: IPartnerContent.ContentStatus | null,
+    extra: { changes?: IPartnerContent.FieldChanges; metadata?: Record<string, unknown> } = {}
+  ): Promise<void> {
+    await this.events.record(
+      {
+        tenantId: content.tenant_id,
+        establishmentId: content.establishment_id,
+        kind,
+        contentId: content.id,
+        action,
+        actorId: actor.id,
+        fromStatus,
+        toStatus,
+        changes: extra.changes ?? null,
+        metadata: extra.metadata ?? null,
+      },
+      client
+    )
   }
 
   private attributesFor(

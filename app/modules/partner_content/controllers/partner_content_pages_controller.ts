@@ -219,6 +219,25 @@ export default class PartnerContentPagesController {
     return response.redirect().back()
   }
 
+  async moderationUpdate({ auth, params, request, response, session, tenant }: HttpContext) {
+    const { kind: path, id } = await contentIdParamsValidator.validate(params)
+    const payload = await request.validateUsing(updateContentValidator)
+    const content = await this.contentService.adminUpdate(
+      IPartnerContent.kindOfPath(path),
+      tenant!.id,
+      id,
+      auth.getUserOrFail(),
+      payload
+    )
+    session.flash(
+      'success',
+      content.status === 'published'
+        ? 'Correção publicada. O público já vê a nova versão.'
+        : 'Correção salva. O item continua onde o parceiro o deixou.'
+    )
+    return response.redirect().back()
+  }
+
   async moderationArchive({ auth, params, response, session, tenant }: HttpContext) {
     const { kind: path, id } = await contentIdParamsValidator.validate(params)
     await this.contentService.archive(

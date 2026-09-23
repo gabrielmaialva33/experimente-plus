@@ -213,6 +213,38 @@ namespace IPartnerContent {
     new_experiences: CityAgendaExperienceItem[]
   }
 
+  /**
+   * The acts the history of a content item records — ADR-0028 §4.
+   *
+   * `admin_edited` is its own act rather than an `updated` with a different
+   * actor: an administrator's edit has different consequences (it can change
+   * what the public reads at once), and the history has to say which it was.
+   */
+  export const CANONICAL_EVENT_ACTIONS = [
+    'created',
+    'updated',
+    'submitted',
+    'approved',
+    'rejected',
+    'archived',
+    'admin_edited',
+  ] as const
+  export type EventAction = (typeof CANONICAL_EVENT_ACTIONS)[number]
+
+  /** Only the fields that moved. Never identifiers, never the whole row. */
+  export type FieldChanges = Record<string, { from: unknown; to: unknown }>
+
+  export type EventProjection = {
+    id: number
+    action: EventAction
+    from_status: ContentStatus | null
+    to_status: ContentStatus | null
+    actor: { id: number; full_name: string } | null
+    changes: FieldChanges | null
+    metadata: Record<string, unknown> | null
+    created_at: string
+  }
+
   export interface ListQuery {
     page?: number
     per_page?: number

@@ -11,6 +11,10 @@ import {
 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
+import {
+  PartnerContentAdminEditor,
+  PartnerContentHistory,
+} from '~/components/backoffice/partner_content_admin_tools'
 import { PartnerContentMediaModeration } from '~/components/backoffice/partner_content_media_moderation'
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
@@ -108,6 +112,7 @@ export default function BackofficePartnerContentPage({
   const canApprove = can('establishments.approve')
   const canReject = can('establishments.reject')
   const canArchive = can('establishments.archive')
+  const canEdit = can('establishments.update')
   const canUpdatePolicy = platformAccess === 'platform_admin' && can('settings.update')
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
@@ -373,6 +378,34 @@ export default function BackofficePartnerContentPage({
                     canApprove={canApprove}
                     canReject={canReject}
                   />
+                  <div className="mt-4 flex flex-col gap-2">
+                    {canEdit ? (
+                      <PartnerContentAdminEditor
+                        key={id + ':' + text(row, 'updated_at')}
+                        kind={kind}
+                        contentId={id}
+                        status={rowStatus}
+                        title={text(row, 'title')}
+                        description={text(row, 'description') || null}
+                        startsAt={startsAt}
+                        endsAt={endsAt}
+                        priceCents={
+                          row.informational_price_cents === null ||
+                          row.informational_price_cents === undefined
+                            ? null
+                            : numeric(row, 'informational_price_cents')
+                        }
+                        timeZone={timeZone}
+                      />
+                    ) : null}
+                    <PartnerContentHistory
+                      key={'history:' + id + ':' + text(row, 'updated_at')}
+                      tenantId={tenantId}
+                      kind={kind}
+                      contentId={id}
+                      timeZone={timeZone}
+                    />
+                  </div>
                 </article>
               )
             })}

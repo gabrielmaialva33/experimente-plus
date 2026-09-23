@@ -161,6 +161,11 @@ router
       .as('backoffice.content.archive')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.ARCHIVE))
     router
+      .put('/content/:kind/:id', [PartnerContentPagesController, 'moderationUpdate'])
+      .where('kind', /^(experiences|events|showcase-items)$/)
+      .as('backoffice.content.update')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
       .put('/content/policy', [PartnerContentPagesController, 'updatePolicy'])
       .as('backoffice.content.policy')
       .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))

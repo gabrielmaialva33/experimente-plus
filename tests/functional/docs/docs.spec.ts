@@ -9,6 +9,7 @@ import EstablishmentEvent from '#modules/partner_content/models/establishment_ev
 import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
 import EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
 import PartnerContentPolicy from '#modules/partner_content/models/partner_content_policy'
+import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
 import IReview from '#modules/reviews/interfaces/review_interface'
 import ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
@@ -842,6 +843,25 @@ test.group('Documentation', () => {
       )
     assert.sameMembers(parameter('target_type')!.schema!.enum!, targets)
     assert.sameMembers(parameter('status')!.schema!.enum!, statuses)
+  })
+
+  /**
+   * The partner-content history — ADR-0028 §4. Its acts come from the same
+   * constant the service records, and the documented event never exposes the
+   * tenant or a copy of the row.
+   */
+  test('documents the partner-content history from the recorded vocabulary', async ({ assert }) => {
+    const specification = await readOpenApi()
+    const event = specification.components!.schemas!.PartnerContentEvent
+
+    assert.sameMembers(event.properties!.action.enum!, [...IPartnerContent.CANONICAL_EVENT_ACTIONS])
+    assert.notProperty(event.properties!, 'tenant_id')
+    assert.notProperty(event.properties!, 'published_snapshot')
+    assert.deepEqual(
+      operationAt(specification, '/api/v1/admin/content/{kind}/{id}/history', 'get')?.security,
+      [{ bearerAuth: [] }]
+    )
+    assert.exists(operationAt(specification, '/api/v1/admin/content/{kind}/{id}', 'put'))
   })
 
   test('locks mobile metadata and corrected runtime semantics', async ({ assert }) => {
