@@ -5904,6 +5904,52 @@ components:
           minLength: 1
           maxLength: 4000
 
+    CreateAnonymousReportRequest:
+      description: >-
+        An identified report's fields plus an optional opaque token the client
+        generates and keeps, so a repeat is recognised across networks
+        (ADR-0027 scenarios 13 and 14). The token grants nothing.
+      type: object
+      additionalProperties: false
+      required:
+        - target_type
+        - target_id
+        - reason
+      properties:
+        target_type:
+          type: string
+          enum: [review, reply, establishment, experience, event, showcase_item]
+        target_id:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          enum: [spam, offensive, inappropriate, false_information, conflict_of_interest, harassment, other]
+        details:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 4000
+        anonymous_token:
+          type:
+            - string
+            - 'null'
+          minLength: 16
+          maxLength: 128
+          pattern: '^[A-Za-z0-9-]+$'
+
+    AnonymousReportReceipt:
+      description: >-
+        The protocol and nothing else. Neither the stored report nor how its
+        origin was recorded is ever returned.
+      type: object
+      additionalProperties: false
+      required: [protocol_number]
+      properties:
+        protocol_number:
+          type: string
+
     ResolveReportRequest:
       type: object
       additionalProperties: false
@@ -14569,6 +14615,41 @@ paths:
           description: Reply not found
         '422':
           description: Validation failed
+
+  /api/v1/catalog/content-reports:
+    post:
+      operationId: createAnonymousContentReport
+      summary: Report content anonymously
+      description: >-
+        Public, like the catalogue it reports on: the operation is resolved from
+        the hostname and no session is needed (ADR-0027 scenario 13). Only
+        content the public can currently see is reportable. The reporter is
+        recorded only as keyed hashes of the connection and of the optional
+        token, scoped to the target, so the same origin reporting the same
+        target again is a repeat (scenario 14) while one person's reports
+        cannot be linked to each other. Five per hour per connection.
+      tags: [Content Moderation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnonymousReportRequest'
+      responses:
+        '201':
+          description: Report registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnonymousReportReceipt'
+        '404':
+          description: Target not found or not publicly visible, or operation not resolvable
+        '409':
+          description: This origin already reported this target
+        '422':
+          description: Validation failed
+        '429':
+          description: Too many reports from this connection
 
   /api/v1/content-reports:
     post:

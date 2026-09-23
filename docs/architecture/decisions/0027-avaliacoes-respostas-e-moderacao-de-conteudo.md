@@ -136,6 +136,18 @@ A marca é reivindicada por um único `UPDATE … WHERE sla_notified_at IS NULL 
 
 Como `purchases:process` e `analytics:prune`, o comando roda por um agendador do ambiente, que o repositório não instala. O passo do operador está em `docs/runbooks/content_report_deadlines.md`.
 
+### Implementação da denúncia anônima — 23/09/2026
+
+Os cenários 13 e 14 estavam decididos e sem código: toda denúncia exigia conta, e as colunas de anonimato existiam sem uso.
+
+- **Rota pública própria**, `POST /api/v1/catalog/content-reports`, sem sessão. A operação vem do hostname confiável, como toda leitura pública (ADR-0003); cabeçalho de tenant enviado pelo visitante é ignorado.
+- **Só o que o público vê pode ser denunciado anonimamente**, para os seis tipos de alvo: avaliação publicada de autor não banido em estabelecimento descobrível, resposta publicada sob essa avaliação, estabelecimento descobrível, e conteúdo do parceiro com snapshot aprovado e não arquivado. Aceitar alvo invisível por número transformaria a rota — que não tem sessão para encarecer a tentativa — em sonda do que existe atrás do catálogo. A regra mora em `PublicReportTargetRepository`; a denúncia identificada passou a delegar a ele a parte de conteúdo do parceiro, que antes era uma cópia.
+- **O denunciante vira apenas HMAC, nunca digest simples.** SHA-256 de um IPv4 se reverte testando os quatro bilhões de endereços. A chave é `ANALYTICS_HASH_SECRET`, o segredo que o produto já guarda para pseudonimizar visitantes, sob namespace próprio. Não se criou segredo novo de propósito: todo ambiente já o tem, e uma variável obrigatória a mais derrubaria na validação de ambiente um servidor cujo `.env` é anterior a este código.
+- **O alvo entra no que é hasheado.** A mesma pessoa denunciando duas coisas gera valores sem relação: a tabela reconhece repetição num alvo sem conseguir ligar as denúncias de uma pessoa entre si.
+- **Repetição é conexão ou token.** O token é opaco, gerado e guardado pelo aplicativo, e sobrevive à troca de rede; o endereço sobrevive à reinstalação. Qualquer dos dois igual no mesmo alvo responde 409, sem nada da denúncia anterior. Um índice único parcial por hash de conexão, ao lado do que já existia para o token, faz duas submissões simultâneas se encontrarem no banco. Consequência assumida: pessoas atrás do mesmo endereço — rede compartilhada, NAT de operadora — não denunciam anonimamente o mesmo alvo duas vezes; com conta, podem.
+- **Resposta é só o protocolo.** Nem a denúncia, nem os hashes, nem como a origem foi registrada. A resposta leva cabeçalhos privados.
+- **Limite próprio:** cinco por hora por conexão, depois uma hora de bloqueio. É a única rota de escrita sem sessão do produto, e o caminho óbvio para inundar a fila.
+
 ## Consequências
 
 Cria um domínio novo com leitura pública e escrita autenticada, aumentando superfície de abuso: spam, avaliação em massa, conteúdo ofensivo e disputa entre parceiro e consumidor. A fila de moderação humana passa a receber volume que hoje não recebe, e isso é operação contínua — que o escopo contratado coloca **fora** da entrega.

@@ -72,6 +72,28 @@ export const listReportsQueryValidator = vine.compile(
   })
 )
 
+/**
+ * The anonymous report — ADR-0027 scenarios 13 and 14. The same fields as an
+ * identified report, plus an optional token the app generates and keeps so a
+ * repeat is recognised across networks. The token is opaque and grants nothing.
+ */
+export const createAnonymousReportValidator = vine.compile(
+  vine.object({
+    target_type: vine.enum(IReview.CANONICAL_REPORT_TARGET_TYPES),
+    target_id: vine.number().min(1),
+    reason: vine.enum(IReview.CANONICAL_REPORT_REASONS),
+    details: vine.string().trim().minLength(1).maxLength(4000).nullable().optional(),
+    anonymous_token: vine
+      .string()
+      .trim()
+      .minLength(16)
+      .maxLength(128)
+      .regex(/^[A-Za-z0-9-]+$/)
+      .nullable()
+      .optional(),
+  })
+)
+
 export const reviewIdValidator = vine.compile(
   vine.object({
     id: vine.number().min(1),

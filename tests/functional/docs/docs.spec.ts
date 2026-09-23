@@ -863,6 +863,11 @@ test.group('Documentation', () => {
     const reasons = [...IReview.CANONICAL_REPORT_REASONS]
 
     assert.sameMembers(schemas.CreateReportRequest.properties!.reason.enum!, reasons)
+    // The anonymous route takes the same vocabularies; a second hand-written
+    // copy is exactly where the first drift came from.
+    assert.sameMembers(schemas.CreateAnonymousReportRequest.properties!.reason.enum!, reasons)
+    assert.sameMembers(schemas.CreateAnonymousReportRequest.properties!.target_type.enum!, targets)
+    assert.sameMembers(Object.keys(schemas.AnonymousReportReceipt.properties!), ['protocol_number'])
     assert.sameMembers(schemas.ContentReport.properties!.reason.enum!, reasons)
     assert.sameMembers(schemas.CreateReportRequest.properties!.target_type.enum!, targets)
     assert.sameMembers(schemas.ContentReport.properties!.target_type.enum!, targets)

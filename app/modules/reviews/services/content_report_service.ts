@@ -13,6 +13,7 @@ import type ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
 import ContentReportRepository from '#modules/reviews/repositories/content_report_repository'
+import PublicReportTargetRepository from '#modules/reviews/repositories/public_report_target_repository'
 import ContentReportTargetRepository from '#modules/reviews/repositories/content_report_target_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
 import { buildProtocolNumber } from '#modules/reviews/services/report_protocol'
@@ -25,7 +26,8 @@ export default class ContentReportService {
     private targetRepository: ContentReportTargetRepository,
     private policyRepository: ReviewPolicyRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private partnerContent: PartnerContentService
+    private partnerContent: PartnerContentService,
+    private publicTargets: PublicReportTargetRepository
   ) {}
 
   async createReport(
@@ -248,28 +250,9 @@ export default class ContentReportService {
     id: number,
     client: any
   ): Promise<void> {
-    const table = {
-      experience: 'establishment_experiences',
-      event: 'establishment_events',
-      showcase_item: 'establishment_showcase_items',
-    }[kind]
-
-    const result = await client.rawQuery(
-      `
-      SELECT EXISTS (
-        SELECT 1
-          FROM ${table} content
-         WHERE content.tenant_id = ?
-           AND content.id = ?
-           AND content.published_snapshot IS NOT NULL
-           AND content.status <> 'archived'
-           AND EXISTS (${discoverableEstablishmentExistsSql.replace('AND projection.establishment_id = ?', 'AND projection.establishment_id = content.establishment_id')})
-      ) AS visible
-      `,
-      [tenantId, id, tenantId]
-    )
-
-    if (result.rows[0]?.visible !== true) {
+    // The rule lives with the other public-visibility rules, which the
+    // anonymous route applies to every kind of target.
+    if (!(await this.publicTargets.isPartnerContentVisible(tenantId, kind, id, client))) {
       throw new NotFoundException('Report target not found')
     }
   }

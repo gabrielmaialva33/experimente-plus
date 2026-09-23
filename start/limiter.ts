@@ -218,6 +218,25 @@ export const uploadThrottle = limiter.define('upload', async (ctx) => {
 })
 
 /**
+ * Anonymous content reports — ADR-0027 scenario 13.
+ *
+ * The only write route in the product that needs no session, so it is the
+ * obvious way to flood the moderation queue. Five an hour from one address,
+ * then an hour out: generous for a person reporting what they saw, useless for
+ * a script. The key is a digest of the address, like the other public limiters.
+ */
+export const anonymousReportThrottle = limiter.define('anonymous-report', (ctx) => {
+  return limiter
+    .allowRequests(5)
+    .every('1 hour')
+    .blockFor('1 hour')
+    .usingKey(`anonymous_report_${throttleIdentifierDigest(ctx.request.ip())}`)
+    .limitExceeded((error) => {
+      error.setMessage('Too many reports from this connection. Please try again later.')
+    })
+})
+
+/**
  * Admin throttle for administrative endpoints
  * - 200 requests per minute
  * - Only for authenticated admin/root users
