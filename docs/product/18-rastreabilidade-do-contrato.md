@@ -34,13 +34,13 @@ Auditoria feita em **23/09/2026**, confrontando cada item do anexo com o código
 
 ## 3. Cadastro e dados de parceiros
 
-| Item                                                                     | Situação      | Onde / observação                                                                  |
-| ------------------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------------------- |
-| CNPJ, CEP, categoria e imagem para ativação                              | Entregue      | a projeção só torna descobrível com categoria ativa e exatamente uma capa aprovada |
-| Telefone e e-mail obrigatórios na ativação                               | Não conferido |                                                                                    |
-| Cadastro e edição respeitando permissões                                 | Entregue      | revisões e moderação (ADR-0012, ADR-0015)                                          |
-| Parceiro altera horários, fotos, responde avaliações, gerencia conteúdos | Entregue      | ADR-0027, ADR-0028                                                                 |
-| Parceiro desativado sai de busca e mapa, preservando histórico           | Entregue      | definição única em `catalog_discoverability`                                       |
+| Item                                                                     | Situação | Onde / observação                                                                                                                                           |
+| ------------------------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CNPJ, CEP, categoria e imagem para ativação                              | Entregue | a projeção só torna descobrível com categoria ativa e exatamente uma capa aprovada                                                                          |
+| Telefone e e-mail obrigatórios na ativação                               | Parcial  | a completude exige ao menos um canal de contato, não telefone e e-mail ambos; exigir os dois pode travar parceiros já publicados e é decisão do contratante |
+| Cadastro e edição respeitando permissões                                 | Entregue | revisões e moderação (ADR-0012, ADR-0015)                                                                                                                   |
+| Parceiro altera horários, fotos, responde avaliações, gerencia conteúdos | Entregue | ADR-0027, ADR-0028                                                                                                                                          |
+| Parceiro desativado sai de busca e mapa, preservando histórico           | Entregue | definição única em `catalog_discoverability`                                                                                                                |
 
 ## 4. Descoberta, catálogo, busca e mapa
 
@@ -79,17 +79,17 @@ Auditoria feita em **23/09/2026**, confrontando cada item do anexo com o código
 
 ## 8. Avaliações, mídia e respostas
 
-| Item                                      | Situação    | Onde / observação                                                                                                  |
-| ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| Nota de 1 a 5 e texto                     | Entregue    | ADR-0027                                                                                                           |
-| **Fotos** na avaliação                    | **Falta**   | existem só os contadores `photos_count` e `videos_count`; não há envio. A política padrão já habilita quatro fotos |
-| Vídeos                                    | Contratante | proposto como corte próprio, padrão zero (ADR-0027)                                                                |
-| Parceiro responde sem alterar a nota      | Entregue    |                                                                                                                    |
-| JPG, PNG e WEBP                           | Entregue    | HEIC não suportado (ADR-0014); o anexo o condiciona a "quando suportados pela infraestrutura"                      |
-| Limites configuráveis                     | Entregue    | `review_policies`; tela de gestão falta (item 12)                                                                  |
-| Denúncia e moderação                      | Entregue    | fila única, tela no backoffice                                                                                     |
-| Usuário banido tem avaliações ocultadas   | Entregue    | por operação, oculta na leitura e na média, reversível, com histórico (ADR-0027 §6)                                |
-| Parceiro excluído retira material público | Parcial     | página e busca saem por arquivamento; avaliações vinculadas não conferidas                                         |
+| Item                                      | Situação    | Onde / observação                                                                                                                                                 |
+| ----------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nota de 1 a 5 e texto                     | Entregue    | ADR-0027                                                                                                                                                          |
+| **Fotos** na avaliação                    | **Falta**   | existem só os contadores `photos_count` e `videos_count`; não há envio. A política padrão já habilita quatro fotos                                                |
+| Vídeos                                    | Contratante | proposto como corte próprio, padrão zero (ADR-0027)                                                                                                               |
+| Parceiro responde sem alterar a nota      | Entregue    |                                                                                                                                                                   |
+| JPG, PNG e WEBP                           | Entregue    | HEIC não suportado (ADR-0014); o anexo o condiciona a "quando suportados pela infraestrutura"                                                                     |
+| Limites configuráveis                     | Entregue    | `review_policies`; tela de gestão falta (item 12)                                                                                                                 |
+| Denúncia e moderação                      | Entregue    | fila única, tela no backoffice                                                                                                                                    |
+| Usuário banido tem avaliações ocultadas   | Entregue    | por operação, oculta na leitura e na média, reversível, com histórico (ADR-0027 §6)                                                                               |
+| Parceiro excluído retira material público | **Falta**   | página e busca saem por arquivamento, mas **as avaliações continuam públicas**: `listPublic` e `showPublic` não conferem se o estabelecimento ainda é descobrível |
 
 ## 9. Moderação e conteúdo proibido
 
@@ -147,12 +147,12 @@ Auditoria feita em **23/09/2026**, confrontando cada item do anexo com o código
 
 ## 14. Casos e regras expressamente definidos
 
-| Item                                         | Situação | Onde / observação             |
-| -------------------------------------------- | -------- | ----------------------------- |
-| Sem módulo de reservas                       | Entregue |                               |
-| Parceiro desativado fora de busca e mapa     | Entregue |                               |
-| Avaliações de usuário banido fora do público | Entregue | mesma implementação do item 8 |
-| Exclusão de parceiro retira material público | Parcial  | mesma ressalva do item 8      |
+| Item                                         | Situação  | Onde / observação             |
+| -------------------------------------------- | --------- | ----------------------------- |
+| Sem módulo de reservas                       | Entregue  |                               |
+| Parceiro desativado fora de busca e mapa     | Entregue  |                               |
+| Avaliações de usuário banido fora do público | Entregue  | mesma implementação do item 8 |
+| Exclusão de parceiro retira material público | **Falta** | mesma lacuna do item 8        |
 
 Eram o maior risco no aceite, por serem regras que o próprio anexo chama de "expressamente definidas". O banimento foi entregue em 23/09/2026; resta conferir se as avaliações vinculadas saem com a exclusão do parceiro.
 
@@ -173,9 +173,10 @@ Lacunas que dependem só dos contratados, em ordem de risco no aceite:
 
 1. ~~**Usuário banido** — itens 8 e 14.~~ Entregue em 23/09/2026.
 2. ~~**Denúncia de experiência, evento e item de vitrine** — item 9.~~ Entregue em 23/09/2026.
-3. **Fotos na avaliação** — item 8. A política padrão já as habilita.
-4. **Telas de regras de avaliação e de categorias** — item 12.
-5. **Moderação automática razoável** — item 9.
-6. **Edição administrativa com histórico** — item 7 e ADR-0028 §4.
-7. **Favoritar conteúdo, compartilhar experiência e interesses no Concierge** — itens 10 e 11.
-8. **Configuração de build de loja** — item 17, antes de as contas chegarem.
+3. **Avaliações de parceiro retirado saem do público** — itens 8 e 14. Conferido em 23/09/2026: não saem.
+4. **Fotos na avaliação** — item 8. A política padrão já as habilita.
+5. **Telas de regras de avaliação e de categorias** — item 12.
+6. **Moderação automática razoável** — item 9.
+7. **Edição administrativa com histórico** — item 7 e ADR-0028 §4.
+8. **Favoritar conteúdo, compartilhar experiência e interesses no Concierge** — itens 10 e 11.
+9. **Configuração de build de loja** — item 17, antes de as contas chegarem.
