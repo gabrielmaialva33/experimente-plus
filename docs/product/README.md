@@ -73,6 +73,7 @@ Ações de descoberta são registradas
 - [`15-apresentacao-e-resgate.md`](15-apresentacao-e-resgate.md) — QR temporário, validação do parceiro, resgate transacional, comprovante e históricos.
 - [`16-piloto-operacional.md`](16-piloto-operacional.md) — ambiente reproduzível, roteiro assistido, evidências e backlog para validação em campo.
 - [`17-aplicativo-movel-consumer-first.md`](17-aplicativo-movel-consumer-first.md) — jornadas, casos de uso, estados e decisões adiadas do primeiro aplicativo.
+- [`18-rastreabilidade-do-contrato.md`](18-rastreabilidade-do-contrato.md) — cada item do Anexo I do contrato confrontado com o código, com situação medida. Prevalece sobre o 09 onde divergirem, pela cláusula 1.3.
 - [`../architecture/decisions/`](../architecture/decisions/README.md) — ADRs aceitos que transformam o planejamento em contratos técnicos.
 
 ## Estado arquitetural
