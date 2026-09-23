@@ -350,9 +350,36 @@ test.group('Documentation', () => {
       Object.keys(schemas[name].properties!).filter((property) => !relations.includes(property))
 
     assert.sameMembers(
-      documented('EstablishmentReview', ['author', 'reply']),
+      documented('EstablishmentReview', ['author', 'reply', 'photos']),
       serialisable(EstablishmentReview)
     )
+    // Derived from the constant the model uses. The document said
+    // `pending_moderation`, a status that does not exist, and omitted
+    // `archived`, which the author's own listing does return.
+    assert.sameMembers(schemas.EstablishmentReview.properties!.status.enum!, [
+      ...IReview.CANONICAL_REVIEW_STATUSES,
+    ])
+
+    // A review photo is an address and a shape. The model is read with its
+    // asset and file preloaded, and those carry the storage key, the checksum
+    // and the owner: the public shape is pinned so none of it can travel.
+    assert.sameMembers(Object.keys(schemas.ReviewPhoto.properties!), [
+      'id',
+      'url',
+      'width',
+      'height',
+      'alt_text',
+    ])
+    assert.equal(
+      schemas.EstablishmentReview.properties!.photos.items!.$ref,
+      '#/components/schemas/ReviewPhoto'
+    )
+    for (const internal of ['file_name', 'checksum_sha256', 'media_asset_id', 'file_id']) {
+      assert.notProperty(schemas.ReviewPhoto.properties!, internal)
+    }
+    // The client no longer declares how many photos a review has.
+    assert.notProperty(schemas.CreateReviewRequest.properties!, 'photos_count')
+    assert.notProperty(schemas.UpdateReviewRequest.properties!, 'photos_count')
     assert.sameMembers(
       documented('EstablishmentReviewReply'),
       serialisable(EstablishmentReviewReply)

@@ -23,6 +23,9 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     const query = EstablishmentReview.query({ client })
       .where('tenant_id', tenantId)
       .where('id', id)
+      .preload('photos', (photoQuery) => {
+        photoQuery.orderBy('sort_order', 'asc').preload('asset', (asset) => asset.preload('file'))
+      })
       .preload('reply', (replyQuery) => {
         replyQuery.where('status', 'published')
       })
@@ -100,6 +103,9 @@ export default class EstablishmentReviewRepository extends LucidRepository<
           .whereColumn('user_tenants.tenant_id', 'establishment_reviews.tenant_id')
           .whereNotNull('user_tenants.banned_at')
       })
+      .preload('photos', (photoQuery) => {
+        photoQuery.orderBy('sort_order', 'asc').preload('asset', (asset) => asset.preload('file'))
+      })
       .preload('reply', (replyQuery) => {
         replyQuery.where('status', 'published')
       })
@@ -125,6 +131,9 @@ export default class EstablishmentReviewRepository extends LucidRepository<
       .preload('establishment', (estQuery) => {
         estQuery.preload('published_revision')
       })
+      .preload('photos', (photoQuery) => {
+        photoQuery.orderBy('sort_order', 'asc').preload('asset', (asset) => asset.preload('file'))
+      })
       .preload('reply', (replyQuery) => {
         replyQuery.where('status', 'published')
       })
@@ -144,6 +153,9 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     const rows = EstablishmentReview.query()
       .where('tenant_id', tenantId)
       .preload('establishment')
+      .preload('photos', (photoQuery) => {
+        photoQuery.orderBy('sort_order', 'asc').preload('asset', (asset) => asset.preload('file'))
+      })
       .preload('author', (userQuery) => {
         userQuery.select('id', 'full_name', 'username', 'email')
       })

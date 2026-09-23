@@ -5500,11 +5500,11 @@ components:
             - 'null'
         status:
           type: string
-          enum: [published, hidden, pending_moderation]
+          enum: [published, hidden, archived]
         photos_count:
           description: >-
-            Number of photos attached. The media pipeline of ADR-0014 owns the
-            files; the review carries the count, never the URLs.
+            Number of photos attached, derived by the server from the photos
+            that exist. It is never accepted from the client.
           type: integer
           minimum: 0
         videos_count:
@@ -5530,6 +5530,36 @@ components:
           $ref: '#/components/schemas/ReviewAuthor'
         reply:
           $ref: '#/components/schemas/EstablishmentReviewReply'
+        photos:
+          description: >-
+            Photos in their display order. Public exactly when the review is:
+            they have no moderation state of their own (ADR-0027).
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewPhoto'
+
+    ReviewPhoto:
+      description: >-
+        A review photo as anyone may see it. The file was stripped of its
+        metadata (location, device, time) before being stored, and the response
+        carries an address and a shape — never the storage key, the checksum or
+        the identifiers behind them.
+      type: object
+      additionalProperties: false
+      required: [id, url, width, height, alt_text]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        url:
+          type: [string, 'null']
+        width:
+          type: [integer, 'null']
+        height:
+          type: [integer, 'null']
+        alt_text:
+          type: [string, 'null']
+          maxLength: 180
 
     ContentReport:
       type: object
@@ -5639,9 +5669,6 @@ components:
             - integer
             - 'null'
           minimum: 1
-        photos_count:
-          type: integer
-          minimum: 0
 
     UpdateReviewRequest:
       type: object
@@ -5655,9 +5682,6 @@ components:
           type:
             - string
             - 'null'
-        photos_count:
-          type: integer
-          minimum: 0
 
     CreateReplyRequest:
       type: object
@@ -13960,6 +13984,92 @@ paths:
         '404':
           description: Review not found
 
+
+  /api/v1/me/reviews/{id}/photos:
+    post:
+      operationId: addMyReviewPhoto
+      summary: Attach a photo to one of the caller's reviews
+      description: >-
+        JPEG, PNG or WebP up to 10 MiB (ADR-0014; HEIC is rejected). The file is
+        stripped of its metadata — including GPS location — before it is
+        probed and stored; only the orientation is kept. The number of photos is
+        limited by the operation's review policy (`max_photos`), and attaching
+        follows the review's edit window.
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                alt_text:
+                  type: string
+                  maxLength: 180
+      responses:
+        '201':
+          description: Photo attached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPhoto'
+        '400':
+          description: >-
+            Photo limit reached, photos not accepted by this operation, edit
+            window expired, or the image could not be processed
+        '401':
+          description: Authentication required
+        '403':
+          description: The review belongs to someone else
+        '404':
+          description: Review not found
+        '422':
+          description: Missing photo, wrong extension or too large
+
+  /api/v1/me/reviews/{id}/photos/{photoId}:
+    delete:
+      operationId: removeMyReviewPhoto
+      summary: Remove a photo from one of the caller's reviews
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Photo removed, with its file
+        '401':
+          description: Authentication required
+        '403':
+          description: The review belongs to someone else
+        '404':
+          description: Review or photo not found
   /api/v1/portal/reviews/{reviewId}/replies:
     post:
       operationId: createPortalReviewReply

@@ -279,4 +279,16 @@ describe('ContentReportCard', () => {
 
     expect(screen.queryByRole('button', { name: /Banir autor/ })).not.toBeInTheDocument()
   })
+
+  it('shows the photos of a reported review, since a report about an image is judged by looking', () => {
+    const report = reviewReport()
+    ;(report.target as JsonRecord).photos = [
+      { id: 5, url: 'https://example.test/foto.jpg', width: 800, height: 600, alt_text: 'Prato' },
+    ]
+
+    render(<ContentReportCard report={report} />)
+
+    const image = screen.getByAltText('Prato') as HTMLImageElement
+    expect(image.src).toBe('https://example.test/foto.jpg')
+  })
 })

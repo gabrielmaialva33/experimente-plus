@@ -2,6 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 
 import type IReview from '#modules/reviews/interfaces/review_interface'
 import type ContentReport from '#modules/reviews/models/content_report'
+import EstablishmentReviewPhoto from '#modules/reviews/models/establishment_review_photo'
 
 /**
  * Resolves what a batch of reports actually points at — ADR-0027 §6.
@@ -68,6 +69,7 @@ export default class ContentReportTargetRepository {
       title: null,
       text: null,
       rating: null,
+      photos: [],
       status: null,
       author_name: null,
       author_id: null,
@@ -129,6 +131,8 @@ export default class ContentReportTargetRepository {
         'city.slug as city_slug'
       )
 
+    const photos = await this.reviewPhotos(tenantId, ids)
+
     return new Map(
       rows.map((row) => [
         Number(row.id),
@@ -139,6 +143,7 @@ export default class ContentReportTargetRepository {
           title: null,
           text: row.comment ?? null,
           rating: row.rating === null || row.rating === undefined ? null : Number(row.rating),
+          photos: photos.get(Number(row.id)) ?? [],
           status: row.status ?? null,
           author_name: row.author_name ?? null,
           author_id: Number(row.author_id),
@@ -201,6 +206,7 @@ export default class ContentReportTargetRepository {
           title: null,
           text: row.comment ?? null,
           rating: null,
+          photos: [],
           status: row.status ?? null,
           author_name: row.author_name ?? null,
           author_id: null,
@@ -253,6 +259,7 @@ export default class ContentReportTargetRepository {
           title: null,
           text: row.short_description ?? null,
           rating: null,
+          photos: [],
           status: row.lifecycle_status ?? null,
           author_name: null,
           author_id: null,
@@ -327,6 +334,7 @@ export default class ContentReportTargetRepository {
           title: row.snapshot_title ?? null,
           text: row.snapshot_description ?? null,
           rating: null,
+          photos: [],
           status: row.status ?? null,
           author_name: null,
           author_id: null,
@@ -341,5 +349,24 @@ export default class ContentReportTargetRepository {
         },
       ])
     )
+  }
+
+  private async reviewPhotos(
+    tenantId: number,
+    reviewIds: number[]
+  ): Promise<Map<number, IReview.ReviewPhotoProjection[]>> {
+    const rows = await EstablishmentReviewPhoto.query()
+      .where('tenant_id', tenantId)
+      .whereIn('review_id', reviewIds)
+      .orderBy('sort_order', 'asc')
+      .preload('asset', (asset) => asset.preload('file'))
+
+    const byReview = new Map<number, IReview.ReviewPhotoProjection[]>()
+    for (const photo of rows) {
+      const list = byReview.get(photo.review_id) ?? []
+      list.push(photo.projection())
+      byReview.set(photo.review_id, list)
+    }
+    return byReview
   }
 }

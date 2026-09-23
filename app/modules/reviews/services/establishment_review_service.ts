@@ -55,13 +55,6 @@ export default class EstablishmentReviewService {
       const comment = this.normalizeText(payload.comment)
       this.validateTextLength(comment, policy.min_text_length, policy.max_text_length)
 
-      const photosCount = payload.photos_count ?? 0
-      if (photosCount > policy.max_photos) {
-        throw new BadRequestException(
-          `Maximum photos limit exceeded (allowed: ${policy.max_photos})`
-        )
-      }
-
       const startOfDay = DateTime.utc().startOf('day').toJSDate()
       const todayCount = await this.reviewRepository.countUserReviewsSince(
         tenantId,
@@ -107,7 +100,8 @@ export default class EstablishmentReviewService {
           rating: payload.rating,
           comment,
           status: 'published',
-          photos_count: photosCount,
+          // Derived from the photos actually attached, never declared by the client.
+          photos_count: 0,
           videos_count: 0,
         },
         { client }
@@ -152,19 +146,11 @@ export default class EstablishmentReviewService {
         payload.comment !== undefined ? this.normalizeText(payload.comment) : review.comment
       this.validateTextLength(comment, policy.min_text_length, policy.max_text_length)
 
-      const photosCount = payload.photos_count ?? review.photos_count
-      if (photosCount > policy.max_photos) {
-        throw new BadRequestException(
-          `Maximum photos limit exceeded (allowed: ${policy.max_photos})`
-        )
-      }
-
       review.useTransaction(client)
       if (payload.rating !== undefined) {
         review.rating = payload.rating
       }
       review.comment = comment
-      review.photos_count = photosCount
       review.edited_at = now
       await review.save()
 

@@ -1,10 +1,18 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column, hasOne, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
-import type { BelongsTo, HasOne } from '@adonisjs/lucid/types/relations'
+import {
+  BaseModel,
+  belongsTo,
+  column,
+  hasMany,
+  hasOne,
+  SnakeCaseNamingStrategy,
+} from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 
 import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
 import Establishment from '#modules/establishments/models/establishment'
 import type IReview from '#modules/reviews/interfaces/review_interface'
+import EstablishmentReviewPhoto from '#modules/reviews/models/establishment_review_photo'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
@@ -66,4 +74,8 @@ export default class EstablishmentReview extends BaseModel {
 
   @hasOne(() => EstablishmentReviewReply, { foreignKey: 'review_id' })
   declare reply: HasOne<typeof EstablishmentReviewReply>
+
+  /** Public exactly when the review is: photos carry no moderation state of their own. */
+  @hasMany(() => EstablishmentReviewPhoto, { foreignKey: 'review_id' })
+  declare photos: HasMany<typeof EstablishmentReviewPhoto>
 }

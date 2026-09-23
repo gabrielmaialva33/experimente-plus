@@ -4,6 +4,7 @@ import { apiThrottle, throttle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const ReviewsController = () => import('#modules/reviews/controllers/reviews_controller')
+const ReviewPhotosController = () => import('#modules/reviews/controllers/review_photos_controller')
 const UserBansController = () => import('#modules/reviews/controllers/user_bans_controller')
 
 router
@@ -21,6 +22,13 @@ router
     router.post('/', [ReviewsController, 'store'])
     router.put('/:id', [ReviewsController, 'update'])
     router.delete('/:id', [ReviewsController, 'destroy'])
+    router
+      .post('/:id/photos', [ReviewPhotosController, 'store'])
+      .where('id', router.matchers.number())
+    router
+      .delete('/:id/photos/:photoId', [ReviewPhotosController, 'destroy'])
+      .where('id', router.matchers.number())
+      .where('photoId', router.matchers.number())
   })
   .prefix('/api/v1/me/reviews')
   .use([

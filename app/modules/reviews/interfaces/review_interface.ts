@@ -19,6 +19,22 @@ export namespace IReview {
    * It belongs to the membership, so the same person can be banned in one
    * operation and not in another.
    */
+  /**
+   * A review photo as anyone may see it: an address and a shape, never the
+   * storage key, the checksum or the identifiers behind them.
+   */
+  export interface ReviewPhotoProjection {
+    id: number
+    url: string | null
+    width: number | null
+    height: number | null
+    alt_text: string | null
+  }
+
+  export interface ReviewPhotoPayload {
+    alt_text?: string | null
+  }
+
   export interface BanState {
     user_id: number
     banned: boolean
@@ -66,6 +82,11 @@ export namespace IReview {
     text: string | null
     /** Reviews only. */
     rating: number | null
+    /**
+     * Reviews only. A report about an image is judged by looking at it, so the
+     * queue shows the photos beside the text.
+     */
+    photos: ReviewPhotoProjection[]
     /** The target's own visibility, so an already hidden item is obvious. */
     status: string | null
     author_name: string | null
@@ -190,13 +211,11 @@ export namespace IReview {
     rating: number
     comment?: string | null
     redemption_id?: number | null
-    photos_count?: number
   }
 
   export interface UpdateReviewPayload {
     rating?: number
     comment?: string | null
-    photos_count?: number
   }
 
   export interface CreateReplyPayload {

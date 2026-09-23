@@ -9,7 +9,7 @@ import {
 import { Button } from '~/components/ui/button'
 import { Textarea } from '~/components/ui/textarea'
 import { useAuth } from '~/hooks/use_auth'
-import { numeric, record, text, type JsonRecord } from '~/lib/json'
+import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
   formatReportDate,
   isOverdue,
@@ -60,6 +60,7 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
   const targetExists = target?.exists === true
   const canHide = target?.can_hide === true && targetExists
   const targetTitle = nullableText(target, 'title')
+  const targetPhotos = collection(target?.photos)
   const targetText = nullableText(target, 'text')
   const targetAuthor = nullableText(target, 'author_name')
   const targetEstablishment = nullableText(target, 'establishment_name')
@@ -175,6 +176,23 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
                 <Star aria-hidden="true" className="size-4 text-warning" />
                 <span aria-label={`${targetRating} de 5`}>{targetRating} de 5</span>
               </p>
+            ) : null}
+
+            {targetPhotos.length > 0 ? (
+              <ul className="flex list-none flex-wrap gap-2 p-0" aria-label="Fotos da avaliação">
+                {targetPhotos.map((photo) => (
+                  <li key={numeric(photo, 'id')}>
+                    <a href={text(photo, 'url')} target="_blank" rel="noreferrer">
+                      <img
+                        src={text(photo, 'url')}
+                        alt={text(photo, 'alt_text') || 'Foto enviada com a avaliação'}
+                        className="size-20 rounded-md border border-border object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                  </li>
+                ))}
+              </ul>
             ) : null}
 
             {targetText ? (
