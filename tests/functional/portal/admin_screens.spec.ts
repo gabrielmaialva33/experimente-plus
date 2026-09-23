@@ -269,4 +269,88 @@ test.group('Backoffice administration screens (Anexo I item 12)', (group) => {
       .first()
     assert.notExists(row)
   })
+
+  test('the rules screen also carries the automatic moderation rules', async ({
+    client,
+    assert,
+  }) => {
+    const { admin, headers } = await staff('adm-automod-page')
+
+    const page = await client.get('/backoffice/review-policy').headers(headers).loginAs(admin)
+    page.assertStatus(200)
+    assert.include(page.text(), '"contact_mode"')
+    assert.include(page.text(), '"blocked_terms_text"')
+  })
+
+  test('saving the automatic rules through the screen takes one term per line', async ({
+    client,
+    assert,
+  }) => {
+    const { scenario, admin, headers } = await staff('adm-automod-save')
+
+    const saved = await client
+      .put('/backoffice/moderation-rules')
+      .headers(headers)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({
+        link_mode: 'off',
+        contact_mode: 'flag',
+        payment_data_mode: 'hold',
+        blocked_term_mode: 'hold',
+        blocked_terms_text: '  golpe \n\npirâmide\ngolpe\r\n',
+      })
+    assert.oneOf(saved.status(), [200, 302])
+
+    const row = await db
+      .from('automatic_moderation_policies')
+      .where('tenant_id', scenario.tenant.id)
+      .first()
+    assert.equal(row.link_mode, 'off')
+    assert.equal(row.contact_mode, 'flag')
+    assert.equal(row.blocked_term_mode, 'hold')
+    // Trimmed, blank lines dropped, the repeat collapsed — as the API stores it.
+    assert.deepEqual(row.blocked_terms, ['golpe', 'pirâmide'])
+  })
+
+  test('a term the API would refuse is refused by the screen too', async ({ client, assert }) => {
+    const { scenario, admin, headers } = await staff('adm-automod-refuse')
+
+    await client
+      .put('/backoffice/moderation-rules')
+      .headers(headers)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ blocked_terms_text: 'golpe' })
+
+    const refused = await client
+      .put('/backoffice/moderation-rules')
+      .headers({ ...headers, referer: '/backoffice/review-policy' })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ blocked_terms_text: 'golpe\nx' })
+    assert.oneOf(refused.status(), [302, 422])
+
+    const row = await db
+      .from('automatic_moderation_policies')
+      .where('tenant_id', scenario.tenant.id)
+      .first()
+    assert.deepEqual(row.blocked_terms, ['golpe'])
+  })
+
+  test('a moderator reads the report queue but does not set the rules', async ({ client }) => {
+    const { moderator, headers } = await staff('adm-automod-moderator')
+
+    const denied = await client
+      .put('/backoffice/moderation-rules')
+      .headers(headers)
+      .loginAs(moderator)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ contact_mode: 'off' })
+    denied.assertStatus(403)
+  })
 })

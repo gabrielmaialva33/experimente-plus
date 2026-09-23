@@ -248,6 +248,10 @@ router
       .put('/review-policy', [ReviewPolicyPagesController, 'update'])
       .as('backoffice.review_policy.update')
       .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))
+    router
+      .put('/moderation-rules', [ReviewPolicyPagesController, 'updateModerationRules'])
+      .as('backoffice.moderation_rules.update')
+      .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))
 
     router
       .get('/taxonomy', [TaxonomyPagesController, 'index'])

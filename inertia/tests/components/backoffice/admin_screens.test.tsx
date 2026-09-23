@@ -171,6 +171,13 @@ describe('backoffice administration screens', () => {
           edit_window_days: 30,
           report_moderation_days: 5,
         }}
+        moderation_rules={{
+          link_mode: 'flag',
+          contact_mode: 'hold',
+          payment_data_mode: 'hold',
+          blocked_term_mode: 'hold',
+          blocked_terms_text: '',
+        }}
       />
     )
 
@@ -189,9 +196,49 @@ describe('backoffice administration screens', () => {
   })
 
   it('shows the review rules read-only to someone who cannot change them', () => {
-    render(<BackofficeReviewPolicy policy={{ report_moderation_days: 5 }} />)
+    render(
+      <BackofficeReviewPolicy
+        policy={{ report_moderation_days: 5 }}
+        moderation_rules={{ link_mode: 'flag', blocked_terms_text: '' }}
+      />
+    )
 
     expect(screen.queryByRole('form')).not.toBeInTheDocument()
-    expect(screen.getByText(/pode consultar, mas não alterar/)).toBeInTheDocument()
+    // Both sections say so: the review rules and the automatic moderation rules.
+    expect(screen.getAllByText(/pode consultar, mas não alterar/)).toHaveLength(2)
+  })
+
+  it('edits the automatic moderation rules on the same screen, one term per line', () => {
+    mocks.permissions = ['settings.update']
+    render(
+      <BackofficeReviewPolicy
+        policy={{ report_moderation_days: 5 }}
+        moderation_rules={{
+          link_mode: 'flag',
+          contact_mode: 'hold',
+          payment_data_mode: 'hold',
+          blocked_term_mode: 'off',
+          blocked_terms_text: 'golpe',
+        }}
+      />
+    )
+
+    expect(screen.getByRole('heading', { name: 'Moderação automática' })).toBeInTheDocument()
+    expect(screen.getByText(/Nenhuma regra apaga nada/)).toBeInTheDocument()
+    expect((screen.getByLabelText('Dados de contato') as HTMLSelectElement).value).toBe('hold')
+
+    fireEvent.change(screen.getByLabelText('Termos bloqueados'), { target: { value: 'hold' } })
+    fireEvent.change(screen.getByLabelText('Lista de termos bloqueados'), {
+      target: { value: 'golpe\npirâmide' },
+    })
+    fireEvent.submit(screen.getByRole('form', { name: 'Salvar regras de moderação' }))
+
+    expect(mocks.transform).toHaveBeenCalledWith(
+      expect.objectContaining({ blocked_term_mode: 'hold', blocked_terms_text: 'golpe\npirâmide' })
+    )
+    expect(mocks.formPut).toHaveBeenCalledWith(
+      '/backoffice/moderation-rules',
+      expect.objectContaining({ preserveScroll: true })
+    )
   })
 })
