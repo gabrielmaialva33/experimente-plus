@@ -1,0 +1,8 @@
+# Runtime do backend do Experimente+.
+# O global da workstation usa node 26, e o ace deste projeto não sobe nele: o
+# validador de metadados de comandos quebra antes de qualquer teste rodar
+# ("Invalid command exported ... Invalid URL"). A versão acompanha o `.nvmrc` e o
+# campo `engines` do package.json; mude os três juntos.
+[tools]
+node = "24.13.0"
+pnpm = "11"

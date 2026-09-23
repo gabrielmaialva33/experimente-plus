@@ -44,7 +44,7 @@ Use os aliases de `package.json`: `#modules/*`, `#shared/*`, `#exceptions/*`, `#
 
 ## Ambiente e comandos
 
-Use Node 24 (`.nvmrc`: `v24.13.0`) e pnpm 11 (`packageManager` fixa `11.22.0`). Execute comandos na raiz deste repositório. Use `pnpm ace`, que encapsula o loader TypeScript.
+Use Node 24 (`.nvmrc`: `v24.13.0`) e pnpm 11 (`packageManager` fixa `11.22.0`). `mise.toml` fixa a mesma versão para quem usa mise: o Node global mais novo não sobe o ace deste projeto, e o erro aparece como falha de metadados de comando, não como versão errada. Execute comandos na raiz deste repositório. Use `pnpm ace`, que encapsula o loader TypeScript.
 
 Em um checkout novo, instale com `pnpm install --frozen-lockfile`. Crie `.env` a partir de `.env.example` apenas se ainda não existir, ajuste o ambiente local e gere `APP_KEY` com `pnpm ace generate:key`. Não sobrescreva um `.env` existente.
 
