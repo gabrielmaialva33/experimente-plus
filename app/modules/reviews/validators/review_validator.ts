@@ -8,7 +8,6 @@ export const createReviewValidator = vine.compile(
     rating: vine.number().withoutDecimals().min(1).max(5),
     comment: vine.string().trim().nullable().optional(),
     redemption_id: vine.number().min(1).nullable().optional(),
-    photos_count: vine.number().withoutDecimals().min(0).optional(),
   })
 )
 
@@ -16,7 +15,6 @@ export const updateReviewValidator = vine.compile(
   vine.object({
     rating: vine.number().withoutDecimals().min(1).max(5).optional(),
     comment: vine.string().trim().nullable().optional(),
-    photos_count: vine.number().withoutDecimals().min(0).optional(),
   })
 )
 
@@ -111,5 +109,23 @@ export const banPayloadValidator = vine.compile(
 export const unbanPayloadValidator = vine.compile(
   vine.object({
     reason: vine.string().trim().maxLength(500).nullable().optional(),
+  })
+)
+
+export const reviewPhotoParamsValidator = vine.compile(
+  vine.object({
+    id: vine.number().min(1),
+    photoId: vine.number().min(1),
+  })
+)
+
+/**
+ * The photo itself is validated by the request's file options and then by the
+ * image probe, as all media is. This only covers the description, which a
+ * screen reader reads in place of the image.
+ */
+export const reviewPhotoValidator = vine.compile(
+  vine.object({
+    alt_text: vine.string().trim().maxLength(180).nullable().optional(),
   })
 )

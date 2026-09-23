@@ -19,6 +19,19 @@ export default class ReviewPolicyService {
     return this.policyRepository.getForTenant(tenantId)
   }
 
+  /** The rules any member writing a review must follow; no role required. */
+  async authorRules(tenantId: number): Promise<IReview.AuthorRules> {
+    const policy = await this.policyRepository.getForTenant(tenantId)
+    return {
+      min_text_length: policy.min_text_length,
+      max_text_length: policy.max_text_length,
+      max_photos: policy.max_photos,
+      edit_window_days: policy.edit_window_days,
+      min_edit_interval_minutes: policy.min_edit_interval_minutes,
+      daily_limit_per_user: policy.daily_limit_per_user,
+    }
+  }
+
   async updatePolicy(
     tenantId: number,
     actor: User,

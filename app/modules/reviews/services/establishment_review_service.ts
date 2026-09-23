@@ -57,13 +57,6 @@ export default class EstablishmentReviewService {
       const comment = this.normalizeText(payload.comment)
       this.validateTextLength(comment, policy.min_text_length, policy.max_text_length)
 
-      const photosCount = payload.photos_count ?? 0
-      if (photosCount > policy.max_photos) {
-        throw new BadRequestException(
-          `Maximum photos limit exceeded (allowed: ${policy.max_photos})`
-        )
-      }
-
       const startOfDay = DateTime.utc().startOf('day').toJSDate()
       const todayCount = await this.reviewRepository.countUserReviewsSince(
         tenantId,
@@ -113,7 +106,8 @@ export default class EstablishmentReviewService {
           rating: payload.rating,
           comment,
           status: assessment.hold ? 'hidden' : 'published',
-          photos_count: photosCount,
+          // Derived from the photos actually attached, never declared by the client.
+          photos_count: 0,
           videos_count: 0,
         },
         { client }
@@ -159,13 +153,6 @@ export default class EstablishmentReviewService {
         payload.comment !== undefined ? this.normalizeText(payload.comment) : review.comment
       this.validateTextLength(comment, policy.min_text_length, policy.max_text_length)
 
-      const photosCount = payload.photos_count ?? review.photos_count
-      if (photosCount > policy.max_photos) {
-        throw new BadRequestException(
-          `Maximum photos limit exceeded (allowed: ${policy.max_photos})`
-        )
-      }
-
       // Only new text is assessed, and only while it is public: a review a
       // moderator already hid is not the rules' business.
       const assessment =
@@ -178,7 +165,6 @@ export default class EstablishmentReviewService {
         review.rating = payload.rating
       }
       review.comment = comment
-      review.photos_count = photosCount
       review.edited_at = now
       if (assessment?.hold) review.status = 'hidden'
       await review.save()
@@ -212,12 +198,15 @@ export default class EstablishmentReviewService {
 
   async showPublic(tenantId: number, id: number): Promise<EstablishmentReview> {
     const review = await this.reviewRepository.findById(tenantId, id)
-    // A banned author's review answers exactly like one that does not exist:
-    // otherwise its address would stay a way around the ban (ADR-0027 §6).
+    // A banned author's review, and a review of an establishment that left
+    // the catalogue, answer exactly like one that does not exist: otherwise
+    // their address would stay a way around the ban (ADR-0027 §6) or around
+    // the withdrawal (Anexo I item 14).
     if (
       !review ||
       review.status !== 'published' ||
-      (await this.userBans.isBanned(tenantId, review.user_id))
+      (await this.userBans.isBanned(tenantId, review.user_id)) ||
+      !(await this.reviewRepository.isEstablishmentDiscoverable(tenantId, review.establishment_id))
     ) {
       throw new NotFoundException('Review not found')
     }
