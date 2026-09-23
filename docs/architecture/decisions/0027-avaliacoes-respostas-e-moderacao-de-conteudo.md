@@ -18,20 +18,20 @@
 
 Avaliações são escopo contratado e hoje **não existem no código**. Não há entidade de avaliação, nota, resposta do parceiro ou denúncia. O que existe com nome parecido é `establishment_revision_review_issues`, que pertence à moderação de submissão de estabelecimento descrita no ADR-0015, e `establishment_revision_events`, que é log de workflow. Nenhum dos dois serve a este domínio.
 
-O planejamento de produto já registrou o tema, mas explicitamente como **questões abertas**, em `docs/product/05-decisoes-e-pendencias.md`: comprovação de visita, mínimo e máximo de caracteres, quantidade de fotos e vídeos, limite diário, intervalo entre edições, prazo de edição e efeitos do banimento sobre histórico e médias. O documento de atores é ainda mais direto: *a exigência de visita para avaliar ainda está aberta na especificação e não deve ser implementada até existir uma regra verificável*.
+O planejamento de produto já registrou o tema, mas explicitamente como **questões abertas**, em `docs/product/05-decisoes-e-pendencias.md`: comprovação de visita, mínimo e máximo de caracteres, quantidade de fotos e vídeos, limite diário, intervalo entre edições, prazo de edição e efeitos do banimento sobre histórico e médias. O documento de atores é ainda mais direto: _a exigência de visita para avaliar ainda está aberta na especificação e não deve ser implementada até existir uma regra verificável_.
 
 Essas mesmas perguntas aparecem no instrumento contratual como itens que **dependem de definição das partes antes da produção**. Isso não é coincidência e tem consequência de desenho, tratada abaixo.
 
 ## Costuras existentes que esta decisão deve respeitar
 
-| Costura                                                          | Consequência para avaliações                                                                                                         |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| ADR-0012: estabelecimento estável, revisões publicáveis          | A avaliação é sobre **o lugar**, não sobre uma revisão. Deve apontar para a identidade estável, sobrevivendo a novas revisões.        |
-| ADR-0003 e ADR-0016: catálogo público sem membership             | Leitura de avaliações e de médias é pública e sai da projeção reconstruível. Escrever exige autenticação.                             |
-| ADR-0007: RBAC global com policies de domínio                    | Responder é capacidade de membership da organização dona do estabelecimento; moderar é papel global `moderator`. Nada de papel novo.  |
-| ADR-0014: mídia estável e composição versionada                  | Fotos de avaliação reutilizam `files` e `media_assets`. O ADR-0014 cobre **apenas imagem** e rejeita HEIC/HEIF explicitamente.        |
-| ADR-0015: submissão, moderação e publicação atômica              | A fila humana, as issues e o histórico append-only já têm forma definida. Moderação de avaliação segue o mesmo padrão, não outro.     |
-| ADR-0021: resgate transacional                                   | Existe evidência durável de uso de benefício. É o único sinal de visita hoje verificável no sistema.                                  |
+| Costura                                                 | Consequência para avaliações                                                                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| ADR-0012: estabelecimento estável, revisões publicáveis | A avaliação é sobre **o lugar**, não sobre uma revisão. Deve apontar para a identidade estável, sobrevivendo a novas revisões.       |
+| ADR-0003 e ADR-0016: catálogo público sem membership    | Leitura de avaliações e de médias é pública e sai da projeção reconstruível. Escrever exige autenticação.                            |
+| ADR-0007: RBAC global com policies de domínio           | Responder é capacidade de membership da organização dona do estabelecimento; moderar é papel global `moderator`. Nada de papel novo. |
+| ADR-0014: mídia estável e composição versionada         | Fotos de avaliação reutilizam `files` e `media_assets`. O ADR-0014 cobre **apenas imagem** e rejeita HEIC/HEIF explicitamente.       |
+| ADR-0015: submissão, moderação e publicação atômica     | A fila humana, as issues e o histórico append-only já têm forma definida. Moderação de avaliação segue o mesmo padrão, não outro.    |
+| ADR-0021: resgate transacional                          | Existe evidência durável de uso de benefício. É o único sinal de visita hoje verificável no sistema.                                 |
 
 ## Decisão proposta
 
@@ -39,7 +39,7 @@ Essas mesmas perguntas aparecem no instrumento contratual como itens que **depen
 
 `establishment_reviews` referencia `establishments` pela identidade estável do ADR-0012, com `tenant_id` e chave composta no padrão do repositório (`unique(['id','tenant_id'])`, FKs compostas com o tenant). Uma nova revisão publicada não invalida nem reatribui avaliações.
 
-Nota inteira obrigatória de 1 a 5. Texto opcional, dentro dos limites parametrizados. **Uma avaliação por par (usuário, estabelecimento)**, editável dentro da janela configurada: o Anexo fala em limite *diário* de avaliações e em *intervalo entre edições* e *prazo para editar*, o que descreve uma avaliação por lugar, editável, e não múltiplas avaliações do mesmo usuário sobre o mesmo lugar.
+Nota inteira obrigatória de 1 a 5. Texto opcional, dentro dos limites parametrizados. **Uma avaliação por par (usuário, estabelecimento)**, editável dentro da janela configurada: o Anexo fala em limite _diário_ de avaliações e em _intervalo entre edições_ e _prazo para editar_, o que descreve uma avaliação por lugar, editável, e não múltiplas avaliações do mesmo usuário sobre o mesmo lugar.
 
 ### 2. Resposta do parceiro é entidade separada
 
@@ -51,12 +51,12 @@ Nota inteira obrigatória de 1 a 5. Texto opcional, dentro dos limites parametri
 
 **Revisão de 15/09/2026 — quatro elementos incorporados de desenho externo.** Um projeto irmão da mesma família de stack resolve denúncia com quatro ideias que esta proposta não previa e que valem mais que o custo de implementá-las agora, enquanto a tabela ainda não chegou a ambiente persistente:
 
-| Elemento              | Por que entra                                                                                                                                                  |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Número de protocolo   | Sem ele o denunciante não tem como acompanhar o que reportou, e a operação não tem identificador humano para conversar sobre um caso.                           |
-| Denúncia anônima      | O escopo contratado prevê fluxo de denúncia sem qualificá-lo; exigir identidade suprime justamente a denúncia que mais importa.                                 |
-| Hash do denunciante   | Permite deduplicar e limitar abuso **sem armazenar quem denunciou**, coerente com a postura de privacidade do ADR-0017, que já evita identificador bruto.        |
-| Prazo de moderação    | Sem prazo, uma denúncia fica parada indefinidamente sem que nada no sistema perceba. Com `due_at` e marca de aviso, o atraso é observável.                      |
+| Elemento            | Por que entra                                                                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Número de protocolo | Sem ele o denunciante não tem como acompanhar o que reportou, e a operação não tem identificador humano para conversar sobre um caso.                     |
+| Denúncia anônima    | O escopo contratado prevê fluxo de denúncia sem qualificá-lo; exigir identidade suprime justamente a denúncia que mais importa.                           |
+| Hash do denunciante | Permite deduplicar e limitar abuso **sem armazenar quem denunciou**, coerente com a postura de privacidade do ADR-0017, que já evita identificador bruto. |
+| Prazo de moderação  | Sem prazo, uma denúncia fica parada indefinidamente sem que nada no sistema perceba. Com `due_at` e marca de aviso, o atraso é observável.                |
 
 Consequências de modelo: `content_reports` ganha protocolo único por tenant, sinalizador de anonimato, hashes de origem e de token do denunciante — nunca o valor em claro —, prazo e marca de aviso de prazo, responsável atribuído e descrição de desfecho. O denunciante autenticado continua identificado; o anônimo existe apenas como hash.
 
@@ -68,17 +68,17 @@ O prazo é operação, não obrigação contratual: o escopo coloca moderação 
 
 Todos os valores em aberto viram **política configurável por tenant**, em `review_policies`, com defaults versionados e auditáveis:
 
-| Parâmetro                        | Default proposto | Origem                       |
-| -------------------------------- | ---------------- | ---------------------------- |
-| exigir comprovação de visita     | **desligado**    | questão aberta em produto    |
-| mínimo de caracteres do texto    | 0 (texto opcional) | questão aberta             |
-| máximo de caracteres do texto    | 1.000            | questão aberta               |
-| máximo de fotos por avaliação    | 4                | questão aberta               |
-| máximo de vídeos por avaliação   | **0**            | ver seção de divergência     |
-| limite de avaliações por dia     | 5                | questão aberta               |
-| intervalo mínimo entre edições   | 1 hora           | questão aberta               |
-| prazo para editar                | 30 dias          | questão aberta               |
-| prazo de moderação de denúncia   | 5 dias           | incorporado em 15/09/2026    |
+| Parâmetro                      | Default proposto   | Origem                    |
+| ------------------------------ | ------------------ | ------------------------- |
+| exigir comprovação de visita   | **desligado**      | questão aberta em produto |
+| mínimo de caracteres do texto  | 0 (texto opcional) | questão aberta            |
+| máximo de caracteres do texto  | 1.000              | questão aberta            |
+| máximo de fotos por avaliação  | 4                  | questão aberta            |
+| máximo de vídeos por avaliação | **0**              | ver seção de divergência  |
+| limite de avaliações por dia   | 5                  | questão aberta            |
+| intervalo mínimo entre edições | 1 hora             | questão aberta            |
+| prazo para editar              | 30 dias            | questão aberta            |
+| prazo de moderação de denúncia | 5 dias             | incorporado em 15/09/2026 |
 
 Os defaults **não são a decisão do dono**: são ponto de partida para que a funcionalidade exista e seja testável antes das definições. Quando o dono definir, muda-se configuração, não schema nem regra de negócio. Essa é a razão de o desenho ser assim: a definição pendente não pode virar redesenho.
 
@@ -96,7 +96,7 @@ Agregados entram na projeção pública do ADR-0016, reconstruíveis a partir da
 
 ## Divergência real entre o escopo contratado e o ADR-0014
 
-O escopo contratado prevê **vídeos** em avaliações e fotos em **JPG, PNG, WEBP e HEIC**, este último com a ressalva *quando suportados pela infraestrutura adotada*. O ADR-0014 aceito cobre apenas imagem, com JPEG, PNG e WebP válidos, e **rejeita HEIC/HEIF explicitamente** neste corte, em vez de armazenar sem pipeline compatível.
+O escopo contratado prevê **vídeos** em avaliações e fotos em **JPG, PNG, WEBP e HEIC**, este último com a ressalva _quando suportados pela infraestrutura adotada_. O ADR-0014 aceito cobre apenas imagem, com JPEG, PNG e WebP válidos, e **rejeita HEIC/HEIF explicitamente** neste corte, em vez de armazenar sem pipeline compatível.
 
 Consequências que precisam de decisão do dono, não de inferência:
 

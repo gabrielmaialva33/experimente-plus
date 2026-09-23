@@ -21,12 +21,22 @@ const REFUSAL =
   'Para assuntos jurídicos, de saúde, financeiros ou de emergência, procure um profissional ou o serviço oficial adequado.'
 
 const SYSTEM_PROMPT = [
-  'Você é o concierge do Experimente+, um app de descoberta de lugares.',
-  'Use EXCLUSIVAMENTE os lugares da lista fornecida. Nunca cite lugar que não esteja nela.',
+  'Você é o concierge do Experimente+, um app de descoberta de lugares, experiências e eventos.',
+  'Use EXCLUSIVAMENTE os itens da lista fornecida. Nunca cite item que não esteja nela.',
+  'Nunca afirme disponibilidade, vaga, horário, data ou preço que não esteja escrito na lista.',
+  'Não converta nem reescreva datas e horários: repita exatamente como aparecem, ou não os cite.',
   'Responda em português do Brasil e APENAS com JSON válido, sem texto fora do JSON, no formato:',
-  '{"intro":"uma frase curta","steps":[{"id":<id da lista>,"why":"uma frase curta"}]}',
-  'Use no máximo 4 steps. Não invente id. Não faça reservas, compras nem confirmações.',
+  '{"intro":"uma frase curta","steps":[{"ref":"<ref da lista>","why":"uma frase curta"}]}',
+  'O ref é a string exata da lista, como "establishment:12" ou "event:7".',
+  'Use no máximo 4 steps. Não invente ref. Não faça reservas, compras nem confirmações.',
 ].join(' ')
+
+/** How each species is named for the model, in the language of the answer. */
+const KIND_LABEL: Record<IConcierge.GroundingKind, string> = {
+  establishment: 'lugar',
+  experience: 'experiência',
+  event: 'evento',
+}
 
 @inject()
 export default class ConciergeService {
@@ -51,7 +61,7 @@ export default class ConciergeService {
     if (!provider) return this.degrade(offered)
 
     const user = [
-      'Lugares disponíveis:',
+      'Itens disponíveis:',
       ...offered.map((i) => this.describe(i)),
       '',
       `Pergunta: ${question}`,
@@ -110,14 +120,28 @@ export default class ConciergeService {
     return new NvidiaProvider(baseUrl, apiKey)
   }
 
+  /**
+   * One line per item, and every fact in it came from the catalogue.
+   *
+   * The event window travels verbatim from the approved snapshot. Turning it
+   * into words here would mean choosing a timezone on the model's behalf, and an
+   * hour invented by rounding is still an invented hour; the consumer surface
+   * formats it from `starts_at`, which travels in the reply.
+   */
   private describe(item: IConcierge.GroundingItem): string {
-    const hours = item.opens_at ? ` abre ${item.opens_at}` : ''
-    const where = [item.district, item.city].filter(Boolean).join(', ')
-    return `- id ${item.id}: ${item.name} — ${item.category ?? 'sem categoria'}, ${where}${hours}`
+    const where = [item.district, item.city_slug].filter(Boolean).join(', ')
+    const at = item.kind === 'establishment' ? '' : ` em ${item.establishment_name}`
+    const when = item.starts_at ? ` — de ${item.starts_at} a ${item.ends_at ?? item.starts_at}` : ''
+
+    return `- ${item.ref} (${KIND_LABEL[item.kind]}): ${item.name}${at} — ${item.category ?? 'sem categoria'}, ${where}${when}`
   }
 
   private render(answer: IConcierge.GroundedAnswer): string {
-    const steps = answer.steps.map((step) => `${step.item.name}: ${step.why}`.trim())
+    const steps = answer.steps.map((step) => {
+      const where = step.item.kind === 'establishment' ? '' : ` (${step.item.establishment_name})`
+      return `${step.item.name}${where}: ${step.why}`.trim()
+    })
+
     return [answer.intro, ...steps].filter(Boolean).join('\n')
   }
 }

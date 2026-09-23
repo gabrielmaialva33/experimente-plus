@@ -4883,6 +4883,87 @@ components:
       type: object
       additionalProperties: true
 
+    PartnerContentPublicMedia:
+      type: object
+      additionalProperties: false
+      required: [id, is_cover, sort_order, alt_text, caption, asset]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        is_cover:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+        alt_text:
+          type: string
+          minLength: 1
+          maxLength: 180
+        caption:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 500
+        asset:
+          $ref: '#/components/schemas/PublicMediaAsset'
+
+    PartnerContentMedia:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - establishment_id
+        - content_id
+        - is_cover
+        - sort_order
+        - alt_text
+        - caption
+        - moderation_status
+        - review_notes
+        - reviewed_at
+        - created_at
+        - updated_at
+        - asset
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        establishment_id:
+          type: integer
+          minimum: 1
+        content_id:
+          type: integer
+          minimum: 1
+        is_cover:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+        alt_text:
+          type: string
+          minLength: 1
+          maxLength: 180
+        caption:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 500
+        moderation_status:
+          type: string
+          enum: [pending, approved, rejected, quarantined]
+        review_notes:
+          type: [string, 'null']
+        reviewed_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        asset:
+          $ref: '#/components/schemas/MediaAsset'
+
     EstablishmentExperience:
       type: object
       additionalProperties: false
@@ -5193,6 +5274,55 @@ components:
           type: integer
           minimum: 0
 
+    PartnerContentPublicItem:
+      description: >-
+        What a visitor receives. It is built from `published_snapshot`, never
+        from the live row: the administrative schemas above carry `tenant_id`,
+        `created_by`, `archived_by` and the lifecycle, and this response is
+        cached as `public, max-age=300`. Documenting the row here is how those
+        columns reach a public consumer even when the code never sends them.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - title
+        - description
+        - starts_at
+        - ends_at
+        - informational_price_cents
+        - published_at
+        - media
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        kind:
+          type: string
+          enum: [experience, event, showcase_item]
+        title:
+          type: string
+        description:
+          type: [string, 'null']
+        starts_at:
+          description: Events only, from the approved snapshot.
+          type: [string, 'null']
+          format: date-time
+        ends_at:
+          type: [string, 'null']
+          format: date-time
+        informational_price_cents:
+          description: Showcase items only. Displayed, never charged.
+          type: [integer, 'null']
+          minimum: 0
+        published_at:
+          type: string
+          format: date-time
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerContentPublicMedia'
+
     PartnerContentListResponse:
       type: object
       required:
@@ -5201,7 +5331,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/PartnerContent'
+            $ref: '#/components/schemas/PartnerContentPublicItem'
 
     PaginatedPartnerContentResponse:
       type: object
@@ -12771,6 +12901,207 @@ paths:
         '404':
           description: Content not found, or not one the actor manages
 
+  /api/v1/portal/content/{kind}/{id}/media:
+    get:
+      operationId: listPartnerContentMedia
+      summary: List media assigned to one partner-content item
+      tags: [Partner content, Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: Administrative media projection
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerContentMedia'
+        '401':
+          description: Authentication required
+        '404':
+          description: Content not found, or not one the actor manages
+    post:
+      operationId: uploadPartnerContentMedia
+      summary: Upload an image to partner content
+      description: >-
+        Reuses the platform image pipeline: JPEG, PNG or WebP up to 10 MiB,
+        binary signature validation, shared media_assets storage and an
+        independent moderation state.
+      tags: [Partner content, Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [file, alt_text]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                alt_text:
+                  type: string
+                  minLength: 1
+                  maxLength: 180
+                caption:
+                  type: [string, 'null']
+                  minLength: 1
+                  maxLength: 500
+                is_cover:
+                  type: boolean
+      responses:
+        '201':
+          description: Pending media created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentMedia'
+        '400':
+          description: Image limit, archived content or binary validation failure
+        '401':
+          description: Authentication required
+        '404':
+          description: Content not found, or not one the actor manages
+        '422':
+          description: Multipart or metadata validation failed
+
+  /api/v1/portal/content/{kind}/{id}/media/{mediaId}:
+    patch:
+      operationId: updatePartnerContentMedia
+      summary: Update partner-content media metadata
+      description: Updating approved metadata returns the image to pending moderation.
+      tags: [Partner content, Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              properties:
+                alt_text:
+                  type: string
+                  minLength: 1
+                  maxLength: 180
+                caption:
+                  type: [string, 'null']
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '200':
+          description: Media updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentMedia'
+        '400':
+          description: Archived content or empty update
+        '404':
+          description: Content or media not found
+    delete:
+      operationId: deletePartnerContentMedia
+      summary: Remove media from partner content
+      description: >-
+        Removes the assignment. The underlying file and media asset are deleted
+        only when no other platform resource still references the asset.
+      tags: [Partner content, Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Media removed
+        '404':
+          description: Content or media not found
+
+  /api/v1/portal/content/{kind}/{id}/media/{mediaId}/cover:
+    patch:
+      operationId: setPartnerContentMediaCover
+      summary: Select the cover image for partner content
+      tags: [Partner content, Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Cover selected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentMedia'
+        '400':
+          description: Rejected or quarantined media cannot be selected
+        '404':
+          description: Content or media not found
+
   /api/v1/portal/content/{kind}/{id}/submit:
     post:
       operationId: submitPartnerContent
@@ -12873,6 +13204,134 @@ paths:
           description: Authentication required
         '403':
           description: Moderator privileges required
+
+  /api/v1/admin/content/{kind}/{id}/media/{mediaId}/approve:
+    post:
+      operationId: approvePartnerContentMedia
+      summary: Approve one partner-content image
+      tags: [Partner content, Media, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Image approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentMedia'
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content or media not found
+
+  /api/v1/admin/content/{kind}/{id}/media/{mediaId}/reject:
+    post:
+      operationId: rejectPartnerContentMedia
+      summary: Reject one partner-content image
+      tags: [Partner content, Media, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Image rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentMedia'
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content or media not found
+
+  /api/v1/admin/content/{kind}/{id}/media/{mediaId}/quarantine:
+    post:
+      operationId: quarantinePartnerContentMedia
+      summary: Quarantine one partner-content image
+      tags: [Partner content, Media, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Image quarantined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentMedia'
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content or media not found
 
   /api/v1/admin/content/{kind}/{id}/approve:
     post:

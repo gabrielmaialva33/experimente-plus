@@ -2,8 +2,11 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
+import CityAgendaService from '#modules/partner_content/services/city_agenda_service'
 import PartnerContentService from '#modules/partner_content/services/partner_content_service'
+import PartnerContentMediaService from '#modules/partner_content/services/partner_content_media_service'
 import {
+  cityAgendaParamsValidator,
   contentIdParamsValidator,
   contentKindParamsValidator,
   createContentValidator,
@@ -18,16 +21,45 @@ import PublicOperationResolver from '#modules/tenants/services/public_operation_
 export default class PartnerContentController {
   constructor(
     private contentService: PartnerContentService,
+    private mediaService: PartnerContentMediaService,
+    private cityAgendaService: CityAgendaService,
     private publicResolver: PublicOperationResolver
   ) {}
 
-  /** Public: the operation comes from the hostname, never from the visitor. */
-  async publicList({ request, params }: HttpContext) {
+  /**
+   * Public: the operation comes from the hostname, never from the visitor.
+   *
+   * The payload is the server-side projection of ADR-0028 §4 — the approved
+   * snapshot and approved media only. The response is publicly cacheable, so it
+   * must not be able to carry a lifecycle field or an internal identifier.
+   */
+  async publicList({ request, params, response }: HttpContext) {
     const { kind: path, establishmentId } = await publicContentParamsValidator.validate(params)
     const kind = IPartnerContent.kindOfPath(path)
     const tenant = await this.publicResolver.resolve(request.hostname())
     const items = await this.contentService.listPublic(kind, tenant.id, establishmentId)
-    return { data: items }
+    const data: IPartnerContent.PublicProjection[] = await this.mediaService.projectPublicContents(
+      kind,
+      tenant.id,
+      items
+    )
+
+    this.publicCache(response, 300)
+    return response.ok({ data })
+  }
+
+  /**
+   * The agenda of a city: what is on today, what was announced and what is new.
+   *
+   * It lives beside the other public partner-content route rather than in the
+   * catalogue module so the `/api/v1/catalog/.../{kind}` family keeps one owner.
+   */
+  async cityAgenda({ request, params, response }: HttpContext) {
+    const { citySlug } = await cityAgendaParamsValidator.validate(params)
+    const agenda = await this.cityAgendaService.forCity(request.hostname(), citySlug)
+
+    this.publicCache(response, 60)
+    return response.ok(agenda)
   }
 
   async index({ tenant, auth, request, params }: HttpContext) {
@@ -109,5 +141,14 @@ export default class PartnerContentController {
   async updatePolicy({ tenant, auth, request }: HttpContext) {
     const payload = await request.validateUsing(updatePartnerContentPolicyValidator)
     return this.contentService.updatePolicy(tenant!.id, auth.getUserOrFail(), payload)
+  }
+
+  /** `Vary: Host` because the hostname is what selects the operation. */
+  private publicCache(response: HttpContext['response'], maxAge: number): void {
+    response.header(
+      'Cache-Control',
+      `public, max-age=${maxAge}, stale-while-revalidate=${maxAge * 2}`
+    )
+    response.vary(['Host', 'Accept-Encoding'])
   }
 }

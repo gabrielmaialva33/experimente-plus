@@ -40,13 +40,13 @@ Para revisões de unidade a aprovação é obrigatória. Para eventos, o escopo 
 
 **Decisão:** seguindo o padrão já adotado no ADR-0027, a exigência de aprovação é **política por tenant**, em `partner_content_policies`, com um parâmetro por tipo de conteúdo:
 
-| Parâmetro                              | Default proposto |
-| -------------------------------------- | ---------------- |
-| exigir aprovação para experiência      | desligado        |
-| exigir aprovação para evento           | **ligado**       |
-| exigir aprovação para item de vitrine  | desligado        |
-| máximo de mídias por conteúdo          | 6                |
-| antecedência mínima para publicar evento | nenhuma        |
+| Parâmetro                                | Default proposto |
+| ---------------------------------------- | ---------------- |
+| exigir aprovação para experiência        | desligado        |
+| exigir aprovação para evento             | **ligado**       |
+| exigir aprovação para item de vitrine    | desligado        |
+| máximo de mídias por conteúdo            | 6                |
+| antecedência mínima para publicar evento | nenhuma          |
 
 Com a política desligada, publicar é ato do próprio parceiro. Com ela ligada, o conteúdo entra na fila humana já existente do ADR-0015 e só se torna público após aprovação. Os defaults **não são decisão do contratante**; existem para a funcionalidade ser construível e testável antes da definição dele.
 

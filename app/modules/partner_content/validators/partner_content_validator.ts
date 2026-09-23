@@ -26,6 +26,56 @@ export const publicContentParamsValidator = vine.compile(
   })
 )
 
+/**
+ * The city agenda is keyed by the city's public slug, so the slug is validated
+ * as a slug before it reaches a query. City is a discovery dimension, never an
+ * operation selector (ADR-0008): the tenant still comes from the hostname.
+ */
+export const cityAgendaParamsValidator = vine.compile(
+  vine.object({
+    citySlug: vine
+      .string()
+      .trim()
+      .maxLength(160)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  })
+)
+
+export const contentMediaParamsValidator = vine.compile(
+  vine.object({
+    kind: vine.enum(IPartnerContent.CANONICAL_CONTENT_PATHS),
+    id: vine.number().min(1),
+    mediaId: vine.number().min(1),
+  })
+)
+
+export const createPartnerContentMediaValidator = vine.compile(
+  vine.object({
+    alt_text: vine.string().trim().minLength(1).maxLength(180),
+    caption: vine.string().trim().maxLength(500).nullable().optional(),
+    is_cover: vine.boolean().optional(),
+  })
+)
+
+export const updatePartnerContentMediaValidator = vine.compile(
+  vine.object({
+    alt_text: vine.string().trim().minLength(1).maxLength(180).optional(),
+    caption: vine.string().trim().maxLength(500).nullable().optional(),
+  })
+)
+
+export const approvePartnerContentMediaValidator = vine.compile(
+  vine.object({
+    reason: vine.string().trim().maxLength(2000).nullable().optional(),
+  })
+)
+
+export const rejectPartnerContentMediaValidator = vine.compile(
+  vine.object({
+    reason: vine.string().trim().minLength(1).maxLength(2000),
+  })
+)
+
 export const createContentValidator = vine.compile(
   vine.object({
     establishment_id: vine.number().min(1),

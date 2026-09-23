@@ -1,10 +1,12 @@
 import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
+import CatalogProjectionRepository from '#modules/catalog/repositories/catalog_projection_repository'
 import Establishment from '#modules/establishments/models/establishment'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
@@ -30,7 +32,8 @@ export default class PartnerContentService {
   constructor(
     private contentRepository: PartnerContentRepository,
     private policyRepository: PartnerContentPolicyRepository,
-    private organizationPolicy: OrganizationPolicyService
+    private organizationPolicy: OrganizationPolicyService,
+    private projectionRepository: CatalogProjectionRepository
   ) {}
 
   async create(
@@ -123,13 +126,20 @@ export default class PartnerContentService {
 
       content.useTransaction(client)
 
-      if (this.policyRepository.requiresApproval(policy, kind)) {
+      const requiresApproval = this.policyRepository.requiresApproval(policy, kind)
+
+      if (requiresApproval) {
         content.status = 'pending_review'
       } else {
         this.publish(content, kind)
       }
 
       await content.save()
+
+      if (!requiresApproval) {
+        await this.projectionRepository.bumpTenantVersion(tenantId, client)
+      }
+
       return content
     })
   }
@@ -148,6 +158,7 @@ export default class PartnerContentService {
       content.useTransaction(client)
       this.publish(content, kind)
       await content.save()
+      await this.projectionRepository.bumpTenantVersion(tenantId, client)
       return content
     })
   }
@@ -210,6 +221,7 @@ export default class PartnerContentService {
       content.archived_by = actor.id
       content.archived_at = DateTime.utc()
       await content.save()
+      await this.projectionRepository.bumpTenantVersion(tenantId, client)
       return content
     })
   }
@@ -252,6 +264,39 @@ export default class PartnerContentService {
   async updatePolicy(tenantId: number, actor: User, payload: IPartnerContent.PolicyPayload) {
     await this.organizationPolicy.requirePlatformAdmin(actor)
     return this.policyRepository.updateForTenant(tenantId, payload)
+  }
+
+  /**
+   * Shared authorization seam for media assigned to stable partner content.
+   * Media is independent of an establishment revision but inherits the same
+   * organization-management boundary as the content itself.
+   */
+  async requireForPartnerMedia(
+    kind: IPartnerContent.ContentKind,
+    tenantId: number,
+    id: number,
+    actor: User,
+    client: TransactionClientContract,
+    lock = true,
+    allowArchived = false
+  ): Promise<IPartnerContent.ContentRow> {
+    const content = await this.requireContent(kind, tenantId, id, client, lock)
+    await this.authorizeEstablishment(tenantId, actor, content.establishment_id, client)
+    if (!allowArchived && content.status === 'archived') {
+      throw new BadRequestException('Archived content cannot have its media changed')
+    }
+    return content
+  }
+
+  async requireForModeratorMedia(
+    kind: IPartnerContent.ContentKind,
+    tenantId: number,
+    id: number,
+    actor: User,
+    client: TransactionClientContract
+  ): Promise<IPartnerContent.ContentRow> {
+    await this.organizationPolicy.requirePlatformModerator(actor)
+    return this.requireContent(kind, tenantId, id, client, true)
   }
 
   /**

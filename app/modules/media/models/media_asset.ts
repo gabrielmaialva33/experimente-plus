@@ -6,6 +6,7 @@ import Establishment from '#modules/establishments/models/establishment'
 import StoredFile from '#modules/files/models/file'
 import type IMedia from '#modules/media/interfaces/media_interface'
 import EstablishmentRevisionMedia from '#modules/media/models/establishment_revision_media'
+import PartnerContentMedia from '#modules/partner_content/models/partner_content_media'
 import User from '#modules/users/models/user'
 
 export default class MediaAsset extends BaseModel {
@@ -62,4 +63,7 @@ export default class MediaAsset extends BaseModel {
 
   @hasMany(() => EstablishmentRevisionMedia, { foreignKey: 'media_asset_id' })
   declare revision_media: HasMany<typeof EstablishmentRevisionMedia>
+
+  @hasMany(() => PartnerContentMedia, { foreignKey: 'media_asset_id' })
+  declare partner_content_media: HasMany<typeof PartnerContentMedia>
 }

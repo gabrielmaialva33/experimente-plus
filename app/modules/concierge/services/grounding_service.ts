@@ -5,8 +5,14 @@ import type IConcierge from '#modules/concierge/interfaces/concierge_interface'
  *
  * A first attempt at this check hunted for capitalised words in free prose and
  * flagged "Você" and "Depois" as invented places, which is why the model is
- * required to cite items by identifier instead: an identifier either belongs to
- * the set that was handed over or it does not, and no heuristic is involved.
+ * required to cite items by reference instead: a reference either belongs to the
+ * set that was handed over or it does not, and no heuristic is involved.
+ *
+ * The reference is composite (`<kind>:<id>`) and that is not cosmetic. While it
+ * was a bare number, the three species numbered their rows independently, so
+ * experience 7 validated as establishment 7: the check approved a citation that
+ * pointed at the wrong thing, which is worse than invention because it looks
+ * verified. Matching is therefore exact on the whole reference.
  *
  * Prose still receives a narrower check. The model cannot be stopped from
  * writing a name, but it can be caught naming an item of the catalogue that was
@@ -37,9 +43,9 @@ export default class GroundingService {
       steps: steps.flatMap((step) => {
         if (typeof step !== 'object' || step === null) return []
         const entry = step as Record<string, unknown>
-        const id = Number(entry.id)
-        if (!Number.isInteger(id)) return []
-        return [{ id, why: typeof entry.why === 'string' ? entry.why.trim() : '' }]
+        const ref = this.normalize(entry.ref ?? entry.id)
+        if (!ref) return []
+        return [{ ref, why: typeof entry.why === 'string' ? entry.why.trim() : '' }]
       }),
     }
   }
@@ -54,25 +60,40 @@ export default class GroundingService {
     offered: IConcierge.GroundingItem[],
     withheld: readonly string[] = []
   ): IConcierge.GroundedAnswer {
-    const byId = new Map(offered.map((item) => [item.id, item]))
+    const byRef = new Map(offered.map((item) => [this.normalize(item.ref), item]))
     const steps: IConcierge.GroundedAnswer['steps'] = []
-    const discarded: number[] = []
-    const seen = new Set<number>()
+    const discarded: string[] = []
+    const seen = new Set<string>()
 
     for (const step of answer.steps) {
-      const item = byId.get(step.id)
-      if (!item) {
-        discarded.push(step.id)
+      const ref = this.normalize(step.ref)
+      const item = ref ? byRef.get(ref) : null
+      if (!ref || !item) {
+        discarded.push(step.ref)
         continue
       }
       // A repeated citation is not invention, but it is not a step either.
-      if (seen.has(step.id)) continue
-      seen.add(step.id)
+      if (seen.has(ref)) continue
+      seen.add(ref)
       steps.push({ item, why: this.clean(step.why, withheld) })
     }
 
     const intro = this.clean(answer.intro, withheld)
     return { intro, steps, discarded, empty: steps.length === 0 }
+  }
+
+  /**
+   * One spelling for one reference.
+   *
+   * A model that answers `"Event:7"` cited an item it was given, and losing the
+   * whole answer over a capital letter would degrade a reply that was in fact
+   * grounded. Matching stays exact after this: only case and surrounding space
+   * are forgiven, never the species or the number.
+   */
+  private normalize(value: unknown): string | null {
+    if (typeof value !== 'string') return null
+    const normalized = value.trim().toLowerCase()
+    return normalized.length > 0 ? normalized : null
   }
 
   /** Drops a sentence that names a catalogue item the model was not given. */

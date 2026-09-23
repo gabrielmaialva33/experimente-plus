@@ -38,6 +38,14 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/organizations/42/analytics')?.id).toBe(
       'portal-organization-analytics'
     )
+    expect(resolveRouteMetadata('/portal/content')).toMatchObject({
+      id: 'portal-content',
+      title: 'Conteúdo do parceiro',
+    })
+    expect(resolveRouteMetadata('/backoffice/content?status=pending_review')).toMatchObject({
+      id: 'backoffice-content',
+      title: 'Conteúdo de parceiros',
+    })
   })
 
   it('normalizes query strings and trailing slashes when matching navigation', () => {
@@ -65,7 +73,7 @@ describe('navigation configuration', () => {
       platformAccess: 'platform_moderator',
     })
 
-    expect(portalItems.map((item) => item.href)).toEqual(['/portal'])
+    expect(portalItems.map((item) => item.href)).toEqual(['/portal', '/portal/content'])
     expect(portalItems.every((item) => item.surface === 'portal')).toBe(true)
     expect(backofficeItems.every((item) => item.surface === 'backoffice')).toBe(true)
     expect(backofficeItems.some((item) => item.href.startsWith('/portal'))).toBe(false)
@@ -205,6 +213,8 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/portal/redemptions')?.capability).toBe('benefit_offers.read')
     expect(resolveRouteMetadata('/backoffice/moderation')?.capability).toBe('establishments.list')
     expect(resolveRouteMetadata('/backoffice/benefits')?.capability).toBe('benefit_editions.list')
+    expect(resolveRouteMetadata('/portal/content')?.capability).toBe('establishments.read')
+    expect(resolveRouteMetadata('/backoffice/content')?.capability).toBe('establishments.list')
   })
 
   it('does not expose the conditional UI demo route in central navigation', () => {

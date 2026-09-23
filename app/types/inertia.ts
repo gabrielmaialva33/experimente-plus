@@ -6,6 +6,7 @@
  * the props passed from the controller. Pages without page-specific props use
  * an empty object.
  */
+import type IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
 import type { FileListResult } from '#modules/files/services/list_files_service'
 import type { DashboardStats } from '#modules/web/services/get_dashboard_stats_service'
 import type { WebRole } from '#modules/web/services/list_roles_with_permissions_service'
@@ -16,6 +17,21 @@ type SettingsProfile = {
   full_name: string
   email: string
   username: string | null
+}
+
+/**
+ * Public partner content, as the server projects it.
+ *
+ * These props are serialized into the SSR document of a page cached as `public`,
+ * so the type is the contract, not a convenience. It used to be
+ * `Array<Record<string, any>>`, and the `any` is what let the live columns, the
+ * lifecycle and the operation's identifiers travel into the HTML while still
+ * type-checking. Naming the real projection is what makes that a compile error.
+ */
+type PublicPartnerContent = {
+  experiences: IPartnerContent.PublicProjection[]
+  events: IPartnerContent.PublicProjection[]
+  showcase_items: IPartnerContent.PublicProjection[]
 }
 
 type PublicServerError = {
@@ -53,6 +69,7 @@ declare module '@adonisjs/inertia/types' {
     'portal/redemptions/index': Record<string, any>
     'portal/redemptions/validate': Record<string, any>
     'portal/redemptions/receipt': Record<string, any>
+    'portal/content/index': Record<string, any>
 
     // Backoffice
     'backoffice/moderation/index': Record<string, any>
@@ -60,6 +77,7 @@ declare module '@adonisjs/inertia/types' {
     'backoffice/feedback/index': Record<string, any>
     'backoffice/benefits/index': Record<string, any>
     'backoffice/benefits/accesses': Record<string, any>
+    'backoffice/content/index': Record<string, any>
 
     // Consumer
     'wallet/index': Record<string, any>
@@ -77,6 +95,9 @@ declare module '@adonisjs/inertia/types' {
       catalog: any
       city_slug: string | null
       filter_categories: any
+      // Null on a narrowed result set: the agenda belongs to the city's landing
+      // view, and the controller decides that, not the page.
+      city_agenda: IPartnerContent.CityAgendaResponse | null
     }
     'catalog/category': {
       catalog: any
@@ -88,6 +109,7 @@ declare module '@adonisjs/inertia/types' {
     'catalog/establishment': {
       catalog: any
       city_slug: string | null
+      partner_content: PublicPartnerContent
     }
 
     // Files

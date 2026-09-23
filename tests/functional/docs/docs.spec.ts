@@ -418,6 +418,32 @@ test.group('Documentation', () => {
       assert.sameMembers(Object.keys(schemas[name].properties!), serialisable(model))
     }
 
+    // The public list must not be documented as the row.
+    //
+    // The three schemas above describe the tables, and the tables carry
+    // `tenant_id`, `created_by`, `archived_by` and the lifecycle. The public
+    // route answers from `published_snapshot` and its response is cached as
+    // `public, max-age=300`, so pointing that route at a row schema publishes
+    // those columns as the contract even while the code withholds them — and a
+    // client written against the document would then be right to expect them.
+    assert.sameMembers(Object.keys(schemas.PartnerContentPublicItem.properties!), [
+      'id',
+      'kind',
+      'title',
+      'description',
+      'starts_at',
+      'ends_at',
+      'informational_price_cents',
+      'published_at',
+      'media',
+    ])
+
+    const publicList = JSON.stringify(
+      specification.paths!['/api/v1/catalog/establishments/{establishmentId}/{kind}']
+    )
+    assert.include(publicList, 'PartnerContentListResponse')
+    assert.notInclude(JSON.stringify(schemas.PartnerContentListResponse), 'EstablishmentExperience')
+
     // The lifecycle is one enum shared by the three kinds, and it has to agree
     // with the check constraint the tables carry.
     assert.deepEqual(schemas.PartnerContentStatus.enum, [

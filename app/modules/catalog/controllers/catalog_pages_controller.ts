@@ -3,6 +3,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import NotFoundException from '#exceptions/not_found_exception'
 import CatalogService from '#modules/catalog/services/catalog_service'
+import type IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
+import CityAgendaService from '#modules/partner_content/services/city_agenda_service'
+import PartnerContentService from '#modules/partner_content/services/partner_content_service'
+import PartnerContentMediaService from '#modules/partner_content/services/partner_content_media_service'
+import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
 import {
   catalogDefaults,
   catalogSearchValidator,
@@ -10,7 +15,13 @@ import {
 
 @inject()
 export default class CatalogPagesController {
-  constructor(private catalogService: CatalogService) {}
+  constructor(
+    private catalogService: CatalogService,
+    private partnerContentService: PartnerContentService,
+    private partnerContentMediaService: PartnerContentMediaService,
+    private cityAgendaService: CityAgendaService,
+    private publicOperationResolver: PublicOperationResolver
+  ) {}
 
   async cities({ inertia, request, response }: HttpContext) {
     this.publicCache(response, 300)
@@ -50,11 +61,15 @@ export default class CatalogPagesController {
     // keeps the request compatible with node-postgres 9 and transactional callers.
     const result = await this.catalogService.search(hostname, citySlug, query)
     const filterCategories = await this.catalogService.categories(hostname, citySlug)
+    const cityAgenda = this.isCityLanding(query)
+      ? await this.cityAgendaService.forCity(hostname, result.context.city.slug)
+      : null
 
     return inertia.render('catalog/establishments', {
       catalog: result,
       city_slug: result.context.city.slug,
       filter_categories: filterCategories,
+      city_agenda: cityAgenda,
     })
   }
 
@@ -89,15 +104,90 @@ export default class CatalogPagesController {
 
   async show({ inertia, params, request, response }: HttpContext) {
     this.publicCache(response, 300)
+    const hostname = request.hostname()
     const establishment = await this.catalogService.show(
-      request.hostname(),
+      hostname,
       String(params.citySlug),
       String(params.establishmentSlug)
     )
+    const partnerContent =
+      'historical' in establishment
+        ? { experiences: [], events: [], showcase_items: [] }
+        : await this.publicPartnerContent(hostname, establishment.id)
+
     return inertia.render('catalog/establishment', {
       catalog: establishment,
       city_slug: establishment.city.slug,
+      partner_content: partnerContent,
     })
+  }
+
+  private async publicPartnerContent(
+    hostname: string | null,
+    establishmentId: number
+  ): Promise<{
+    experiences: IPartnerContent.PublicProjection[]
+    events: IPartnerContent.PublicProjection[]
+    showcase_items: IPartnerContent.PublicProjection[]
+  }> {
+    const tenant = await this.publicOperationResolver.resolve(hostname)
+
+    // Keep these reads serial. Functional suites may execute inside a
+    // transaction-bound pg connection that must not carry concurrent queries.
+    const experiences = await this.partnerContentService.listPublic(
+      'experience',
+      tenant.id,
+      establishmentId
+    )
+    const events = await this.partnerContentService.listPublic('event', tenant.id, establishmentId)
+    const showcaseItems = await this.partnerContentService.listPublic(
+      'showcase_item',
+      tenant.id,
+      establishmentId
+    )
+
+    return {
+      experiences: await this.partnerContentMediaService.projectPublicContents(
+        'experience',
+        tenant.id,
+        experiences
+      ),
+      events: await this.partnerContentMediaService.projectPublicContents(
+        'event',
+        tenant.id,
+        events
+      ),
+      showcase_items: await this.partnerContentMediaService.projectPublicContents(
+        'showcase_item',
+        tenant.id,
+        showcaseItems
+      ),
+    }
+  }
+
+  /**
+   * Whether this request is the city's landing view.
+   *
+   * The agenda belongs to the page someone arrives at, not to a result set they
+   * narrowed down: a visitor who typed a term or picked a category asked a
+   * question, and answering it with three unrelated bands would bury the answer.
+   * The rule lives here rather than in the component so the extra reads are not
+   * paid for at all when they would not be shown.
+   */
+  private isCityLanding(query: {
+    q: string
+    category?: string
+    open_now: boolean
+    attributes: string[]
+    page: number
+  }): boolean {
+    return (
+      query.page === 1 &&
+      query.q.trim() === '' &&
+      !query.category &&
+      !query.open_now &&
+      query.attributes.length === 0
+    )
   }
 
   private publicCache(response: HttpContext['response'], maxAge: number): void {

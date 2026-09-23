@@ -352,15 +352,15 @@ persistida em perfil e não foi repassada a outro agente. O bloco 4 (upload da r
 reexecutado: os objetos de `20260911-v1` já existiam de entrega anterior. Foram executados o bloco 5
 (validação pública) e o bloco 6 (promoção do alias), que até então tinham apenas sintaxe conferida.
 
-| Ensaio executado                                                            | Saída real / resultado                                                                                                                              |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Verificação completa do manifesto: GET de **todos** os 1.033 objetos        | bytes e SHA-256 idênticos ao manifesto em **todos**; nenhuma resposta trouxe `Content-Encoding`; **30.680.397 bytes**; 24,8 s com 16 conexões.        |
-| Range no PMTiles real, com `Origin` da web de homologação                   | `206`; `content-range: bytes 0-15/12823275`; `accept-ranges: bytes`; `etag`; `cache-control: public,max-age=31536000,immutable`; sem transformação. |
-| Preflight `OPTIONS` no PMTiles, com `Access-Control-Request-Headers: range` | `204`; `access-control-allow-methods: GET, HEAD`; `access-control-allow-headers: range`; `access-control-max-age: 86400`.                            |
-| `access-control-expose-headers` nas respostas GET                          | `etag,content-range,accept-ranges,content-length` — os quatro exigidos pelo bloco 5.                                                                |
-| Promoção do alias, bloco 6                                                 | `style.json` da release copiado para `maps/norte-parana/style.json`, `content-type: application/json`, `cache-control: public,max-age=300,must-revalidate`. |
-| `cmp` alias × release, e alias × artefato versionado do repositório         | exit **0** nos dois. SHA-256 `49fbacc67ff011fd5aa73815f09aac5fcfd2dc1bfd03a42fee1b7fab07b0a82b`, **122.497 bytes**.                                 |
-| Referências internas do alias                                              | glyphs, sprite e source apontam exclusivamente para `20260911-v1`; nenhuma chave mutável referenciada.                                               |
+| Ensaio executado                                                            | Saída real / resultado                                                                                                                                      |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Verificação completa do manifesto: GET de **todos** os 1.033 objetos        | bytes e SHA-256 idênticos ao manifesto em **todos**; nenhuma resposta trouxe `Content-Encoding`; **30.680.397 bytes**; 24,8 s com 16 conexões.              |
+| Range no PMTiles real, com `Origin` da web de homologação                   | `206`; `content-range: bytes 0-15/12823275`; `accept-ranges: bytes`; `etag`; `cache-control: public,max-age=31536000,immutable`; sem transformação.         |
+| Preflight `OPTIONS` no PMTiles, com `Access-Control-Request-Headers: range` | `204`; `access-control-allow-methods: GET, HEAD`; `access-control-allow-headers: range`; `access-control-max-age: 86400`.                                   |
+| `access-control-expose-headers` nas respostas GET                           | `etag,content-range,accept-ranges,content-length` — os quatro exigidos pelo bloco 5.                                                                        |
+| Promoção do alias, bloco 6                                                  | `style.json` da release copiado para `maps/norte-parana/style.json`, `content-type: application/json`, `cache-control: public,max-age=300,must-revalidate`. |
+| `cmp` alias × release, e alias × artefato versionado do repositório         | exit **0** nos dois. SHA-256 `49fbacc67ff011fd5aa73815f09aac5fcfd2dc1bfd03a42fee1b7fab07b0a82b`, **122.497 bytes**.                                         |
+| Referências internas do alias                                               | glyphs, sprite e source apontam exclusivamente para `20260911-v1`; nenhuma chave mutável referenciada.                                                      |
 
 A cadeia de proveniência fica fechada e verificável: `resources/maps/norte-parana/style.json` no
 repositório, o objeto da release imutável e o objeto servido pelo alias público são **o mesmo byte a
@@ -373,17 +373,17 @@ primeira verificação do manifesto recebeu `403` em **todos** os 1.033 objetos 
 enquanto `curl` obtinha `200`/`206` nos mesmos objetos no mesmo momento. A causa é uma regra de borda
 por **User-Agent**, não Range, CORS, credencial, cache ou limite de taxa. Mesma URL, variando apenas o UA:
 
-| User-Agent enviado                        | Resposta |
-| ----------------------------------------- | -------- |
-| `Python-urllib/3.13`                      | **403**  |
-| `Python-urllib/3.11`                      | **403**  |
-| `Python-urllib/3.13 extra` (com sufixo)   | **403**  |
-| `extra Python-urllib/3.13` (com prefixo)  | `200`    |
-| `python-requests/2.32`, `Python/3.13`, `urllib/3.13` | `200` |
-| `okhttp/4.12.0` (transporte Android)      | `200`    |
-| `CFNetwork/1568 Darwin/24.0.0` (iOS)      | `200`    |
-| `MapLibreNative/11.3.8 Android`           | `200`    |
-| Chrome, `curl`, `Go-http-client`, `undici`, UA vazio | `200` |
+| User-Agent enviado                                   | Resposta |
+| ---------------------------------------------------- | -------- |
+| `Python-urllib/3.13`                                 | **403**  |
+| `Python-urllib/3.11`                                 | **403**  |
+| `Python-urllib/3.13 extra` (com sufixo)              | **403**  |
+| `extra Python-urllib/3.13` (com prefixo)             | `200`    |
+| `python-requests/2.32`, `Python/3.13`, `urllib/3.13` | `200`    |
+| `okhttp/4.12.0` (transporte Android)                 | `200`    |
+| `CFNetwork/1568 Darwin/24.0.0` (iOS)                 | `200`    |
+| `MapLibreNative/11.3.8 Android`                      | `200`    |
+| Chrome, `curl`, `Go-http-client`, `undici`, UA vazio | `200`    |
 
 A regra casa o UA **ancorado no início** da string, é independente da versão do Python e o `403` é
 reprodutível (3/3). **Consequência operacional delimitada:** nenhum transporte real de cliente é
@@ -398,11 +398,11 @@ O cabeçalho `access-control-allow-origin` é devolvido **apenas** para
 `https://experimente-plus.mahina.fun`. Origens de terceiros, a própria origem de mídia e
 `http://localhost:8081` recebem resposta **sem** cabeçalho CORS:
 
-| `Origin` enviado                      | `access-control-allow-origin` |
-| ------------------------------------- | ----------------------------- |
-| `https://experimente-plus.mahina.fun` | ecoa a origem                 |
-| `https://exemplo-terceiro.invalid`    | ausente                       |
-| `http://localhost:8081`               | ausente                       |
+| `Origin` enviado                       | `access-control-allow-origin` |
+| -------------------------------------- | ----------------------------- |
+| `https://experimente-plus.mahina.fun`  | ecoa a origem                 |
+| `https://exemplo-terceiro.invalid`     | ausente                       |
+| `http://localhost:8081`                | ausente                       |
 | `https://midia-experimente.mahina.fun` | ausente                       |
 
 Isso é suficiente para o cliente móvel nativo, que não passa por CORS. Duas consequências reais:
@@ -430,13 +430,13 @@ avião com Wi-Fi reativado, sem rota para o IP de LAN da estação: o bundler fo
 `adb reverse tcp:8081 tcp:8081` pelo próprio cabo. O basemap **não** passou por esse túnel — veio da
 internet do aparelho, com ida ao domínio público medida em 22,5 ms.
 
-| Requisito                                    | Resultado observado na tela                                                                                     |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Detalhe de rua na câmera inicial (zoom 11)   | Malha viária de Londrina renderizada. É a correção direta do fallback, cujo tileset terminava no zoom 6.          |
-| Faixa de zoom 11 a 15                        | Nomes de rua individuais, rótulos de POI e footprints de edificação.                                             |
-| Acentuação dos rótulos                       | Correta: `Iapó`, `Itajaí`, `São Luiz`, `Ibiporã`, `Sabará`, `Seminário`. Os glyphs publicados atendem o português. |
-| Pins do catálogo sobre o basemap             | Estabelecimento publicado pela API desenhado sobre os tiles, com a seleção de renderer existente.                |
-| Descoberta sem autenticação                  | Preservada: lista e mapa funcionam deslogado.                                                                    |
+| Requisito                                  | Resultado observado na tela                                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Detalhe de rua na câmera inicial (zoom 11) | Malha viária de Londrina renderizada. É a correção direta do fallback, cujo tileset terminava no zoom 6.           |
+| Faixa de zoom 11 a 15                      | Nomes de rua individuais, rótulos de POI e footprints de edificação.                                               |
+| Acentuação dos rótulos                     | Correta: `Iapó`, `Itajaí`, `São Luiz`, `Ibiporã`, `Sabará`, `Seminário`. Os glyphs publicados atendem o português. |
+| Pins do catálogo sobre o basemap           | Estabelecimento publicado pela API desenhado sobre os tiles, com a seleção de renderer existente.                  |
+| Descoberta sem autenticação                | Preservada: lista e mapa funcionam deslogado.                                                                      |
 
 ### Atribuição incompleta no cliente — encontrada e corrigida
 

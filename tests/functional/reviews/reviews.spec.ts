@@ -6,7 +6,7 @@ import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
-import Establishment from '#modules/establishments/models/establishment'
+import type Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
@@ -14,6 +14,7 @@ import ReviewPolicy from '#modules/reviews/models/review_policy'
 import IRoles from '#modules/roles/interfaces/role_interface'
 import {
   createEstablishmentScenario,
+  createPublishedEstablishment,
   type EstablishmentScenario,
 } from '#tests/functional/establishments/helpers'
 import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
@@ -26,48 +27,6 @@ const publicHeaders = (scenario: EstablishmentScenario) => ({
   'x-forwarded-host': `${scenario.tenant.slug}.experimente.test`,
   'x-forwarded-for': `198.51.100.${(scenario.tenant.id % 250) + 1}`,
 })
-
-let estSeq = 0
-async function createPublishedEstablishment(
-  scenario: EstablishmentScenario,
-  publicName = 'Cafe Central'
-): Promise<Establishment> {
-  estSeq += 1
-  const cleanSlug = publicName
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-
-  const establishment = await Establishment.create({
-    tenant_id: scenario.tenant.id,
-    organization_id: scenario.organization.id,
-    lifecycle_status: 'active',
-    business_status: 'open',
-    created_by: scenario.owner.id,
-  })
-
-  const revision = await EstablishmentRevision.create({
-    establishment_id: establishment.id,
-    tenant_id: scenario.tenant.id,
-    version: 1,
-    status: 'approved',
-    public_name: publicName,
-    slug: `${cleanSlug}-${estSeq}-${Date.now()}`,
-    city_id: scenario.city.id,
-    short_description: 'Cafes especiais e confeitaria artesanal.',
-    created_by: scenario.owner.id,
-    submitted_at: DateTime.utc(),
-    reviewed_by: scenario.owner.id,
-    reviewed_at: DateTime.utc(),
-  })
-
-  establishment.published_revision_id = revision.id
-  await establishment.save()
-
-  return establishment
-}
 
 async function createRedemption(
   scenario: EstablishmentScenario,

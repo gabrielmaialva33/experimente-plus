@@ -6,6 +6,8 @@ import { privateResponseHeadersMiddleware } from '#shared/utils/private_response
 
 const PartnerContentController = () =>
   import('#modules/partner_content/controllers/partner_content_controller')
+const PartnerContentMediaController = () =>
+  import('#modules/partner_content/controllers/partner_content_media_controller')
 
 /**
  * Partner-owned content — ADR-0028.
@@ -24,6 +26,19 @@ router
   .where('kind', /^(experiences|events|showcase-items)$/)
   .use(throttle)
 
+/**
+ * The agenda of a city.
+ *
+ * It is registered here, not in `catalog/routes.ts`, so the partner-content
+ * surfaces keep a single owner: the payload, its windows and its ordering are
+ * decided by this module, and splitting the prefix across two files is how two
+ * owners of the same contract start to drift.
+ */
+router
+  .get('/api/v1/catalog/cities/:citySlug/agenda', [PartnerContentController, 'cityAgenda'])
+  .as('catalog.city.agenda')
+  .use(throttle)
+
 router
   .group(() => {
     router.get('/:kind', [PartnerContentController, 'index'])
@@ -31,6 +46,11 @@ router
     router.put('/:kind/:id', [PartnerContentController, 'update'])
     router.post('/:kind/:id/submit', [PartnerContentController, 'submit'])
     router.post('/:kind/:id/archive', [PartnerContentController, 'archive'])
+    router.get('/:kind/:id/media', [PartnerContentMediaController, 'index'])
+    router.post('/:kind/:id/media', [PartnerContentMediaController, 'store'])
+    router.patch('/:kind/:id/media/:mediaId', [PartnerContentMediaController, 'update'])
+    router.patch('/:kind/:id/media/:mediaId/cover', [PartnerContentMediaController, 'cover'])
+    router.delete('/:kind/:id/media/:mediaId', [PartnerContentMediaController, 'destroy'])
   })
   .prefix('/api/v1/portal/content')
   .where('kind', /^(experiences|events|showcase-items)$/)
@@ -47,6 +67,18 @@ router
     router.post('/content/:kind/:id/approve', [PartnerContentController, 'approve'])
     router.post('/content/:kind/:id/reject', [PartnerContentController, 'reject'])
     router.post('/content/:kind/:id/archive', [PartnerContentController, 'moderationArchive'])
+    router.post('/content/:kind/:id/media/:mediaId/approve', [
+      PartnerContentMediaController,
+      'approve',
+    ])
+    router.post('/content/:kind/:id/media/:mediaId/reject', [
+      PartnerContentMediaController,
+      'reject',
+    ])
+    router.post('/content/:kind/:id/media/:mediaId/quarantine', [
+      PartnerContentMediaController,
+      'quarantine',
+    ])
     router.get('/partner-content-policy', [PartnerContentController, 'getPolicy'])
     router.put('/partner-content-policy', [PartnerContentController, 'updatePolicy'])
   })

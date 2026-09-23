@@ -65,6 +65,16 @@ describe('SidebarNav', () => {
     )
   })
 
+  it('shows the cross-organization content workspace only with establishment read access', () => {
+    mocks.url = '/portal/content'
+    mocks.permissions = ['establishments.read']
+
+    render(<SidebarNav surface="portal" />)
+
+    expect(screen.getByRole('link', { name: 'Conteúdo' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Visão geral' })).not.toHaveAttribute('aria-current')
+  })
+
   it('renders only permitted Backoffice destinations and keeps the specific active state', () => {
     mocks.url = '/backoffice/moderation/45'
     mocks.activeTenantId = 7
@@ -93,6 +103,22 @@ describe('SidebarNav', () => {
     expect(screen.getByRole('link', { name: 'Edições e benefícios' })).toHaveAttribute(
       'aria-current',
       'page'
+    )
+  })
+
+  it('marks partner content as its own Backoffice destination', () => {
+    mocks.url = '/backoffice/content'
+    mocks.platformAccess = 'platform_moderator'
+    mocks.permissions = ['establishments.list']
+
+    render(<SidebarNav surface="backoffice" />)
+
+    expect(screen.getByRole('link', { name: 'Conteúdo de parceiros' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    expect(screen.getByRole('link', { name: 'Fila de moderação' })).not.toHaveAttribute(
+      'aria-current'
     )
   })
 

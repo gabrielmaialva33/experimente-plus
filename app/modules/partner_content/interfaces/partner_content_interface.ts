@@ -1,3 +1,4 @@
+import type IMedia from '#modules/media/interfaces/media_interface'
 import type EstablishmentEvent from '#modules/partner_content/models/establishment_event'
 import type EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
 import type EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
@@ -56,6 +57,160 @@ namespace IPartnerContent {
     starts_at?: string
     ends_at?: string
     informational_price_cents?: number | null
+  }
+
+  export interface MediaCreatePayload {
+    alt_text: string
+    caption?: string | null
+    is_cover?: boolean
+  }
+
+  export interface MediaUpdatePayload {
+    alt_text?: string
+    caption?: string | null
+  }
+
+  export interface MediaAdministrativeProjection {
+    id: number
+    establishment_id: number
+    content_id: number
+    is_cover: boolean
+    sort_order: number
+    alt_text: string
+    caption: string | null
+    moderation_status: IMedia.ModerationStatus
+    review_notes: string | null
+    reviewed_at: string | null
+    created_at: string
+    updated_at: string
+    asset: IMedia.AssetProjection
+  }
+
+  /**
+   * The projections below are written as `type`, not `interface`, and that is
+   * load-bearing rather than a matter of taste.
+   *
+   * They travel as Inertia page props, and `inertia.render` types its props
+   * against `Record<string, JSONDataTypes>`. TypeScript grants an implicit
+   * index signature to an object type alias and never to a named interface, so
+   * declaring these as interfaces makes the whole page fail that constraint —
+   * and because the signature is conditional, the failure surfaces as "not
+   * assignable to parameter of type 'never'", which names neither the page nor
+   * the offending field. Every other type the registry imports is an alias for
+   * the same reason.
+   *
+   * The alias keeps the guarantee intact: a `DateTime` or a model instance
+   * smuggled in here still fails to compile.
+   */
+  export type MediaPublicProjection = {
+    id: number
+    is_cover: boolean
+    sort_order: number
+    alt_text: string
+    caption: string | null
+    asset: Pick<
+      IMedia.AssetProjection,
+      'id' | 'media_type' | 'file_extension' | 'mime_type' | 'width' | 'height' | 'url'
+    >
+  }
+
+  /**
+   * What a visitor is allowed to read — derived on the server, never a
+   * serialization of the row.
+   *
+   * `content.serialize()` used to be the public payload, and that leaked the
+   * live columns (a title awaiting moderation), the lifecycle (`status`) and the
+   * operation's own identifiers (`tenant_id`, `created_by`, `archived_by`) into
+   * a response cached as `public, max-age=300` and into the SSR HTML. The
+   * publication rule then had to be re-implemented by every client — web, and
+   * the app of ADR-0022/0023 — which is exactly the drift ADR-0016 §6 forbids.
+   *
+   * So the fields below come from `published_snapshot` alone, and nothing that
+   * is not listed here reaches a public surface.
+   */
+  export type PublicProjection = {
+    id: number
+    kind: ContentKind
+    title: string
+    description: string | null
+    /** Events only. The instant of the approved snapshot, in UTC. */
+    starts_at: string | null
+    ends_at: string | null
+    /** Showcase items only. Displayed, never charged. */
+    informational_price_cents: number | null
+    published_at: string
+    media: MediaPublicProjection[]
+  }
+
+  /**
+   * The one image a discovery band shows. Narrower than
+   * `MediaPublicProjection` on purpose: a band renders a cover, not a gallery,
+   * and `alt_text` travels with it because it is approved content, not
+   * decoration.
+   */
+  export type DiscoveryCover = {
+    url: string
+    alt_text: string
+    width: number | null
+    height: number | null
+  }
+
+  /**
+   * How a discovery item points back at its establishment.
+   *
+   * Slug plus city slug, never `establishment_id`: the public link is
+   * `/cidades/{city_slug}/estabelecimentos/{slug}`, and keying a discovery
+   * surface by the numeric identity would make it unresolvable from the URL and
+   * would expose an internal identifier for no gain.
+   */
+  export type DiscoveryEstablishment = {
+    slug: string
+    name: string
+  }
+
+  export type CityAgendaEventItem = {
+    id: number
+    kind: 'event'
+    title: string
+    description: string | null
+    starts_at: string
+    ends_at: string
+    cover: DiscoveryCover | null
+    establishment: DiscoveryEstablishment
+    city_slug: string
+  }
+
+  export type CityAgendaExperienceItem = {
+    id: number
+    kind: 'experience'
+    title: string
+    description: string | null
+    published_at: string
+    cover: DiscoveryCover | null
+    establishment: DiscoveryEstablishment
+    city_slug: string
+  }
+
+  /**
+   * The agenda of one city.
+   *
+   * Three chronological lists, no ranking, no score and no sponsorship: there
+   * is no prominence contract in this product, so `new_experiences` is labelled
+   * as recency ("Novidades") and never as a highlight. `local_date` travels in
+   * the payload because the whole window was computed in the city's timezone
+   * and the client must not recompute it.
+   */
+  export type CityAgendaResponse = {
+    city: {
+      slug: string
+      name: string
+      state_code: string
+      timezone: string
+    }
+    local_date: string
+    happening_today: CityAgendaEventItem[]
+    upcoming: CityAgendaEventItem[]
+    new_experiences: CityAgendaExperienceItem[]
   }
 
   export interface ListQuery {

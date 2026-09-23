@@ -1,6 +1,8 @@
+import { CatalogConcierge } from '~/components/catalog/catalog_concierge'
 import { CatalogPagination } from '~/components/catalog/catalog_pagination'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
+import { CityAgendaSection } from '~/components/catalog/city_agenda'
 import EstablishmentGrid from '~/components/catalog/establishment_grid'
 import { useCatalogSearchAnalytics } from '~/components/catalog/use_catalog_analytics'
 import { catalogCategories, catalogSearch } from '~/lib/catalog'
@@ -9,11 +11,18 @@ interface CatalogEstablishmentsProps {
   catalog: unknown
   city_slug: string
   filter_categories: unknown
+  /**
+   * Null when the visitor narrowed the results. The controller decides that: the
+   * agenda belongs to the city's landing view, and when it is not shown the
+   * reads behind it are never paid for.
+   */
+  city_agenda?: unknown
 }
 
 export default function CatalogEstablishments({
   catalog,
   filter_categories: filterCategories,
+  city_agenda: cityAgenda,
 }: CatalogEstablishmentsProps) {
   const result = catalogSearch(catalog)
   const categoryListing = catalogCategories(filterCategories)
@@ -42,6 +51,10 @@ export default function CatalogEstablishments({
         sponsoredCount={result.sponsored.length}
         categories={categories}
       />
+
+      <CatalogConcierge citySlug={resolvedCitySlug} cityName={cityName} />
+
+      <CityAgendaSection agenda={cityAgenda} />
 
       {result.sponsored.length > 0 ? (
         <section

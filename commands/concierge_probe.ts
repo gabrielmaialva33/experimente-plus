@@ -1,7 +1,10 @@
 import { BaseCommand, flags } from '@adonisjs/core/ace'
 
 import type IConcierge from '#modules/concierge/interfaces/concierge_interface'
+import CatalogGroundingRepository from '#modules/concierge/repositories/catalog_grounding_repository'
 import ConciergeService from '#modules/concierge/services/concierge_service'
+import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
+import env from '#start/env'
 
 /**
  * Operational probe for the Concierge — ADR-0029.
@@ -11,6 +14,11 @@ import ConciergeService from '#modules/concierge/services/concierge_service'
  * it answer right now, and does the answer survive validation" without
  * deploying anything is worth a command. It reads the published catalogue and
  * writes nothing.
+ *
+ * It grounds through the same repository the route uses, rather than assembling
+ * catalogue rows of its own. The hand-rolled copy it used to carry drifted the
+ * moment the grounding set grew past establishments, and a probe that grounds
+ * differently from production answers a question nobody asked.
  */
 export default class ConciergeProbe extends BaseCommand {
   static commandName = 'concierge:probe'
@@ -24,43 +32,47 @@ export default class ConciergeProbe extends BaseCommand {
   @flags.string({ description: 'City slug used to ground the answer' })
   declare city: string
 
+  @flags.string({
+    description: 'Hostname to resolve the operation from, as a visitor request would',
+  })
+  declare host: string
+
   async run() {
-    const { default: db } = await import('@adonisjs/lucid/services/db')
+    const resolver = await this.app.container.make(PublicOperationResolver)
+    const grounding = await this.app.container.make(CatalogGroundingRepository)
     const service = await this.app.container.make(ConciergeService)
 
-    // Only what the public projection already publishes, and only what is
-    // discoverable: the model must never see a withheld establishment.
-    const rows = await db
-      .from('catalog_establishments')
-      .select('establishment_id', 'public_name', 'city_slug', 'address', 'categories')
-      .where('is_discoverable', true)
-      .if(this.city, (query) => query.where('city_slug', this.city))
-      .limit(20)
+    // The operation comes from the trusted hostname, exactly as it does for a
+    // visitor (ADR-0003), falling back to the configured public slug.
+    const tenant = await resolver.resolve(this.host ?? null)
 
-    const offered: IConcierge.GroundingItem[] = rows.map((row) => {
-      const address = (row.address ?? {}) as Record<string, unknown>
-      const categories = Array.isArray(row.categories) ? row.categories : []
-      const first = (categories[0] ?? {}) as Record<string, unknown>
-      return {
-        id: Number(row.establishment_id),
-        kind: 'establishment' as const,
-        name: String(row.public_name),
-        city: String(row.city_slug ?? ''),
-        district: address.district ? String(address.district) : null,
-        category: first.name ? String(first.name) : null,
-        opens_at: null,
-        closes_at: null,
-      }
-    })
+    const { offered, withheld } = await grounding.forQuestion(
+      tenant.id,
+      this.city ?? null,
+      env.get('CONCIERGE_MAX_CATALOG_ITEMS', 20)
+    )
 
-    this.logger.info(`Catalogue items offered: ${offered.length}`)
+    const counted = (kind: IConcierge.GroundingKind) =>
+      offered.filter((item) => item.kind === kind).length
+
+    this.logger.info(
+      `operation=${tenant.slug} offered=${offered.length} ` +
+        `(lugares ${counted('establishment')}, experiências ${counted('experience')}, ` +
+        `eventos ${counted('event')}) withheld=${withheld.length}`
+    )
 
     const started = Date.now()
-    const reply = await service.answer(this.question, offered)
+    const reply = await service.answer(this.question, offered, withheld)
     const elapsed = Date.now() - started
 
     this.logger.info(`outcome=${reply.outcome} model=${reply.model ?? 'none'} in ${elapsed}ms`)
     if (reply.text) this.logger.log(reply.text)
-    if (!reply.text) this.logger.log(offered.map((item) => `- ${item.name}`).join('\n'))
+
+    // The reference is a citation token; the link is always built from the slugs.
+    for (const item of reply.items) {
+      this.logger.log(
+        `- [${item.kind}] ${item.name} → /cidades/${item.city_slug}/estabelecimentos/${item.establishment_slug}`
+      )
+    }
   }
 }

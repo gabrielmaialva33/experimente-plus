@@ -1,11 +1,13 @@
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 
+import testUtils from '@adonisjs/core/services/test_utils'
+
 import IRoles from '#modules/roles/interfaces/role_interface'
-import Establishment from '#modules/establishments/models/establishment'
 import PartnerContentPolicy from '#modules/partner_content/models/partner_content_policy'
 import {
   createEstablishmentScenario,
+  createPublishedEstablishment,
   type EstablishmentScenario,
 } from '#tests/functional/establishments/helpers'
 import { createUser } from '#tests/functional/organizations/helpers'
@@ -17,25 +19,22 @@ const publicHeaders = (scenario: EstablishmentScenario) => ({
   'x-forwarded-for': `198.51.100.${(scenario.tenant.id % 250) + 1}`,
 })
 
-async function createUnit(scenario: EstablishmentScenario): Promise<Establishment> {
-  return Establishment.create({
-    tenant_id: scenario.tenant.id,
-    organization_id: scenario.organization.id,
-    lifecycle_status: 'active',
-    business_status: 'open',
-    created_by: scenario.owner.id,
-  })
-}
-
 const future = (hours: number) => DateTime.utc().plus({ hours }).toISO()
 
-test.group('Partner content', () => {
+test.group('Partner content', (group) => {
+  // Every other functional suite rolls its rows back, and this one has to as
+  // well: without it the operations it creates survive the run, and the next
+  // run collides on `tenants_slug_unique` before reaching a single assertion.
+  // A suite that only passes against a virgin database hides whatever it
+  // would have caught the second time.
+  group.each.setup(() => testUtils.db().withGlobalTransaction())
+
   test('publishes without a queue when the operation does not require approval', async ({
     client,
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('pc-direct')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
 
     const created = await client
       .post('/api/v1/portal/content/experiences')
@@ -66,7 +65,7 @@ test.group('Partner content', () => {
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('pc-queue')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
 
     const created = await client
       .post('/api/v1/portal/content/events')
@@ -127,7 +126,7 @@ test.group('Partner content', () => {
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('pc-edit')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
     const moderator = await createUser({
       prefix: 'pc-edit-mod',
       tenant: scenario.tenant,
@@ -169,7 +168,11 @@ test.group('Partner content', () => {
       .get(`/api/v1/catalog/establishments/${establishment.id}/events`)
       .headers(publicHeaders(scenario))
     assert.lengthOf(stillPublic.body().data, 1)
-    assert.equal(stillPublic.body().data[0].published_snapshot.title, 'Feira de vinilis')
+    assert.equal(stillPublic.body().data[0].title, 'Feira de vinilis')
+    // The public response is the published projection, not the row: it carries
+    // no `published_snapshot`, no `status` and no `tenant_id`. Reading the
+    // snapshot here would be reading a field this endpoint must never send.
+    assert.isUndefined(stillPublic.body().data[0].published_snapshot)
 
     await client
       .post(`/api/v1/admin/content/events/${id}/approve`)
@@ -179,7 +182,7 @@ test.group('Partner content', () => {
     const corrected = await client
       .get(`/api/v1/catalog/establishments/${establishment.id}/events`)
       .headers(publicHeaders(scenario))
-    assert.equal(corrected.body().data[0].published_snapshot.title, 'Feira de vinis')
+    assert.equal(corrected.body().data[0].title, 'Feira de vinis')
   })
 
   test('refusing an edit restores the version that was already approved', async ({
@@ -187,7 +190,7 @@ test.group('Partner content', () => {
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('pc-reject')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
     const moderator = await createUser({
       prefix: 'pc-reject-mod',
       tenant: scenario.tenant,
@@ -231,7 +234,7 @@ test.group('Partner content', () => {
     const still = await client
       .get(`/api/v1/catalog/establishments/${establishment.id}/events`)
       .headers(publicHeaders(scenario))
-    assert.equal(still.body().data[0].published_snapshot.title, 'Sarau')
+    assert.equal(still.body().data[0].title, 'Sarau')
   })
 
   test('an event leaves discovery by its own window, without anyone archiving it', async ({
@@ -239,7 +242,7 @@ test.group('Partner content', () => {
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('pc-window')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
 
     const policy = await PartnerContentPolicy.create({
       tenant_id: scenario.tenant.id,
@@ -289,7 +292,7 @@ test.group('Partner content', () => {
 
   test('withdrawing content archives it and never deletes the row', async ({ client, assert }) => {
     const scenario = await createEstablishmentScenario('pc-archive')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
 
     const created = await client
       .post('/api/v1/portal/content/showcase-items')
@@ -332,7 +335,7 @@ test.group('Partner content', () => {
 
   test('a member of another operation cannot write content for this one', async ({ client }) => {
     const scenario = await createEstablishmentScenario('pc-owner')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
     const stranger = await createUser({
       prefix: 'pc-stranger',
       tenant: scenario.tenant,
@@ -352,7 +355,7 @@ test.group('Partner content', () => {
 
   test('only a moderator approves, and a partner cannot approve their own', async ({ client }) => {
     const scenario = await createEstablishmentScenario('pc-approve')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
 
     const created = await client
       .post('/api/v1/portal/content/events')
@@ -383,7 +386,7 @@ test.group('Partner content', () => {
     assert,
   }) => {
     const scenario = await createEstablishmentScenario('pc-routing')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
 
     const reviews = await client
       .get(`/api/v1/catalog/establishments/${establishment.id}/reviews`)
@@ -439,7 +442,7 @@ test.group('Partner content', () => {
 
   test('the minimum notice is enforced when publishing, not while drafting', async ({ client }) => {
     const scenario = await createEstablishmentScenario('pc-notice')
-    const establishment = await createUnit(scenario)
+    const establishment = await createPublishedEstablishment(scenario)
     await PartnerContentPolicy.create({
       tenant_id: scenario.tenant.id,
       require_event_approval: false,

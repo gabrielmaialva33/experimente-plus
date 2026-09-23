@@ -2,6 +2,10 @@ import { Link } from '@inertiajs/react'
 import { Building2, CalendarClock, Check, CircleAlert, Clock3, Info, MapPin } from 'lucide-react'
 
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import {
+  EstablishmentPartnerContent,
+  type PartnerContentPayload,
+} from '~/components/catalog/establishment_partner_content'
 import { CatalogWeeklyHours } from '~/components/catalog/catalog_weekly_hours'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { EstablishmentActions } from '~/components/catalog/establishment_actions'
@@ -23,6 +27,7 @@ import { cn } from '~/lib/utils'
 interface CatalogEstablishmentProps {
   catalog: unknown
   city_slug: string | null
+  partner_content?: PartnerContentPayload
 }
 
 function formatDate(value: string | null, timeZone: string | null): string | null {
@@ -119,7 +124,13 @@ function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }
   )
 }
 
-function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
+function PublishedEstablishment({
+  detail,
+  partnerContent,
+}: {
+  detail: CatalogDetail
+  partnerContent?: PartnerContentPayload
+}) {
   useEstablishmentViewAnalytics(detail)
 
   const addressLine = formatCatalogAddress(detail.address)
@@ -309,6 +320,8 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
             </section>
           ) : null}
 
+          <EstablishmentPartnerContent content={partnerContent} timeZone={detail.city.timezone} />
+
           {detail.attributes.length > 0 ? (
             <section
               aria-labelledby="attributes-title"
@@ -464,7 +477,10 @@ function PublishedEstablishment({ detail }: { detail: CatalogDetail }) {
   )
 }
 
-export default function CatalogEstablishment({ catalog }: CatalogEstablishmentProps) {
+export default function CatalogEstablishment({
+  catalog,
+  partner_content: partnerContent,
+}: CatalogEstablishmentProps) {
   const detail = catalogDetail(catalog)
 
   if (!detail) {
@@ -493,6 +509,6 @@ export default function CatalogEstablishment({ catalog }: CatalogEstablishmentPr
   return detail.historical ? (
     <HistoricalEstablishment detail={detail} />
   ) : (
-    <PublishedEstablishment detail={detail} />
+    <PublishedEstablishment detail={detail} partnerContent={partnerContent} />
   )
 }

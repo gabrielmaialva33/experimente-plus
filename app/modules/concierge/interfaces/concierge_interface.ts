@@ -3,33 +3,66 @@
  *
  * The model composes language and is never a source of fact. Everything it may
  * mention arrives as a closed set of catalogue items, and it answers by citing
- * their identifiers. Prose that names nothing is safe; a citation that names
+ * their references. Prose that names nothing is safe; a citation that names
  * something absent from the set is removed before the consumer sees it.
  */
 namespace IConcierge {
+  /**
+   * What may be grounded on: a place, something it offers, something it hosts.
+   *
+   * Showcase items of ADR-0028 are deliberately absent. A showcase item is a
+   * displayed product with an informational price and no availability of its
+   * own, so citing one would invite the answer to talk about what is on sale
+   * right now, which nothing in the data supports.
+   */
+  export const GROUNDING_KINDS = ['establishment', 'experience', 'event'] as const
+  export type GroundingKind = (typeof GROUNDING_KINDS)[number]
+
+  /**
+   * The identity a citation is made of.
+   *
+   * It has to be composite. Establishments, experiences and events number their
+   * rows independently, so a bare `7` belongs to three different things at once:
+   * the model citing experience 7 would have validated as establishment 7 and
+   * the consumer would have received a verified-looking reference to the wrong
+   * place. That is worse than invention, because invention can be spotted.
+   *
+   * It is a citation token, not an address. Nothing public is addressable by it:
+   * a link is built from `city_slug` and `establishment_slug` (ADR-0016 §6), and
+   * a client that parses this string is reading an internal detail it was not
+   * given a contract for.
+   */
+  export const refOf = (kind: GroundingKind, id: number): string => `${kind}:${id}`
+
   /** A catalogue item handed to the model. Nothing else may be referenced. */
   export interface GroundingItem {
-    id: number
-    kind: 'establishment'
+    /** `<kind>:<id>` — the only identity the model cites and we validate. */
+    ref: string
+    kind: GroundingKind
+    /** The establishment's public name, or the approved title of the content. */
     name: string
-    city: string
+    city_slug: string
+    /** With `city_slug`, the deterministic public link of the establishment. */
+    establishment_slug: string
+    establishment_name: string
     district: string | null
     category: string | null
-    opens_at: string | null
-    closes_at: string | null
+    /** Events only, from the approved snapshot — never the live column. */
+    starts_at: string | null
+    ends_at: string | null
   }
 
   /** The shape the model is required to answer in, so citations are checkable. */
   export interface ModelAnswer {
     intro: string
-    steps: { id: number; why: string }[]
+    steps: { ref: string; why: string }[]
   }
 
   export interface GroundedAnswer {
     intro: string
     steps: { item: GroundingItem; why: string }[]
-    /** Citations the model produced for items it was never given. */
-    discarded: number[]
+    /** References the model produced for items it was never given. */
+    discarded: string[]
     /** True when nothing survived validation and the caller must degrade. */
     empty: boolean
   }

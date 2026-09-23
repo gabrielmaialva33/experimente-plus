@@ -7,6 +7,8 @@ const PartnerPortalController = () =>
   import('#modules/portal/controllers/partner_portal_controller')
 const BackofficePortalController = () =>
   import('#modules/portal/controllers/backoffice_portal_controller')
+const PartnerContentPagesController = () =>
+  import('#modules/partner_content/controllers/partner_content_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
@@ -14,6 +16,27 @@ const permission = (resource: IPermission.Resources, action: IPermission.Actions
 router
   .group(() => {
     router.get('/', [PartnerPortalController, 'index']).as('portal.index')
+
+    router
+      .get('/content', [PartnerContentPagesController, 'portal'])
+      .as('portal.content.index')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.READ))
+    router
+      .post('/content/:kind', [PartnerContentPagesController, 'create'])
+      .as('portal.content.create')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
+      .put('/content/:kind/:id', [PartnerContentPagesController, 'update'])
+      .as('portal.content.update')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
+      .post('/content/:kind/:id/submit', [PartnerContentPagesController, 'submit'])
+      .as('portal.content.submit')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.SUBMIT))
+    router
+      .post('/content/:kind/:id/archive', [PartnerContentPagesController, 'archive'])
+      .as('portal.content.archive')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.ARCHIVE))
 
     router
       .get('/organizations/new', [PartnerPortalController, 'newOrganization'])
@@ -106,6 +129,27 @@ router
 
 router
   .group(() => {
+    router
+      .get('/content', [PartnerContentPagesController, 'moderation'])
+      .as('backoffice.content.index')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.LIST))
+    router
+      .post('/content/:kind/:id/approve', [PartnerContentPagesController, 'approve'])
+      .as('backoffice.content.approve')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.APPROVE))
+    router
+      .post('/content/:kind/:id/reject', [PartnerContentPagesController, 'reject'])
+      .as('backoffice.content.reject')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.REJECT))
+    router
+      .post('/content/:kind/:id/archive', [PartnerContentPagesController, 'moderationArchive'])
+      .as('backoffice.content.archive')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.ARCHIVE))
+    router
+      .put('/content/policy', [PartnerContentPagesController, 'updatePolicy'])
+      .as('backoffice.content.policy')
+      .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))
+
     router
       .get('/moderation', [BackofficePortalController, 'moderation'])
       .as('backoffice.moderation.index')
