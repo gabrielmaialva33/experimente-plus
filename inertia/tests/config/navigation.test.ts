@@ -215,6 +215,10 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/backoffice/benefits')?.capability).toBe('benefit_editions.list')
     expect(resolveRouteMetadata('/portal/content')?.capability).toBe('establishments.read')
     expect(resolveRouteMetadata('/backoffice/content')?.capability).toBe('establishments.list')
+    expect(resolveRouteMetadata('/backoffice/reports')?.capability).toBe('establishments.list')
+    expect(resolveRouteMetadata('/backoffice/taxonomy')?.capability).toBe('categories.list')
+    expect(resolveRouteMetadata('/backoffice/geography')?.capability).toBe('cities.list')
+    expect(resolveRouteMetadata('/backoffice/review-policy')?.capability).toBe('settings.read')
   })
 
   it('does not expose the conditional UI demo route in central navigation', () => {

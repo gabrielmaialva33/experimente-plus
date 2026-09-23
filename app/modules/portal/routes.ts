@@ -11,9 +11,22 @@ const PartnerContentPagesController = () =>
   import('#modules/partner_content/controllers/partner_content_pages_controller')
 const ContentReportPagesController = () =>
   import('#modules/reviews/controllers/content_report_pages_controller')
+const ReviewPolicyPagesController = () =>
+  import('#modules/reviews/controllers/review_policy_pages_controller')
+const TaxonomyPagesController = () =>
+  import('#modules/taxonomy/controllers/taxonomy_pages_controller')
+const GeographyPagesController = () =>
+  import('#modules/geography/controllers/geography_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
+
+/** A page that shows two resources needs the right to read both. */
+const permissions = (...pairs: [IPermission.Resources, IPermission.Actions][]) =>
+  middleware.permission({
+    permissions: pairs.map(([resource, action]) => `${resource}.${action}`),
+    requireAll: true,
+  })
 
 router
   .group(() => {
@@ -211,6 +224,79 @@ router
       .post('/users/:userId/unban', [ContentReportPagesController, 'unbanAuthor'])
       .as('backoffice.users.unban')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+
+    /**
+     * Administration screens over APIs that already existed — Anexo I item 12.
+     *
+     * Each route carries the permission of the resource it writes, the same one
+     * its `/api/v1/admin` counterpart carries, so the page is never a wider door
+     * than the API it sits on. The review policy additionally requires a
+     * platform administrator inside its service, as the API does.
+     */
+    router
+      .get('/review-policy', [ReviewPolicyPagesController, 'show'])
+      .as('backoffice.review_policy.show')
+      .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.READ))
+    router
+      .put('/review-policy', [ReviewPolicyPagesController, 'update'])
+      .as('backoffice.review_policy.update')
+      .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))
+
+    router
+      .get('/taxonomy', [TaxonomyPagesController, 'index'])
+      .as('backoffice.taxonomy.index')
+      .use(
+        permissions(
+          [IPermission.Resources.CATEGORY_FAMILIES, IPermission.Actions.LIST],
+          [IPermission.Resources.CATEGORIES, IPermission.Actions.LIST]
+        )
+      )
+    router
+      .post('/taxonomy/families', [TaxonomyPagesController, 'storeFamily'])
+      .as('backoffice.taxonomy.families.store')
+      .use(permission(IPermission.Resources.CATEGORY_FAMILIES, IPermission.Actions.CREATE))
+    router
+      .put('/taxonomy/families/:id', [TaxonomyPagesController, 'updateFamily'])
+      .as('backoffice.taxonomy.families.update')
+      .where('id', router.matchers.number())
+      .use(permission(IPermission.Resources.CATEGORY_FAMILIES, IPermission.Actions.UPDATE))
+    router
+      .post('/taxonomy/categories', [TaxonomyPagesController, 'storeCategory'])
+      .as('backoffice.taxonomy.categories.store')
+      .use(permission(IPermission.Resources.CATEGORIES, IPermission.Actions.CREATE))
+    router
+      .put('/taxonomy/categories/:id', [TaxonomyPagesController, 'updateCategory'])
+      .as('backoffice.taxonomy.categories.update')
+      .where('id', router.matchers.number())
+      .use(permission(IPermission.Resources.CATEGORIES, IPermission.Actions.UPDATE))
+
+    router
+      .get('/geography', [GeographyPagesController, 'index'])
+      .as('backoffice.geography.index')
+      .use(
+        permissions(
+          [IPermission.Resources.REGIONS, IPermission.Actions.LIST],
+          [IPermission.Resources.CITIES, IPermission.Actions.LIST]
+        )
+      )
+    router
+      .post('/geography/regions', [GeographyPagesController, 'storeRegion'])
+      .as('backoffice.geography.regions.store')
+      .use(permission(IPermission.Resources.REGIONS, IPermission.Actions.CREATE))
+    router
+      .put('/geography/regions/:id', [GeographyPagesController, 'updateRegion'])
+      .as('backoffice.geography.regions.update')
+      .where('id', router.matchers.number())
+      .use(permission(IPermission.Resources.REGIONS, IPermission.Actions.UPDATE))
+    router
+      .post('/geography/cities', [GeographyPagesController, 'storeCity'])
+      .as('backoffice.geography.cities.store')
+      .use(permission(IPermission.Resources.CITIES, IPermission.Actions.CREATE))
+    router
+      .put('/geography/cities/:id', [GeographyPagesController, 'updateCity'])
+      .as('backoffice.geography.cities.update')
+      .where('id', router.matchers.number())
+      .use(permission(IPermission.Resources.CITIES, IPermission.Actions.UPDATE))
   })
   .prefix('/backoffice')
   .use(middleware.auth({ guards: ['jwt'] }))
