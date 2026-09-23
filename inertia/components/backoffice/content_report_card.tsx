@@ -1,5 +1,5 @@
 import { Link, useForm } from '@inertiajs/react'
-import { AlertTriangle, EyeOff, Loader2, ShieldQuestion, Star, UserX } from 'lucide-react'
+import { AlertTriangle, Bot, EyeOff, Loader2, ShieldQuestion, Star, UserX } from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -11,6 +11,8 @@ import { Textarea } from '~/components/ui/textarea'
 import { useAuth } from '~/hooks/use_auth'
 import { numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
+  automaticRuleLabels,
+  isAutomaticRule,
   formatReportDate,
   isOverdue,
   isReportReason,
@@ -53,6 +55,12 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
   const reporter = record(report.reporter)
   const resolver = record(report.resolver)
   const details = nullableText(report, 'details')
+  // ADR-0031: a report a rule opened, with the rule and its masked evidence.
+  const isAutomatic = report.origin === 'automatic'
+  const rawRule = text(report, 'automatic_rule')
+  const ruleLabel = isAutomaticRule(rawRule) ? automaticRuleLabels[rawRule] : null
+  const evidence = nullableText(report, 'automatic_evidence')
+  const holdsContent = report.holds_content === true
 
   const target = record(report.target)
   const rawTargetType = text(report, 'target_type', 'review')
@@ -133,12 +141,41 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
             Denunciante
           </dt>
           <dd className="mt-0.5">
-            {isAnonymous ? 'Denúncia anônima' : (nullableText(reporter, 'full_name') ?? '—')}
+            {isAutomatic
+              ? `Regra automática${ruleLabel ? `: ${ruleLabel}` : ''}`
+              : isAnonymous
+                ? 'Denúncia anônima'
+                : (nullableText(reporter, 'full_name') ?? '—')}
           </dd>
         </div>
       </dl>
 
-      {details ? (
+      {isAutomatic ? (
+        <section
+          className="mt-4 flex items-start gap-3 rounded-md border border-primary/20 bg-primary-soft p-4"
+          aria-label="Origem automática"
+        >
+          <Bot aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary-accent" />
+          <div className="space-y-1 text-sm">
+            <p className="font-semibold">
+              Aberta por regra automática{ruleLabel ? ` — ${ruleLabel}` : ''}
+            </p>
+            {details ? (
+              <p className="text-muted-foreground">{details}</p>
+            ) : evidence ? (
+              <p className="text-muted-foreground">Encontrado: {evidence}</p>
+            ) : null}
+            {holdsContent && !settled ? (
+              <p className="font-semibold text-warning-foreground">
+                Conteúdo retido fora das áreas públicas até a decisão. Descartar ou resolver sem
+                ocultar libera o conteúdo.
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {details && !isAutomatic ? (
         <section className="mt-4 rounded-md border border-border bg-muted/40 p-4">
           <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             O que o denunciante escreveu

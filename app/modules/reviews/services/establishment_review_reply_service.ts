@@ -11,6 +11,7 @@ import type IReview from '#modules/reviews/interfaces/review_interface'
 import type EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
 import EstablishmentReviewReplyRepository from '#modules/reviews/repositories/establishment_review_reply_repository'
 import EstablishmentReviewRepository from '#modules/reviews/repositories/establishment_review_repository'
+import AutomaticModerationService from '#modules/reviews/services/automatic_moderation_service'
 import type User from '#modules/users/models/user'
 
 @inject()
@@ -18,7 +19,8 @@ export default class EstablishmentReviewReplyService {
   constructor(
     private replyRepository: EstablishmentReviewReplyRepository,
     private reviewRepository: EstablishmentReviewRepository,
-    private organizationPolicy: OrganizationPolicyService
+    private organizationPolicy: OrganizationPolicyService,
+    private automod: AutomaticModerationService
   ) {}
 
   async reply(
@@ -65,6 +67,10 @@ export default class EstablishmentReviewReplyService {
         throw new BadRequestException('Reply text cannot be empty')
       }
 
+      // ADR-0031: contact data in a partner's reply is exactly the "contatos
+      // publicados em desacordo" of Anexo I item 9.
+      const assessment = await this.automod.assess(tenantId, [comment], client)
+
       const reply = await this.replyRepository.create(
         {
           tenant_id: tenantId,
@@ -72,11 +78,12 @@ export default class EstablishmentReviewReplyService {
           organization_id: establishment.organization_id,
           user_id: actor.id,
           comment,
-          status: 'published',
+          status: assessment.hold ? 'hidden' : 'published',
         },
         { client }
       )
 
+      await this.automod.record(tenantId, 'reply', reply.id, assessment, client)
       return reply
     })
   }
@@ -111,11 +118,18 @@ export default class EstablishmentReviewReplyService {
         throw new BadRequestException('Reply text cannot be empty')
       }
 
+      const assessment =
+        comment !== reply.comment && reply.status === 'published'
+          ? await this.automod.assess(tenantId, [comment], client)
+          : null
+
       reply.useTransaction(client)
       reply.comment = comment
       reply.edited_at = DateTime.utc()
+      if (assessment?.hold) reply.status = 'hidden'
       await reply.save()
 
+      if (assessment) await this.automod.record(tenantId, 'reply', reply.id, assessment, client)
       return reply
     })
   }

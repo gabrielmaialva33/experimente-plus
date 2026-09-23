@@ -2,6 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 
 import type IReview from '#modules/reviews/interfaces/review_interface'
 import type ContentReport from '#modules/reviews/models/content_report'
+import { maskPaymentData } from '#modules/reviews/services/automatic_moderation_detectors'
 
 /**
  * Resolves what a batch of reports actually points at — ADR-0027 §6.
@@ -137,7 +138,7 @@ export default class ContentReportTargetRepository {
           id: Number(row.id),
           exists: true,
           title: null,
-          text: row.comment ?? null,
+          text: row.comment ? maskPaymentData(row.comment) : null,
           rating: row.rating === null || row.rating === undefined ? null : Number(row.rating),
           status: row.status ?? null,
           author_name: row.author_name ?? null,
@@ -199,7 +200,7 @@ export default class ContentReportTargetRepository {
           id: Number(row.id),
           exists: true,
           title: null,
-          text: row.comment ?? null,
+          text: row.comment ? maskPaymentData(row.comment) : null,
           rating: null,
           status: row.status ?? null,
           author_name: row.author_name ?? null,
@@ -251,7 +252,7 @@ export default class ContentReportTargetRepository {
           id: Number(row.id),
           exists: true,
           title: null,
-          text: row.short_description ?? null,
+          text: row.short_description ? maskPaymentData(row.short_description) : null,
           rating: null,
           status: row.lifecycle_status ?? null,
           author_name: null,
@@ -324,8 +325,8 @@ export default class ContentReportTargetRepository {
           type: kind,
           id: Number(row.id),
           exists: true,
-          title: row.snapshot_title ?? null,
-          text: row.snapshot_description ?? null,
+          title: row.snapshot_title ? maskPaymentData(row.snapshot_title) : null,
+          text: row.snapshot_description ? maskPaymentData(row.snapshot_description) : null,
           rating: null,
           status: row.status ?? null,
           author_name: null,

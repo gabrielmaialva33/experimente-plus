@@ -5346,6 +5346,74 @@ components:
         meta:
           $ref: '#/components/schemas/AdministrativePaginationMeta'
 
+    AutomaticModerationPolicy:
+      description: >-
+        Automatic moderation rules of one operation (ADR-0031, Anexo I item 9).
+        Each detector is `off`, `flag` (publish and open a report) or `hold`
+        (keep out of public view until a person decides). All values are
+        provisional until the contracting party defines them.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - link_mode
+        - contact_mode
+        - payment_data_mode
+        - blocked_term_mode
+        - blocked_terms
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        link_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        contact_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        payment_data_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        blocked_term_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        blocked_terms:
+          description: Matched as whole words, without regard to case or accents.
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AutomaticModerationMode:
+      type: string
+      enum: [off, flag, hold]
+
+    UpdateAutomaticModerationPolicyRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        link_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        contact_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        payment_data_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        blocked_term_mode:
+          $ref: '#/components/schemas/AutomaticModerationMode'
+        blocked_terms:
+          description: Replaces the whole list. Trimmed and de-duplicated on save.
+          type: array
+          maxItems: 500
+          items:
+            type: string
+            minLength: 2
+            maxLength: 80
+
     ReviewPolicy:
       type: object
       additionalProperties: false
@@ -5543,6 +5611,8 @@ components:
         - status
         - protocol_number
         - is_anonymous
+        - origin
+        - holds_content
         - created_at
         - updated_at
       properties:
@@ -5607,6 +5677,26 @@ components:
           type:
             - string
             - 'null'
+        origin:
+          description: >-
+            `automatic` when a rule of ADR-0031 opened the report. Such a report
+            has no reporter; a person resolves it like any other.
+          type: string
+          enum: [user, automatic]
+        automatic_rule:
+          type: [string, 'null']
+          enum: [link, contact, payment_data, blocked_term, null]
+        automatic_evidence:
+          description: >-
+            What made the rule fire, masked by the writer — a card number or an
+            e-mail is never copied into the queue.
+          type: [string, 'null']
+          maxLength: 200
+        holds_content:
+          description: >-
+            The rule kept the content out of public view until a person decides.
+            Resolving without `content_hidden` or dismissing releases it.
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -14177,6 +14267,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReviewPolicy'
+        '401':
+          description: Authentication required
+        '403':
+          description: Admin or root role required
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/moderation-rules:
+    get:
+      operationId: getAutomaticModerationRules
+      summary: Get the operation's automatic moderation rules
+      description: >-
+        Requires admin or root role. Created with provisional defaults on first
+        read (ADR-0031).
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Automatic moderation rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomaticModerationPolicy'
+        '401':
+          description: Authentication required
+        '403':
+          description: Admin or root role required
+    put:
+      operationId: updateAutomaticModerationRules
+      summary: Update the operation's automatic moderation rules
+      description: >-
+        Requires admin or root role. Changes apply to text written from now on;
+        nothing already published is re-assessed.
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAutomaticModerationPolicyRequest'
+      responses:
+        '200':
+          description: Automatic moderation rules updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomaticModerationPolicy'
         '401':
           description: Authentication required
         '403':

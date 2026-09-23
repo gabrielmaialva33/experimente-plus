@@ -68,6 +68,21 @@ export default class ContentReport extends BaseModel {
   @column.dateTime()
   declare sla_notified_at: DateTime | null
 
+  /** `automatic` when a rule opened it (ADR-0031); such a report has no reporter. */
+  @column()
+  declare origin: IReview.ReportOrigin
+
+  @column()
+  declare automatic_rule: IReview.AutomaticRule | null
+
+  /** Masked by the writer: a rule never copies a card number or an e-mail here. */
+  @column()
+  declare automatic_evidence: string | null
+
+  /** The rule kept the content out of public view until a person decides. */
+  @column()
+  declare holds_content: boolean
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 

@@ -92,6 +92,52 @@ export namespace IReview {
     can_hide: boolean
   }
 
+  /**
+   * Automatic moderation — ADR-0031, Anexo I item 9.
+   *
+   * Deterministic detectors only. Each one opens a report in the single queue
+   * and, depending on the operation's mode, either publishes and flags or holds
+   * the content out of public view until a person decides.
+   */
+  export const AUTOMATIC_RULES = ['link', 'contact', 'payment_data', 'blocked_term'] as const
+  export type AutomaticRule = (typeof AUTOMATIC_RULES)[number]
+  export const AUTOMATIC_MODES = ['off', 'flag', 'hold'] as const
+  export type AutomaticMode = (typeof AUTOMATIC_MODES)[number]
+  export type ReportOrigin = 'user' | 'automatic'
+
+  /** Which canonical reason a rule files its report under. */
+  export const AUTOMATIC_RULE_REASON: Record<AutomaticRule, ReportReason> = {
+    link: 'spam',
+    contact: 'inappropriate',
+    payment_data: 'inappropriate',
+    blocked_term: 'offensive',
+  }
+
+  export interface AutomaticModerationPolicyAttributes {
+    link_mode: AutomaticMode
+    contact_mode: AutomaticMode
+    payment_data_mode: AutomaticMode
+    blocked_term_mode: AutomaticMode
+    blocked_terms: string[]
+  }
+
+  /**
+   * Provisional defaults (ADR-0031). Contacts and payment data are held because
+   * their harm is exposure, and exposure cannot be undone by a later decision.
+   * Links are published and flagged: they are common in honest text. The
+   * blocked vocabulary starts empty — what counts as offensive in this
+   * operation is the operation's to say, not a list this code invents.
+   */
+  export const DEFAULT_AUTOMATIC_MODERATION_POLICY: AutomaticModerationPolicyAttributes = {
+    link_mode: 'flag',
+    contact_mode: 'hold',
+    payment_data_mode: 'hold',
+    blocked_term_mode: 'hold',
+    blocked_terms: [],
+  }
+
+  export type UpdateAutomaticModerationPolicyPayload = Partial<AutomaticModerationPolicyAttributes>
+
   export interface ReviewPolicyAttributes {
     id?: number
     tenant_id: number

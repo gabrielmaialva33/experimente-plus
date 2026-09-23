@@ -44,6 +44,7 @@ Este diretório contém os contratos arquiteturais aceitos para os domínios do 
 
 - [ADR-0029 — Concierge IA ancorado no catálogo](0029-concierge-ia-ancorado-no-catalogo.md): marco EP-17, domínio inexistente hoje; execução do desenho estrutural autorizada em 15/09/2026. Redigida depois de medir o provedor real: um modelo inventou um lugar ausente da lista, outro vazou o próprio raciocínio no conteúdo, houve `529` de sobrecarga e modelos listados que respondem `404`. Daí a decisão central — o modelo compõe linguagem e nunca é fonte de fato, e uma validação determinística contra o catálogo remove o que ele inventar. Fronteira de assunto é recusa em código, não instrução ao modelo, e o módulo não tem caminho de escrita.
 - [ADR-0030 — Camada pessoal do Explorador](0030-camada-pessoal-do-explorador.md): marco EP-18, domínio inexistente hoje. Escopo contratado do Anexo I item 10 — favoritar, seguir, escolher interesses e salvar roteiros — que ainda não tem uma linha de código. Decisões centrais: favorito e seguido são relações distintas porque uma recupera e a outra assina publicação; segue-se o estabelecimento, que é a identidade pública do parceiro, nunca a organização; roteiro é privado do autor, já que conteúdo público exigiria fila de moderação que o contrato não dimensionou; e toda leitura revalida o alvo pela definição única de descobribilidade, para que um favorito não reabra uma unidade retirada.
+- [ADR-0031 — Moderação automática determinística](0031-moderacao-automatica-deterministica.md): marco EP-19, escopo contratado do Anexo I item 9 que não tinha nenhuma regra. Detectores determinísticos — link, contato, dados de pagamento e termo bloqueado —, sem modelo de linguagem, porque uma retenção que não sabe dizer por que aconteceu não pode ser contestada. Cada regra, por operação, está desligada, sinaliza ou retém; toda ocorrência abre denúncia sem autor na fila única do ADR-0027, com evidência mascarada. Reter usa estados que já existem (`hidden`, `pending_review`), e descartar a regra libera só o que ela reteve.
 
 ## Regra de evolução
 
@@ -74,4 +75,5 @@ EP-15 — avaliações e moderação de conteúdo     ADR-0027 proposto com exec
 EP-16 — conteúdo próprio do parceiro           ADR-0028 proposto com execução autorizada; parâmetros pendentes do contratante
 EP-17 — assistência de descoberta              ADR-0029 proposto com execução autorizada; limites de consumo pendentes do contratante
 EP-18 — recursos do Explorador                 ADR-0030 proposto; escopo contratado do Anexo I item 10, parâmetros pendentes do contratante
+EP-19 — moderação automática                 ADR-0031 proposto; escopo contratado do Anexo I item 9, parâmetros pendentes do contratante
 ```

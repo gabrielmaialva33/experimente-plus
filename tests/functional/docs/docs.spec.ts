@@ -13,6 +13,7 @@ import IReview from '#modules/reviews/interfaces/review_interface'
 import ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
+import AutomaticModerationPolicy from '#modules/reviews/models/automatic_moderation_policy'
 import ReviewPolicy from '#modules/reviews/models/review_policy'
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'trace'] as const
@@ -359,6 +360,10 @@ test.group('Documentation', () => {
     )
     assert.sameMembers(documented('ContentReport'), serialisable(ContentReport))
     assert.sameMembers(documented('ReviewPolicy'), serialisable(ReviewPolicy))
+    assert.sameMembers(
+      documented('AutomaticModerationPolicy'),
+      serialisable(AutomaticModerationPolicy)
+    )
 
     // A report may name its author only to moderation. The hashes exist to
     // recognise repetition from the same origin, never to reveal who wrote it,
@@ -834,6 +839,15 @@ test.group('Documentation', () => {
     assert.sameMembers(schemas.CreateReportRequest.properties!.target_type.enum!, targets)
     assert.sameMembers(schemas.ContentReport.properties!.target_type.enum!, targets)
     assert.sameMembers(schemas.ContentReport.properties!.status.enum!, statuses)
+    // ADR-0031: the rule vocabulary and the modes come from the same constants
+    // the validator and the check constraints are written from.
+    assert.sameMembers(
+      (schemas.ContentReport.properties!.automatic_rule.enum as unknown[]).filter(
+        (value) => value !== null
+      ),
+      [...IReview.AUTOMATIC_RULES]
+    )
+    assert.sameMembers(schemas.AutomaticModerationMode.enum!, [...IReview.AUTOMATIC_MODES])
 
     const listing = operationAt(specification, '/api/v1/admin/content-reports', 'get')
     const parameter = (name: string) =>

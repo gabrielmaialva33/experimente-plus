@@ -1,5 +1,4 @@
 import { inject } from '@adonisjs/core'
-import { randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 
@@ -16,6 +15,7 @@ import EstablishmentReviewReply from '#modules/reviews/models/establishment_revi
 import ContentReportRepository from '#modules/reviews/repositories/content_report_repository'
 import ContentReportTargetRepository from '#modules/reviews/repositories/content_report_target_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
+import { buildProtocolNumber } from '#modules/reviews/services/report_protocol'
 import type User from '#modules/users/models/user'
 
 @inject()
@@ -53,7 +53,7 @@ export default class ContentReportService {
       const report = await this.reportRepository.create(
         {
           tenant_id: tenantId,
-          protocol_number: this.buildProtocolNumber(),
+          protocol_number: buildProtocolNumber(),
           target_type: payload.target_type,
           target_id: payload.target_id,
           reporter_id: actor.id,
@@ -72,22 +72,16 @@ export default class ContentReportService {
           resolved_at: null,
           resolution_action: null,
           resolution_notes: null,
+          origin: 'user',
+          automatic_rule: null,
+          automatic_evidence: null,
+          holds_content: false,
         },
         { client }
       )
 
       return report
     })
-  }
-
-  /**
-   * Human-facing identifier the reporter can quote later. Random suffix rather
-   * than a sequence so the protocol does not disclose how many reports exist.
-   */
-  private buildProtocolNumber(): string {
-    const day = DateTime.now().toFormat('yyyyLLdd')
-    const suffix = randomBytes(4).toString('hex').toUpperCase()
-    return `DEN-${day}-${suffix}`
   }
 
   async listReports(tenantId: number, actor: User, query: IReview.ListReportsQuery) {
@@ -158,10 +152,56 @@ export default class ContentReportService {
 
       if (payload.resolution_action === 'content_hidden') {
         await this.hideTargetContent(tenantId, report.target_type, report.target_id, actor, client)
+      } else if (report.origin === 'automatic' && report.holds_content) {
+        await this.releaseAutomaticHold(tenantId, report, client)
       }
 
       return report
     })
+  }
+
+  /**
+   * A person decided a rule's report without hiding the content: release what
+   * the rule held — ADR-0031.
+   *
+   * Only what the rule held. If any other report of the same target was
+   * resolved with `content_hidden`, a moderator hid it on its merits and it
+   * stays hidden; the rule's dismissal is not a reason to republish it.
+   */
+  private async releaseAutomaticHold(
+    tenantId: number,
+    report: ContentReport,
+    client: any
+  ): Promise<void> {
+    const hiddenByPerson = await client
+      .from('content_reports')
+      .where('tenant_id', tenantId)
+      .where('target_type', report.target_type)
+      .where('target_id', report.target_id)
+      .whereNot('id', report.id)
+      .where('resolution_action', 'content_hidden')
+      .first()
+    if (hiddenByPerson) return
+
+    if (IReview.isPartnerContentTarget(report.target_type)) {
+      await this.partnerContent.releaseHold(report.target_type, tenantId, report.target_id, client)
+      return
+    }
+
+    const model =
+      report.target_type === 'review'
+        ? EstablishmentReview
+        : report.target_type === 'reply'
+          ? EstablishmentReviewReply
+          : null
+    if (!model) return
+
+    await model
+      .query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', report.target_id)
+      .where('status', 'hidden')
+      .update({ status: 'published', updated_at: new Date() })
   }
 
   private async validateTargetExists(

@@ -5,6 +5,8 @@ import { privateResponseHeadersMiddleware } from '#shared/utils/private_response
 
 const ReviewsController = () => import('#modules/reviews/controllers/reviews_controller')
 const UserBansController = () => import('#modules/reviews/controllers/user_bans_controller')
+const AutomaticModerationController = () =>
+  import('#modules/reviews/controllers/automatic_moderation_controller')
 
 router
   .get('/api/v1/catalog/establishments/:establishmentId/reviews', [
@@ -58,6 +60,8 @@ router
     router.post('/content-reports/:id/resolve', [ReviewsController, 'resolveReport'])
     router.get('/review-policy', [ReviewsController, 'getPolicy'])
     router.put('/review-policy', [ReviewsController, 'updatePolicy'])
+    router.get('/moderation-rules', [AutomaticModerationController, 'show'])
+    router.put('/moderation-rules', [AutomaticModerationController, 'update'])
     router
       .get('/users/:userId/ban', [UserBansController, 'show'])
       .where('userId', router.matchers.number())
