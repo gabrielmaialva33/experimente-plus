@@ -1,6 +1,7 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import ContentReportDeadlineService from '#modules/reviews/services/content_report_deadline_service'
 import ContentReportService from '#modules/reviews/services/content_report_service'
 import UserBanService from '#modules/reviews/services/user_ban_service'
 import {
@@ -29,7 +30,8 @@ import {
 export default class ContentReportPagesController {
   constructor(
     private reportService: ContentReportService,
-    private bans: UserBanService
+    private bans: UserBanService,
+    private deadlines: ContentReportDeadlineService
   ) {}
 
   async index({ auth, inertia, request, response, tenant }: HttpContext) {
@@ -45,8 +47,13 @@ export default class ContentReportPagesController {
       status,
     })
 
+    // Across the whole operation, not the page: a deadline is missed by a case,
+    // wherever the pagination happens to put it.
+    const overdueTotal = await this.deadlines.countOverdue(tenantId, actor)
+
     return inertia.render('backoffice/reports/index', {
       reports,
+      overdue_total: overdueTotal,
       filters: {
         status,
         target_type: query.target_type ?? null,
