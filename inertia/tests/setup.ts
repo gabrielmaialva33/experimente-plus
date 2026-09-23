@@ -12,20 +12,60 @@ class ResizeObserverMock implements ResizeObserver {
 vi.stubGlobal('ResizeObserver', ResizeObserverMock)
 
 // Mock InertiaJS
-vi.mock('@inertiajs/react', () => ({
-  usePage: vi.fn(() => ({
-    props: {},
-  })),
-  Link: vi.fn(({ children }) => children),
-  router: {
-    visit: vi.fn(),
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
+//
+// `Link` has to render a real anchor. The mock used to return only the
+// children, which dropped the destination from the markup entirely: an
+// assertion about where a link points could not fail, and a component that
+// forgot to link at all still looked correct. Inertia's own props are removed
+// so React does not receive unknown DOM attributes; everything else, `href`
+// included, reaches the anchor exactly as the component passed it.
+vi.mock('@inertiajs/react', async () => {
+  const { createElement } = await import('react')
+  const inertiaOnlyProps = new Set([
+    'method',
+    'as',
+    'data',
+    'headers',
+    'replace',
+    'preserveScroll',
+    'preserveState',
+    'only',
+    'except',
+    'queryStringArrayFormat',
+    'async',
+    'prefetch',
+    'cacheFor',
+    'onCancelToken',
+    'onBefore',
+    'onStart',
+    'onProgress',
+    'onFinish',
+    'onCancel',
+    'onSuccess',
+    'onError',
+  ])
+
+  return {
+    usePage: vi.fn(() => ({
+      props: {},
+    })),
+    Link: vi.fn(({ children, ...props }: Record<string, unknown>) =>
+      createElement(
+        'a',
+        Object.fromEntries(Object.entries(props).filter(([name]) => !inertiaOnlyProps.has(name))),
+        children as never
+      )
+    ),
+    router: {
+      visit: vi.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+    },
+  }
+})
 
 // Setup MSW
 beforeAll(() => server.listen())
