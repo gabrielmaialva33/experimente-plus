@@ -21,6 +21,16 @@ import BadRequestException from '#exceptions/bad_request_exception'
  * It fails closed. A file whose structure it cannot walk is refused rather than
  * stored as received, because "stored unstripped" is exactly the outcome this
  * exists to prevent.
+ *
+ * And it keeps by allowlist, not by denylist. The first version dropped the
+ * containers it knew to carry metadata — EXIF, XMP, IPTC, comments, text
+ * chunks — and kept everything else, which let through exactly what it did not
+ * know about: APP11 segments (where C2PA content credentials, with author and
+ * location assertions, live), private PNG chunks, unknown WebP chunks, and, in a
+ * JPEG, every byte after the image ended. Ultra HDR photos append a second JPEG
+ * there and motion photos append a video, each with metadata of its own; a
+ * crafted file appended a whole EXIF block with GPS, and it was stored byte for
+ * byte. What survives now is only what is needed to draw the pixels.
  */
 export function stripImageMetadata(input: Buffer): Buffer {
   if (isJpeg(input)) return stripJpeg(input)
@@ -98,16 +108,40 @@ function isJpeg(buffer: Buffer): boolean {
 }
 
 /**
- * Drops APP1 (EXIF and XMP), APP13 (IPTC) and comments. APP0 (JFIF), APP2 (ICC
- * colour profile) and APP14 (Adobe colour transform) are kept: they change how
- * the pixels look, not what they reveal. Everything from the start of scan on is
- * copied verbatim.
+ * Whether a segment before the image data is needed to draw it.
+ *
+ * Kept: frame headers, quantisation and Huffman tables, restart interval, and
+ * three application segments that change how pixels look — APP0 when it is
+ * JFIF, APP2 when it is an ICC colour profile, APP14 when it is Adobe's colour
+ * transform. Everything else goes, including APP2 in its other uses (the MPF
+ * index that points at an appended second image) and every application segment
+ * this code has no reason to trust.
+ */
+function jpegSegmentIsNeeded(marker: number, payload: Buffer): boolean {
+  if (marker >= 0xc0 && marker <= 0xcf) return marker !== 0xc8 // SOFn, DHT, DAC
+  if (marker === 0xdb || marker === 0xdd || marker === 0xda) return true // DQT, DRI, SOS
+  if (marker === 0xe0) return payload.subarray(0, 5).equals(Buffer.from('JFIF\0', 'latin1'))
+  if (marker === 0xe2) return payload.subarray(0, 12).equals(Buffer.from('ICC_PROFILE\0', 'latin1'))
+  if (marker === 0xee) return payload.subarray(0, 5).equals(Buffer.from('Adobe', 'latin1'))
+  return false
+}
+
+/**
+ * Rebuilds a JPEG from the segments it needs, and ends it at its own end.
+ *
+ * The entropy-coded data after each start of scan is walked rather than copied
+ * to the end of the file: a real marker is a 0xFF not followed by stuffing
+ * (0x00), a restart (0xD0–0xD7) or another fill byte. That is how progressive
+ * images, with several scans and tables in between, are followed to their end
+ * of image — and how anything appended after it is left behind. A file with no
+ * end of image is refused.
  */
 function stripJpeg(input: Buffer): Buffer {
-  const kept: Buffer[] = []
+  const kept: Buffer[] = [input.subarray(0, 2)]
   let orientation: number | null = null
-  let offset = 2
   let jfifEnd: number | null = null
+  let offset = 2
+  let ended = false
 
   while (offset < input.length) {
     if (input[offset] !== 0xff) malformed()
@@ -120,9 +154,9 @@ function stripJpeg(input: Buffer): Buffer {
       continue
     }
 
-    // Start of scan: the entropy-coded data and the end marker follow.
-    if (marker === 0xda) {
-      kept.push(input.subarray(offset))
+    if (marker === 0xd9) {
+      kept.push(input.subarray(offset, offset + 2))
+      ended = true
       break
     }
 
@@ -130,24 +164,39 @@ function stripJpeg(input: Buffer): Buffer {
     const length = input.readUInt16BE(offset + 2)
     const end = offset + 2 + length
     if (length < 2 || end > input.length) malformed()
-    const segment = input.subarray(offset, end)
     const payload = input.subarray(offset + 4, end)
 
     if (marker === 0xe1) {
       if (payload.subarray(0, 6).equals(EXIF_HEADER)) {
         orientation ??= orientationFromTiff(payload.subarray(6))
       }
-    } else if (marker === 0xed || marker === 0xfe) {
-      // IPTC and free-text comments: dropped.
-    } else {
-      kept.push(segment)
-      if (marker === 0xe0 && kept.length === 1) jfifEnd = kept.length
+    } else if (jpegSegmentIsNeeded(marker, payload)) {
+      kept.push(input.subarray(offset, end))
+      if (marker === 0xe0 && jfifEnd === null) jfifEnd = kept.length
     }
-
     offset = end
+
+    if (marker === 0xda) {
+      let cursor = offset
+      while (true) {
+        if (cursor + 1 >= input.length) malformed()
+        if (input[cursor] !== 0xff) {
+          cursor++
+          continue
+        }
+        const next = input[cursor + 1]
+        if (next === 0x00 || (next >= 0xd0 && next <= 0xd7) || next === 0xff) {
+          cursor += next === 0xff ? 1 : 2
+          continue
+        }
+        break
+      }
+      kept.push(input.subarray(offset, cursor))
+      offset = cursor
+    }
   }
 
-  if (offset >= input.length) malformed()
+  if (!ended) malformed()
 
   if (orientation !== null && orientation !== 1) {
     const tiff = minimalTiff(orientation)
@@ -155,16 +204,40 @@ function stripJpeg(input: Buffer): Buffer {
     app1.writeUInt16BE(0xffe1, 0)
     app1.writeUInt16BE(2 + EXIF_HEADER.length + tiff.length, 2)
     // JFIF requires APP0 to follow the start of image directly.
-    kept.splice(jfifEnd ?? 0, 0, Buffer.concat([app1, EXIF_HEADER, tiff]))
+    kept.splice(jfifEnd ?? 1, 0, Buffer.concat([app1, EXIF_HEADER, tiff]))
   }
 
-  return Buffer.concat([input.subarray(0, 2), ...kept])
+  return Buffer.concat(kept)
 }
 
 // PNG -------------------------------------------------------------------------
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-const PNG_DROPPED = new Set(['eXIf', 'tEXt', 'zTXt', 'iTXt', 'tIME'])
+/**
+ * The chunks a PNG needs to be drawn as it was: the critical ones, colour and
+ * transparency information, physical size, and the three that make an APNG
+ * move. Text, time, EXIF and every private or unknown chunk are left out.
+ */
+const PNG_NEEDED = new Set([
+  'IHDR',
+  'PLTE',
+  'IDAT',
+  'IEND',
+  'tRNS',
+  'gAMA',
+  'cHRM',
+  'sRGB',
+  'iCCP',
+  'sBIT',
+  'bKGD',
+  'pHYs',
+  'cICP',
+  'mDCV',
+  'cLLI',
+  'acTL',
+  'fcTL',
+  'fdAT',
+])
 
 function isPng(buffer: Buffer): boolean {
   return buffer.length >= 8 && buffer.subarray(0, 8).equals(PNG_SIGNATURE)
@@ -195,7 +268,7 @@ function stripPng(input: Buffer): Buffer {
 
     if (type === 'eXIf') {
       orientation ??= orientationFromTiff(tiffFromExifPayload(data))
-    } else if (!PNG_DROPPED.has(type)) {
+    } else if (PNG_NEEDED.has(type)) {
       if (type === 'IDAT' && orientation !== null && orientation !== 1) {
         // eXIf must precede the image data.
         kept.push(pngChunk('eXIf', minimalTiff(orientation)))
@@ -224,6 +297,13 @@ function isWebp(buffer: Buffer): boolean {
     buffer.toString('latin1', 8, 12) === 'WEBP'
   )
 }
+
+/**
+ * The chunks a WebP needs: its bitstream (lossy or lossless), the extended
+ * header, alpha, animation and the colour profile. EXIF, XMP and any chunk this
+ * code does not know are left out.
+ */
+const WEBP_NEEDED = new Set(['VP8 ', 'VP8L', 'VP8X', 'ALPH', 'ANIM', 'ANMF', 'ICCP'])
 
 const VP8X_EXIF_FLAG = 0x08
 const VP8X_XMP_FLAG = 0x04
@@ -257,8 +337,11 @@ function stripWebp(input: Buffer): Buffer {
 
     if (type === 'EXIF') {
       orientation ??= orientationFromTiff(tiffFromExifPayload(data))
-    } else if (type !== 'XMP ') {
-      chunks.push({ type, raw: input.subarray(offset, Math.min(end, input.length)) })
+    } else if (WEBP_NEEDED.has(type)) {
+      // A final chunk of odd size may arrive without its padding byte. It is
+      // restored, so a chunk appended after it still starts on an even offset.
+      const raw = input.subarray(offset, Math.min(end, input.length))
+      chunks.push({ type, raw: raw.length === 8 + padded ? raw : riffChunk(type, data) })
     }
     offset = end
   }
