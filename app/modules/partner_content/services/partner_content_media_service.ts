@@ -14,6 +14,7 @@ import FileRepository from '#modules/files/repositories/file_repository'
 import MediaAssetRepository from '#modules/media/repositories/media_asset_repository'
 import MediaAuditService from '#modules/media/services/media_audit_service'
 import ImageProbeService from '#modules/media/services/image_probe_service'
+import ImageMetadataStripper from '#modules/media/services/image_metadata_stripper'
 import MediaStorageService from '#modules/media/services/media_storage_service'
 import type IMedia from '#modules/media/interfaces/media_interface'
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
@@ -41,7 +42,8 @@ export default class PartnerContentMediaService {
     private imageProbeService: ImageProbeService,
     private storageService: MediaStorageService,
     private auditService: MediaAuditService,
-    private projectionRepository: CatalogProjectionRepository
+    private projectionRepository: CatalogProjectionRepository,
+    private stripper: ImageMetadataStripper
   ) {}
 
   async upload(
@@ -49,6 +51,12 @@ export default class PartnerContentMediaService {
     file: MultipartFile,
     payload: IPartnerContent.MediaCreatePayload
   ): Promise<IPartnerContent.MediaAdministrativeProjection> {
+    // Metadata leaves before the probe, so the checksum and size it records are
+    // of the file actually stored. A partner photographing from a phone
+    // publishes its EXIF otherwise — position, device, sometimes a name — and
+    // only review photos used to be protected.
+    if (!file.tmpPath) throw new BadRequestException('The uploaded image could not be inspected')
+    await this.stripper.stripFile(file.tmpPath)
     const probe = await this.imageProbeService.probe(file)
     let storedKey: string | null = null
     let mustCompensateStorage = true

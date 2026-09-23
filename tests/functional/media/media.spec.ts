@@ -1,4 +1,4 @@
-import { access, readdir, rm } from 'node:fs/promises'
+import { access, readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import app from '@adonisjs/core/services/app'
@@ -95,6 +95,30 @@ test.group('Establishment media', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
   group.each.teardown(async () => {
     await rm(app.makePath('storage', 'media'), { recursive: true, force: true })
+  })
+
+  test('stores an establishment photo without the metadata it arrived with', async ({
+    client,
+    assert,
+  }) => {
+    // Only review photos used to be stripped. A partner photographing from a
+    // phone published its EXIF — position, device, comments — with the image.
+    const scenario = await createEstablishmentScenario('media-strip')
+    const establishmentId = await createDraftEstablishment(client, scenario)
+
+    const uploaded = await uploadImage(client, scenario, establishmentId, 'with_metadata.jpg')
+    uploaded.assertStatus(201)
+
+    const stored = await db
+      .from('files')
+      .join('media_assets', 'media_assets.file_id', 'files.id')
+      .where('media_assets.id', uploaded.body().asset.id)
+      .select('files.file_name')
+      .first()
+    const bytes = await readFile(app.makePath('storage', stored.file_name))
+    assert.isFalse(bytes.includes(Buffer.from([0x25, 0x88])), 'GPS pointer survived')
+    assert.isFalse(bytes.includes(Buffer.from('FixtureCam')), 'device survived')
+    assert.isFalse(bytes.includes(Buffer.from('shot at home')), 'comment survived')
   })
 
   test('accepts real JPEG, PNG and WebP images and stores normalized metadata', async ({

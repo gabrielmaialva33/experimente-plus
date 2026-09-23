@@ -22,6 +22,7 @@ import ImageProbeService from '#modules/media/services/image_probe_service'
 import MediaAuditService from '#modules/media/services/media_audit_service'
 import MediaEventService from '#modules/media/services/media_event_service'
 import MediaProjectionService from '#modules/media/services/media_projection_service'
+import ImageMetadataStripper from '#modules/media/services/image_metadata_stripper'
 import MediaStorageService from '#modules/media/services/media_storage_service'
 
 interface MutationContext {
@@ -42,7 +43,8 @@ export default class EstablishmentMediaService {
     private storageService: MediaStorageService,
     private eventService: MediaEventService,
     private projectionService: MediaProjectionService,
-    private auditService: MediaAuditService
+    private auditService: MediaAuditService,
+    private stripper: ImageMetadataStripper
   ) {}
 
   async list(
@@ -71,6 +73,12 @@ export default class EstablishmentMediaService {
     file: MultipartFile,
     payload: IMedia.CreatePayload
   ): Promise<IMedia.AdministrativeProjection> {
+    // Metadata leaves before the probe, so the checksum and size it records are
+    // of the file actually stored. A partner photographing from a phone
+    // publishes its EXIF otherwise — position, device, sometimes a name — and
+    // only review photos used to be protected.
+    if (!file.tmpPath) throw new BadRequestException('The uploaded image could not be inspected')
+    await this.stripper.stripFile(file.tmpPath)
     const probe = await this.imageProbeService.probe(file)
     let storedKey: string | null = null
     let mustCompensateStorage = true
