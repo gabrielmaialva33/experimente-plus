@@ -23,8 +23,9 @@ test.group('Canonical homologation baseline', () => {
     // + 2 for automatic moderation of ADR-0031 (the rules per operation and the
     // automatic origin of a report)
     // + 1 for review photos, which reuse the media pipeline (ADR-0027)
-    // + 1 for the content favourites of ADR-0030 (revision of 23/09/2026).
-    assert.lengthOf(files, 75)
+    // + 1 for the content favourites of ADR-0030 (revision of 23/09/2026)
+    // + 1 for the uniqueness of an anonymous report's origin (ADR-0027 §14).
+    assert.lengthOf(files, 76)
     assert.isFalse(files.some((name) => /1788556800|178881480[123]/.test(name)))
     const history = await db.from('adonis_schema').select('name')
     assert.lengthOf(history, files.length)

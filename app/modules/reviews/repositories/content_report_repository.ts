@@ -70,4 +70,29 @@ export default class ContentReportRepository extends LucidRepository<typeof Cont
     const perPage = query.per_page ?? 10
     return rows.paginate(page, perPage)
   }
+
+  /**
+   * An earlier anonymous report of the same target from the same origin —
+   * ADR-0027 scenario 14. Either hash matching is a repeat: a token survives a
+   * change of network, an address survives a reinstall.
+   */
+  async findAnonymousRepeat(
+    tenantId: number,
+    targetType: IReview.ReportTargetType,
+    targetId: number,
+    ipHash: string,
+    tokenHash: string | null,
+    client?: TransactionClientContract
+  ): Promise<ContentReport | null> {
+    return ContentReport.query({ client })
+      .where('tenant_id', tenantId)
+      .where('target_type', targetType)
+      .where('target_id', targetId)
+      .whereNull('reporter_id')
+      .where((origin) => {
+        origin.where('reporter_ip_hash', ipHash)
+        if (tokenHash) origin.orWhere('reporter_token_hash', tokenHash)
+      })
+      .first()
+  }
 }

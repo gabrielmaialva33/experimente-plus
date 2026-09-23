@@ -1,9 +1,11 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
-import { apiThrottle, throttle } from '#start/limiter'
+import { anonymousReportThrottle, apiThrottle, throttle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const ReviewsController = () => import('#modules/reviews/controllers/reviews_controller')
+const AnonymousReportsController = () =>
+  import('#modules/reviews/controllers/anonymous_reports_controller')
 const ReviewPhotosController = () => import('#modules/reviews/controllers/review_photos_controller')
 const UserBansController = () => import('#modules/reviews/controllers/user_bans_controller')
 const AutomaticModerationController = () =>
@@ -53,6 +55,15 @@ router
     apiThrottle,
     middleware.tenant({ required: true }),
   ])
+
+/**
+ * Anonymous reports — ADR-0027 scenarios 13 and 14. Public, like the catalogue
+ * it reports on, and the only write route without a session, hence its own
+ * tight limiter. The answer carries a protocol and must never be cached.
+ */
+router
+  .post('/api/v1/catalog/content-reports', [AnonymousReportsController, 'store'])
+  .use([privateResponseHeadersMiddleware, anonymousReportThrottle])
 
 router
   .post('/api/v1/content-reports', [ReviewsController, 'report'])
