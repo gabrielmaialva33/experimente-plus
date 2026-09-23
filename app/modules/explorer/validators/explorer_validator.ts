@@ -45,8 +45,13 @@ export const reorderPayloadValidator = vine.compile(
   })
 )
 
+/**
+ * Interests are chosen by slug, the identity the public catalogue gives a
+ * category. It never publishes the numeric id, so the app has nothing else to
+ * send.
+ */
 export const interestsPayloadValidator = vine.compile(
   vine.object({
-    category_ids: vine.array(vine.number().min(1)).maxLength(100),
+    category_slugs: vine.array(vine.string().trim().minLength(1).maxLength(140)).maxLength(100),
   })
 )

@@ -43,10 +43,14 @@ namespace IExplorer {
     unavailable: number
   }
 
+  /**
+   * The category is identified by its slug, as the public catalogue identifies
+   * it. The catalogue never publishes a category's numeric id, so an interest
+   * addressed by id could not be chosen from the list the app actually shows.
+   */
   export interface InterestProjection {
     id: number
     category: {
-      id: number
       slug: string
       name: string
       is_active: boolean

@@ -28,7 +28,6 @@ export default class ExplorerInterestRepository {
       .select(
         'interest.id',
         'interest.created_at',
-        'category.id as category_id',
         'category.slug as category_slug',
         'category.name as category_name',
         'category.is_active as category_is_active'
@@ -37,7 +36,6 @@ export default class ExplorerInterestRepository {
     return rows.map((row) => ({
       id: Number(row.id),
       category: {
-        id: Number(row.category_id),
         slug: row.category_slug,
         name: row.category_name,
         is_active: Boolean(row.category_is_active),
@@ -46,16 +44,21 @@ export default class ExplorerInterestRepository {
     }))
   }
 
-  /** Categories of this operation among the given ids, so a foreign one is a miss. */
-  async existingCategoryIds(tenantId: number, categoryIds: number[]): Promise<number[]> {
-    if (categoryIds.length === 0) return []
+  /**
+   * Resolves slugs to this operation's categories.
+   *
+   * Slug is unique per tenant, so a slug of another operation simply does not
+   * resolve here — it is a miss, not a category someone else owns.
+   */
+  async categoryIdsForSlugs(tenantId: number, slugs: string[]): Promise<Map<string, number>> {
+    if (slugs.length === 0) return new Map()
     const rows = await db
       .from('categories')
       .where('tenant_id', tenantId)
-      .whereIn('id', categoryIds)
-      .select('id')
+      .whereIn('slug', slugs)
+      .select('id', 'slug')
 
-    return rows.map((row) => Number(row.id))
+    return new Map(rows.map((row) => [String(row.slug), Number(row.id)]))
   }
 
   /**

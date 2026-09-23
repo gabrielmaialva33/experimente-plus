@@ -64,7 +64,7 @@ export default class ExplorerController {
       data: await this.explorer.replaceInterests(
         tenant!.id,
         auth.getUserOrFail().id,
-        payload.category_ids
+        payload.category_slugs
       ),
     }
   }

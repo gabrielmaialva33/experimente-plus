@@ -52,6 +52,8 @@ Interesses personalizam descoberta, e descoberta é por cidade e categoria (ADR-
 
 **Decisão:** interesse é vínculo entre usuário e **categoria do próprio tenant**, com a chave composta que carrega o tenant. Não se cria vocabulário paralelo de "interesses" desacoplado da taxonomia: seriam dois dicionários para a mesma ideia, e o segundo envelheceria sozinho. Categoria inativa deixa de ser oferecida para escolha e o vínculo existente é preservado, pela mesma razão do favorito.
 
+**A escolha é feita pelo slug da categoria, não pelo id.** O catálogo público identifica categoria por slug — único por tenant — e nunca publica o id numérico, pela mesma regra que identifica estabelecimento por cidade + slug no ADR-0016 §6. Uma API de interesses que pedisse id obrigaria a alargar o contrato público do catálogo só para servi-la, ou seria impossível de usar a partir da lista que o aplicativo de fato mostra. O servidor resolve o slug dentro da operação; slug de outra operação não resolve e é tratado como inexistente.
+
 ## Demais decisões de modelo
 
 **Escopo e unicidade.** As cinco tabelas — `explorer_favorites`, `explorer_follows`, `explorer_interests`, `explorer_itineraries` e `explorer_itinerary_items` — carregam `tenant_id`, usam `unique(['id','tenant_id'])` e chaves estrangeiras compostas que levam o tenant junto, como o restante do schema. Favorito, seguido e interesse são únicos por `(tenant_id, user_id, alvo)`: favoritar duas vezes é o mesmo favorito, não dois.

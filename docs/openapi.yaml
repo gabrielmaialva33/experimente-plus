@@ -5848,12 +5848,12 @@ components:
         category:
           type: object
           additionalProperties: false
-          required: [id, slug, name, is_active]
+          required: [slug, name, is_active]
           properties:
-            id:
-              type: integer
-              minimum: 1
             slug:
+              description: >-
+                The identity the public catalogue gives a category. Its numeric id
+                is never published, so it is not used here either.
               type: string
             name:
               type: string
@@ -5880,14 +5880,15 @@ components:
       description: The whole set. Choosing interests replaces it rather than toggling one at a time.
       type: object
       additionalProperties: false
-      required: [category_ids]
+      required: [category_slugs]
       properties:
-        category_ids:
+        category_slugs:
           type: array
           maxItems: 100
           items:
-            type: integer
-            minimum: 1
+            type: string
+            minLength: 1
+            maxLength: 140
 
     ExplorerItineraryStop:
       type: object

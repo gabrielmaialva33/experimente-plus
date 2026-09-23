@@ -64,17 +64,17 @@ export default class ExplorerService {
   async replaceInterests(
     tenantId: number,
     userId: number,
-    categoryIds: number[]
+    categorySlugs: string[]
   ): Promise<IExplorer.InterestProjection[]> {
-    const unique = [...new Set(categoryIds)]
-    const existing = await this.interests.existingCategoryIds(tenantId, unique)
-    if (existing.length !== unique.length) {
+    const unique = [...new Set(categorySlugs)]
+    const resolved = await this.interests.categoryIdsForSlugs(tenantId, unique)
+    if (resolved.size !== unique.length) {
       // A category of another operation is not forbidden, it is absent: the
-      // reply must not confirm that some other tenant owns that number.
+      // reply must not confirm that some other tenant uses that slug.
       throw new NotFoundException('Category not found')
     }
 
-    await this.interests.replace(tenantId, userId, unique)
+    await this.interests.replace(tenantId, userId, [...resolved.values()])
     return this.interests.list(tenantId, userId)
   }
 

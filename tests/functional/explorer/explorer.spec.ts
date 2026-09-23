@@ -241,7 +241,7 @@ test.group('Explorer — interests (ADR-0030)', (group) => {
       .put('/api/v1/me/interests')
       .headers(headers)
       .loginAs(explorer)
-      .json({ category_ids: [scenario.primaryCategory.id, scenario.parentCategory.id] })
+      .json({ category_slugs: [scenario.primaryCategory.slug, scenario.parentCategory.slug] })
     first.assertStatus(200)
     assert.lengthOf(first.body().data, 2)
 
@@ -249,17 +249,17 @@ test.group('Explorer — interests (ADR-0030)', (group) => {
       .put('/api/v1/me/interests')
       .headers(headers)
       .loginAs(explorer)
-      .json({ category_ids: [scenario.primaryCategory.id] })
+      .json({ category_slugs: [scenario.primaryCategory.slug] })
     assert.deepEqual(
-      second.body().data.map((interest: any) => interest.category.id),
-      [scenario.primaryCategory.id]
+      second.body().data.map((interest: any) => interest.category.slug),
+      [scenario.primaryCategory.slug]
     )
 
     const cleared = await client
       .put('/api/v1/me/interests')
       .headers(headers)
       .loginAs(explorer)
-      .json({ category_ids: [] })
+      .json({ category_slugs: [] })
     assert.lengthOf(cleared.body().data, 0)
   })
 
@@ -272,7 +272,7 @@ test.group('Explorer — interests (ADR-0030)', (group) => {
       .put('/api/v1/me/interests')
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(explorer)
-      .json({ category_ids: [foreign.primaryCategory.id] })
+      .json({ category_slugs: [foreign.primaryCategory.slug] })
 
     response.assertStatus(404)
     const rows = await db.from('explorer_interests').where('user_id', explorer.id)
@@ -291,7 +291,7 @@ test.group('Explorer — interests (ADR-0030)', (group) => {
       .put('/api/v1/me/interests')
       .headers(headers)
       .loginAs(explorer)
-      .json({ category_ids: [scenario.primaryCategory.id] })
+      .json({ category_slugs: [scenario.primaryCategory.slug] })
 
     const category = await Category.findOrFail(scenario.primaryCategory.id)
     category.is_active = false
@@ -332,7 +332,7 @@ test.group('Explorer — interests (ADR-0030)', (group) => {
       .put('/api/v1/me/interests')
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(explorer)
-      .json({ category_ids: [scenario.primaryCategory.id] })
+      .json({ category_slugs: [scenario.primaryCategory.slug] })
 
     const afterResponse = await search()
     const after = slugsOf(afterResponse)
@@ -534,7 +534,7 @@ test.group('Explorer — account deletion (ADR-0030)', (group) => {
       .put('/api/v1/me/interests')
       .headers(headers)
       .loginAs(explorer)
-      .json({ category_ids: [scenario.primaryCategory.id] })
+      .json({ category_slugs: [scenario.primaryCategory.slug] })
     const itinerary = await client
       .post('/api/v1/me/itineraries')
       .headers(headers)
