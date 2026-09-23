@@ -13,6 +13,7 @@ import IPartnerContent from '#modules/partner_content/interfaces/partner_content
 import PartnerContentEventRepository from '#modules/partner_content/repositories/partner_content_event_repository'
 import PartnerContentPolicyRepository from '#modules/partner_content/repositories/partner_content_policy_repository'
 import PartnerContentRepository from '#modules/partner_content/repositories/partner_content_repository'
+import AutomaticModerationService from '#modules/reviews/services/automatic_moderation_service'
 import type User from '#modules/users/models/user'
 
 /**
@@ -39,7 +40,8 @@ export default class PartnerContentService {
     private policyRepository: PartnerContentPolicyRepository,
     private organizationPolicy: OrganizationPolicyService,
     private projectionRepository: CatalogProjectionRepository,
-    private events: PartnerContentEventRepository
+    private events: PartnerContentEventRepository,
+    private automod: AutomaticModerationService
   ) {}
 
   async create(
@@ -146,8 +148,17 @@ export default class PartnerContentService {
 
       content.useTransaction(client)
 
-      const requiresApproval = this.policyRepository.requiresApproval(policy, kind)
       const fromStatus = content.status
+      // ADR-0031: a rule in `hold` mode sends the item to the approval queue that
+      // already exists, instead of inventing a second waiting state. An edit of
+      // published content keeps its approved snapshot public meanwhile.
+      const assessment = await this.automod.assess(
+        tenantId,
+        [content.title, content.description],
+        client
+      )
+      const requiresApproval =
+        this.policyRepository.requiresApproval(policy, kind) || assessment.hold
 
       if (requiresApproval) {
         content.status = 'pending_review'
@@ -157,6 +168,7 @@ export default class PartnerContentService {
 
       await content.save()
       await this.record(client, kind, content, actor, 'submitted', fromStatus, content.status)
+      await this.automod.record(tenantId, kind, content.id, assessment, client)
 
       if (!requiresApproval) {
         await this.projectionRepository.bumpTenantVersion(tenantId, client)
@@ -184,6 +196,33 @@ export default class PartnerContentService {
       await this.record(client, kind, content, actor, 'approved', 'pending_review', 'published')
       return content
     })
+  }
+
+  /**
+   * Releasing what an automatic rule held — ADR-0031.
+   *
+   * Called when a person dismisses the rule's report. The item publishes only if
+   * the rule was the sole reason it was waiting; if the operation's policy
+   * requires approval for this kind anyway, it stays in that queue, because
+   * dismissing a rule is not approving content.
+   */
+  async releaseHold(
+    kind: IPartnerContent.ContentKind,
+    tenantId: number,
+    id: number,
+    client: TransactionClientContract
+  ) {
+    const content = await this.requireContent(kind, tenantId, id, client, true)
+    if (content.status !== 'pending_review') return content
+
+    const policy = await this.policyRepository.getForTenant(tenantId, client)
+    if (this.policyRepository.requiresApproval(policy, kind)) return content
+
+    content.useTransaction(client)
+    this.publish(content, kind)
+    await content.save()
+    await this.projectionRepository.bumpTenantVersion(tenantId, client)
+    return content
   }
 
   /**

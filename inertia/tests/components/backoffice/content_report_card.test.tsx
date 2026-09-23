@@ -279,4 +279,29 @@ describe('ContentReportCard', () => {
 
     expect(screen.queryByRole('button', { name: /Banir autor/ })).not.toBeInTheDocument()
   })
+
+  it('says a rule opened the case, which one, and that the content is held', () => {
+    const report = reviewReport({
+      origin: 'automatic',
+      automatic_rule: 'contact',
+      automatic_evidence: 'e-mail j***@gmail.com',
+      holds_content: true,
+      reporter: null,
+      details: 'Aberta por regra automática: dados de contato (e-mail j***@gmail.com) — conteúdo retido.',
+    })
+
+    render(<ContentReportCard report={report} />)
+
+    expect(screen.getByText('Regra automática: Dados de contato')).toBeInTheDocument()
+    expect(screen.getByText(/Aberta por regra automática — Dados de contato/)).toBeInTheDocument()
+    expect(screen.getByText(/Conteúdo retido fora das áreas públicas/)).toBeInTheDocument()
+    expect(screen.queryByText('O que o denunciante escreveu')).not.toBeInTheDocument()
+  })
+
+  it("does not call a person's report automatic", () => {
+    render(<ContentReportCard report={reviewReport({ origin: 'user' })} />)
+
+    expect(screen.queryByText(/regra automática/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Marta Denunciante')).toBeInTheDocument()
+  })
 })

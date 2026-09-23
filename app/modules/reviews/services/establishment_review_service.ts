@@ -12,6 +12,7 @@ import type IReview from '#modules/reviews/interfaces/review_interface'
 import type EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewRepository from '#modules/reviews/repositories/establishment_review_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
+import AutomaticModerationService from '#modules/reviews/services/automatic_moderation_service'
 import UserBanRepository from '#modules/reviews/repositories/user_ban_repository'
 import type User from '#modules/users/models/user'
 
@@ -21,7 +22,8 @@ export default class EstablishmentReviewService {
     private reviewRepository: EstablishmentReviewRepository,
     private policyRepository: ReviewPolicyRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private userBans: UserBanRepository
+    private userBans: UserBanRepository,
+    private automod: AutomaticModerationService
   ) {}
 
   async create(
@@ -98,6 +100,10 @@ export default class EstablishmentReviewService {
         redemptionId = payload.redemption_id
       }
 
+      // ADR-0031: a rule in `hold` mode keeps the review out of public view until
+      // a person resolves the report it opens.
+      const assessment = await this.automod.assess(tenantId, [comment], client)
+
       const review = await this.reviewRepository.create(
         {
           tenant_id: tenantId,
@@ -106,13 +112,14 @@ export default class EstablishmentReviewService {
           redemption_id: redemptionId,
           rating: payload.rating,
           comment,
-          status: 'published',
+          status: assessment.hold ? 'hidden' : 'published',
           photos_count: photosCount,
           videos_count: 0,
         },
         { client }
       )
 
+      await this.automod.record(tenantId, 'review', review.id, assessment, client)
       return review
     })
   }
@@ -159,6 +166,13 @@ export default class EstablishmentReviewService {
         )
       }
 
+      // Only new text is assessed, and only while it is public: a review a
+      // moderator already hid is not the rules' business.
+      const assessment =
+        comment !== review.comment && review.status === 'published'
+          ? await this.automod.assess(tenantId, [comment], client)
+          : null
+
       review.useTransaction(client)
       if (payload.rating !== undefined) {
         review.rating = payload.rating
@@ -166,8 +180,10 @@ export default class EstablishmentReviewService {
       review.comment = comment
       review.photos_count = photosCount
       review.edited_at = now
+      if (assessment?.hold) review.status = 'hidden'
       await review.save()
 
+      if (assessment) await this.automod.record(tenantId, 'review', review.id, assessment, client)
       return review
     })
   }

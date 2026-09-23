@@ -39,6 +39,20 @@ export const reportReasonLabels: Record<ReportReason, string> = {
   other: 'Outro motivo',
 }
 
+export type AutomaticRule = 'link' | 'contact' | 'payment_data' | 'blocked_term'
+
+/** ADR-0031. What each automatic rule looks for, as the moderator reads it. */
+export const automaticRuleLabels: Record<AutomaticRule, string> = {
+  link: 'Link externo',
+  contact: 'Dados de contato',
+  payment_data: 'Dados de pagamento',
+  blocked_term: 'Termo bloqueado',
+}
+
+export function isAutomaticRule(value: string): value is AutomaticRule {
+  return value in automaticRuleLabels
+}
+
 export const reportTargetLabels: Record<ReportTargetType, string> = {
   review: 'Avaliação',
   reply: 'Resposta do parceiro',
