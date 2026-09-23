@@ -26,6 +26,7 @@ import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
 import ExplorerCatalogRepository from '#modules/explorer/repositories/explorer_catalog_repository'
+import ExplorerContentFavoriteRepository from '#modules/explorer/repositories/explorer_content_favorite_repository'
 import ExplorerInterestRepository from '#modules/explorer/repositories/explorer_interest_repository'
 import ExplorerItineraryRepository from '#modules/explorer/repositories/explorer_itinerary_repository'
 import ExplorerSavedRepository from '#modules/explorer/repositories/explorer_saved_repository'
@@ -91,7 +92,8 @@ function createServices() {
         new ExplorerSavedRepository(),
         new ExplorerInterestRepository(),
         new ExplorerItineraryRepository(),
-        new ExplorerCatalogRepository()
+        new ExplorerCatalogRepository(),
+        new ExplorerContentFavoriteRepository()
       )
     ),
     deleteUser: new DeleteUserService(

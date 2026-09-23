@@ -31,7 +31,7 @@ const WITHHELD_LIMIT = 200
 
 export interface GroundingQuery {
   sql: string
-  bindings: (string | number | Date)[]
+  bindings: (string | number | Date | number[])[]
 }
 
 /**
@@ -73,8 +73,10 @@ export function establishmentGroundingQuery(params: {
   tenantId: number
   citySlug: string | null
   limit: number
+  preferredCategoryIds?: readonly number[]
 }): GroundingQuery {
   const { tenantId, citySlug, limit } = params
+  const preferred = preferenceOrder(params.preferredCategoryIds)
 
   return {
     sql: `
@@ -90,11 +92,30 @@ export function establishmentGroundingQuery(params: {
         place.categories
       FROM discoverable place
       ${citySlug ? 'WHERE place.city_slug = ?' : ''}
-      ORDER BY place.public_name ASC, place.establishment_slug ASC, place.establishment_id ASC
+      ORDER BY ${preferred.sql}place.public_name ASC, place.establishment_slug ASC, place.establishment_id ASC
       LIMIT ?
     `,
-    bindings: citySlug ? [tenantId, citySlug, limit] : [tenantId, limit],
+    bindings: [tenantId, ...(citySlug ? [citySlug] : []), ...preferred.bindings, limit],
   }
+}
+
+/**
+ * Interests decide which places enter a prompt that cannot hold them all — and
+ * nothing else (ADR-0029, revision of 23/09/2026).
+ *
+ * The preference only reorders inside the same discoverable, city-narrowed set,
+ * before the ceiling cuts it. It adds no place, removes none that would have
+ * fit, and never touches the order of search, which ADR-0030 keeps free of
+ * personal ranking. Without interests the clause is absent and the query is the
+ * anonymous one, byte for byte.
+ */
+function preferenceOrder(categoryIds: readonly number[] | undefined): {
+  sql: string
+  bindings: number[][]
+} {
+  const ids = [...new Set((categoryIds ?? []).map((id) => Math.trunc(id)))].filter((id) => id > 0)
+  if (ids.length === 0) return { sql: '', bindings: [] }
+  return { sql: '(place.category_ids && ?::integer[]) DESC, ', bindings: [ids] }
 }
 
 /**
@@ -115,8 +136,10 @@ export function contentGroundingQuery(params: {
   citySlug: string | null
   limit: number
   now: Date
+  preferredCategoryIds?: readonly number[]
 }): GroundingQuery {
   const { kind, tenantId, citySlug, limit, now } = params
+  const preferred = preferenceOrder(params.preferredCategoryIds)
   const isEvent = kind === 'event'
 
   const window = isEvent
@@ -154,7 +177,7 @@ export function contentGroundingQuery(params: {
         AND coalesce(content.published_snapshot->>'title', '') <> ''
         ${isEvent ? `AND (content.published_snapshot->>'ends_at')::timestamptz > ?` : ''}
         ${citySlug ? 'AND place.city_slug = ?' : ''}
-      ORDER BY ${order}, place.establishment_slug ASC, content.id ASC
+      ORDER BY ${preferred.sql}${order}, place.establishment_slug ASC, content.id ASC
       LIMIT ?
     `,
     bindings: [
@@ -162,6 +185,7 @@ export function contentGroundingQuery(params: {
       tenantId,
       ...(isEvent ? [now] : []),
       ...(citySlug ? [citySlug] : []),
+      ...preferred.bindings,
       limit,
     ],
   }
@@ -239,19 +263,29 @@ export default class CatalogGroundingRepository {
     tenantId: number,
     citySlug: string | null,
     limit: number,
-    now: Date = new Date()
+    now: Date = new Date(),
+    preferredCategoryIds: readonly number[] = []
   ): Promise<{ offered: IConcierge.GroundingItem[]; withheld: string[] }> {
     const budget = splitGroundingBudget(limit)
+    const preferred = preferredCategoryIds
 
-    const events = await this.content('event', tenantId, citySlug, budget.event, now)
-    const experiences = await this.content('experience', tenantId, citySlug, budget.experience, now)
+    const events = await this.content('event', tenantId, citySlug, budget.event, now, preferred)
+    const experiences = await this.content(
+      'experience',
+      tenantId,
+      citySlug,
+      budget.experience,
+      now,
+      preferred
+    )
 
     // Reserved content slots nobody used belong to establishments, so a
     // catalogue with no partner content still fills the prompt.
     const establishments = await this.establishments(
       tenantId,
       citySlug,
-      budget.total - events.length - experiences.length
+      budget.total - events.length - experiences.length,
+      preferred
     )
 
     const rows = [...establishments, ...experiences, ...events]
@@ -265,11 +299,12 @@ export default class CatalogGroundingRepository {
   private async establishments(
     tenantId: number,
     citySlug: string | null,
-    limit: number
+    limit: number,
+    preferredCategoryIds: readonly number[]
   ): Promise<OfferedRow[]> {
     if (limit <= 0) return []
 
-    const query = establishmentGroundingQuery({ tenantId, citySlug, limit })
+    const query = establishmentGroundingQuery({ tenantId, citySlug, limit, preferredCategoryIds })
     const result = await db.rawQuery<{ rows: PlaceColumns[] }>(query.sql, query.bindings)
 
     return result.rows.map((row) => {
@@ -294,11 +329,19 @@ export default class CatalogGroundingRepository {
     tenantId: number,
     citySlug: string | null,
     limit: number,
-    now: Date
+    now: Date,
+    preferredCategoryIds: readonly number[]
   ): Promise<OfferedRow[]> {
     if (limit <= 0) return []
 
-    const query = contentGroundingQuery({ kind, tenantId, citySlug, limit, now })
+    const query = contentGroundingQuery({
+      kind,
+      tenantId,
+      citySlug,
+      limit,
+      now,
+      preferredCategoryIds,
+    })
     const result = await db.rawQuery<{ rows: ContentColumns[] }>(query.sql, query.bindings)
 
     return result.rows.map((row) => ({

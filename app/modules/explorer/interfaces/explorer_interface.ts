@@ -48,6 +48,44 @@ namespace IExplorer {
    * it. The catalogue never publishes a category's numeric id, so an interest
    * addressed by id could not be chosen from the list the app actually shows.
    */
+  /**
+   * The partner content species that can be favourited. Showcase items are out:
+   * favouriting a priced product is a wishlist, the first step of the checkout
+   * the contract excludes (Anexo I item 16).
+   */
+  export const FAVORITE_CONTENT_KINDS = ['experience', 'event'] as const
+  export type FavoriteContentKind = (typeof FAVORITE_CONTENT_KINDS)[number]
+
+  /** Route segment to species, matching the public partner-content paths. */
+  export const FAVORITE_CONTENT_PATHS = { experiences: 'experience', events: 'event' } as const
+  export type FavoriteContentPath = keyof typeof FAVORITE_CONTENT_PATHS
+
+  /**
+   * A favourited experience or event, as the Explorer's list shows it.
+   *
+   * Title and window come from the approved snapshot, never the live columns:
+   * an edit awaiting moderation was never public and is not what was saved.
+   */
+  export interface SavedContent {
+    id: number
+    content: {
+      kind: FavoriteContentKind
+      id: number
+      title: string
+      starts_at: string | null
+      ends_at: string | null
+      cover_url: string | null
+      establishment: EstablishmentCard
+    }
+    created_at: string
+  }
+
+  /** Same contract as `SavedList`: what is not public now is counted, not dropped. */
+  export interface SavedContentList {
+    data: SavedContent[]
+    unavailable: number
+  }
+
   export interface InterestProjection {
     id: number
     category: {

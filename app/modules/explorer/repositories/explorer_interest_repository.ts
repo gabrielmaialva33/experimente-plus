@@ -45,6 +45,29 @@ export default class ExplorerInterestRepository {
   }
 
   /**
+   * The active categories a person chose, for the Concierge to prefer.
+   *
+   * A deactivated category stays chosen (see `replace`) but is not applied: it
+   * is no longer offered, and preferring it would favour what the operation
+   * withdrew.
+   */
+  async activeCategoryIdsFor(tenantId: number, userId: number): Promise<number[]> {
+    const rows = await db
+      .from('explorer_interests as interest')
+      .join('categories as category', (join) => {
+        join
+          .on('category.id', 'interest.category_id')
+          .andOn('category.tenant_id', 'interest.tenant_id')
+      })
+      .where('interest.tenant_id', tenantId)
+      .where('interest.user_id', userId)
+      .where('category.is_active', true)
+      .select('category.id')
+
+    return rows.map((row) => Number(row.id))
+  }
+
+  /**
    * Resolves slugs to this operation's categories.
    *
    * Slug is unique per tenant, so a slug of another operation simply does not

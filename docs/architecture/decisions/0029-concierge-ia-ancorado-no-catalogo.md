@@ -152,3 +152,19 @@ Não altera catálogo, benefícios, carteira, resgate, compra ou avaliações.
 ## Pendências que dependem do contratante
 
 Limites de consumo e conta de produção do provedor, que são responsabilidade dele. Se o guarda de tópico dedicado entra no escopo. O aviso, nos termos de uso, de que o texto da pergunta é processado por provedor externo de IA. E a definição sobre interesses do Explorador, que hoje mantém a personalização fora deste corte.
+
+## Revisão de 23/09/2026 — interesses do Explorador
+
+O Anexo I item 11 pede sugerir lugares "com base nos dados disponíveis e, quando aplicável, nos interesses do Explorador". Os interesses passaram a existir com o ADR-0030.
+
+**Rota própria, `POST /api/v1/me/concierge`.** A rota pública continua pública e **nunca lê credencial**: um token enviado a ela é ignorado, então a resposta pública não pode depender de quem pergunta. A variante pessoal exige sessão e resolve a operação pelo mesmo middleware do restante de `/api/v1/me`.
+
+**Os interesses escolhem o que cabe no prompt, e só isso.** Quando há mais lugares descobríveis do que o orçamento de `CONCIERGE_MAX_CATALOG_ITEMS`, os das categorias de interesse entram primeiro, dentro do mesmo conjunto descobrível e do mesmo recorte de cidade. Não acrescentam lugar, não retiram nenhum que caberia, e não tocam na ordem da busca, que o ADR-0030 mantém sem ranking pessoal. Sem interesses, a consulta é idêntica à anônima.
+
+**Os interesses não vão para o provedor do modelo.** Preferência é dado pessoal, e o modelo não precisa dela para citar só o que recebeu. O que sai do servidor continua sendo só a pergunta e os itens do catálogo.
+
+**Interesse em categoria desativada não é aplicado.** Continua escolhido, pelo ADR-0030, mas favorecer o que a operação retirou seria o contrário da retirada.
+
+A resposta das duas rotas ganha `personalized`, verdadeiro quando os interesses foram aplicados, para o cliente poder dizer isso em vez de insinuar uma personalização que não houve. Na rota pública é sempre falso.
+
+Cenários acrescentados: com orçamento curto, a categoria preferida entra no prompt; com orçamento folgado, a preferência não muda o conjunto; a rota pública não é personalizada mesmo com sessão enviada; sem interesses, a rota pessoal responde o mesmo que a pública; com interesses, informa `personalized`; interesse desativado não é aplicado; a rota pessoal exige sessão.

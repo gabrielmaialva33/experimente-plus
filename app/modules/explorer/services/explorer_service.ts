@@ -6,6 +6,7 @@ import type IExplorer from '#modules/explorer/interfaces/explorer_interface'
 import ExplorerItinerary from '#modules/explorer/models/explorer_itinerary'
 import ExplorerItineraryItem from '#modules/explorer/models/explorer_itinerary_item'
 import ExplorerCatalogRepository from '#modules/explorer/repositories/explorer_catalog_repository'
+import ExplorerContentFavoriteRepository from '#modules/explorer/repositories/explorer_content_favorite_repository'
 import ExplorerInterestRepository from '#modules/explorer/repositories/explorer_interest_repository'
 import ExplorerItineraryRepository from '#modules/explorer/repositories/explorer_itinerary_repository'
 import ExplorerSavedRepository, {
@@ -25,8 +26,41 @@ export default class ExplorerService {
     private saved: ExplorerSavedRepository,
     private interests: ExplorerInterestRepository,
     private itineraries: ExplorerItineraryRepository,
-    private catalog: ExplorerCatalogRepository
+    private catalog: ExplorerCatalogRepository,
+    private contentFavorites: ExplorerContentFavoriteRepository
   ) {}
+
+  async listSavedContent(tenantId: number, userId: number): Promise<IExplorer.SavedContentList> {
+    return this.contentFavorites.list(tenantId, userId, new Date())
+  }
+
+  /**
+   * Only what the public can see now can be saved. Anything else — a draft, an
+   * archived item, an event that has ended, content of a withdrawn place —
+   * answers as missing, so the button cannot be used to probe identifiers.
+   */
+  async saveContent(
+    tenantId: number,
+    userId: number,
+    kind: IExplorer.FavoriteContentKind,
+    contentId: number
+  ): Promise<{ favorited: boolean }> {
+    const present = await this.contentFavorites.isVisible(tenantId, kind, contentId, new Date())
+    if (!present) throw new NotFoundException('Content not found')
+    await this.contentFavorites.save(tenantId, userId, kind, contentId)
+    return { favorited: true }
+  }
+
+  /** No revalidation: an ended event must still be removable. */
+  async unsaveContent(
+    tenantId: number,
+    userId: number,
+    kind: IExplorer.FavoriteContentKind,
+    contentId: number
+  ): Promise<{ favorited: boolean }> {
+    await this.contentFavorites.remove(tenantId, userId, kind, contentId)
+    return { favorited: false }
+  }
 
   async listSaved(kind: SavedKind, tenantId: number, userId: number): Promise<IExplorer.SavedList> {
     return this.saved.list(kind, tenantId, userId)
@@ -201,6 +235,7 @@ export default class ExplorerService {
    */
   async purgeForUser(userId: number, client: any): Promise<void> {
     await this.saved.purgeForUser(userId, client)
+    await this.contentFavorites.purgeForUser(userId, client)
     await this.interests.purgeForUser(userId, client)
     await this.itineraries.purgeForUser(userId, client)
   }
