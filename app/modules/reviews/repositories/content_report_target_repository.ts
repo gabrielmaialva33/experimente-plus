@@ -58,6 +58,8 @@ export default class ContentReportTargetRepository {
       rating: null,
       status: null,
       author_name: null,
+      author_id: null,
+      author_banned: false,
       establishment_name: null,
       city_slug: null,
       establishment_slug: null,
@@ -81,6 +83,11 @@ export default class ContentReportTargetRepository {
     const rows = await db
       .from('establishment_reviews as review')
       .leftJoin('users as author', 'author.id', 'review.user_id')
+      .leftJoin('user_tenants as membership', (join) => {
+        join
+          .on('membership.user_id', 'review.user_id')
+          .andOn('membership.tenant_id', 'review.tenant_id')
+      })
       .leftJoin('establishments as establishment', (join) => {
         join
           .on('establishment.id', 'review.establishment_id')
@@ -102,6 +109,8 @@ export default class ContentReportTargetRepository {
         'review.rating',
         'review.status',
         'review.created_at',
+        'review.user_id as author_id',
+        'membership.banned_at as author_banned_at',
         'author.full_name as author_name',
         'revision.public_name as establishment_name',
         'revision.slug as establishment_slug',
@@ -119,6 +128,8 @@ export default class ContentReportTargetRepository {
           rating: row.rating === null || row.rating === undefined ? null : Number(row.rating),
           status: row.status ?? null,
           author_name: row.author_name ?? null,
+          author_id: Number(row.author_id),
+          author_banned: row.author_banned_at !== null && row.author_banned_at !== undefined,
           establishment_name: row.establishment_name ?? null,
           city_slug: row.city_slug ?? null,
           establishment_slug: row.establishment_slug ?? null,
@@ -178,6 +189,8 @@ export default class ContentReportTargetRepository {
           rating: null,
           status: row.status ?? null,
           author_name: row.author_name ?? null,
+          author_id: null,
+          author_banned: false,
           establishment_name: row.establishment_name ?? null,
           city_slug: row.city_slug ?? null,
           establishment_slug: row.establishment_slug ?? null,
@@ -227,6 +240,8 @@ export default class ContentReportTargetRepository {
           rating: null,
           status: row.lifecycle_status ?? null,
           author_name: null,
+          author_id: null,
+          author_banned: false,
           establishment_name: row.establishment_name ?? null,
           city_slug: row.city_slug ?? null,
           establishment_slug: row.establishment_slug ?? null,

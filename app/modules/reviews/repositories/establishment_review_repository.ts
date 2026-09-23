@@ -72,6 +72,16 @@ export default class EstablishmentReviewRepository extends LucidRepository<
       .where('tenant_id', tenantId)
       .where('establishment_id', establishmentId)
       .where('status', 'published')
+      // A banned author's reviews leave public view without their status being
+      // touched (ADR-0027 §6). The aggregate in the projection applies the same
+      // rule, so the list and the average can never disagree.
+      .whereNotExists((membership) => {
+        membership
+          .from('user_tenants')
+          .whereColumn('user_tenants.user_id', 'establishment_reviews.user_id')
+          .whereColumn('user_tenants.tenant_id', 'establishment_reviews.tenant_id')
+          .whereNotNull('user_tenants.banned_at')
+      })
       .preload('reply', (replyQuery) => {
         replyQuery.where('status', 'published')
       })

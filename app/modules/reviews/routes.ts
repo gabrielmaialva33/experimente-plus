@@ -4,6 +4,7 @@ import { apiThrottle, throttle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const ReviewsController = () => import('#modules/reviews/controllers/reviews_controller')
+const UserBansController = () => import('#modules/reviews/controllers/user_bans_controller')
 
 router
   .get('/api/v1/catalog/establishments/:establishmentId/reviews', [
@@ -57,6 +58,15 @@ router
     router.post('/content-reports/:id/resolve', [ReviewsController, 'resolveReport'])
     router.get('/review-policy', [ReviewsController, 'getPolicy'])
     router.put('/review-policy', [ReviewsController, 'updatePolicy'])
+    router
+      .get('/users/:userId/ban', [UserBansController, 'show'])
+      .where('userId', router.matchers.number())
+    router
+      .post('/users/:userId/ban', [UserBansController, 'ban'])
+      .where('userId', router.matchers.number())
+    router
+      .post('/users/:userId/unban', [UserBansController, 'unban'])
+      .where('userId', router.matchers.number())
   })
   .prefix('/api/v1/admin')
   .use([

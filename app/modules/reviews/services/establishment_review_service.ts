@@ -12,6 +12,7 @@ import type IReview from '#modules/reviews/interfaces/review_interface'
 import type EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewRepository from '#modules/reviews/repositories/establishment_review_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
+import UserBanRepository from '#modules/reviews/repositories/user_ban_repository'
 import type User from '#modules/users/models/user'
 
 @inject()
@@ -19,7 +20,8 @@ export default class EstablishmentReviewService {
   constructor(
     private reviewRepository: EstablishmentReviewRepository,
     private policyRepository: ReviewPolicyRepository,
-    private organizationPolicy: OrganizationPolicyService
+    private organizationPolicy: OrganizationPolicyService,
+    private userBans: UserBanRepository
   ) {}
 
   async create(
@@ -194,7 +196,13 @@ export default class EstablishmentReviewService {
 
   async showPublic(tenantId: number, id: number): Promise<EstablishmentReview> {
     const review = await this.reviewRepository.findById(tenantId, id)
-    if (!review || review.status !== 'published') {
+    // A banned author's review answers exactly like one that does not exist:
+    // otherwise its address would stay a way around the ban (ADR-0027 §6).
+    if (
+      !review ||
+      review.status !== 'published' ||
+      (await this.userBans.isBanned(tenantId, review.user_id))
+    ) {
       throw new NotFoundException('Review not found')
     }
     return review

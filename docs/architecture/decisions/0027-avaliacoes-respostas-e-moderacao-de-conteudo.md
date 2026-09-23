@@ -90,6 +90,15 @@ Os defaults **não são a decisão do dono**: são ponto de partida para que a f
 
 Usuário banido: avaliações **ocultadas das áreas públicas e excluídas das médias e contagens**, preservadas em histórico e auditoria. O efeito exato sobre médias era questão aberta; esta é a proposta, e precisa de confirmação do dono. Apagar destruiria trilha de auditoria e impediria reverter banimento indevido.
 
+**Implementação — 23/09/2026.** Duas escolhas que esta seção deixava abertas:
+
+- **O banimento pertence à membership**, em `user_tenants`, e não ao usuário. Tenant é operação isolada (ADR-0001); o moderador de uma operação não tem por que silenciar alguém na operação de outro negócio.
+- **Ocultar é regra de leitura, nunca reescrita do status da avaliação.** Uma avaliação é pública quando está `published` **e** seu autor não está banido naquela operação. Se banir mudasse as avaliações para `hidden`, retirar o banimento não saberia distinguir as ocultadas pelo banimento das ocultadas por um moderador ao julgar uma denúncia: restaurar todas republicaria o que foi removido pelo mérito, e não restaurar nenhuma quebraria o cenário 7. Mantidas separadas, as duas causas nunca se sobrescrevem.
+
+A média e a contagem da projeção aplicam a mesma regra, e um gatilho em `banned_at` as recalcula para todo estabelecimento que a pessoa avaliou, de modo que nenhum caminho de escrita consiga mudar um banimento e deixar o catálogo contando avaliações que ninguém vê. O histórico fica em `user_ban_events`, append-only, com autor e motivo — motivo obrigatório ao banir.
+
+O banimento faz só o que o Anexo I itens 8 e 14 descrevem: não impede a pessoa de usar o restante do produto nem de escrever, e o que ela escrever enquanto banida já nasce fora das áreas públicas. Impedir a escrita seria decisão que o contrato não contém; fica listada entre as pendências.
+
 ### 7. Média e contagem saem da projeção, não de consulta ao vivo
 
 Agregados entram na projeção pública do ADR-0016, reconstruíveis a partir das avaliações visíveis. Nenhuma média é mantida como contador incremental sem fonte reconstruível: banimento, moderação e exclusão mudam agregados retroativamente.
@@ -141,4 +150,4 @@ Exigidos pela regra de mudança do README de decisões:
 
 ## Pendências que dependem do dono, sem encerramento implícito
 
-Todos os valores da tabela de parâmetros; a decisão sobre exigir comprovação de visita; o efeito do banimento sobre médias aqui proposto; se vídeo entra no escopo desta entrega ou vira corte próprio; e se HEIC permanece rejeitado conforme ADR-0014 sob a ressalva contratual de suporte da infraestrutura. Moderação humana contínua após a entrega é operação, não desenvolvimento, e não integra este ADR.
+Todos os valores da tabela de parâmetros; a decisão sobre exigir comprovação de visita; o efeito do banimento sobre médias aqui proposto, e se o banimento deve também impedir a pessoa de escrever; se vídeo entra no escopo desta entrega ou vira corte próprio; e se HEIC permanece rejeitado conforme ADR-0014 sob a ressalva contratual de suporte da infraestrutura. Moderação humana contínua após a entrega é operação, não desenvolvimento, e não integra este ADR.

@@ -203,6 +203,14 @@ router
       .post('/reports/:id/resolve', [ContentReportPagesController, 'resolve'])
       .as('backoffice.reports.resolve')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
+      .post('/users/:userId/ban', [ContentReportPagesController, 'banAuthor'])
+      .as('backoffice.users.ban')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
+      .post('/users/:userId/unban', [ContentReportPagesController, 'unbanAuthor'])
+      .as('backoffice.users.unban')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
   })
   .prefix('/backoffice')
   .use(middleware.auth({ guards: ['jwt'] }))

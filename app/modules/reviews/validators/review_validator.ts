@@ -91,3 +91,25 @@ export const reviewReplyParamsValidator = vine.compile(
     reviewId: vine.number().min(1),
   })
 )
+
+export const userIdParamsValidator = vine.compile(
+  vine.object({
+    userId: vine.number().min(1),
+  })
+)
+
+/**
+ * A ban requires a reason. It is what makes the audit trail of ADR-0027 §6 mean
+ * something, and it is what a later moderator reads before deciding to lift it.
+ */
+export const banPayloadValidator = vine.compile(
+  vine.object({
+    reason: vine.string().trim().minLength(3).maxLength(500),
+  })
+)
+
+export const unbanPayloadValidator = vine.compile(
+  vine.object({
+    reason: vine.string().trim().maxLength(500).nullable().optional(),
+  })
+)

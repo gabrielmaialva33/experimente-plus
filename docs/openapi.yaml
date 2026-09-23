@@ -5770,6 +5770,87 @@ components:
         meta:
           $ref: '#/components/schemas/AdministrativePaginationMeta'
 
+    UserBanState:
+      description: >-
+        A ban belongs to the membership in one operation (ADR-0027 §6). It hides
+        the person's reviews from public areas and averages without deleting or
+        rewriting them.
+      type: object
+      additionalProperties: false
+      required: [user_id, banned, banned_at, banned_by, reason]
+      properties:
+        user_id:
+          type: integer
+          minimum: 1
+        banned:
+          type: boolean
+        banned_at:
+          type: [string, 'null']
+          format: date-time
+        banned_by:
+          type: [integer, 'null']
+        reason:
+          type: [string, 'null']
+
+    UserBanEvent:
+      type: object
+      additionalProperties: false
+      required: [id, action, reason, actor, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+          enum: [banned, unbanned]
+        reason:
+          type: [string, 'null']
+        actor:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [id, full_name]
+              properties:
+                id:
+                  type: integer
+                full_name:
+                  type: string
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+
+    UserBanDetail:
+      type: object
+      additionalProperties: false
+      required: [state, history]
+      properties:
+        state:
+          $ref: '#/components/schemas/UserBanState'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBanEvent'
+
+    BanUserRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          description: Required. It is what the audit trail records and what a later moderator reads.
+          type: string
+          minLength: 3
+          maxLength: 500
+
+    UnbanUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: [string, 'null']
+          maxLength: 500
+
     ExplorerEstablishmentCard:
       description: >-
         How an establishment appears inside the Explorer's own lists. Built from
@@ -14564,3 +14645,113 @@ paths:
           description: Authentication required
         '404':
           description: Itinerary or stop not found
+
+  /api/v1/admin/users/{userId}/ban:
+    get:
+      operationId: getUserBan
+      summary: Current ban state and history of a member of this operation
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: State and append-only history, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBanDetail'
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator required
+        '404':
+          description: Not a member of this operation
+    post:
+      operationId: banUser
+      summary: Ban a member of this operation
+      description: >-
+        Hides every review the person wrote in this operation from public areas
+        and recomputes the averages (ADR-0027 §6, Anexo I items 8 and 14).
+        Nothing is deleted and no review status is rewritten, so lifting the ban
+        restores exactly what was published. Banning an already banned member
+        changes nothing and keeps the original author and reason.
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BanUserRequest'
+      responses:
+        '200':
+          description: Resulting ban state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBanState'
+        '400':
+          description: A moderator cannot ban their own account
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator required
+        '404':
+          description: Not a member of this operation
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/users/{userId}/unban:
+    post:
+      operationId: unbanUser
+      summary: Lift the ban of a member of this operation
+      description: >-
+        Restores the published reviews to public areas and averages. Reviews a
+        moderator hid on their merits stay hidden: the ban never touched them.
+      tags: [Content Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnbanUserRequest'
+      responses:
+        '200':
+          description: Resulting ban state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBanState'
+        '401':
+          description: Authentication required
+        '403':
+          description: Platform moderator required
+        '404':
+          description: Not a member of this operation

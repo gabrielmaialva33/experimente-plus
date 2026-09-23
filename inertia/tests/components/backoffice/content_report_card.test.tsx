@@ -68,6 +68,8 @@ function reviewReport(overrides: JsonRecord = {}): JsonRecord {
       rating: 1,
       status: 'published',
       author_name: 'Bruno Avaliador',
+      author_id: 44,
+      author_banned: false,
       establishment_name: 'Ateliê do Café',
       city_slug: 'londrina',
       establishment_slug: 'atelie-do-cafe',
@@ -217,5 +219,64 @@ describe('ContentReportCard', () => {
 
     expect(screen.queryByRole('button', { name: 'Resolver' })).not.toBeInTheDocument()
     expect(screen.getByText(/não tem permissão/i)).toBeInTheDocument()
+  })
+
+  it('states what a ban reaches before it can be confirmed', () => {
+    render(<ContentReportCard report={reviewReport()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Banir autor/ }))
+
+    expect(screen.getByText(/Todas as avaliações de/)).toBeInTheDocument()
+    expect(screen.getByText(/Nada é apagado/)).toBeInTheDocument()
+    const confirm = screen.getByRole('button', { name: 'Confirmar banimento' })
+    expect(confirm).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('Motivo do banimento'), {
+      target: { value: 'Ofensas repetidas' },
+    })
+    expect(confirm).toBeEnabled()
+
+    fireEvent.click(confirm)
+    expect(mockPost).toHaveBeenCalledWith(
+      '/backoffice/users/44/ban',
+      expect.objectContaining({ preserveScroll: true })
+    )
+  })
+
+  it('shows a banned author and offers to lift the ban', () => {
+    const report = reviewReport()
+    ;(report.target as JsonRecord).author_banned = true
+
+    render(<ContentReportCard report={report} />)
+
+    expect(screen.getByText('Autor banido nesta operação')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retirar banimento' }))
+    expect(mockPost).toHaveBeenCalledWith('/backoffice/users/44/unban', { preserveScroll: true })
+  })
+
+  it('does not offer a ban on a partner reply, where it would hide nothing', () => {
+    const report = reviewReport({
+      target_type: 'reply',
+      target: {
+        type: 'reply',
+        id: 3,
+        exists: true,
+        text: 'Obrigado pela visita.',
+        rating: null,
+        status: 'published',
+        author_name: 'Equipe do Café',
+        author_id: null,
+        author_banned: false,
+        establishment_name: 'Ateliê do Café',
+        city_slug: 'londrina',
+        establishment_slug: 'atelie-do-cafe',
+        created_at: hourAgo,
+        can_hide: true,
+      },
+    })
+
+    render(<ContentReportCard report={report} />)
+
+    expect(screen.queryByRole('button', { name: /Banir autor/ })).not.toBeInTheDocument()
   })
 })

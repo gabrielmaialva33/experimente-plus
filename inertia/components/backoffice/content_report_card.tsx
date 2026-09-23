@@ -1,5 +1,6 @@
 import { Link, useForm } from '@inertiajs/react'
-import { AlertTriangle, EyeOff, Loader2, ShieldQuestion, Star } from 'lucide-react'
+import { AlertTriangle, EyeOff, Loader2, ShieldQuestion, Star, UserX } from 'lucide-react'
+import { useState } from 'react'
 
 import {
   EditorField,
@@ -62,6 +63,8 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
   const targetAuthor = nullableText(target, 'author_name')
   const targetEstablishment = nullableText(target, 'establishment_name')
   const targetStatus = nullableText(target, 'status')
+  const authorId = target && target.author_id ? numeric(target, 'author_id') : null
+  const authorBanned = target?.author_banned === true
   const targetRating = target && target.rating !== null ? numeric(target, 'rating') : null
   const publicPath = targetPublicPath(text(target, 'city_slug'), text(target, 'establishment_slug'))
 
@@ -188,6 +191,14 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
                 Abrir a página pública da unidade
               </Link>
             ) : null}
+
+            {targetType === 'review' && authorId !== null && canResolve ? (
+              <BanAuthorControl
+                authorId={authorId}
+                authorName={targetAuthor}
+                banned={authorBanned}
+              />
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
@@ -293,5 +304,111 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
         </p>
       )}
     </article>
+  )
+}
+
+/**
+ * Banning the author of a reported review — ADR-0027 §6.
+ *
+ * Separate from resolving the report on purpose. Resolving decides about one
+ * review; a ban reaches every review the person wrote in this operation, so it
+ * gets its own reason and its own confirmation, and the effect is stated before
+ * the click rather than discovered after it.
+ */
+function BanAuthorControl({
+  authorId,
+  authorName,
+  banned,
+}: {
+  authorId: number
+  authorName: string | null
+  banned: boolean
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const ban = useForm({ reason: '' })
+  const unban = useForm({ reason: '' })
+  const who = authorName ?? 'esta pessoa'
+
+  if (banned) {
+    return (
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-danger/25 bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">
+          <UserX aria-hidden="true" className="size-3.5" />
+          Autor banido nesta operação
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={unban.processing}
+          onClick={() =>
+            unban.post(`/backoffice/users/${authorId}/unban`, { preserveScroll: true })
+          }
+        >
+          Retirar banimento
+        </Button>
+      </div>
+    )
+  }
+
+  if (!confirming) {
+    return (
+      <div className="mt-3 border-t border-border pt-3">
+        <Button type="button" variant="outline" size="sm" onClick={() => setConfirming(true)}>
+          <UserX aria-hidden="true" className="size-4" />
+          Banir autor
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      className="mt-3 space-y-3 border-t border-border pt-3"
+      aria-label={`Banir ${who}`}
+      onSubmit={(event) => {
+        event.preventDefault()
+        ban.post(`/backoffice/users/${authorId}/ban`, {
+          preserveScroll: true,
+          onSuccess: () => setConfirming(false),
+        })
+      }}
+    >
+      <p className="text-sm leading-6">
+        Todas as avaliações de <strong>{who}</strong> nesta operação saem das áreas públicas e das
+        médias. Nada é apagado, e retirar o banimento devolve exatamente o que estava publicado.
+      </p>
+      <EditorField
+        htmlFor={`ban-${authorId}-reason`}
+        label="Motivo do banimento"
+        error={ban.errors.reason ?? null}
+      >
+        <Textarea
+          id={`ban-${authorId}-reason`}
+          rows={2}
+          minLength={3}
+          maxLength={500}
+          required
+          disabled={ban.processing}
+          value={ban.data.reason}
+          onChange={(event) => ban.setData('reason', event.target.value)}
+          placeholder="Fica no histórico e é o que o próximo moderador lê"
+          className="resize-y"
+        />
+      </EditorField>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          variant="destructive"
+          size="sm"
+          disabled={ban.processing || ban.data.reason.trim().length < 3}
+        >
+          Confirmar banimento
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setConfirming(false)}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
   )
 }

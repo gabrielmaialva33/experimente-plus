@@ -13,6 +13,36 @@ export namespace IReview {
   export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed'
 
   /**
+   * A ban as the operation sees it — ADR-0027 §6.
+   *
+   * It belongs to the membership, so the same person can be banned in one
+   * operation and not in another.
+   */
+  export interface BanState {
+    user_id: number
+    banned: boolean
+    banned_at: string | null
+    banned_by: number | null
+    reason: string | null
+  }
+
+  export interface BanEvent {
+    id: number
+    action: 'banned' | 'unbanned'
+    reason: string | null
+    actor: { id: number; full_name: string } | null
+    created_at: string
+  }
+
+  export interface BanPayload {
+    reason: string
+  }
+
+  export interface UnbanPayload {
+    reason?: string | null
+  }
+
+  /**
    * The reported content itself, as a moderation queue has to show it.
    *
    * A report stores `target_type` and `target_id` and nothing else, which is
@@ -36,6 +66,13 @@ export namespace IReview {
     /** The target's own visibility, so an already hidden item is obvious. */
     status: string | null
     author_name: string | null
+    /**
+     * Reviews only. A ban hides the reviews a person wrote, so it is offered
+     * where it acts; on a partner's reply it would hide nothing, and offering
+     * it there would promise an effect that does not happen.
+     */
+    author_id: number | null
+    author_banned: boolean
     establishment_name: string | null
     /** The pair that builds the public link, never the numeric identity. */
     city_slug: string | null

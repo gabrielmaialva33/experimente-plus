@@ -2,10 +2,14 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
 import ContentReportService from '#modules/reviews/services/content_report_service'
+import UserBanService from '#modules/reviews/services/user_ban_service'
 import {
+  banPayloadValidator,
   listReportsQueryValidator,
   resolveReportValidator,
   reviewIdValidator,
+  unbanPayloadValidator,
+  userIdParamsValidator,
 } from '#modules/reviews/validators/review_validator'
 
 /**
@@ -23,7 +27,10 @@ import {
  */
 @inject()
 export default class ContentReportPagesController {
-  constructor(private reportService: ContentReportService) {}
+  constructor(
+    private reportService: ContentReportService,
+    private bans: UserBanService
+  ) {}
 
   async index({ auth, inertia, request, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
@@ -68,6 +75,28 @@ export default class ContentReportPagesController {
         ? `Denúncia ${report.protocol_number} resolvida.`
         : `Denúncia ${report.protocol_number} descartada.`
     )
+    return response.redirect().back()
+  }
+
+  /**
+   * Bans the author of a reported review, from the queue where the pattern of
+   * abuse is actually seen. The ban hides every review of that person in this
+   * operation, not only the reported one — which is why it is a separate act
+   * from resolving the report, with its own reason.
+   */
+  async banAuthor({ auth, params, request, response, session, tenant }: HttpContext) {
+    const { userId } = await userIdParamsValidator.validate(params)
+    const payload = await request.validateUsing(banPayloadValidator)
+    await this.bans.ban(tenant!.id, auth.getUserOrFail(), userId, payload)
+    session.flash('success', 'Autor banido. As avaliações dele saíram das áreas públicas.')
+    return response.redirect().back()
+  }
+
+  async unbanAuthor({ auth, params, request, response, session, tenant }: HttpContext) {
+    const { userId } = await userIdParamsValidator.validate(params)
+    const payload = await request.validateUsing(unbanPayloadValidator)
+    await this.bans.unban(tenant!.id, auth.getUserOrFail(), userId, payload)
+    session.flash('success', 'Banimento retirado. As avaliações publicadas voltaram.')
     return response.redirect().back()
   }
 

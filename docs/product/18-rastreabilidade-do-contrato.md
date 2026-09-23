@@ -79,17 +79,17 @@ Auditoria feita em **23/09/2026**, confrontando cada item do anexo com o código
 
 ## 8. Avaliações, mídia e respostas
 
-| Item                                        | Situação    | Onde / observação                                                                                                  |
-| ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| Nota de 1 a 5 e texto                       | Entregue    | ADR-0027                                                                                                           |
-| **Fotos** na avaliação                      | **Falta**   | existem só os contadores `photos_count` e `videos_count`; não há envio. A política padrão já habilita quatro fotos |
-| Vídeos                                      | Contratante | proposto como corte próprio, padrão zero (ADR-0027)                                                                |
-| Parceiro responde sem alterar a nota        | Entregue    |                                                                                                                    |
-| JPG, PNG e WEBP                             | Entregue    | HEIC não suportado (ADR-0014); o anexo o condiciona a "quando suportados pela infraestrutura"                      |
-| Limites configuráveis                       | Entregue    | `review_policies`; tela de gestão falta (item 12)                                                                  |
-| Denúncia e moderação                        | Entregue    | fila única, tela no backoffice                                                                                     |
-| **Usuário banido tem avaliações ocultadas** | **Falta**   | não existe conceito de banimento no código                                                                         |
-| Parceiro excluído retira material público   | Parcial     | página e busca saem por arquivamento; avaliações vinculadas não conferidas                                         |
+| Item                                      | Situação    | Onde / observação                                                                                                  |
+| ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| Nota de 1 a 5 e texto                     | Entregue    | ADR-0027                                                                                                           |
+| **Fotos** na avaliação                    | **Falta**   | existem só os contadores `photos_count` e `videos_count`; não há envio. A política padrão já habilita quatro fotos |
+| Vídeos                                    | Contratante | proposto como corte próprio, padrão zero (ADR-0027)                                                                |
+| Parceiro responde sem alterar a nota      | Entregue    |                                                                                                                    |
+| JPG, PNG e WEBP                           | Entregue    | HEIC não suportado (ADR-0014); o anexo o condiciona a "quando suportados pela infraestrutura"                      |
+| Limites configuráveis                     | Entregue    | `review_policies`; tela de gestão falta (item 12)                                                                  |
+| Denúncia e moderação                      | Entregue    | fila única, tela no backoffice                                                                                     |
+| Usuário banido tem avaliações ocultadas   | Entregue    | por operação, oculta na leitura e na média, reversível, com histórico (ADR-0027 §6)                                |
+| Parceiro excluído retira material público | Parcial     | página e busca saem por arquivamento; avaliações vinculadas não conferidas                                         |
 
 ## 9. Moderação e conteúdo proibido
 
@@ -147,14 +147,14 @@ Auditoria feita em **23/09/2026**, confrontando cada item do anexo com o código
 
 ## 14. Casos e regras expressamente definidos
 
-| Item                                             | Situação  | Onde / observação        |
-| ------------------------------------------------ | --------- | ------------------------ |
-| Sem módulo de reservas                           | Entregue  |                          |
-| Parceiro desativado fora de busca e mapa         | Entregue  |                          |
-| **Avaliações de usuário banido fora do público** | **Falta** | mesma lacuna do item 8   |
-| Exclusão de parceiro retira material público     | Parcial   | mesma ressalva do item 8 |
+| Item                                         | Situação | Onde / observação             |
+| -------------------------------------------- | -------- | ----------------------------- |
+| Sem módulo de reservas                       | Entregue |                               |
+| Parceiro desativado fora de busca e mapa     | Entregue |                               |
+| Avaliações de usuário banido fora do público | Entregue | mesma implementação do item 8 |
+| Exclusão de parceiro retira material público | Parcial  | mesma ressalva do item 8      |
 
-Este é o item de maior risco no aceite: são regras que o próprio anexo chama de "expressamente definidas", e não pendências.
+Eram o maior risco no aceite, por serem regras que o próprio anexo chama de "expressamente definidas". O banimento foi entregue em 23/09/2026; resta conferir se as avaliações vinculadas saem com a exclusão do parceiro.
 
 ## 15. Itens que dependem de definição
 
@@ -171,7 +171,7 @@ Todos **pendentes do contratante** em 23/09/2026: comprovação de visita, limit
 
 Lacunas que dependem só dos contratados, em ordem de risco no aceite:
 
-1. **Usuário banido** — itens 8 e 14. Regra expressamente definida.
+1. ~~**Usuário banido** — itens 8 e 14.~~ Entregue em 23/09/2026.
 2. **Denúncia de experiência, evento e item de vitrine** — item 9. Já decidida no ADR-0028 e nunca implementada.
 3. **Fotos na avaliação** — item 8. A política padrão já as habilita.
 4. **Telas de regras de avaliação e de categorias** — item 12.
