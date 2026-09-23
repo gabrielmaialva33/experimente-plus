@@ -32,6 +32,9 @@ yarn-error.log
 # AdonisJS specific
 storage/uploads/*
 storage/seed-media/*
+# The local drive's media, uploaded at run time — the functional suite writes
+# review photos here. Runtime data never belongs in the repository.
+storage/media/
 
 # Lucid v7 auto-generated schema classes
 database/schema.ts
