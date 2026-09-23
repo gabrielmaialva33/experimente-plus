@@ -44,6 +44,9 @@ import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitAccess from '#modules/benefits/models/benefit_access'
 import PaymentMethodsService from '#modules/purchases/services/payment_methods_service'
 import PaymentProviderService from '#modules/purchases/services/payment_provider_service'
+import HomologationDemoContent, {
+  type DemoContentOutcome,
+} from '#modules/tenants/services/homologation_demo_content'
 
 const ACTION = 'homologation.provision.v1'
 const VENUES = [
@@ -461,6 +464,40 @@ export default class HomologationProvisioningService {
       // DB errors may include hashes; SDK errors may include authorization. Never propagate causes.
       throw new ProvisioningError(
         'Provisioning failed; verify infrastructure privately and rerun with the same configuration'
+      )
+    }
+  }
+
+  /**
+   * Demonstration content over the baseline: agenda events, experiences,
+   * showcase items, reviews with a partner reply and one pending report.
+   *
+   * It runs after `run` on every invocation of `homologation:provision`, the
+   * first and every replay, because the baseline's replay deliberately does
+   * nothing — and a homologation provisioned before this content existed would
+   * otherwise never receive it. Identities are checked exactly as a replay
+   * checks them, and each item is created at most once (see
+   * `homologation_demo_content`). Completed steps survive a failure, so a rerun
+   * continues where the last one stopped.
+   */
+  async provisionDemoContent(
+    input: HomologationProvisioningConfig,
+    now: DateTime = DateTime.utc()
+  ): Promise<DemoContentOutcome> {
+    this.assertEnvironment()
+    const config = parseProvisioningConfig(input)
+    const tenant = await Tenant.findBy('slug', config.tenantSlug)
+    if (!tenant)
+      throw new ProvisioningError(
+        'No provisioned tenant; run homologation:provision so the baseline exists first'
+      )
+    const receipt = await this.replay(tenant, config)
+    try {
+      return await new HomologationDemoContent(receipt, config.tenantSlug, now).provision()
+    } catch (error) {
+      if (error instanceof ProvisioningError) throw error
+      throw new ProvisioningError(
+        'Demonstration content failed; completed steps are kept, verify privately and rerun'
       )
     }
   }
