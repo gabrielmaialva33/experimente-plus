@@ -5323,6 +5323,67 @@ components:
           items:
             $ref: '#/components/schemas/PartnerContentPublicMedia'
 
+    PartnerContentEvent:
+      description: One act in the history of a content item (ADR-0028 §4).
+      type: object
+      additionalProperties: false
+      required: [id, action, from_status, to_status, actor, changes, metadata, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+          enum: [created, updated, submitted, approved, rejected, archived, admin_edited]
+        from_status:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerContentStatus'
+            - type: 'null'
+        to_status:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerContentStatus'
+            - type: 'null'
+        actor:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [id, full_name]
+              properties:
+                id:
+                  type: integer
+                full_name:
+                  type: string
+            - type: 'null'
+        changes:
+          description: >-
+            Only the fields that moved, each as an object with `from` and `to`.
+            Never identifiers.
+          oneOf:
+            - type: object
+              additionalProperties:
+                type: object
+                required: [from, to]
+                properties:
+                  from: {}
+                  to: {}
+            - type: 'null'
+        metadata:
+          oneOf:
+            - type: object
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+
+    PartnerContentHistoryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerContentEvent'
+
     PartnerContentListResponse:
       type: object
       required:
@@ -13725,6 +13786,88 @@ paths:
           description: Moderator privileges required
         '404':
           description: Content not found
+
+  /api/v1/admin/content/{kind}/{id}:
+    put:
+      operationId: updatePartnerContentAsModerator
+      summary: Correct partner content as an administrator
+      description: >-
+        What the scope calls "editar" (Anexo I item 7, ADR-0028 §4). A
+        moderator's edit is already approved, so it never enters the queue. On
+        published content the public snapshot moves with it and the public reads
+        the correction at once, while `published_at` stays; on a draft or an item
+        awaiting approval only the live fields move and the item stays where the
+        partner left it. Archived content is refused. Moving a published event's
+        dates applies the operation's minimum notice. Every edit is recorded in
+        the item's history as `admin_edited`.
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartnerContentRequest'
+      responses:
+        '200':
+          description: The corrected content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContent'
+        '400':
+          description: Archived content, or an event window the policy refuses
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content not found in this operation
+        '422':
+          description: Validation failed
+
+  /api/v1/admin/content/{kind}/{id}/history:
+    get:
+      operationId: getPartnerContentHistory
+      summary: The append-only history of one content item
+      description: >-
+        Every act — creation, edits, submission, approval, refusal, archiving and
+        administrative correction — with who did it and only the fields that
+        moved, newest first (ADR-0028 §4). Moderators only; it names people and
+        is never part of a public payload.
+      tags: [Partner content, Moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events, showcase-items]
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        '200':
+          description: History, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContentHistoryResponse'
+        '401':
+          description: Authentication required
+        '403':
+          description: Moderator privileges required
+        '404':
+          description: Content not found in this operation
 
   /api/v1/admin/content/{kind}/{id}/archive:
     post:

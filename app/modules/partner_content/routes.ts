@@ -67,6 +67,9 @@ router
     router.post('/content/:kind/:id/approve', [PartnerContentController, 'approve'])
     router.post('/content/:kind/:id/reject', [PartnerContentController, 'reject'])
     router.post('/content/:kind/:id/archive', [PartnerContentController, 'moderationArchive'])
+    // Administrative edit and the append-only history — ADR-0028 §4.
+    router.put('/content/:kind/:id', [PartnerContentController, 'moderationUpdate'])
+    router.get('/content/:kind/:id/history', [PartnerContentController, 'history'])
     router.post('/content/:kind/:id/media/:mediaId/approve', [
       PartnerContentMediaController,
       'approve',

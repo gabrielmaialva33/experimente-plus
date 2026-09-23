@@ -60,6 +60,19 @@ O escopo usa três verbos que colidem com invariantes aceitas. Revisões aprovad
 - **Desativar** é arquivar. O conteúdo sai da descoberta pública imediatamente e permanece referenciável por histórico e auditoria, coerente com a regra já registrada de que parceiro desativado some da busca e do mapa mas permanece no histórico do usuário.
 - **Excluir**, por administrador, é também arquivamento com remoção da exibição pública, **nunca `DELETE` físico**. Preservar a trilha é requisito de auditoria e a única forma de reverter uma exclusão indevida. Se o contratante exigir destruição física de dados, isso é decisão dele, tem implicação de LGPD e retenção, e deve ser tratado como requisito próprio — não é assumido aqui.
 
+**Implementação — 23/09/2026.** O histórico append-only exigido acima existe em `partner_content_events`: uma tabela para os três tipos, com ator, estados de origem e destino e apenas os campos que mudaram (`{ campo: { from, to } }`), nunca cópia da linha. Cada ato — criar, editar, submeter, aprovar, recusar, arquivar e a edição administrativa — grava seu evento na mesma transação do ato, inclusive o arquivamento feito ao resolver uma denúncia com `content_hidden`. Um gatilho recusa `UPDATE` e `DELETE`. A leitura é só de moderador.
+
+A **edição pelo administrador** (Anexo I item 7), que o texto acima deixava sem semântica própria, ficou assim:
+
+- O administrador edita como moderador (ADR-0007), e a edição de um moderador já está aprovada. Mandá-la à fila seria pedir à mesma pessoa que aprove a própria correção.
+- **Conteúdo publicado:** as colunas vivas e o snapshot público mudam juntos, e o público lê a correção na hora. `published_at` **não** muda: corrigir uma vírgula não pode levar um item antigo ao topo de "Novidades". Se a política deixava o parceiro editar sem aprovação e havia alteração dele ainda não submetida, ela é publicada junto. Com a política desligada, ele mesmo poderia publicá-la, então a correção não abre nada que ele não pudesse abrir.
+- **Rascunho ou aguardando aprovação:** só as colunas vivas mudam. O item fica onde o parceiro o deixou, e publicar continua sendo outro ato.
+- **Arquivado:** recusado, como é para o parceiro.
+- Mudar as datas de um evento **publicado** aplica a antecedência mínima da política, porque essa versão fica pública agora. As demais correções não aplicam.
+- A edição fica registrada como `admin_edited`, com `republished` dizendo se o público passou a ver a nova versão.
+
+O histórico ainda não é exibido ao parceiro. Mostrar a ele quem da operação alterou seu conteúdo é desejável, mas decide o que o parceiro vê sobre a moderação, e fica como pendência.
+
 ### 5. A projeção pública não sabe destes conteúdos
 
 A projeção reconstruível do ADR-0016 conhece hoje apenas as fontes do estabelecimento. Publicar, arquivar ou moderar um conteúdo novo não apareceria na descoberta sem decisão explícita.

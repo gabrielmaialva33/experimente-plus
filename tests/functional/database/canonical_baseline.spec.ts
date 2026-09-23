@@ -18,8 +18,9 @@ test.group('Canonical homologation baseline', () => {
     // interests, itineraries and their stops)
     // + 2 for the ban of ADR-0027 §6 (its state on the membership and its
     // append-only history)
-    // + 1 widening the report targets to partner content, as ADR-0028 decided.
-    assert.lengthOf(files, 70)
+    // + 1 widening the report targets to partner content, as ADR-0028 decided
+    // + 1 for the append-only history of partner content (ADR-0028 §4).
+    assert.lengthOf(files, 71)
     assert.isFalse(files.some((name) => /1788556800|178881480[123]/.test(name)))
     const history = await db.from('adonis_schema').select('name')
     assert.lengthOf(history, files.length)

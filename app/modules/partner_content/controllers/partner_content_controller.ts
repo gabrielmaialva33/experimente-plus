@@ -126,6 +126,22 @@ export default class PartnerContentController {
    * ADR-0028 says why: destroying the trail is the one thing that cannot be
    * undone when a removal turns out to be wrong.
    */
+  /** An administrator's edit; what it does depends on where the item is. */
+  async moderationUpdate({ tenant, auth, request, params }: HttpContext) {
+    const { kind: path, id } = await contentIdParamsValidator.validate(params)
+    const kind = IPartnerContent.kindOfPath(path)
+    const payload = await request.validateUsing(updateContentValidator)
+    return this.contentService.adminUpdate(kind, tenant!.id, id, auth.getUserOrFail(), payload)
+  }
+
+  async history({ tenant, auth, params }: HttpContext) {
+    const { kind: path, id } = await contentIdParamsValidator.validate(params)
+    const kind = IPartnerContent.kindOfPath(path)
+    return {
+      data: await this.contentService.history(kind, tenant!.id, id, auth.getUserOrFail()),
+    }
+  }
+
   async moderationArchive({ tenant, auth, params }: HttpContext) {
     const { kind: path, id } = await contentIdParamsValidator.validate(params)
     const kind = IPartnerContent.kindOfPath(path)
