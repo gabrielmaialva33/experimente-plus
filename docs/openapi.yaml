@@ -6118,6 +6118,150 @@ components:
           type: integer
           minimum: 0
 
+    ExplorerSavedContent:
+      type: object
+      additionalProperties: false
+      required: [id, content, created_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        content:
+          type: object
+          additionalProperties: false
+          required: [kind, id, title, starts_at, ends_at, cover_url, establishment]
+          properties:
+            kind:
+              type: string
+              enum: [experience, event]
+            id:
+              type: integer
+              minimum: 1
+            title:
+              description: From the approved snapshot, never an edit awaiting moderation.
+              type: string
+            starts_at:
+              type: [string, 'null']
+              format: date-time
+            ends_at:
+              type: [string, 'null']
+              format: date-time
+            cover_url:
+              type: [string, 'null']
+            establishment:
+              $ref: '#/components/schemas/ExplorerEstablishmentCard'
+        created_at:
+          type: string
+          format: date-time
+
+    ExplorerSavedContentList:
+      description: >-
+        `unavailable` counts favourites that are not public now — archived,
+        ended events, content of a withdrawn establishment. They are kept, not
+        returned as navigable items.
+      type: object
+      additionalProperties: false
+      required: [data, unavailable]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExplorerSavedContent'
+        unavailable:
+          type: integer
+          minimum: 0
+
+    ExplorerContentFavoriteStatus:
+      type: object
+      additionalProperties: false
+      required: [favorited]
+      properties:
+        favorited:
+          type: boolean
+
+    ConciergeQuestion:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question:
+          type: string
+          minLength: 3
+          maxLength: 300
+        city:
+          type: string
+          maxLength: 120
+          description: Restricts grounding to one city of the operation
+
+    ConciergeGroundingItem:
+      description: >-
+        A catalogue item backing a reply. `ref` is a citation token
+        (`<kind>:<id>`), never an address; the public link is built from
+        `city_slug` and `establishment_slug`.
+      type: object
+      additionalProperties: false
+      required:
+        - ref
+        - kind
+        - name
+        - city_slug
+        - establishment_slug
+        - establishment_name
+        - district
+        - category
+        - starts_at
+        - ends_at
+      properties:
+        ref:
+          type: string
+        kind:
+          type: string
+          enum: [establishment, experience, event]
+        name:
+          type: string
+        city_slug:
+          type: string
+        establishment_slug:
+          type: string
+        establishment_name:
+          type: string
+        district:
+          type: [string, 'null']
+        category:
+          type: [string, 'null']
+        starts_at:
+          type: [string, 'null']
+          format: date-time
+        ends_at:
+          type: [string, 'null']
+          format: date-time
+
+    ConciergeReply:
+      type: object
+      additionalProperties: false
+      required: [outcome, text, items, model, personalized]
+      properties:
+        outcome:
+          type: string
+          enum: [grounded, degraded, refused]
+        text:
+          type: [string, 'null']
+          description: Absent on a degraded reply, which carries items only
+        items:
+          type: array
+          description: Catalogue items backing the reply, in order
+          items:
+            $ref: '#/components/schemas/ConciergeGroundingItem'
+        model:
+          type: [string, 'null']
+          description: Null when no model was consulted
+        personalized:
+          description: >-
+            True when the caller's interests chose which places entered the
+            prompt. Always false on the public route. Interests are never sent
+            to the model provider.
+          type: boolean
+
     ExplorerSavedStatus:
       type: object
       additionalProperties: false
@@ -8061,7 +8205,8 @@ paths:
         else is removed, so the assistant cannot present a place that does not
         exist. Subjects outside discovery receive a fixed refusal without
         consulting any model, and the module has no write path: it never
-        reserves, purchases or confirms anything.
+        reserves, purchases or confirms anything. This route never reads
+        credentials; the personal variant is `/api/v1/me/concierge`.
       tags: [Catalog]
       security: []
       requestBody:
@@ -8069,17 +8214,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [question]
-              properties:
-                question:
-                  type: string
-                  minLength: 3
-                  maxLength: 300
-                city:
-                  type: string
-                  maxLength: 120
-                  description: Restricts grounding to one city of the operation
+              $ref: '#/components/schemas/ConciergeQuestion'
       responses:
         '200':
           description: >-
@@ -8089,32 +8224,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [outcome, text, items, model]
-                properties:
-                  outcome:
-                    type: string
-                    enum: [grounded, degraded, refused]
-                  text:
-                    type: string
-                    nullable: true
-                    description: Absent on a degraded reply, which carries items only
-                  items:
-                    type: array
-                    description: Catalogue places backing the reply, in order
-                    items:
-                      type: object
-                      properties:
-                        id: { type: integer }
-                        kind: { type: string, enum: [establishment] }
-                        name: { type: string }
-                        city: { type: string }
-                        district: { type: string, nullable: true }
-                        category: { type: string, nullable: true }
-                  model:
-                    type: string
-                    nullable: true
-                    description: Null when no model was consulted
+                $ref: '#/components/schemas/ConciergeReply'
         '422':
           description: Question missing or outside the accepted length
         '404':
@@ -14712,6 +14822,95 @@ paths:
         '401':
           description: Authentication required
 
+  /api/v1/me/favorites/content:
+    get:
+      operationId: listMyContentFavorites
+      summary: List the experiences and events the caller favourited
+      description: >-
+        Showcase items cannot be favourited: favouriting a priced product is a
+        wishlist, the first step of the checkout the contract excludes.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Public favourites, most recent first, and the count of unavailable ones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerSavedContentList'
+        '401':
+          description: Authentication required
+
+  /api/v1/me/favorites/content/{kind}/{contentId}:
+    put:
+      operationId: favoriteContent
+      summary: Favourite an experience or an event
+      description: >-
+        Idempotent. Content that is not public now — a draft, archived, an
+        ended event, or content of a withdrawn establishment — answers 404,
+        exactly like content that does not exist.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events]
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The favourite exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerContentFavoriteStatus'
+        '401':
+          description: Authentication required
+        '404':
+          description: Content not found or not public
+    delete:
+      operationId: unfavoriteContent
+      summary: Remove a content favourite
+      description: Does not revalidate visibility, so an ended event can still be removed.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [experiences, events]
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: The favourite no longer exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerContentFavoriteStatus'
+        '401':
+          description: Authentication required
+
   /api/v1/me/follows:
     get:
       operationId: listMyFollows
@@ -15096,6 +15295,38 @@ paths:
           description: Authentication required
         '404':
           description: Itinerary or stop not found
+
+  /api/v1/me/concierge:
+    post:
+      operationId: askMyConcierge
+      summary: Ask the discovery assistant, considering the caller's interests
+      description: >-
+        Same answer rules as the public route (Anexo I item 11). The caller's
+        active interests decide which discoverable places enter a prompt that
+        cannot hold them all; they add no place, remove none that would have
+        fit, never reorder search, and are not sent to the model provider.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConciergeQuestion'
+      responses:
+        '200':
+          description: The reply, with `personalized` true when interests were applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConciergeReply'
+        '401':
+          description: Authentication required
+        '422':
+          description: Question missing or outside the accepted length
 
   /api/v1/admin/users/{userId}/ban:
     get:

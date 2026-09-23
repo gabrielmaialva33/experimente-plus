@@ -79,6 +79,13 @@ namespace IConcierge {
     model: string | null
   }
 
+  /**
+   * What the routes answer. `personalized` says whether the caller's interests
+   * chose which places entered the prompt — never whether the model saw them:
+   * interests do not leave the server (ADR-0029, revision of 23/09/2026).
+   */
+  export type RouteReply = Reply & { personalized: boolean }
+
   export interface ProviderRequest {
     model: string
     system: string

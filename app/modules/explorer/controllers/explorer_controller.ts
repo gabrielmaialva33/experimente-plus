@@ -1,9 +1,11 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import IExplorer from '#modules/explorer/interfaces/explorer_interface'
 import ExplorerService from '#modules/explorer/services/explorer_service'
 import type { SavedKind } from '#modules/explorer/repositories/explorer_saved_repository'
 import {
+  contentParamsValidator,
   establishmentParamsValidator,
   interestsPayloadValidator,
   itineraryParamsValidator,
@@ -46,6 +48,30 @@ export default class ExplorerController {
 
   async unfollow(ctx: HttpContext) {
     return this.write('follow', 'unsave', ctx)
+  }
+
+  async listContentFavorites({ auth, tenant }: HttpContext) {
+    return this.explorer.listSavedContent(tenant!.id, auth.getUserOrFail().id)
+  }
+
+  async favoriteContent({ auth, params, tenant }: HttpContext) {
+    const { kind, contentId } = await contentParamsValidator.validate(params)
+    return this.explorer.saveContent(
+      tenant!.id,
+      auth.getUserOrFail().id,
+      IExplorer.FAVORITE_CONTENT_PATHS[kind],
+      contentId
+    )
+  }
+
+  async unfavoriteContent({ auth, params, tenant }: HttpContext) {
+    const { kind, contentId } = await contentParamsValidator.validate(params)
+    return this.explorer.unsaveContent(
+      tenant!.id,
+      auth.getUserOrFail().id,
+      IExplorer.FAVORITE_CONTENT_PATHS[kind],
+      contentId
+    )
   }
 
   /** What an establishment page needs to draw its own two buttons. */

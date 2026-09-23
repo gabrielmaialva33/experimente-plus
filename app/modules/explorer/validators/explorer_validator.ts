@@ -55,3 +55,10 @@ export const interestsPayloadValidator = vine.compile(
     category_slugs: vine.array(vine.string().trim().minLength(1).maxLength(140)).maxLength(100),
   })
 )
+
+export const contentParamsValidator = vine.compile(
+  vine.object({
+    kind: vine.enum(['experiences', 'events'] as const),
+    contentId: vine.number().min(1),
+  })
+)

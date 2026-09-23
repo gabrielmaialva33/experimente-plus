@@ -108,3 +108,17 @@ Não altera catálogo, benefícios, carteira, resgate, compra, avaliações ou c
 ## Pendências que dependem do contratante
 
 Se seguir um parceiro deve gerar aviso, por qual canal e com qual frequência — o que traz push para dentro ou o mantém fora. Limite de roteiros por Explorador e de paradas por roteiro, hoje propostos sem teto. Se o roteiro deve poder ser compartilhado de forma que outra pessoa o abra dentro do produto, o que o transformaria em conteúdo público sujeito ao item 9. Se interesses devem efetivamente alterar a ordenação da descoberta, e sob qual regra, já que isso cria prominência. E se favoritar deve exigir conta confirmada ou basta sessão autenticada.
+
+## Revisão de 23/09/2026 — favoritar conteúdo do parceiro
+
+O Anexo I item 10 diz "favoritar estabelecimentos **e conteúdos** previstos no aplicativo", e a primeira entrega só cobria estabelecimentos.
+
+**Tabela própria, `explorer_content_favorites`, em vez de alargar `explorer_favorites`.** Aquela tabela aponta para estabelecimentos com chave estrangeira real. Fazer o alvo virar "estabelecimento ou experiência ou evento" exigiria ou perder a chave — a referência polimórfica que este ADR descartou, em que o banco deixa de saber para onde a linha aponta — ou encher de colunas anuláveis e checagem de espécie uma tabela cujas linhas hoje são todas a mesma coisa. Na tabela nova, cada espécie tem coluna anulável própria com chave composta para sua tabela de conteúdo, e exatamente uma é preenchida: o mesmo formato que `partner_content_media` já usa para essas tabelas.
+
+**Experiências e eventos, não itens de vitrine.** Item de vitrine é produto exibido com preço informativo; favoritá-lo é lista de desejos, o primeiro passo do carrinho e do checkout que o Anexo I item 16 põe fora da entrega. Fica como pendência se o contratante quiser.
+
+**Mesmas regras dos favoritos de estabelecimento.** Privado, `PUT` idempotente, e só se favorita o que o público vê agora: snapshot aprovado, não arquivado, estabelecimento descobrível e, para evento, janela não encerrada. Título e janela vêm do snapshot, nunca das colunas vivas, porque uma edição à espera de moderação nunca foi pública. Evento que terminou **continua gravado**, deixa de ser navegável e entra na contagem `unavailable`, como a unidade retirada; e continua podendo ser removido, porque desfavoritar não revalida.
+
+A exclusão de conta apaga também estas linhas, pela mesma purga explícita.
+
+Cenários acrescentados: favoritar duas vezes é um favorito; rascunho, arquivado, evento encerrado e item de vitrine respondem como inexistentes; evento que termina depois de favoritado vira indisponível e pode ser removido; conteúdo de unidade retirada é contado e não listado; um Explorador não lê os favoritos de outro; excluir a conta apaga os favoritos de conteúdo.

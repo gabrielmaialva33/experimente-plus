@@ -27,6 +27,18 @@ router
       .delete('/favorites/:establishmentId', [ExplorerController, 'unfavorite'])
       .where('establishmentId', router.matchers.number())
 
+    // Experiences and events. Showcase items are not a kind here: favouriting a
+    // priced product is a wishlist, which the contract keeps out (Anexo I 16).
+    router.get('/favorites/content', [ExplorerController, 'listContentFavorites'])
+    router
+      .put('/favorites/content/:kind/:contentId', [ExplorerController, 'favoriteContent'])
+      .where('kind', /^(experiences|events)$/)
+      .where('contentId', router.matchers.number())
+    router
+      .delete('/favorites/content/:kind/:contentId', [ExplorerController, 'unfavoriteContent'])
+      .where('kind', /^(experiences|events)$/)
+      .where('contentId', router.matchers.number())
+
     router.get('/follows', [ExplorerController, 'listFollows'])
     router
       .put('/follows/:establishmentId', [ExplorerController, 'follow'])
