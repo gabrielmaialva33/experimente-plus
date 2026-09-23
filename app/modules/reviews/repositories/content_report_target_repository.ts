@@ -25,13 +25,24 @@ export default class ContentReportTargetRepository {
       ),
     ]
 
-    const [reviews, replies, establishments] = await Promise.all([
-      this.reviews(tenantId, idsOf('review')),
-      this.replies(tenantId, idsOf('reply')),
-      this.establishments(tenantId, idsOf('establishment')),
-    ])
+    const [reviews, replies, establishments, experiences, events, showcaseItems] =
+      await Promise.all([
+        this.reviews(tenantId, idsOf('review')),
+        this.replies(tenantId, idsOf('reply')),
+        this.establishments(tenantId, idsOf('establishment')),
+        this.partnerContent(tenantId, 'experience', idsOf('experience')),
+        this.partnerContent(tenantId, 'event', idsOf('event')),
+        this.partnerContent(tenantId, 'showcase_item', idsOf('showcase_item')),
+      ])
 
-    const found = { review: reviews, reply: replies, establishment: establishments }
+    const found: Record<IReview.ReportTargetType, Map<number, IReview.ReportTargetProjection>> = {
+      review: reviews,
+      reply: replies,
+      establishment: establishments,
+      experience: experiences,
+      event: events,
+      showcase_item: showcaseItems,
+    }
     const projections = new Map<number, IReview.ReportTargetProjection>()
 
     for (const report of reports) {
@@ -54,6 +65,7 @@ export default class ContentReportTargetRepository {
       type,
       id,
       exists: false,
+      title: null,
       text: null,
       rating: null,
       status: null,
@@ -124,6 +136,7 @@ export default class ContentReportTargetRepository {
           type: 'review' as const,
           id: Number(row.id),
           exists: true,
+          title: null,
           text: row.comment ?? null,
           rating: row.rating === null || row.rating === undefined ? null : Number(row.rating),
           status: row.status ?? null,
@@ -185,6 +198,7 @@ export default class ContentReportTargetRepository {
           type: 'reply' as const,
           id: Number(row.id),
           exists: true,
+          title: null,
           text: row.comment ?? null,
           rating: null,
           status: row.status ?? null,
@@ -236,6 +250,7 @@ export default class ContentReportTargetRepository {
           type: 'establishment' as const,
           id: Number(row.id),
           exists: true,
+          title: null,
           text: row.short_description ?? null,
           rating: null,
           status: row.lifecycle_status ?? null,
@@ -249,6 +264,80 @@ export default class ContentReportTargetRepository {
           // An establishment leaves the catalogue through its revision
           // lifecycle, not through a report resolution.
           can_hide: false,
+        },
+      ])
+    )
+  }
+
+  /**
+   * Experiences, events and showcase items — ADR-0028.
+   *
+   * The moderator reads the approved snapshot, because that is what the
+   * reporter saw: a pending edit sitting in the live columns was never public
+   * and is not what the report is about.
+   */
+  private async partnerContent(
+    tenantId: number,
+    kind: IReview.PartnerContentTarget,
+    ids: number[]
+  ): Promise<Map<number, IReview.ReportTargetProjection>> {
+    if (ids.length === 0) return new Map()
+
+    const table = {
+      experience: 'establishment_experiences',
+      event: 'establishment_events',
+      showcase_item: 'establishment_showcase_items',
+    }[kind]
+
+    const rows = await db
+      .from(`${table} as content`)
+      .leftJoin('establishments as establishment', (join) => {
+        join
+          .on('establishment.id', 'content.establishment_id')
+          .andOn('establishment.tenant_id', 'content.tenant_id')
+      })
+      .leftJoin('establishment_revisions as revision', (join) => {
+        join
+          .on('revision.id', 'establishment.published_revision_id')
+          .andOn('revision.tenant_id', 'establishment.tenant_id')
+      })
+      .leftJoin('cities as city', (join) => {
+        join.on('city.id', 'revision.city_id').andOn('city.tenant_id', 'revision.tenant_id')
+      })
+      .where('content.tenant_id', tenantId)
+      .whereIn('content.id', ids)
+      .select(
+        'content.id',
+        'content.status',
+        'content.created_at',
+        db.raw("content.published_snapshot->>'title' AS snapshot_title"),
+        db.raw("content.published_snapshot->>'description' AS snapshot_description"),
+        'revision.public_name as establishment_name',
+        'revision.slug as establishment_slug',
+        'city.slug as city_slug'
+      )
+
+    return new Map(
+      rows.map((row) => [
+        Number(row.id),
+        {
+          type: kind,
+          id: Number(row.id),
+          exists: true,
+          title: row.snapshot_title ?? null,
+          text: row.snapshot_description ?? null,
+          rating: null,
+          status: row.status ?? null,
+          author_name: null,
+          author_id: null,
+          author_banned: false,
+          establishment_name: row.establishment_name ?? null,
+          city_slug: row.city_slug ?? null,
+          establishment_slug: row.establishment_slug ?? null,
+          created_at: this.instant(row.created_at),
+          // Archiving is what hiding means for this content, and an archived
+          // item has nothing left to hide.
+          can_hide: row.status !== 'archived',
         },
       ])
     )

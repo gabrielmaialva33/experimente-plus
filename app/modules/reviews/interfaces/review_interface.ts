@@ -1,7 +1,8 @@
 export namespace IReview {
   export type ReviewStatus = 'published' | 'hidden' | 'archived'
   export type ReplyStatus = 'published' | 'hidden'
-  export type ReportTargetType = 'review' | 'reply' | 'establishment'
+  export type ReportTargetType =
+    'review' | 'reply' | 'establishment' | 'experience' | 'event' | 'showcase_item'
   export type ReportReason =
     | 'spam'
     | 'offensive'
@@ -59,6 +60,8 @@ export namespace IReview {
     id: number
     /** False when the target was deleted after the report was filed. */
     exists: boolean
+    /** Partner content only: the approved title the public sees. */
+    title: string | null
     /** What the moderator reads. Null for an establishment, which has no text. */
     text: string | null
     /** Reviews only. */
@@ -130,7 +133,16 @@ export namespace IReview {
     'review',
     'reply',
     'establishment',
+    'experience',
+    'event',
+    'showcase_item',
   ] as const
+
+  /** The targets that are partner content (ADR-0028), which hide by archiving. */
+  export const PARTNER_CONTENT_TARGETS = ['experience', 'event', 'showcase_item'] as const
+  export type PartnerContentTarget = (typeof PARTNER_CONTENT_TARGETS)[number]
+  export const isPartnerContentTarget = (value: ReportTargetType): value is PartnerContentTarget =>
+    (PARTNER_CONTENT_TARGETS as readonly string[]).includes(value)
 
   export const CANONICAL_REPORT_REASONS: readonly ReportReason[] = [
     'spam',

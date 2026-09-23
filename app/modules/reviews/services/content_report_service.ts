@@ -7,7 +7,9 @@ import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import Establishment from '#modules/establishments/models/establishment'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
-import type IReview from '#modules/reviews/interfaces/review_interface'
+import { discoverableEstablishmentExistsSql } from '#modules/catalog/repositories/catalog_discoverability'
+import PartnerContentService from '#modules/partner_content/services/partner_content_service'
+import IReview from '#modules/reviews/interfaces/review_interface'
 import type ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
@@ -22,7 +24,8 @@ export default class ContentReportService {
     private reportRepository: ContentReportRepository,
     private targetRepository: ContentReportTargetRepository,
     private policyRepository: ReviewPolicyRepository,
-    private organizationPolicy: OrganizationPolicyService
+    private organizationPolicy: OrganizationPolicyService,
+    private partnerContent: PartnerContentService
   ) {}
 
   async createReport(
@@ -154,7 +157,7 @@ export default class ContentReportService {
       await report.save()
 
       if (payload.resolution_action === 'content_hidden') {
-        await this.hideTargetContent(tenantId, report.target_type, report.target_id, client)
+        await this.hideTargetContent(tenantId, report.target_type, report.target_id, actor, client)
       }
 
       return report
@@ -185,6 +188,49 @@ export default class ContentReportService {
         .where('id', targetId)
         .first()
       if (!target) throw new NotFoundException('Report target establishment not found')
+    } else if (IReview.isPartnerContentTarget(targetType)) {
+      await this.requireVisiblePartnerContent(tenantId, targetType, targetId, client)
+    }
+  }
+
+  /**
+   * Partner content is reportable only as the public sees it.
+   *
+   * A report is about something someone read. A draft, an item waiting for
+   * approval, an archived one, or content of an establishment that is not
+   * discoverable was never in front of the reporter, and accepting a report of
+   * it by id would turn the endpoint into a way of asking which identifiers
+   * exist behind the public surface.
+   */
+  private async requireVisiblePartnerContent(
+    tenantId: number,
+    kind: IReview.PartnerContentTarget,
+    id: number,
+    client: any
+  ): Promise<void> {
+    const table = {
+      experience: 'establishment_experiences',
+      event: 'establishment_events',
+      showcase_item: 'establishment_showcase_items',
+    }[kind]
+
+    const result = await client.rawQuery(
+      `
+      SELECT EXISTS (
+        SELECT 1
+          FROM ${table} content
+         WHERE content.tenant_id = ?
+           AND content.id = ?
+           AND content.published_snapshot IS NOT NULL
+           AND content.status <> 'archived'
+           AND EXISTS (${discoverableEstablishmentExistsSql.replace('AND projection.establishment_id = ?', 'AND projection.establishment_id = content.establishment_id')})
+      ) AS visible
+      `,
+      [tenantId, id, tenantId]
+    )
+
+    if (result.rows[0]?.visible !== true) {
+      throw new NotFoundException('Report target not found')
     }
   }
 
@@ -192,8 +238,21 @@ export default class ContentReportService {
     tenantId: number,
     targetType: IReview.ReportTargetType,
     targetId: number,
+    actor: User,
     client: any
   ): Promise<void> {
+    // Partner content is hidden by archiving it, which is what ADR-0028 §4 says
+    // deactivating means. It goes through the partner-content service rather
+    // than an update here, so the archive author, the timestamp and the
+    // projection version move exactly as they do from the moderation screen.
+    if (IReview.isPartnerContentTarget(targetType)) {
+      await this.partnerContent.archive(targetType, tenantId, targetId, actor, {
+        asModerator: true,
+        client,
+      })
+      return
+    }
+
     if (targetType === 'review') {
       await EstablishmentReview.query({ client })
         .where('tenant_id', tenantId)

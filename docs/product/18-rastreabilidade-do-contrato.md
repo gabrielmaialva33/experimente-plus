@@ -95,7 +95,7 @@ Auditoria feita em **23/09/2026**, confrontando cada item do anexo com o código
 
 | Item                                         | Situação  | Onde / observação                                                                                                                                  |
 | -------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Fluxo de denúncia e recursos administrativos | Parcial   | avaliação, resposta e estabelecimento; **experiência, evento e item de vitrine não são denunciáveis**, embora o ADR-0028 tenha decidido que seriam |
+| Fluxo de denúncia e recursos administrativos | Entregue  | avaliação, resposta, estabelecimento, experiência, evento e item de vitrine, numa fila só; ocultar conteúdo do parceiro é arquivá-lo (ADR-0028 §4) |
 | Ocultar ou remover conteúdo proibido         | Entregue  | avaliação e resposta por denúncia; conteúdo do parceiro por arquivamento                                                                           |
 | Parceiro não apaga avaliação nem altera nota | Entregue  |                                                                                                                                                    |
 | **Moderação automática razoável**            | **Falta** | nenhuma regra automática existe                                                                                                                    |
@@ -172,7 +172,7 @@ Todos **pendentes do contratante** em 23/09/2026: comprovação de visita, limit
 Lacunas que dependem só dos contratados, em ordem de risco no aceite:
 
 1. ~~**Usuário banido** — itens 8 e 14.~~ Entregue em 23/09/2026.
-2. **Denúncia de experiência, evento e item de vitrine** — item 9. Já decidida no ADR-0028 e nunca implementada.
+2. ~~**Denúncia de experiência, evento e item de vitrine** — item 9.~~ Entregue em 23/09/2026.
 3. **Fotos na avaliação** — item 8. A política padrão já as habilita.
 4. **Telas de regras de avaliação e de categorias** — item 12.
 5. **Moderação automática razoável** — item 9.

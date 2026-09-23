@@ -1,5 +1,6 @@
 export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed'
-export type ReportTargetType = 'review' | 'reply' | 'establishment'
+export type ReportTargetType =
+  'review' | 'reply' | 'establishment' | 'experience' | 'event' | 'showcase_item'
 export type ReportReason =
   | 'spam'
   | 'offensive'
@@ -42,6 +43,9 @@ export const reportTargetLabels: Record<ReportTargetType, string> = {
   review: 'Avaliação',
   reply: 'Resposta do parceiro',
   establishment: 'Unidade',
+  experience: 'Experiência',
+  event: 'Evento',
+  showcase_item: 'Item de vitrine',
 }
 
 /**
@@ -59,6 +63,8 @@ export const reportResolutionActions: Array<{
   /** True when choosing it changes the content, not only the record. */
   hides: boolean
 }> = [
+  // For partner content, hiding is archiving (ADR-0028 §4): it leaves discovery
+  // and stays on record.
   { value: 'content_hidden', label: 'Ocultar o conteúdo', hides: true },
   { value: 'no_violation', label: 'Sem violação', hides: false },
   { value: 'warning_issued', label: 'Autor advertido', hides: false },

@@ -9,6 +9,7 @@ import EstablishmentEvent from '#modules/partner_content/models/establishment_ev
 import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
 import EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
 import PartnerContentPolicy from '#modules/partner_content/models/partner_content_policy'
+import IReview from '#modules/reviews/interfaces/review_interface'
 import ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
@@ -806,6 +807,35 @@ test.group('Documentation', () => {
       const serialised = JSON.stringify(specification.components!.schemas![schemaName])
       assert.notMatch(serialised, /"(user_id|email|full_name)"/, `${schemaName} names a person`)
     }
+  })
+
+  /**
+   * The report vocabularies come from the validator, not from memory.
+   *
+   * The document said `review_reply` where the validator accepts `reply`, and
+   * `in_review` where it accepts `under_review`. The mobile app is generated
+   * from this document, so it sent `review_reply` and every report of a partner
+   * reply it ever made was refused. Deriving the expectation from the same
+   * constant the validator reads is what stops a hand-written enum drifting
+   * again.
+   */
+  test('keeps every content-report enum equal to the validator', async ({ assert }) => {
+    const specification = await readOpenApi()
+    const schemas = specification.components!.schemas!
+    const targets = [...IReview.CANONICAL_REPORT_TARGET_TYPES]
+    const statuses = [...IReview.CANONICAL_REPORT_STATUSES]
+
+    assert.sameMembers(schemas.CreateReportRequest.properties!.target_type.enum!, targets)
+    assert.sameMembers(schemas.ContentReport.properties!.target_type.enum!, targets)
+    assert.sameMembers(schemas.ContentReport.properties!.status.enum!, statuses)
+
+    const listing = operationAt(specification, '/api/v1/admin/content-reports', 'get')
+    const parameter = (name: string) =>
+      (listing?.parameters as Array<{ name?: string; schema?: { enum?: string[] } }>).find(
+        (candidate) => candidate.name === name
+      )
+    assert.sameMembers(parameter('target_type')!.schema!.enum!, targets)
+    assert.sameMembers(parameter('status')!.schema!.enum!, statuses)
   })
 
   test('locks mobile metadata and corrected runtime semantics', async ({ assert }) => {

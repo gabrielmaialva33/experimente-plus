@@ -199,13 +199,19 @@ export default class PartnerContentService {
     tenantId: number,
     id: number,
     actor: User,
-    { asModerator = false }: { asModerator?: boolean } = {}
+    {
+      asModerator = false,
+      client: outer,
+    }: { asModerator?: boolean; client?: TransactionClientContract } = {}
   ) {
     if (asModerator) {
       await this.organizationPolicy.requirePlatformModerator(actor)
     }
 
-    return db.transaction(async (client) => {
+    // Joins the caller's transaction when given one. Resolving a report with
+    // `content_hidden` archives inside the resolution: two separate
+    // transactions could record the content as hidden while it stays public.
+    const run = async (client: TransactionClientContract) => {
       const content = await this.requireContent(kind, tenantId, id, client, true)
 
       if (!asModerator) {
@@ -223,7 +229,9 @@ export default class PartnerContentService {
       await content.save()
       await this.projectionRepository.bumpTenantVersion(tenantId, client)
       return content
-    })
+    }
+
+    return outer ? run(outer) : db.transaction(run)
   }
 
   async listForPartner(

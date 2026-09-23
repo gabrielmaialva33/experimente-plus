@@ -59,6 +59,7 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
   const targetType = isReportTargetType(rawTargetType) ? rawTargetType : 'review'
   const targetExists = target?.exists === true
   const canHide = target?.can_hide === true && targetExists
+  const targetTitle = nullableText(target, 'title')
   const targetText = nullableText(target, 'text')
   const targetAuthor = nullableText(target, 'author_name')
   const targetEstablishment = nullableText(target, 'establishment_name')
@@ -161,6 +162,7 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
 
         {targetExists ? (
           <div className="mt-2 space-y-2">
+            {targetTitle ? <p className="text-base font-semibold">{targetTitle}</p> : null}
             <p className="text-sm font-semibold">
               {targetAuthor ?? reportTargetLabels[targetType]}
               {targetEstablishment ? (

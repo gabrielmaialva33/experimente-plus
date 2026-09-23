@@ -5,15 +5,22 @@ import ContentReport from '#modules/reviews/models/content_report'
 
 test.group('Content report invariants (ADR-0027)', () => {
   test('recognizes only canonical polymorphic target types', ({ assert }) => {
+    // Partner content joined the queue as ADR-0028 decided; one queue for every
+    // reportable content, never a second one per kind.
     assert.sameMembers(
       [...IReview.CANONICAL_REPORT_TARGET_TYPES],
-      ['review', 'reply', 'establishment']
+      ['review', 'reply', 'establishment', 'experience', 'event', 'showcase_item']
     )
     assert.isTrue(IReview.isReportTargetType('review'))
     assert.isTrue(IReview.isReportTargetType('reply'))
     assert.isTrue(IReview.isReportTargetType('establishment'))
+    assert.isTrue(IReview.isReportTargetType('experience'))
+    assert.isTrue(IReview.isReportTargetType('event'))
+    assert.isTrue(IReview.isReportTargetType('showcase_item'))
     assert.isFalse(IReview.isReportTargetType('user'))
     assert.isFalse(IReview.isReportTargetType('media'))
+    // The value the document once advertised and the validator never accepted.
+    assert.isFalse(IReview.isReportTargetType('review_reply'))
   })
 
   test('recognizes only canonical report reasons', ({ assert }) => {
