@@ -5538,6 +5538,41 @@ components:
           items:
             $ref: '#/components/schemas/ReviewPhoto'
 
+    ReviewAuthorRules:
+      description: >-
+        The rules an author must follow in this operation (ADR-0027 scenario 10).
+        Clients read them rather than hard-coding them, so changing the policy
+        changes what a screen allows without a release.
+      type: object
+      additionalProperties: false
+      required:
+        - min_text_length
+        - max_text_length
+        - max_photos
+        - edit_window_days
+        - min_edit_interval_minutes
+        - daily_limit_per_user
+      properties:
+        min_text_length:
+          type: integer
+          minimum: 0
+        max_text_length:
+          type: integer
+          minimum: 0
+        max_photos:
+          description: 0 means this operation does not accept photos on reviews.
+          type: integer
+          minimum: 0
+        edit_window_days:
+          type: integer
+          minimum: 0
+        min_edit_interval_minutes:
+          type: integer
+          minimum: 0
+        daily_limit_per_user:
+          type: integer
+          minimum: 0
+
     ReviewPhoto:
       description: >-
         A review photo as anyone may see it. The file was stripped of its
@@ -13930,6 +13965,25 @@ paths:
           description: User already reviewed this establishment
         '422':
           description: Validation failed
+
+  /api/v1/me/reviews/rules:
+    get:
+      operationId: getMyReviewRules
+      summary: The review rules of the caller's operation
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Author-facing rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewAuthorRules'
+        '401':
+          description: Authentication required
 
   /api/v1/me/reviews/{id}:
     put:

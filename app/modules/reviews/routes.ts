@@ -19,6 +19,7 @@ router.get('/api/v1/catalog/reviews/:id', [ReviewsController, 'showPublic']).use
 router
   .group(() => {
     router.get('/', [ReviewsController, 'myReviews'])
+    router.get('/rules', [ReviewsController, 'authorRules'])
     router.post('/', [ReviewsController, 'store'])
     router.put('/:id', [ReviewsController, 'update'])
     router.delete('/:id', [ReviewsController, 'destroy'])

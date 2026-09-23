@@ -31,6 +31,22 @@ export namespace IReview {
     alt_text: string | null
   }
 
+  /**
+   * The rules an author has to follow in this operation — ADR-0027 scenario 10.
+   *
+   * The app reads them instead of hard-coding them, so changing the policy
+   * changes what the screen allows without a release. It is the author-facing
+   * subset: nothing here is administrative.
+   */
+  export interface AuthorRules {
+    min_text_length: number
+    max_text_length: number
+    max_photos: number
+    edit_window_days: number
+    min_edit_interval_minutes: number
+    daily_limit_per_user: number
+  }
+
   export interface ReviewPhotoPayload {
     alt_text?: string | null
   }

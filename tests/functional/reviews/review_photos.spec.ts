@@ -296,4 +296,31 @@ test.group('Review photos (ADR-0027, Anexo I item 8)', (group) => {
     queue.assertStatus(200)
     assert.include(queue.text(), JSON.stringify(uploaded.body().url).slice(1, -1))
   })
+
+  test('the app reads the author rules instead of hard-coding them', async ({ client, assert }) => {
+    const scenario = await createEstablishmentScenario('photo-rules')
+    const author = await createUser({ prefix: 'photo-rules-author', tenant: scenario.tenant })
+    const headers = tenantHeader(scenario.tenant.id)
+
+    const anonymous = await client.get('/api/v1/me/reviews/rules').headers(headers)
+    anonymous.assertStatus(401)
+
+    await setMaxPhotos(scenario, 2)
+    const rules = await client.get('/api/v1/me/reviews/rules').headers(headers).loginAs(author)
+    rules.assertStatus(200)
+    assert.sameMembers(Object.keys(rules.body()), [
+      'min_text_length',
+      'max_text_length',
+      'max_photos',
+      'edit_window_days',
+      'min_edit_interval_minutes',
+      'daily_limit_per_user',
+    ])
+    assert.equal(rules.body().max_photos, 2)
+
+    // Changing the policy changes what the screen allows, without a release.
+    await setMaxPhotos(scenario, 0)
+    const changed = await client.get('/api/v1/me/reviews/rules').headers(headers).loginAs(author)
+    assert.equal(changed.body().max_photos, 0)
+  })
 })

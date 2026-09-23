@@ -101,6 +101,10 @@ export default class ReviewsController {
     return this.reportService.resolveReport(tenant!.id, id, auth.getUserOrFail(), payload)
   }
 
+  async authorRules({ tenant }: HttpContext) {
+    return this.policyService.authorRules(tenant!.id)
+  }
+
   async getPolicy({ tenant, auth }: HttpContext) {
     return this.policyService.getPolicy(tenant!.id, auth.getUserOrFail())
   }
