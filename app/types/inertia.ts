@@ -78,6 +78,7 @@ declare module '@adonisjs/inertia/types' {
     'backoffice/benefits/index': Record<string, any>
     'backoffice/benefits/accesses': Record<string, any>
     'backoffice/content/index': Record<string, any>
+    'backoffice/reports/index': Record<string, any>
 
     // Consumer
     'wallet/index': Record<string, any>

@@ -12,6 +12,46 @@ export namespace IReview {
     | 'other'
   export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed'
 
+  /**
+   * The reported content itself, as a moderation queue has to show it.
+   *
+   * A report stores `target_type` and `target_id` and nothing else, which is
+   * the right shape for the table and useless to the person deciding: nobody
+   * can judge whether something is offensive from an identifier. The queue
+   * therefore resolves the target and carries the text alongside the report.
+   *
+   * It is deliberately narrow. The moderator needs to read what was written,
+   * see who wrote it and where, and know whether it is still visible. The
+   * author's email is not part of that and never travels here.
+   */
+  export interface ReportTargetProjection {
+    type: ReportTargetType
+    id: number
+    /** False when the target was deleted after the report was filed. */
+    exists: boolean
+    /** What the moderator reads. Null for an establishment, which has no text. */
+    text: string | null
+    /** Reviews only. */
+    rating: number | null
+    /** The target's own visibility, so an already hidden item is obvious. */
+    status: string | null
+    author_name: string | null
+    establishment_name: string | null
+    /** The pair that builds the public link, never the numeric identity. */
+    city_slug: string | null
+    establishment_slug: string | null
+    created_at: string | null
+    /**
+     * Whether resolving with `content_hidden` actually hides this target.
+     *
+     * Hiding is implemented for reviews and replies. An establishment leaves
+     * the public catalogue through the revision lifecycle of ADR-0015, not
+     * through a report, so the queue must not offer an action that would
+     * silently do nothing.
+     */
+    can_hide: boolean
+  }
+
   export interface ReviewPolicyAttributes {
     id?: number
     tenant_id: number

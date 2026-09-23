@@ -12,6 +12,7 @@ import type ContentReport from '#modules/reviews/models/content_report'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
 import ContentReportRepository from '#modules/reviews/repositories/content_report_repository'
+import ContentReportTargetRepository from '#modules/reviews/repositories/content_report_target_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
 import type User from '#modules/users/models/user'
 
@@ -19,6 +20,7 @@ import type User from '#modules/users/models/user'
 export default class ContentReportService {
   constructor(
     private reportRepository: ContentReportRepository,
+    private targetRepository: ContentReportTargetRepository,
     private policyRepository: ReviewPolicyRepository,
     private organizationPolicy: OrganizationPolicyService
   ) {}
@@ -88,6 +90,45 @@ export default class ContentReportService {
   async listReports(tenantId: number, actor: User, query: IReview.ListReportsQuery) {
     await this.organizationPolicy.requirePlatformModerator(actor)
     return this.reportRepository.paginateForTenant(tenantId, query)
+  }
+
+  /**
+   * The same queue, with the reported content resolved beside each report.
+   *
+   * It exists separately from `listReports` because the JSON contract of
+   * `/api/v1/admin/content-reports` is published and pinned by a parity test,
+   * and widening it to serve one screen would make every consumer pay for a
+   * join it did not ask for. The screen needs the text; the API does not have
+   * to grow to say so.
+   */
+  async listReportsForModeration(
+    tenantId: number,
+    actor: User,
+    query: IReview.ListReportsQuery
+  ): Promise<{
+    meta: Record<string, unknown>
+    data: Array<Record<string, unknown>>
+  }> {
+    const page = await this.listReports(tenantId, actor, query)
+    const reports = page.all()
+    const targets = await this.targetRepository.projectFor(tenantId, reports)
+
+    return {
+      meta: page.getMeta(),
+      data: reports.map((report) => ({
+        ...report.serialize(),
+        // `serialize()` honours the model: the origin hashes are never
+        // serialised, and the reporter arrives only through the preloaded
+        // relation below, narrowed to what a queue has to show.
+        reporter: report.reporter
+          ? { id: report.reporter.id, full_name: report.reporter.full_name }
+          : null,
+        resolver: report.resolver
+          ? { id: report.resolver.id, full_name: report.resolver.full_name }
+          : null,
+        target: targets.get(report.id) ?? null,
+      })),
+    }
   }
 
   async resolveReport(

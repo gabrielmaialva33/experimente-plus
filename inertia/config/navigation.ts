@@ -371,6 +371,15 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     includeChildren: true,
   },
   {
+    id: 'backoffice-reports',
+    pattern: '/backoffice/reports',
+    surface: 'backoffice',
+    title: 'Denúncias de conteúdo',
+    description: 'Avaliações, respostas e unidades reportadas por quem usa o catálogo.',
+    capability: 'establishments.list',
+    breadcrumbs: [{ label: 'Denúncias de conteúdo' }],
+  },
+  {
     id: 'backoffice-moderation-review',
     pattern: '/backoffice/moderation/:revisionId',
     surface: 'backoffice',

@@ -9,6 +9,8 @@ const BackofficePortalController = () =>
   import('#modules/portal/controllers/backoffice_portal_controller')
 const PartnerContentPagesController = () =>
   import('#modules/partner_content/controllers/partner_content_pages_controller')
+const ContentReportPagesController = () =>
+  import('#modules/reviews/controllers/content_report_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
@@ -182,6 +184,25 @@ router
       .patch('/feedback/:feedbackId', [BackofficePortalController, 'reviewFeedback'])
       .as('backoffice.feedback.update')
       .use(permission(IPermission.Resources.PILOT_FEEDBACK, IPermission.Actions.UPDATE))
+
+    /**
+     * Content reports — ADR-0027.
+     *
+     * They are guarded by the establishment permissions the neighbouring
+     * queues use, because that is what the platform moderators who work this
+     * screen already hold, and because inventing a `content_reports` resource
+     * would mean seeding it and back-filling every role for one screen. The
+     * service still requires a platform moderator of its own accord, so the
+     * permission narrows who reaches the page rather than deciding it.
+     */
+    router
+      .get('/reports', [ContentReportPagesController, 'index'])
+      .as('backoffice.reports.index')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.LIST))
+    router
+      .post('/reports/:id/resolve', [ContentReportPagesController, 'resolve'])
+      .as('backoffice.reports.resolve')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
   })
   .prefix('/backoffice')
   .use(middleware.auth({ guards: ['jwt'] }))
