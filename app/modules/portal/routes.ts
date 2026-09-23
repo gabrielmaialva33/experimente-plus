@@ -206,12 +206,14 @@ router
     /**
      * Content reports — ADR-0027.
      *
-     * They are guarded by the establishment permissions the neighbouring
-     * queues use, because that is what the platform moderators who work this
-     * screen already hold, and because inventing a `content_reports` resource
-     * would mean seeding it and back-filling every role for one screen. The
-     * service still requires a platform moderator of its own accord, so the
-     * permission narrows who reaches the page rather than deciding it.
+     * The route permission here is the one the neighbouring queues carry, and
+     * it keeps out no one: the ordinary `user` role holds `establishments.list`
+     * and `establishments.update`, because any person may become a partner and
+     * manage their own unit. The gate that decides is `requirePlatformModerator`
+     * in the service, which every action on this queue calls, and the
+     * functional suite pins the 403 for partners and ordinary users. Do not read
+     * the permission below as protection, and do not remove the service check
+     * on the strength of it.
      */
     router
       .get('/reports', [ContentReportPagesController, 'index'])

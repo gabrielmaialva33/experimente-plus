@@ -20,10 +20,10 @@ import {
  * scope says the administrator approves, edits, deactivates or deletes, which
  * is a statement about a person, not about an endpoint.
  *
- * Authorization is enforced twice on purpose. The route carries the permission
- * the neighbouring queues carry, and the service independently requires a
- * platform moderator: the page is a second door onto the same decision, and a
- * second door with a weaker lock is how a queue becomes a way in.
+ * Authorization is decided in the service, which requires a platform
+ * moderator. The route permission admits every authenticated person, since the
+ * ordinary role holds the establishment permissions partners need, so this
+ * controller must never grow an action that skips the service.
  */
 @inject()
 export default class ContentReportPagesController {
