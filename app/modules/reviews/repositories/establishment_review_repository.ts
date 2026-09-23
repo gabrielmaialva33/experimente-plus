@@ -124,6 +124,30 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     return rows.paginate(page, perPage)
   }
 
+  /**
+   * The reviews among these that an automatic rule is holding and nobody has
+   * decided yet.
+   *
+   * A held review is `hidden`, like one a moderator hid on its merits; what
+   * tells them apart is an open automatic report that holds it. The author is
+   * owed the difference: "under review" and "hidden by moderation" are not the
+   * same news.
+   */
+  async awaitingModeration(tenantId: number, reviewIds: number[]): Promise<Set<number>> {
+    if (reviewIds.length === 0) return new Set()
+    const rows = await db
+      .from('content_reports')
+      .where('tenant_id', tenantId)
+      .where('target_type', 'review')
+      .whereIn('target_id', reviewIds)
+      .where('origin', 'automatic')
+      .where('holds_content', true)
+      .whereIn('status', ['pending', 'under_review'])
+      .distinct('target_id')
+
+    return new Set(rows.map((row) => Number(row.target_id)))
+  }
+
   async paginateForUser(tenantId: number, userId: number, query: IReview.ListReviewsQuery) {
     const rows = EstablishmentReview.query()
       .where('tenant_id', tenantId)

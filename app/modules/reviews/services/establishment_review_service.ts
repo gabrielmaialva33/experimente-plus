@@ -214,7 +214,22 @@ export default class EstablishmentReviewService {
   }
 
   async listMyReviews(tenantId: number, actor: User, query: IReview.ListReviewsQuery) {
-    return this.reviewRepository.paginateForUser(tenantId, actor.id, query)
+    const page = await this.reviewRepository.paginateForUser(tenantId, actor.id, query)
+    const reviews = page.all()
+    const held = await this.reviewRepository.awaitingModeration(
+      tenantId,
+      reviews.filter((review) => review.status === 'hidden').map((review) => review.id)
+    )
+
+    return {
+      meta: page.getMeta(),
+      data: reviews.map((review) => ({
+        ...review.serialize(),
+        // Only the author's own listing says this. It reveals that a rule
+        // fired, which the author may know and a stranger has no business to.
+        awaiting_moderation: held.has(review.id),
+      })),
+    }
   }
 
   private normalizeText(value: string | null | undefined): string | null {

@@ -5967,6 +5967,33 @@ components:
         meta:
           $ref: '#/components/schemas/AdministrativePaginationMeta'
 
+    MyReview:
+      description: >-
+        A review as its author sees it. `awaiting_moderation` is true when an
+        automatic rule is holding the review and no person has decided yet: the
+        review is `hidden`, but it is under review, not hidden on its merits.
+        Only the author's own listing carries it.
+      allOf:
+        - $ref: '#/components/schemas/EstablishmentReview'
+        - type: object
+          required: [awaiting_moderation]
+          properties:
+            awaiting_moderation:
+              type: boolean
+
+    PaginatedMyReviewsResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyReview'
+        meta:
+          $ref: '#/components/schemas/AdministrativePaginationMeta'
+
     PaginatedContentReportsResponse:
       type: object
       required:
@@ -14273,7 +14300,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedReviewsResponse'
+                $ref: '#/components/schemas/PaginatedMyReviewsResponse'
         '401':
           description: Authentication required
     post:
