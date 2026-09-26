@@ -106,6 +106,18 @@ describe('SettingsPage', () => {
     expect(mocks.setTheme).toHaveBeenCalledWith('dark')
   })
 
+  // At 390 px four line tabs ran off the page; pills in a 2×2 grid fit, one row from sm.
+  it('lays the section tabs out as pills that never scroll the page on a phone', () => {
+    mocks.tenants = [{ id: 9, name: 'Norte do Paraná', role: 'owner' }]
+    render(<SettingsPage profile={profile} />)
+
+    const tabs = screen.getByRole('tablist', { name: 'Seções da conta' })
+    // The list rounds every tab it holds (`[&_[role=tab]]:rounded-full`).
+    expect(tabs).toHaveClass('grid', 'grid-cols-2', 'sm:flex', '[&_[role=tab]]:rounded-full')
+    expect(tabs).not.toHaveClass('border-b')
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
+  })
+
   it('requires typed confirmation and a destructive dialog before account deletion', async () => {
     const { user } = render(<SettingsPage profile={profile} />)
 

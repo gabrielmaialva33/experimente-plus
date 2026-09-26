@@ -6,7 +6,7 @@ import {
   Loader2,
   Monitor,
   Moon,
-  ShieldAlert,
+  Settings,
   Sun,
   Trash2,
   type LucideIcon,
@@ -81,7 +81,8 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} aria-busy={form.processing} className="space-y-5">
-          <div className="grid gap-5 sm:grid-cols-2">
+          {/* One column: the username hint would push its input below its neighbour's. */}
+          <div className="grid gap-5">
             <EditorField
               htmlFor="settings-full-name"
               label="Nome completo"
@@ -463,14 +464,20 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
 
       <div className="space-y-6">
         <PageHeader
-          icon={ShieldAlert}
+          icon={Settings}
           eyebrow="Minha conta"
           title="Conta e preferências"
           description="Gerencie seus dados pessoais, a aparência da interface e as opções de segurança realmente disponíveis."
         />
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
-          <TabsList variant="line" aria-label="Seções da conta">
+          {/* Pills in a 2×2 grid on a phone, one row from sm: four tabs never scroll the page. */}
+          <TabsList
+            variant="button"
+            shape="pill"
+            aria-label="Seções da conta"
+            className="grid grid-cols-2 sm:flex sm:flex-wrap"
+          >
             <TabsTrigger value="profile">Dados pessoais</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             {showOperations ? <TabsTrigger value="operations">Operações</TabsTrigger> : null}
