@@ -15,6 +15,7 @@ import {
   type PartnerContentPath,
   type PartnerContentStatus,
 } from '~/lib/partner_content'
+import { timeZoneLabel } from '~/lib/time_zones'
 import {
   describeChanges,
   partnerContentEventLabels,
@@ -67,7 +68,7 @@ export function PartnerContentAdminEditor({
 
   if (!open) {
     return (
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="md" shape="pill" onClick={() => setOpen(true)}>
         <Pencil aria-hidden="true" className="size-3.5" />
         Corrigir
       </Button>
@@ -104,7 +105,7 @@ export function PartnerContentAdminEditor({
     <form
       onSubmit={submit}
       aria-label="Corrigir conteúdo"
-      className="mt-4 grid gap-4 rounded-md border border-border bg-muted/30 p-4"
+      className="mt-4 grid w-full gap-4 rounded-xl bg-muted/50 p-4"
     >
       <p className="text-sm leading-6" data-testid={prefix + '-effect'}>
         {status === 'published'
@@ -142,7 +143,7 @@ export function PartnerContentAdminEditor({
           <EditorField
             htmlFor={prefix + '-starts'}
             label="Início"
-            hint={'No fuso da cidade (' + zone + ')'}
+            hint={'No fuso da cidade: ' + timeZoneLabel(zone)}
           >
             <Input
               id={prefix + '-starts'}
@@ -181,14 +182,15 @@ export function PartnerContentAdminEditor({
       ) : null}
 
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={processing || !form.title.trim()}>
+        <Button type="submit" size="md" shape="pill" disabled={processing || !form.title.trim()}>
           {processing ? <Loader2 aria-hidden="true" className="size-3.5 animate-spin" /> : null}
           Salvar correção
         </Button>
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="md"
+          shape="pill"
           disabled={processing}
           onClick={() => setOpen(false)}
         >
@@ -240,7 +242,14 @@ export function PartnerContentHistory({
   if (events === null) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <Button type="button" variant="ghost" size="sm" disabled={loading} onClick={load}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="md"
+          shape="pill"
+          disabled={loading}
+          onClick={load}
+        >
           {loading ? (
             <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
           ) : (

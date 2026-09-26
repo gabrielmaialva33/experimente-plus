@@ -7,6 +7,7 @@ import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { collection, numeric, text, type JsonRecord } from '~/lib/json'
 import type { FieldSpec } from '~/lib/resource_form'
+import { BRAZILIAN_TIME_ZONES, timeZoneLabel } from '~/lib/time_zones'
 
 interface GeographyPageProps {
   regions: unknown
@@ -14,26 +15,17 @@ interface GeographyPageProps {
 }
 
 /**
- * Brazilian time zones by the name people use (audit W63), stored as the IANA
- * identifier the server keeps. A stored zone outside the list stays selectable
- * under its own identifier, so editing a city never changes it by accident.
+ * A stored zone outside the known list stays selectable under its own
+ * identifier, so editing a city never changes it by accident.
  */
-const TIMEZONES: Array<{ value: string; label: string }> = [
-  { value: 'America/Sao_Paulo', label: 'Horário de Brasília' },
-  { value: 'America/Manaus', label: 'Horário do Amazonas (−1h)' },
-  { value: 'America/Rio_Branco', label: 'Horário do Acre (−2h)' },
-  { value: 'America/Noronha', label: 'Horário de Fernando de Noronha (+1h)' },
-]
-
-export function timezoneLabel(value: string): string {
-  return TIMEZONES.find((zone) => zone.value === value)?.label ?? value
-}
-
 function timezoneOptions(cities: JsonRecord[]) {
   const stored = cities
     .map((city) => text(city, 'timezone'))
-    .filter((zone) => zone && !TIMEZONES.some((known) => known.value === zone))
-  return [...TIMEZONES, ...[...new Set(stored)].map((zone) => ({ value: zone, label: zone }))]
+    .filter((zone) => zone && !BRAZILIAN_TIME_ZONES.some((known) => known.value === zone))
+  return [
+    ...BRAZILIAN_TIME_ZONES,
+    ...[...new Set(stored)].map((zone) => ({ value: zone, label: zone })),
+  ]
 }
 
 const regionFields: FieldSpec[] = [
@@ -138,7 +130,7 @@ export default function BackofficeGeography({ regions, cities }: GeographyPagePr
 
   const describeCity = (row: JsonRecord) => ({
     name: `${text(row, 'name')} · ${text(row, 'state_code')}`,
-    meta: [regionName.get(numeric(row, 'region_id')), timezoneLabel(text(row, 'timezone'))]
+    meta: [regionName.get(numeric(row, 'region_id')), timeZoneLabel(text(row, 'timezone'))]
       .filter(Boolean)
       .join(' · '),
   })

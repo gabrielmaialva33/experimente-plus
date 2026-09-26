@@ -35,6 +35,16 @@ describe('PartnerContentAdminEditor', () => {
     )
   })
 
+  // Audit W43: the zone reads as people say it, not as an IANA identifier.
+  it('names the city zone of an event as Horário de Brasília', () => {
+    render(<PartnerContentAdminEditor {...base} kind="events" status="published" />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Corrigir/ }))
+
+    expect(screen.getByText('No fuso da cidade: Horário de Brasília')).toBeInTheDocument()
+    expect(screen.queryByText(/America\/Sao_Paulo/)).not.toBeInTheDocument()
+  })
+
   it('says a draft stays where the partner left it', () => {
     render(<PartnerContentAdminEditor {...base} status="draft" />)
 
@@ -128,9 +138,7 @@ describe('PartnerContentHistory', () => {
       }),
     })
 
-    render(
-      <PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />
-    )
+    render(<PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />)
     expect(fetchMock).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: /Histórico/ }))
@@ -152,9 +160,7 @@ describe('PartnerContentHistory', () => {
   it('says so when the history cannot be loaded', async () => {
     fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) })
 
-    render(
-      <PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />
-    )
+    render(<PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />)
     fireEvent.click(screen.getByRole('button', { name: /Histórico/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/Não foi possível/)
