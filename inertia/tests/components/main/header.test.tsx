@@ -59,6 +59,18 @@ describe('Header mobile navigation', () => {
     expect(screen.getByRole('button', { name: 'Fechar navegação' })).toBeVisible()
   })
 
+  it('draws the mobile drawer on the chrome, its close button never white on white', async () => {
+    const { user } = render(<Header surface="portal" />)
+
+    await user.click(screen.getByRole('button', { name: 'Abrir navegação' }))
+
+    const drawer = screen.getByRole('dialog', { name: 'Navegação principal' })
+    expect(drawer).toHaveClass('bg-chrome', 'text-chrome-foreground')
+    const close = screen.getByRole('button', { name: 'Fechar navegação' })
+    expect(close).toHaveClass('text-chrome-foreground', 'data-[state=open]:bg-chrome-hover')
+    expect(close).not.toHaveClass('data-[state=open]:bg-secondary')
+  })
+
   it('hides the operation surface from a USER with shared Portal permissions', async () => {
     authState.user = { id: 1, full_name: 'Parceira Local', email: 'parceira@example.test' }
     authState.activeTenantId = 7

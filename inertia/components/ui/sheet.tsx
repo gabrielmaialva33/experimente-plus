@@ -60,6 +60,8 @@ interface SheetContentProps
   overlay?: boolean
   close?: boolean
   closeLabel?: string
+  /** Restyles the close button, e.g. for a sheet drawn on the authenticated chrome. */
+  closeClassName?: string
 }
 
 function SheetContent({
@@ -67,6 +69,7 @@ function SheetContent({
   overlay = true,
   close = true,
   closeLabel = 'Fechar',
+  closeClassName,
   className,
   children,
   ...props
@@ -79,7 +82,10 @@ function SheetContent({
         {close && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
-            className="absolute end-5 top-[calc(1rem+env(safe-area-inset-top))] cursor-pointer rounded-sm opacity-60 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
+            className={cn(
+              'absolute end-5 top-[calc(1rem+env(safe-area-inset-top))] cursor-pointer rounded-sm opacity-60 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary',
+              closeClassName
+            )}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">{closeLabel}</span>

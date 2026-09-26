@@ -75,11 +75,13 @@ export function SidebarNav({
             aria-labelledby={collapsed ? undefined : `navigation-${sectionIndex}`}
           >
             {collapsed ? (
-              sectionIndex > 0 && <div aria-hidden="true" className="mx-3 mb-3 h-px bg-border/70" />
+              sectionIndex > 0 && (
+                <div aria-hidden="true" className="mx-3 mb-3 h-px bg-chrome-muted/30" />
+              )
             ) : (
               <h2
                 id={`navigation-${sectionIndex}`}
-                className="mb-1.5 px-3 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75"
+                className="mb-1.5 px-3 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-chrome-muted"
               >
                 {section.label}
               </h2>
@@ -98,22 +100,17 @@ export function SidebarNav({
                     title={collapsed ? item.label : undefined}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'group relative flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors',
+                      'group relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-[0.9375rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-active focus-visible:ring-offset-2 focus-visible:ring-offset-chrome motion-reduce:transition-none',
                       collapsed && 'justify-center px-0',
                       active
-                        ? 'bg-primary-soft text-primary-accent'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                        ? 'bg-chrome-active font-bold text-chrome-active-foreground'
+                        : 'font-medium text-chrome-foreground hover:bg-chrome-hover'
                     )}
                   >
-                    {active && (
-                      <span className="absolute start-0 h-5 w-0.5 rounded-e-full bg-primary" />
-                    )}
                     <span
                       className={cn(
                         'flex size-7 shrink-0 items-center justify-center rounded-md transition-colors',
-                        active
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground group-hover:text-foreground'
+                        active ? 'text-chrome-active-foreground' : 'text-chrome-foreground'
                       )}
                     >
                       <Icon className="size-[1.05rem]" />
@@ -143,10 +140,12 @@ function SidebarWorkspace({
 
   if (!activeTenant) {
     return (
-      <div className={cn('border-t border-border/70 p-3', collapsed && 'flex justify-center')}>
+      <div
+        className={cn('border-t border-chrome-muted/25 p-3', collapsed && 'flex justify-center')}
+      >
         <div
           className={cn(
-            'flex items-center gap-3 rounded-md bg-muted p-3 text-muted-foreground',
+            'flex items-center gap-3 rounded-xl bg-chrome-hover p-3 text-chrome-muted',
             collapsed && 'size-10 justify-center p-0'
           )}
           title={collapsed ? 'Nenhuma operação ativa' : undefined}
@@ -159,21 +158,21 @@ function SidebarWorkspace({
   }
 
   return (
-    <div className={cn('border-t border-border/70 p-3', collapsed && 'flex justify-center')}>
+    <div className={cn('border-t border-chrome-muted/25 p-3', collapsed && 'flex justify-center')}>
       <div
         className={cn(
-          'flex min-w-0 items-center gap-3 rounded-md border border-border bg-background p-3',
+          'flex min-w-0 items-center gap-3 rounded-xl bg-chrome-hover p-3 text-chrome-foreground',
           collapsed && 'size-10 justify-center p-0'
         )}
         title={collapsed ? activeTenant.name : undefined}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-xs font-bold text-primary-accent">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-chrome-active text-xs font-extrabold text-chrome-active-foreground">
           {initialsOf(activeTenant.name)}
         </span>
         {!collapsed && (
           <span className="min-w-0">
-            <span className="block truncate text-xs font-semibold">{activeTenant.name}</span>
-            <span className="block truncate text-[0.68rem] text-muted-foreground">
+            <span className="block truncate text-xs font-bold">{activeTenant.name}</span>
+            <span className="block truncate text-[0.68rem] text-chrome-muted">
               {operationRoleLabel(activeTenant.role)}
             </span>
           </span>
@@ -193,17 +192,17 @@ export function Sidebar({ surface, isCollapsed = false, onToggle }: SidebarProps
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 start-0 z-50 hidden border-e border-border bg-card transition-[width] duration-300 lg:flex lg:flex-col',
+        'fixed inset-y-0 start-0 z-50 hidden bg-chrome text-chrome-foreground transition-[width] duration-300 motion-reduce:transition-none lg:flex lg:flex-col',
         isCollapsed ? 'w-[84px]' : 'w-[272px]'
       )}
     >
       <div
         className={cn(
-          'relative flex h-[72px] shrink-0 items-center border-b border-border/70 px-5',
+          'relative flex h-[72px] shrink-0 items-center border-b border-chrome-muted/25 px-5',
           isCollapsed && 'justify-center px-0'
         )}
       >
-        <AppBrand href="/" collapsed={isCollapsed} />
+        <AppBrand href="/" collapsed={isCollapsed} tone="inverse" />
         <Button
           type="button"
           variant="outline"

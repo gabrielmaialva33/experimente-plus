@@ -451,6 +451,7 @@ describe('flat foundation token contract', () => {
     expect(display).toContain('ui-sans-serif')
     expect(tailwindCss).toContain('--radius-card: 1.25rem')
     expect(tailwindCss).toContain('--color-border-subtle: var(--border-subtle)')
+    expect(tailwindCss).toContain('--color-chrome: var(--chrome)')
   })
 
   it.each([':root', '.dark'])(
@@ -472,6 +473,31 @@ describe('flat foundation token contract', () => {
           `${text}/${fill}`
         ).toBeGreaterThanOrEqual(4.5)
       }
+    }
+  )
+
+  it.each([':root', '.dark'])(
+    '%s keeps the authenticated chrome readable and its active item unmistakable',
+    (selector) => {
+      const block = blockFor(selector)
+      for (const [fill, text] of [
+        ['chrome', 'chrome-foreground'],
+        ['chrome', 'chrome-muted'],
+        ['chrome-hover', 'chrome-foreground'],
+        ['chrome-hover', 'chrome-muted'],
+        ['chrome-active', 'chrome-active-foreground'],
+      ]) {
+        expect(
+          contrastRatio(colorToken(block, fill), colorToken(block, text)),
+          `${text}/${fill}`
+        ).toBeGreaterThanOrEqual(4.5)
+      }
+      expect(
+        contrastRatio(colorToken(block, 'chrome-active'), colorToken(block, 'chrome'))
+      ).toBeGreaterThanOrEqual(3)
+      expect(
+        contrastRatio(colorToken(block, 'chrome'), colorToken(block, 'background'))
+      ).toBeGreaterThanOrEqual(1.15)
     }
   )
 

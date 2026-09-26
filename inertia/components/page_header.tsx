@@ -34,19 +34,21 @@ export function PageHeader({
     >
       <div className="flex min-w-0 items-start gap-3">
         {Icon && (
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
             <Icon className="size-5" aria-hidden="true" />
           </span>
         )}
         <div className="min-w-0">
           {eyebrow && (
-            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+            <p className="mb-1 text-[0.8125rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="font-display text-[1.875rem] font-extrabold leading-tight tracking-[-0.02em] sm:text-[2.125rem]">
+            {title}
+          </h1>
           {description && (
-            <p className="mt-1.5 max-w-3xl text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1.5 max-w-3xl text-[0.9375rem] text-muted-foreground">{description}</p>
           )}
           {meta && <div className="mt-3 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>

@@ -66,6 +66,16 @@
     --ring: oklch(0.45 0.12 253.364477316);
 
     --scrim: oklch(0.133386 0.015892 273.521);
+
+    /* Authenticated chrome (portal and backoffice sidebar): the brand navy, white text,
+     * the active item as a white plate carrying navy text. */
+    --chrome: var(--primary);
+    --chrome-foreground: var(--primary-foreground);
+    --chrome-muted: oklch(0.86 0.045 252);
+    --chrome-hover: var(--primary-hover);
+    --chrome-active: var(--surface-raised);
+    --chrome-active-foreground: var(--primary);
+
     --radius: 0.75rem;
     --elevation-raised: none;
     --elevation-overlay: 0 2px 0 var(--border);
@@ -178,6 +188,14 @@
     --border: oklch(0.410811 0.063788 274.616);
     --border-subtle: oklch(0.33 0.05 274.6);
     --input: oklch(0.681873 0.045602 276.24);
+
+    /* A deep blue chrome, distinct from the indigo canvas; the active item takes the light brand blue. */
+    --chrome: oklch(0.27 0.055 262);
+    --chrome-foreground: var(--foreground);
+    --chrome-muted: oklch(0.82 0.05 250);
+    --chrome-hover: oklch(0.33 0.06 262);
+    --chrome-active: var(--primary);
+    --chrome-active-foreground: var(--primary-foreground);
     --ring: oklch(0.743392 0.110862 251.054);
 
     --elevation-raised: none;

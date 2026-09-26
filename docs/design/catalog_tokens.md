@@ -24,7 +24,7 @@ Fundamentação: [CSS Color 4 / OKLab e OKLCH](https://www.w3.org/TR/css-color-4
 | E2 — sobreposição transitória | `--surface-overlay` / `--popover`            | Menu, popover, dialog/sheet e select aberto; nunca faixa da página       | P2, P7    |
 | Contexto — alias legado       | `--surface-context` / `--context-foreground` | Resolve para background/foreground; não cria outro papel                 | P12       |
 
-Claro: E0 `oklch(0.969195527 0.003425761 247.858256445)` / `#f3f5f7`; E1 branco puro; E2 branco puro, separado por borda e contato duro de 2 px. E2 não precisa superar a claridade do branco: sua relação de elevação vem de sobreposição transitória e contorno. Escuro conserva E0/E1/E2 crescentes e passa a usar E0 também no chrome fixo. Fotos reais conservam suas cores originais.
+Claro: E0 `oklch(0.969195527 0.003425761 247.858256445)` / `#f3f5f7`; E1 branco puro; E2 branco puro, separado por borda e contato duro de 2 px. E2 não precisa superar a claridade do branco: sua relação de elevação vem de sobreposição transitória e contorno. Escuro conserva E0/E1/E2 crescentes e usa E0 no chrome fixo do público e da carteira; a barra lateral autenticada (portal e backoffice) usa o `--chrome` da direção A — azul da marca no claro, azul profundo no escuro. Fotos reais conservam suas cores originais.
 
 Raios web: `--radius: 0.75rem`; `rounded-sm/md/lg` = 4/8/12 px; `xl` é alias de 12 px, não um quarto degrau. No app: 4/8/12 unidades lógicas. `rounded-full` somente para círculos/pílulas. `--elevation-raised: none`; `--elevation-overlay: 0 2px 0 var(--border)`. App pode representar o contato com borda inferior de 2 unidades, sem elevação nativa difusa. Scrim modal: `--scrim` a 60%, sem blur; o plano inferior fica inerte. Foco: `--ring`, anel de 2 px; preservar o afastamento de 2 px onde já aplicado.
 
@@ -86,6 +86,9 @@ Cada célula traz **CSS OKLCH exato / HEX sRGB de 8 bits**. O app deve usar o HE
 | `--destructive-accent`           | `oklch(0.44 0.15 28)` / `#94221d`                          | `oklch(0.812146 0.095733 19.3507)` / `#f9a9a9` | P5, P6                                |
 | `--border`                       | `oklch(0.84 0.008 255)` / `#c7cbd0`                        | `oklch(0.410811 0.063788 274.616)` / `#40486d` | P2, P3                                |
 | `--border-subtle`                | `oklch(0.908 0.008 255)` / `#dde1e6`                       | `oklch(0.33 0.05 274.6)` / `#2e334f`           | P2 (card outline only)                |
+| `--chrome`                       | `var(--primary)`                                           | `oklch(0.27 0.055 262)` / `#172641`            | Sidebar do portal e do backoffice     |
+| `--chrome-muted`                 | `oklch(0.86 0.045 252)` / `#bcd4ee`                        | `oklch(0.82 0.05 250)` / `#acc7e4`             | Texto secundário sobre o chrome       |
+| `--chrome-hover`                 | `var(--primary-hover)`                                     | `oklch(0.33 0.06 262)` / `#243554`             | Item do chrome sob o ponteiro         |
 | `--input`                        | `oklch(0.57 0.012 255)` / `#73787f`                        | `oklch(0.681873 0.045602 276.24)` / `#9197b6`  | P6                                    |
 | `--ring`                         | `oklch(0.45 0.12 253.364477316)` / `#1a5695`               | `oklch(0.743392 0.110862 251.054)` / `#75b0f0` | P6                                    |
 | `--scrim`                        | `oklch(0.133386 0.015892 273.521)` / `#06070e`             | `oklch(0.133386 0.015892 273.521)` / `#06070e` | P7                                    |

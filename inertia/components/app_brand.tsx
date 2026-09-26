@@ -8,14 +8,25 @@ interface AppBrandProps {
   href?: string
   className?: string
   onNavigate?: () => void
+  /** `inverse` sits on the authenticated chrome: a light plate for the mark, light text. */
+  tone?: 'default' | 'inverse'
 }
 
-export function BrandMark({ className }: { className?: string }) {
+export function BrandMark({
+  className,
+  tone = 'default',
+}: {
+  className?: string
+  tone?: 'default' | 'inverse'
+}) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground',
+        'flex size-9 shrink-0 items-center justify-center rounded-md border',
+        tone === 'inverse'
+          ? 'border-chrome-active bg-chrome-active text-chrome-active-foreground'
+          : 'border-primary bg-primary text-primary-foreground',
         className
       )}
     >
@@ -29,6 +40,7 @@ export function AppBrand({
   href = '/dashboard',
   className,
   onNavigate,
+  tone = 'default',
 }: AppBrandProps) {
   const application = useApp()
 
@@ -39,13 +51,18 @@ export function AppBrand({
       aria-label={application.name}
       className={cn('flex min-w-0 items-center gap-3', className)}
     >
-      <BrandMark />
+      <BrandMark tone={tone} />
       {!collapsed && (
         <span className="min-w-0">
-          <span className="block truncate text-[1.05rem] font-bold tracking-[-0.03em]">
+          <span className="block truncate font-display text-[1.125rem] font-extrabold tracking-[-0.02em]">
             {application.name}
           </span>
-          <span className="block truncate text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          <span
+            className={cn(
+              'block truncate text-[0.68rem] font-semibold uppercase tracking-[0.14em]',
+              tone === 'inverse' ? 'text-chrome-muted' : 'text-muted-foreground'
+            )}
+          >
             Descoberta regional
           </span>
         </span>

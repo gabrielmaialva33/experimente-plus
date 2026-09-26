@@ -45,6 +45,12 @@
   --color-scrim: var(--scrim);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
+  --color-chrome: var(--chrome);
+  --color-chrome-foreground: var(--chrome-foreground);
+  --color-chrome-muted: var(--chrome-muted);
+  --color-chrome-hover: var(--chrome-hover);
+  --color-chrome-active: var(--chrome-active);
+  --color-chrome-active-foreground: var(--chrome-active-foreground);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-surface-base: var(--surface-base);

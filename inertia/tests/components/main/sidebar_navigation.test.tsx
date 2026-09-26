@@ -152,4 +152,18 @@ describe('SidebarNav', () => {
     expect(screen.queryByText('Fila de moderação')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Usuários' })).toHaveAttribute('aria-current', 'page')
   })
+
+  it('draws the sidebar on the authenticated chrome, the current item as a light plate', () => {
+    mocks.url = '/portal'
+    mocks.permissions = ['benefit_offers.read']
+
+    render(<SidebarNav surface="portal" />)
+
+    const current = screen.getByRole('link', { name: 'Visão geral' })
+    expect(current).toHaveClass('bg-chrome-active', 'text-chrome-active-foreground', 'font-bold')
+    expect(current).toHaveClass('min-h-11')
+    const other = screen.getByRole('link', { name: 'Utilizações' })
+    expect(other).toHaveClass('text-chrome-foreground', 'hover:bg-chrome-hover')
+    expect(other).not.toHaveClass('bg-chrome-active')
+  })
 })
