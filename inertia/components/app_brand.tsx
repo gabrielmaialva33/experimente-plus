@@ -37,7 +37,7 @@ export function BrandMark({
 
 export function AppBrand({
   collapsed = false,
-  href = '/dashboard',
+  href = '/',
   className,
   onNavigate,
   tone = 'default',

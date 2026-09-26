@@ -4,7 +4,7 @@ import IRole from '#modules/roles/interfaces/role_interface'
 import { resolveActiveTenantId } from '#shared/utils/active_tenant'
 
 export type AuthenticatedLandingPath =
-  '/dashboard' | '/backoffice/moderation' | '/portal' | '/wallet' | '/cidades'
+  '/backoffice/today' | '/backoffice/moderation' | '/portal' | '/wallet' | '/cidades'
 
 type AuthenticatedLandingContext = {
   activeTenantId?: number | null
@@ -16,6 +16,9 @@ type AuthenticatedLandingContext = {
  * Returns one of the application's closed, server-authorized landing routes.
  * Partner access deliberately comes from an organization membership, never
  * from a global role or a broad permission such as `dashboard.read`.
+ *
+ * Administrators open on "Hoje", what the operation has to resolve today; the
+ * indicator dashboard stays at `/dashboard`, one item away in the sidebar.
  */
 export function authenticatedLandingPath({
   activeTenantId,
@@ -26,7 +29,7 @@ export function authenticatedLandingPath({
 
   const roles = new Set(roleSlugs)
   if (roles.has(IRole.Slugs.ROOT) || roles.has(IRole.Slugs.ADMIN)) {
-    return '/dashboard'
+    return '/backoffice/today'
   }
 
   if (roles.has(IRole.Slugs.MODERATOR)) {
