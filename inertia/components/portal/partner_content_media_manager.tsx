@@ -224,6 +224,7 @@ export function PartnerContentMediaManager({
                       item.moderationStatus !== 'rejected' &&
                       item.moderationStatus !== 'quarantined' ? (
                         <Button
+                          shape="pill"
                           type="button"
                           variant="outline"
                           size="sm"
@@ -248,6 +249,7 @@ export function PartnerContentMediaManager({
                         onConfirm={() => void remove(item.id)}
                         trigger={
                           <Button
+                            shape="pill"
                             type="button"
                             variant="ghost"
                             size="sm"

@@ -340,7 +340,7 @@ export default function PortalOrganizationPage({
                   </span>
                 </div>
                 <div
-                  className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
+                  className="mt-4 h-2 overflow-hidden rounded-full bg-border-subtle"
                   role="progressbar"
                   aria-label={`Dados preenchidos de ${establishment.public_name}`}
                   aria-valuemin={0}

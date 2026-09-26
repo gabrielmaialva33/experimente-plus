@@ -208,6 +208,7 @@ export function HoursSection({
                                 </label>
                                 {editable ? (
                                   <Button
+                                    shape="circle"
                                     type="button"
                                     variant="ghost"
                                     mode="icon"
@@ -290,6 +291,7 @@ export function HoursSection({
                 : 'A grade semanal é opcional. Garanta um telefone, WhatsApp ou link de agendamento na etapa de identidade.'}
             </p>
             <Button
+              shape="pill"
               type="button"
               variant="outline"
               className="mt-4"

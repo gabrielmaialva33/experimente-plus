@@ -362,7 +362,7 @@ export default function PartnerPortalIndex({
                         ].map(([label, value]) => (
                           <div
                             key={label}
-                            className="flex flex-col-reverse rounded-2xl bg-muted p-3"
+                            className="flex flex-col-reverse rounded-2xl bg-background p-3"
                           >
                             <dt className="mt-0.5 text-[0.8125rem] text-muted-foreground">
                               {label}
@@ -388,7 +388,7 @@ export default function PartnerPortalIndex({
                             </span>
                           </div>
                           <div
-                            className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
+                            className="mt-2 h-2 overflow-hidden rounded-full bg-border-subtle"
                             role="progressbar"
                             aria-label={`Progresso da configuração de ${organization.trade_name}`}
                             aria-valuemin={0}

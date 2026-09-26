@@ -287,7 +287,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
               ).map(([label, value, Icon]) => (
                 <div
                   key={label}
-                  className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3"
+                  className="flex items-center justify-between rounded-2xl bg-background px-4 py-3"
                 >
                   <span className="flex items-center gap-2.5 text-sm font-semibold">
                     <Icon aria-hidden="true" className="size-4 text-primary" />

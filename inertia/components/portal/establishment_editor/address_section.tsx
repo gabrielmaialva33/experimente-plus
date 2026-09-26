@@ -36,7 +36,7 @@ export function AddressSection({ form, editable, busy, issues, onSubmit }: Addre
       issues={issues}
       toolbar={
         coordinatesAvailable ? (
-          <Button asChild variant="outline" size="sm">
+          <Button shape="pill" asChild variant="outline" size="sm">
             <a
               href={`https://www.google.com/maps?q=${form.data.latitude},${form.data.longitude}`}
               target="_blank"

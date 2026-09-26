@@ -795,7 +795,7 @@ export default function EstablishmentBenefitsPage({
                         {offer.description}
                       </p>
 
-                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-muted/50 p-4 text-sm">
+                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-background p-4 text-sm">
                         <div className="col-span-2">
                           <dt className="text-xs text-muted-foreground">Benefício</dt>
                           <dd className="mt-1 font-semibold">{describeBenefit(offer)}</dd>
@@ -833,7 +833,7 @@ export default function EstablishmentBenefitsPage({
                       ) : null}
 
                       {editionArchived ? (
-                        <p className="mt-4 rounded-xl bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                        <p className="mt-4 rounded-xl bg-background px-3 py-2 text-xs leading-5 text-muted-foreground">
                           {offer.status === 'active'
                             ? 'Esta edição foi arquivada e a oferta não está mais disponível. Pause a oferta antes de arquivar seu histórico.'
                             : offer.status === 'archived'

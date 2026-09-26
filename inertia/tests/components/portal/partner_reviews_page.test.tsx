@@ -114,6 +114,11 @@ describe('Partner reviews page', () => {
     expect(within(filters).getByRole('link', { name: 'Todas (3)' })).not.toHaveAttribute(
       'aria-current'
     )
+    // On a phone the three share the row instead of scrolling the last one out of view.
+    expect(filters).toHaveClass('w-full', 'sm:w-auto')
+    for (const link of within(filters).getAllByRole('link')) {
+      expect(link).toHaveClass('flex-1', 'sm:flex-none')
+    }
   })
 
   it('shows the partner their own reply, held or not, and edits it with PUT', async () => {

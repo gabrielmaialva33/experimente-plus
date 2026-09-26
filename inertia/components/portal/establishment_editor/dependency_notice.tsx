@@ -27,7 +27,7 @@ export function EditorDependencyNotice({
           <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>
         </div>
       </div>
-      <Button type="button" variant="outline" onClick={onAction}>
+      <Button shape="pill" type="button" variant="outline" onClick={onAction}>
         {actionLabel}
         <ArrowRight />
       </Button>
