@@ -115,7 +115,8 @@ function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }
           icon={CircleAlert}
           headingLevel={2}
           title="Este estabelecimento encerrou as atividades"
-          description={`${detail.message} Os contatos foram removidos e esta página mantém apenas a informação histórica publicada.`}
+          // The page header already reads the closure message; the card adds only what changed.
+          description="Os contatos foram removidos e esta página mantém apenas a informação histórica publicada."
         >
           <Button variant="outline" size="lg" shape="pill" asChild>
             <Link href={`/cidades/${encodeURIComponent(detail.city.slug)}`}>
