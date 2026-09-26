@@ -91,7 +91,7 @@ export default class GetDashboardStatsService {
     }
 
     return Array.from(buckets.entries()).map(([key, count]) => ({
-      month: DateTime.fromFormat(key, 'yyyy-MM').toFormat('LLL'),
+      month: monthLabel(key),
       users: count,
     }))
   }
@@ -111,4 +111,16 @@ export default class GetDashboardStatsService {
       roles: user.roles.map((role) => role.name),
     }))
   }
+}
+
+/**
+ * The chart's axis in the reader's language (audit W31): "Set", not "Sep".
+ * Luxon's Portuguese short month carries a period ("set."), which an axis
+ * label does not need.
+ */
+function monthLabel(key: string): string {
+  const short = DateTime.fromFormat(key, 'yyyy-MM', { locale: 'pt-BR' })
+    .toFormat('LLL')
+    .replace('.', '')
+  return short.charAt(0).toUpperCase() + short.slice(1)
 }
