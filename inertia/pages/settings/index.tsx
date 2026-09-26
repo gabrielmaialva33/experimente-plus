@@ -417,7 +417,13 @@ function OperationsTab() {
                     </span>
                   </span>
                   {active ? (
-                    <Badge variant="primary" appearance="light" shape="pill" size="sm">
+                    <Badge
+                      variant="primary"
+                      appearance="light"
+                      shape="pill"
+                      size="sm"
+                      className="self-start sm:self-auto"
+                    >
                       Operação ativa
                     </Badge>
                   ) : (
