@@ -3,10 +3,18 @@ import { cloneElement, type ReactElement } from 'react'
 import { cn } from '~/lib/utils'
 
 interface EditorControlProps {
+  'className'?: string
   'aria-describedby'?: string
   'aria-invalid'?: boolean | 'false' | 'true'
   'aria-required'?: boolean | 'false' | 'true'
 }
+
+/**
+ * Read-only data (a published place, an analyst's access) must stay legible: the
+ * primitives fade disabled controls to half opacity, which fails contrast (web audit W71).
+ */
+const READABLE_WHEN_DISABLED =
+  'disabled:opacity-100 disabled:bg-muted/60 disabled:text-foreground disabled:border-border-subtle'
 
 interface EditorFieldProps {
   htmlFor: string
@@ -40,6 +48,7 @@ export function EditorField({
     .filter(Boolean)
     .join(' ')
   const control = cloneElement(children, {
+    'className': cn(children.props.className, READABLE_WHEN_DISABLED),
     'aria-describedby': describedBy || undefined,
     'aria-invalid': error ? true : children.props['aria-invalid'],
     'aria-required': required || children.props['aria-required'] || undefined,

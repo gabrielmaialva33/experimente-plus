@@ -39,4 +39,17 @@ describe('EditorField', () => {
       'Correção pedida pela moderação: O telefone não atende.'
     )
   })
+
+  it('keeps read-only values legible instead of fading them out', () => {
+    render(
+      <EditorField htmlFor="public-name" label="Nome público">
+        <Input id="public-name" disabled defaultValue="Café Aurora" />
+      </EditorField>
+    )
+
+    const input = screen.getByRole('textbox', { name: 'Nome público' })
+    expect(input).toBeDisabled()
+    expect(input).toHaveClass('disabled:opacity-100')
+    expect(input).not.toHaveClass('disabled:opacity-50')
+  })
 })
