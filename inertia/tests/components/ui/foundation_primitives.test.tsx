@@ -173,7 +173,7 @@ describe('foundation primitives', () => {
     expect(screen.getByText('1 rascunho')).toHaveClass('bg-muted', 'text-muted-foreground')
   })
 
-  it('makes a task card one named link with its number and action', () => {
+  it('makes a task card a heading and one action link stretched over the card', () => {
     render(
       <>
         <TaskCard
@@ -184,6 +184,7 @@ describe('foundation primitives', () => {
         />
         <TaskCard
           title="Feedback do piloto"
+          headingLevel={3}
           value={0}
           tone="muted"
           href="/backoffice/feedback"
@@ -191,17 +192,19 @@ describe('foundation primitives', () => {
         />
       </>
     )
-    const link = screen.getByRole('link', { name: /Avaliações sem resposta/ })
+    expect(screen.getByRole('heading', { level: 2, name: 'Avaliações sem resposta' })).toBeVisible()
+    const link = screen.getByRole('link', { name: 'Responder agora' })
     expect(link).toHaveAttribute('href', '/portal/reviews')
-    expect(link).toHaveAccessibleName(/Responder agora/)
-    expect(link).toHaveClass('rounded-card')
-    expect(link.querySelector('[data-slot="task-card-value"]')).toHaveTextContent('2')
-    expect(link.querySelector('[data-slot="task-card-value"]')).toHaveClass('text-primary')
+    expect(link).toHaveClass('after:absolute', 'after:inset-0', 'min-h-11')
+    const card = link.closest('[data-slot="task-card"]')
+    expect(card).toHaveClass('relative', 'rounded-card')
+    expect(card?.querySelector('[data-slot="task-card-value"]')).toHaveTextContent('2')
+    expect(card?.querySelector('[data-slot="task-card-value"]')).toHaveClass('text-primary')
+    const quiet = screen.getByRole('heading', { level: 3, name: 'Feedback do piloto' })
     expect(
-      screen
-        .getByRole('link', { name: /Feedback do piloto/ })
-        .querySelector('[data-slot="task-card-value"]')
+      quiet.closest('[data-slot="task-card"]')?.querySelector('[data-slot="task-card-value"]')
     ).toHaveClass('text-muted-foreground')
+    expect(screen.getAllByRole('link')).toHaveLength(2)
   })
 
   it('keeps card headings and badge actions semantic', async () => {

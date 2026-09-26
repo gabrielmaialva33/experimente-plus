@@ -1,12 +1,14 @@
 import { Link } from '@inertiajs/react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { cn } from '~/lib/utils'
 
 type TaskCardProps = {
-  /** What the task is about, read first. */
+  /** What the task is about; a heading, so screen readers can jump between tasks. */
   title: string
+  headingLevel?: 2 | 3
+  icon?: LucideIcon
   /** The headline number, when the task is a count. */
   value?: ReactNode
   /** Nothing pending reads quieter than work waiting. */
@@ -20,12 +22,15 @@ type TaskCardProps = {
 }
 
 /**
- * A task on a landing screen — direction A: one card is one link, the number
- * in the display face, the action at the foot. The whole card is the target so
- * it is never smaller than the thumb, and the card carries no second control.
+ * A task on a landing screen — direction A: the number in the display face and
+ * the action at the foot. The action link is stretched over the whole card, so
+ * the card is one generous target while the title stays a heading and the link
+ * keeps a short, meaningful name.
  */
 export function TaskCard({
   title,
+  headingLevel = 2,
+  icon: Icon,
   value,
   tone = 'primary',
   children,
@@ -34,36 +39,43 @@ export function TaskCard({
   actionLabel,
   className,
 }: TaskCardProps) {
+  const Heading = headingLevel === 3 ? 'h3' : 'h2'
+
   return (
-    <Link
-      href={href}
+    <article
       data-slot="task-card"
       className={cn(
-        'group flex min-h-44 flex-col gap-2.5 rounded-card border border-border-subtle bg-card p-5 text-card-foreground transition-colors hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none',
+        'group relative flex min-h-44 flex-col gap-2.5 rounded-card border border-border-subtle bg-card p-5 text-card-foreground transition-colors hover:border-border motion-reduce:transition-none',
         className
       )}
     >
-      <span className="text-[0.9375rem] font-bold text-muted-foreground">{title}</span>
+      <Heading className="flex items-center gap-2 text-[0.9375rem] font-bold text-muted-foreground">
+        {Icon && <Icon aria-hidden="true" className="size-4" />}
+        {title}
+      </Heading>
       {value !== undefined && (
-        <span
+        <p
           data-slot="task-card-value"
           className={cn(
-            'font-display text-[2.75rem] font-extrabold leading-none',
+            'font-display text-[2.75rem] font-extrabold leading-none tabular-nums',
             tone === 'primary' ? 'text-primary' : 'text-muted-foreground'
           )}
         >
           {value}
-        </span>
+        </p>
       )}
       {children}
-      {description && <span className="text-sm text-muted-foreground">{description}</span>}
-      <span className="mt-auto inline-flex items-center gap-1 text-[0.9375rem] font-extrabold text-primary">
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      <Link
+        href={href}
+        className="mt-auto inline-flex min-h-11 items-center gap-1 self-start text-[0.9375rem] font-extrabold text-primary outline-none after:absolute after:inset-0 after:rounded-card focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-background"
+      >
         {actionLabel}
         <ArrowRight
           aria-hidden="true"
           className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
         />
-      </span>
-    </Link>
+      </Link>
+    </article>
   )
 }
