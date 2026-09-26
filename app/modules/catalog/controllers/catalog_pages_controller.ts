@@ -8,6 +8,11 @@ import CityAgendaService from '#modules/partner_content/services/city_agenda_ser
 import PartnerContentService from '#modules/partner_content/services/partner_content_service'
 import PartnerContentMediaService from '#modules/partner_content/services/partner_content_media_service'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
+import EstablishmentReviewService from '#modules/reviews/services/establishment_review_service'
+import {
+  publicReviewItems,
+  type PublicReviewsPayload,
+} from '#modules/reviews/interfaces/public_reviews_page'
 import {
   catalogDefaults,
   catalogSearchValidator,
@@ -20,7 +25,8 @@ export default class CatalogPagesController {
     private partnerContentService: PartnerContentService,
     private partnerContentMediaService: PartnerContentMediaService,
     private cityAgendaService: CityAgendaService,
-    private publicOperationResolver: PublicOperationResolver
+    private publicOperationResolver: PublicOperationResolver,
+    private reviewService: EstablishmentReviewService
   ) {}
 
   async cities({ inertia, request, response }: HttpContext) {
@@ -110,16 +116,41 @@ export default class CatalogPagesController {
       String(params.citySlug),
       String(params.establishmentSlug)
     )
-    const partnerContent =
-      'historical' in establishment
-        ? { experiences: [], events: [], showcase_items: [] }
-        : await this.publicPartnerContent(hostname, establishment.id)
+    const historical = 'historical' in establishment
+    const partnerContent = historical
+      ? { experiences: [], events: [], showcase_items: [] }
+      : await this.publicPartnerContent(hostname, establishment.id)
+    const reviews = historical
+      ? { summary: { count: 0, average: null }, latest: [] }
+      : await this.publicReviews(hostname, establishment.id, establishment.reviews)
 
     return inertia.render('catalog/establishment', {
       catalog: establishment,
       city_slug: establishment.city.slug,
       partner_content: partnerContent,
+      reviews,
     })
+  }
+
+  /**
+   * The latest published reviews of a place, for its public web page — W10.
+   *
+   * The same public listing the app reads, so a banned author's review and a
+   * place that left the catalogue are hidden here exactly as there. The summary
+   * is the projection's, not an average of this page (ADR-0016).
+   */
+  private async publicReviews(
+    hostname: string | null,
+    establishmentId: number,
+    summary: PublicReviewsPayload['summary']
+  ): Promise<PublicReviewsPayload> {
+    const tenant = await this.publicOperationResolver.resolve(hostname)
+    const page = await this.reviewService.listPublic(tenant.id, establishmentId, {
+      page: 1,
+      per_page: 3,
+    })
+
+    return { summary, latest: publicReviewItems(page.all()) }
   }
 
   private async publicPartnerContent(

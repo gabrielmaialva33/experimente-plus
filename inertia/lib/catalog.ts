@@ -163,6 +163,8 @@ export interface CatalogDetail {
   isSponsored: boolean
   publishedAt: string | null
   updatedAt: string | null
+  /** The establishment id, the target of a report; null in stale props. */
+  id: number | null
 }
 
 export interface CatalogHistoricalDetail {
@@ -698,6 +700,7 @@ export function catalogDetail(value: unknown): CatalogDetail | CatalogHistorical
     isSponsored: booleanValue(detail, 'is_sponsored') ?? false,
     publishedAt: dateTimeStringValue(detail, 'published_at'),
     updatedAt: dateTimeStringValue(detail, 'updated_at'),
+    id: numberValue(detail, 'id', 'establishment_id'),
   }
 }
 
@@ -756,4 +759,38 @@ export function pageHref(
   if (page > 1) parameters.set('page', String(page))
   const serialized = parameters.toString()
   return serialized ? `${path}?${serialized}` : path
+}
+
+/**
+ * A Brazilian phone as people write it — W84 of the web audit. The server
+ * stores digits only; showing "4333214343" makes a visitor count digits.
+ * Anything that is not a 10- or 11-digit national number (with or without
+ * the 55 country code) is returned untouched rather than guessed at.
+ */
+export function formatPhoneBR(value: string | null): string | null {
+  if (!value) return value
+  // Another country's number is shown as the partner wrote it.
+  if (/^\s*\+(?!\s*55)/.test(value)) return value
+  let digits = value.replace(/\D/g, '')
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+    digits = digits.slice(2)
+  }
+  // 0800, 0300 and the like carry no area code: 0800 123 4567.
+  if (digits.startsWith('0')) {
+    return digits.length === 11
+      ? `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`
+      : value
+  }
+  if (digits.length === 11)
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  if (digits.length === 10)
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return value
+}
+
+/** CEP as 00000-000; anything else is returned untouched. */
+export function formatPostalCodeBR(value: string | null): string | null {
+  if (!value) return value
+  const digits = value.replace(/\D/g, '')
+  return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : value
 }

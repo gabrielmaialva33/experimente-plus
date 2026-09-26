@@ -11,7 +11,7 @@ interface EstablishmentStatusProps {
   isOpenNow: boolean
   availabilityType?: CatalogAvailability
   id?: string
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
@@ -36,7 +36,7 @@ export function EstablishmentStatus({
   }
 
   return (
-    <Badge id={id} variant="outline" size={size} className={cn(colors, className)}>
+    <Badge id={id} variant="outline" size={size} shape="pill" className={cn(colors, className)}>
       {businessStatusLabel(businessStatus, isOpenNow, availabilityType)}
     </Badge>
   )

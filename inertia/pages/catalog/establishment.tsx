@@ -7,6 +7,11 @@ import {
   type PartnerContentPayload,
 } from '~/components/catalog/establishment_partner_content'
 import { CatalogWeeklyHours } from '~/components/catalog/catalog_weekly_hours'
+import {
+  EstablishmentReviews,
+  type PublicReviewsPayload,
+} from '~/components/catalog/establishment_reviews'
+import { ReportDialog } from '~/components/catalog/report_dialog'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { EstablishmentActions } from '~/components/catalog/establishment_actions'
 import { EstablishmentStatus } from '~/components/catalog/establishment_status'
@@ -18,6 +23,7 @@ import {
   availabilityLabel,
   catalogDetail,
   formatCatalogAddress,
+  formatPostalCodeBR,
   type CatalogAttribute,
   type CatalogDetail,
   type CatalogHistoricalDetail,
@@ -28,6 +34,7 @@ interface CatalogEstablishmentProps {
   catalog: unknown
   city_slug: string | null
   partner_content?: PartnerContentPayload
+  reviews?: PublicReviewsPayload
 }
 
 function formatDate(value: string | null, timeZone: string | null): string | null {
@@ -64,22 +71,27 @@ export function CatalogPublicationMetadata({
   const formattedUpdatedAt = formatDate(updatedAt, timeZone)
 
   return (
-    <section aria-labelledby="publication-title" className="rounded-lg border bg-card p-5 text-sm">
-      <span className="flex size-10 items-center justify-center rounded-md border border-success/20 bg-success-soft text-success-accent">
+    <section
+      aria-labelledby="publication-title"
+      className="flex items-start gap-4 rounded-card border border-border-subtle bg-card p-5 text-sm"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-accent">
         <Check aria-hidden="true" className="size-4" />
       </span>
-      <h2 id="publication-title" className="mt-4 font-semibold">
-        Conteúdo publicado
-      </h2>
-      <p className="mt-2 leading-6 text-muted-foreground">
-        Esta ficha mostra somente dados aprovados e publicados no catálogo.
-      </p>
-      {formattedPublishedAt || formattedUpdatedAt ? (
-        <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-          {formattedPublishedAt ? <p>Publicado em {formattedPublishedAt}</p> : null}
-          {formattedUpdatedAt ? <p>Atualizado em {formattedUpdatedAt}</p> : null}
-        </div>
-      ) : null}
+      <div className="min-w-0">
+        <h2 id="publication-title" className="font-display font-extrabold">
+          Conteúdo publicado
+        </h2>
+        <p className="mt-1 leading-6 text-muted-foreground">
+          Esta ficha mostra somente dados aprovados e publicados no catálogo.
+        </p>
+        {formattedPublishedAt || formattedUpdatedAt ? (
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {formattedPublishedAt ? <span>Publicado em {formattedPublishedAt}</span> : null}
+            {formattedUpdatedAt ? <span>Atualizado em {formattedUpdatedAt}</span> : null}
+          </p>
+        ) : null}
+      </div>
     </section>
   )
 }
@@ -106,7 +118,7 @@ function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }
         { label: detail.name },
       ]}
     >
-      <div className="mx-auto max-w-3xl rounded-lg border bg-card">
+      <div className="mx-auto max-w-3xl rounded-card border border-border-subtle bg-card">
         <EmptyState
           icon={CircleAlert}
           headingLevel={2}
@@ -127,9 +139,11 @@ function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }
 function PublishedEstablishment({
   detail,
   partnerContent,
+  reviews,
 }: {
   detail: CatalogDetail
   partnerContent?: PartnerContentPayload
+  reviews?: PublicReviewsPayload
 }) {
   useEstablishmentViewAnalytics(detail)
 
@@ -205,162 +219,133 @@ function PublishedEstablishment({
         dangerouslySetInnerHTML={{ __html: serializedStructuredData }}
       />
 
+      {/*
+        Reading order is the phone's: the place, then how to reach it, then the
+        rest. On a wide screen the grid lifts the contact column to the right;
+        the DOM never reorders visually, so focus follows what is seen.
+      */}
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <div className="min-w-0 space-y-6">
-          <section
-            aria-label="Apresentação do estabelecimento"
-            className="overflow-hidden rounded-lg border bg-card"
-          >
-            <div className="overflow-hidden border-b">
-              {detail.cover ? (
-                <img
-                  src={detail.cover.url}
-                  alt={detail.cover.altText}
-                  width={detail.cover.width ?? undefined}
-                  height={detail.cover.height ?? undefined}
-                  decoding="async"
-                  className="max-h-[640px] min-h-64 w-full object-cover sm:min-h-96"
-                />
-              ) : (
-                <CatalogImageFallback
-                  name={detail.name}
-                  categoryName={primaryCategory?.name}
-                  className="min-h-72 w-full sm:min-h-96"
-                />
-              )}
-            </div>
-
-            <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {detail.isSponsored ? (
-                  <Badge variant="secondary" appearance="outline" size="sm">
-                    Patrocinado
-                  </Badge>
-                ) : null}
-                <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="truncate">{locationLabel}</span>
-                </p>
-              </div>
+        <section
+          aria-label="Apresentação do estabelecimento"
+          className="min-w-0 overflow-hidden rounded-card border border-border-subtle bg-card lg:col-start-1 lg:row-start-1"
+        >
+          <div className="relative overflow-hidden">
+            <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
               <EstablishmentStatus
                 businessStatus={detail.businessStatus}
                 isOpenNow={detail.isOpenNow}
                 availabilityType={detail.availabilityType}
-                className="self-start sm:self-auto"
+                size="lg"
               />
-            </div>
-
-            <div className="p-5 sm:p-6">
-              <div className="flex flex-wrap gap-2" aria-label="Categorias do estabelecimento">
-                {detail.categories.map((category) => (
-                  <Link
-                    key={category.slug}
-                    href={`/cidades/${encodeURIComponent(detail.city.slug)}/categorias/${encodeURIComponent(category.slug)}`}
-                    className={cn(
-                      'rounded-md border px-2.5 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
-                      category.isPrimary
-                        ? 'border-primary/20 bg-primary-soft text-primary-accent hover:bg-primary-soft'
-                        : 'bg-choice-background text-choice-foreground hover:bg-accent'
-                    )}
-                  >
-                    {category.name}
-                  </Link>
-                ))}
-              </div>
-
-              {detail.shortDescription ? (
-                <p className="mt-5 text-base font-medium leading-7 text-foreground">
-                  {detail.shortDescription}
-                </p>
-              ) : null}
-              {detail.description ? (
-                <p className="mt-4 whitespace-pre-line leading-7 text-muted-foreground">
-                  {detail.description}
-                </p>
+              {detail.isSponsored ? (
+                <Badge variant="secondary" shape="pill" size="lg">
+                  Patrocinado
+                </Badge>
               ) : null}
             </div>
-          </section>
+            {detail.cover ? (
+              <img
+                src={detail.cover.url}
+                alt={detail.cover.altText}
+                width={detail.cover.width ?? undefined}
+                height={detail.cover.height ?? undefined}
+                decoding="async"
+                className="aspect-[16/9] max-h-[560px] w-full object-cover"
+              />
+            ) : (
+              <CatalogImageFallback
+                name={detail.name}
+                categoryName={primaryCategory?.name}
+                className="min-h-72 w-full sm:min-h-96"
+              />
+            )}
+          </div>
 
-          {gallery.length > 0 ? (
+          <div className="p-5 sm:p-6">
+            <p className="mb-4 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-muted-foreground">
+              <MapPin aria-hidden="true" className="size-4 shrink-0" />
+              <span className="truncate">{locationLabel}</span>
+            </p>
+            <div className="flex flex-wrap gap-2" aria-label="Categorias do lugar">
+              {detail.categories.map((category) => (
+                <Link
+                  key={category.slug}
+                  href={`/cidades/${encodeURIComponent(detail.city.slug)}/categorias/${encodeURIComponent(category.slug)}`}
+                  className={cn(
+                    'inline-flex min-h-9 items-center rounded-full border px-3.5 text-[0.8125rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
+                    category.isPrimary
+                      ? 'border-primary bg-primary text-primary-foreground hover:bg-primary-hover'
+                      : 'bg-choice-background text-choice-foreground hover:bg-accent'
+                  )}
+                >
+                  {category.name}
+                </Link>
+              ))}
+            </div>
+
+            {detail.shortDescription ? (
+              <p className="mt-5 text-base font-medium leading-7 text-foreground">
+                {detail.shortDescription}
+              </p>
+            ) : null}
+            {detail.description ? (
+              <p className="mt-4 whitespace-pre-line leading-7 text-muted-foreground">
+                {detail.description}
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-3 lg:row-start-1">
+          <EstablishmentActions detail={detail} />
+
+          {addressLine || detail.address.postalCode ? (
             <section
-              aria-labelledby="gallery-title"
-              className="rounded-lg border bg-card p-5 sm:p-6"
+              aria-labelledby="address-title"
+              className="rounded-card border border-border-subtle bg-card p-5"
             >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                  Galeria
+              <span className="flex size-10 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
+                <MapPin aria-hidden="true" className="size-4" />
+              </span>
+              <h2 id="address-title" className="mt-4 font-display text-lg font-extrabold">
+                Endereço
+              </h2>
+              {addressLine ? (
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{addressLine}</p>
+              ) : null}
+              <p className="mt-1 text-sm text-muted-foreground">{locationLabel}</p>
+              {detail.address.complement ? (
+                <p className="mt-1 text-sm text-muted-foreground">{detail.address.complement}</p>
+              ) : null}
+              {detail.address.reference ? (
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  Referência: {detail.address.reference}
                 </p>
-                <h2 id="gallery-title" className="mt-1 text-xl font-semibold">
-                  Fotos publicadas
-                </h2>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {gallery.map((media) => (
-                  <figure
-                    key={media.url}
-                    className="min-w-0 overflow-hidden rounded-md border bg-card"
-                  >
-                    <img
-                      src={media.url}
-                      alt={media.altText}
-                      width={media.width ?? undefined}
-                      height={media.height ?? undefined}
-                      loading="lazy"
-                      decoding="async"
-                      className="aspect-[4/3] w-full object-cover"
-                    />
-                    {media.caption ? (
-                      <figcaption className="px-3 py-2 text-xs leading-5 text-muted-foreground">
-                        {media.caption}
-                      </figcaption>
-                    ) : null}
-                  </figure>
-                ))}
-              </div>
+              ) : null}
+              {detail.address.postalCode ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  CEP {formatPostalCodeBR(detail.address.postalCode)}
+                </p>
+              ) : null}
             </section>
           ) : null}
+        </aside>
 
-          <EstablishmentPartnerContent content={partnerContent} timeZone={detail.city.timezone} />
-
-          {detail.attributes.length > 0 ? (
-            <section
-              aria-labelledby="attributes-title"
-              className="rounded-lg border bg-card p-5 sm:p-6"
-            >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                  Características
-                </p>
-                <h2 id="attributes-title" className="mt-1 text-xl font-semibold">
-                  Informações úteis
-                </h2>
-              </div>
-              <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-                {detail.attributes.map((attribute) => (
-                  <div key={attribute.key} className="rounded-md border bg-card p-4">
-                    <dt className="text-sm font-medium">{attribute.name}</dt>
-                    <dd className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                      {formatAttribute(attribute)}
-                    </dd>
-                    {attribute.description ? (
-                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                        {attribute.description}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ) : null}
-
+        <div className="min-w-0 space-y-6 lg:col-start-1">
           {detail.businessStatus === 'open' ? (
-            <section aria-labelledby="hours-title" className="rounded-lg border bg-card p-5 sm:p-6">
+            <section
+              aria-labelledby="hours-title"
+              className="rounded-card border border-border-subtle bg-card p-5 sm:p-6"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
                     Atendimento
                   </p>
-                  <h2 id="hours-title" className="mt-1 text-xl font-semibold">
+                  <h2
+                    id="hours-title"
+                    className="mt-1 font-display text-[1.3125rem] font-extrabold"
+                  >
                     Horários
                   </h2>
                 </div>
@@ -391,7 +376,7 @@ function PublishedEstablishment({
                     {detail.specialDays.map((day) => (
                       <div
                         key={day.date}
-                        className="flex flex-col gap-1 rounded-md border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-1 rounded-2xl border border-border-subtle bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                       >
                         <span className="font-medium">
                           {formatDate(day.date, detail.city.timezone) ?? day.date}
@@ -411,7 +396,7 @@ function PublishedEstablishment({
               ) : null}
             </section>
           ) : (
-            <section className="rounded-lg border bg-status-neutral p-5 sm:p-6">
+            <section className="rounded-card border border-border-subtle bg-status-neutral p-5 sm:p-6">
               <div className="flex items-start gap-3">
                 <CircleAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
                 <div>
@@ -425,53 +410,119 @@ function PublishedEstablishment({
               </div>
             </section>
           )}
-        </div>
 
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24">
-          {addressLine || detail.address.postalCode ? (
-            <section aria-labelledby="address-title" className="rounded-lg border bg-card p-5">
-              <span className="flex size-10 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
-                <MapPin aria-hidden="true" className="size-4" />
-              </span>
-              <h2 id="address-title" className="mt-4 text-lg font-semibold">
-                Endereço
-              </h2>
-              {addressLine ? (
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{addressLine}</p>
-              ) : null}
-              <p className="mt-1 text-sm text-muted-foreground">{locationLabel}</p>
-              {detail.address.complement ? (
-                <p className="mt-1 text-sm text-muted-foreground">{detail.address.complement}</p>
-              ) : null}
-              {detail.address.reference ? (
-                <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  Referência: {detail.address.reference}
+          <EstablishmentReviews
+            reviews={reviews}
+            placeName={detail.name}
+            timeZone={detail.city.timezone}
+          />
+
+          {gallery.length > 0 ? (
+            <section
+              aria-labelledby="gallery-title"
+              className="rounded-card border border-border-subtle bg-card p-5 sm:p-6"
+            >
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                  Galeria
                 </p>
-              ) : null}
-              {detail.address.postalCode ? (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  CEP {detail.address.postalCode}
-                </p>
-              ) : null}
+                <h2
+                  id="gallery-title"
+                  className="mt-1 font-display text-[1.3125rem] font-extrabold"
+                >
+                  Fotos publicadas
+                </h2>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {gallery.map((media) => (
+                  <figure
+                    key={media.url}
+                    className="min-w-0 overflow-hidden rounded-2xl border border-border-subtle bg-card"
+                  >
+                    <img
+                      src={media.url}
+                      alt={media.altText}
+                      width={media.width ?? undefined}
+                      height={media.height ?? undefined}
+                      loading="lazy"
+                      decoding="async"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    {media.caption ? (
+                      <figcaption className="px-3 py-2 text-xs leading-5 text-muted-foreground">
+                        {media.caption}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ))}
+              </div>
             </section>
           ) : null}
 
-          <EstablishmentActions detail={detail} />
+          <EstablishmentPartnerContent content={partnerContent} timeZone={detail.city.timezone} />
 
+          {detail.attributes.length > 0 ? (
+            <section
+              aria-labelledby="attributes-title"
+              className="rounded-card border border-border-subtle bg-card p-5 sm:p-6"
+            >
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                  Características
+                </p>
+                <h2
+                  id="attributes-title"
+                  className="mt-1 font-display text-[1.3125rem] font-extrabold"
+                >
+                  Informações úteis
+                </h2>
+              </div>
+              <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+                {detail.attributes.map((attribute) => (
+                  <div
+                    key={attribute.key}
+                    className="rounded-2xl border border-border-subtle bg-card p-4"
+                  >
+                    <dt className="text-sm font-medium">{attribute.name}</dt>
+                    <dd className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                      {formatAttribute(attribute)}
+                    </dd>
+                    {attribute.description ? (
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        {attribute.description}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
+        </div>
+
+        <div className="min-w-0 space-y-3 lg:col-start-1">
           <CatalogPublicationMetadata
             publishedAt={detail.publishedAt}
             updatedAt={detail.updatedAt}
             timeZone={detail.city.timezone}
           />
-
-          <Link
-            href={`/cidades/${encodeURIComponent(detail.city.slug)}`}
-            className="inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-semibold text-primary outline-none hover:bg-primary-soft focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Building2 aria-hidden="true" className="size-4" /> Ver mais lugares em{' '}
-            {detail.city.name}
-          </Link>
-        </aside>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Link
+              href={`/cidades/${encodeURIComponent(detail.city.slug)}`}
+              className="-mx-2 inline-flex min-h-11 items-center gap-2 rounded-full px-2 text-sm font-semibold text-primary-accent outline-none hover:underline hover:underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Building2 aria-hidden="true" className="size-4" /> Ver mais lugares em{' '}
+              {detail.city.name}
+            </Link>
+            {detail.id !== null ? (
+              <ReportDialog
+                targetType="establishment"
+                targetId={detail.id}
+                subject={detail.name}
+                className="-mx-2"
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
     </CatalogShell>
   )
@@ -480,6 +531,7 @@ function PublishedEstablishment({
 export default function CatalogEstablishment({
   catalog,
   partner_content: partnerContent,
+  reviews,
 }: CatalogEstablishmentProps) {
   const detail = catalogDetail(catalog)
 
@@ -490,7 +542,7 @@ export default function CatalogEstablishment({
         description="A ficha pública não pôde ser carregada."
         breadcrumbs={[{ label: 'Cidades', href: '/cidades' }, { label: 'Indisponível' }]}
       >
-        <div className="rounded-lg border border-dashed bg-card">
+        <div className="rounded-card border border-dashed bg-card">
           <EmptyState
             icon={CircleAlert}
             headingLevel={2}
@@ -509,6 +561,6 @@ export default function CatalogEstablishment({
   return detail.historical ? (
     <HistoricalEstablishment detail={detail} />
   ) : (
-    <PublishedEstablishment detail={detail} partnerContent={partnerContent} />
+    <PublishedEstablishment detail={detail} partnerContent={partnerContent} reviews={reviews} />
   )
 }
