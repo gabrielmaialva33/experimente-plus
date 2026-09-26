@@ -16,13 +16,19 @@ export default class ReviewPolicyRepository extends LucidRepository<typeof Revie
       return existing
     }
 
-    return ReviewPolicy.create(
+    const created = await ReviewPolicy.create(
       {
         tenant_id: tenantId,
         ...IReview.DEFAULT_REVIEW_POLICY,
       },
       { client }
     )
+    // Columns the database defaults, such as report_moderation_days, exist on
+    // the model only after a reload. Without it the first visit showed a
+    // deadline of "0 dias", and a report that created the policy came due the
+    // moment it was filed — web audit W29.
+    await created.refresh()
+    return created
   }
 
   async updateForTenant(

@@ -43,6 +43,13 @@ export default class EstablishmentExperience extends BaseModel {
   @column.dateTime()
   declare archived_at: DateTime | null
 
+  /** The moderation's reason while a refusal is the item's current state. */
+  @column()
+  declare rejection_reason: string | null
+
+  @column.dateTime()
+  declare rejected_at: DateTime | null
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 

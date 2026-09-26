@@ -78,7 +78,11 @@ export default function BackofficeTaxonomy({ families, categories }: TaxonomyPag
     const parent = row.parent_id ? categoryName.get(numeric(row, 'parent_id')) : null
     return {
       name: text(row, 'name'),
-      meta: [familyName.get(numeric(row, 'family_id')), parent ? `dentro de ${parent}` : null, text(row, 'slug')]
+      meta: [
+        familyName.get(numeric(row, 'family_id')),
+        parent ? `dentro de ${parent}` : null,
+        text(row, 'slug'),
+      ]
         .filter(Boolean)
         .join(' · '),
     }
@@ -106,6 +110,7 @@ export default function BackofficeTaxonomy({ families, categories }: TaxonomyPag
           createLabel="Nova família"
           emptyLabel="Nenhuma família cadastrada"
           describe={describeFamily}
+          deactivateEffect="As categorias desta família deixam de aparecer na descoberta. Nada é apagado, e dá para reativar depois."
           canCreate={can('category_families.create')}
           canUpdate={can('category_families.update')}
         />
@@ -121,6 +126,7 @@ export default function BackofficeTaxonomy({ families, categories }: TaxonomyPag
           createLabel="Nova categoria"
           emptyLabel="Nenhuma categoria cadastrada"
           describe={describeCategory}
+          deactivateEffect="A categoria sai dos filtros da descoberta. As unidades que já a usam continuam cadastradas, e dá para reativar depois."
           canCreate={can('categories.create') && familyRows.length > 0}
           canUpdate={can('categories.update')}
         />

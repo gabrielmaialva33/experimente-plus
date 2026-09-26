@@ -5,6 +5,7 @@ import { ExceptionHandler, type HttpContext } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
 import { errors as driveErrors } from '@adonisjs/drive'
 
+import BaseException from '#exceptions/base_exception'
 import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 const MALFORMED_JSON_MESSAGE = 'Malformed JSON request body'
@@ -108,6 +109,21 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         status: 400,
         message: MALFORMED_JSON_MESSAGE,
       })
+    }
+
+    /**
+     * Domain exceptions answer JSON on their own, which is the API contract. A
+     * browser that follows a stale link on a web route, such as a revision
+     * that no longer exists, gets the "Página não encontrada" status page
+     * instead of `{"status":404,"message":"…"}` in English — web audit W27.
+     */
+    if (
+      !isApiRequest &&
+      httpError instanceof BaseException &&
+      httpError.status === 404 &&
+      ctx.request.accepts(['html', 'json']) !== 'json'
+    ) {
+      return this.renderError(httpError, ctx)
     }
 
     /**

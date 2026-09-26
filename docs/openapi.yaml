@@ -5013,6 +5013,18 @@ components:
             - string
             - 'null'
           format: date-time
+        rejection_reason:
+          description: >-
+            Why the moderation refused the last version, while that refusal is
+            the item's current state; cleared when the partner sends a new version.
+          type:
+            - string
+            - 'null'
+        rejected_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -5079,6 +5091,18 @@ components:
             - string
             - 'null'
           format: date-time
+        rejection_reason:
+          description: >-
+            Why the moderation refused the last version, while that refusal is
+            the item's current state; cleared when the partner sends a new version.
+          type:
+            - string
+            - 'null'
+        rejected_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -5139,6 +5163,18 @@ components:
             - integer
             - 'null'
         archived_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        rejection_reason:
+          description: >-
+            Why the moderation refused the last version, while that refusal is
+            the item's current state; cleared when the partner sends a new version.
+          type:
+            - string
+            - 'null'
+        rejected_at:
           type:
             - string
             - 'null'
@@ -5368,6 +5404,9 @@ components:
                   to: {}
             - type: 'null'
         metadata:
+          description: >-
+            Context of the act. A `rejected` event carries the moderation's
+            `reason`; an `admin_edited` one, whether it was `republished`.
           oneOf:
             - type: object
             - type: 'null'
@@ -14174,6 +14213,8 @@ paths:
         Returns the item to a draft, or to its previously approved version when
         there is one: refusing an edit is not a reason to take down what was
         already accepted.
+        The reason is required: the partner reads it on the item until they
+        send a new version, and the history keeps it.
       tags: [Partner content, Moderation]
       security:
         - bearerAuth: []
@@ -14186,6 +14227,19 @@ paths:
             type: string
             enum: [experiences, events, showcase-items]
         - $ref: '#/components/parameters/pathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 2000
       responses:
         '200':
           description: Version refused
@@ -14195,6 +14249,8 @@ paths:
                 $ref: '#/components/schemas/PartnerContent'
         '400':
           description: The content is not awaiting approval
+        '422':
+          description: The reason is missing, too short or too long
         '403':
           description: Moderator privileges required
         '404':

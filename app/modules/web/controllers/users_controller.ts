@@ -1,6 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 
+import NotFoundException from '#exceptions/not_found_exception'
+
 import CreateUserService from '#modules/users/services/create_user_service'
 import EditUserService from '#modules/users/services/edit_user_service'
 import DeleteUserService from '#modules/users/services/delete_user_service'
@@ -59,6 +61,9 @@ export default class InertiaUsersController {
     const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
     const getUserService = await app.container.make(GetUserService)
     const user = await getUserService.run(userId)
+    // A stale link gets the not-found page, not an edit screen over null —
+    // web audit W28.
+    if (!user) throw new NotFoundException('User not found')
 
     return inertia.render('users/edit', { user })
   }

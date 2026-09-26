@@ -114,6 +114,40 @@ describe('PartnerContentPage', () => {
     expect(screen.queryByRole('button', { name: 'Publicar' })).not.toBeInTheDocument()
   })
 
+  // Web audit W3 and W12: a refused draft says why, and the send button says
+  // whether the item goes live or goes to analysis.
+  it('says a draft goes to analysis when approval is required, and shows a refusal reason', () => {
+    render(
+      <PartnerContentPage
+        tenant_id={7}
+        establishments={[establishment]}
+        requires_approval={{ 'experiences': true, 'events': false, 'showcase-items': false }}
+        content={{
+          experiences: [
+            {
+              id: 17,
+              establishment_id: 7,
+              title: 'Oficina de preparo',
+              status: 'draft',
+              rejection_reason: 'A foto mostra outro lugar; use uma do seu espaço.',
+              rejected_at: '2026-09-26T12:00:00.000Z',
+            },
+          ],
+          events: [],
+          showcase_items: [{ id: 18, establishment_id: 7, title: 'Bolo de fubá', status: 'draft' }],
+        }}
+      />
+    )
+
+    expect(screen.getByText('A foto mostra outro lugar; use uma do seu espaço.')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Enviar para análise' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Publicar' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: /Vitrine/ }))
+    expect(screen.getByRole('button', { name: 'Publicar' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Enviar para análise' })).not.toBeInTheDocument()
+  })
+
   it('keeps a read-only partner from receiving mutation controls', () => {
     render(
       <PartnerContentPage

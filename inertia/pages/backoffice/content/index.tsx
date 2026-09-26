@@ -26,6 +26,8 @@ import {
 } from '~/components/portal/establishment_editor/editor_field'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
+import { Textarea } from '~/components/ui/textarea'
 import { MainLayout } from '~/layouts/main_layout'
 import { useAuth } from '~/hooks/use_auth'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
@@ -39,8 +41,12 @@ import {
 import { partnerContentMediaItems } from '~/lib/partner_content_media'
 import { cn } from '~/lib/utils'
 
+/** The queue shows every kind at once, or one kind with its own pages. */
+type Scope = PartnerContentPath | 'all'
+
 interface BackofficeContentProps {
-  items: unknown
+  sections: unknown
+  counts?: Partial<Record<PartnerContentPath, number>>
   filters: JsonRecord
   policy: JsonRecord | null
   platform_access: 'platform_admin' | 'platform_moderator' | null
@@ -53,6 +59,19 @@ interface PolicyForm {
   requireShowcaseApproval: boolean
   maxMedia: string
   minEventNotice: string
+}
+
+interface Section {
+  kind: PartnerContentPath
+  rows: JsonRecord[]
+  total: number
+  page: number
+  lastPage: number
+}
+
+interface Refusal {
+  id: number
+  reason: string
 }
 
 const QUEUE_PATH = '/backoffice/content'
@@ -70,35 +89,55 @@ function statusValue(value: string): PartnerContentStatus {
     : 'draft'
 }
 
-function currentKind(filters: JsonRecord): PartnerContentPath {
+function currentScope(filters: JsonRecord): Scope {
   const value = text(filters, 'kind')
   return partnerContentKinds.some((kind) => kind.path === value)
     ? (value as PartnerContentPath)
-    : 'events'
+    : 'all'
+}
+
+function sectionsOf(value: unknown): Section[] {
+  return collection(value).flatMap((entry) => {
+    const kind = text(entry, 'kind')
+    if (!partnerContentKinds.some((item) => item.path === kind)) return []
+    const meta = record(entry.meta)
+    return [
+      {
+        kind: kind as PartnerContentPath,
+        rows: collection(entry.data),
+        total: numeric(meta, 'total'),
+        page: numeric(meta, 'current_page') || 1,
+        lastPage: numeric(meta, 'last_page') || 1,
+      },
+    ]
+  })
+}
+
+function kindLabel(kind: PartnerContentPath): string {
+  return partnerContentKinds.find((item) => item.path === kind)!.label
 }
 
 export default function BackofficePartnerContentPage({
-  items,
+  sections: rawSections,
+  counts = {},
   filters,
   policy,
   platform_access: platformAccess,
   tenant_id: tenantId,
 }: BackofficeContentProps) {
   const { can } = useAuth()
-  const rows = collection(items)
-  const meta = record(record(items)?.meta)
-  const page = numeric(meta, 'current_page') || 1
-  const lastPage = numeric(meta, 'last_page') || 1
-  const kind = currentKind(filters)
+  const sections = sectionsOf(rawSections)
+  const scope = currentScope(filters)
   const status = statusValue(text(filters, 'status', 'pending_review'))
   const perPage = numeric(filters, 'per_page') || 20
   const establishmentId = numeric(filters, 'establishment_id')
-  const [selectedKind, setSelectedKind] = useState<PartnerContentPath>(kind)
   const [selectedStatus, setSelectedStatus] = useState<PartnerContentStatus>(status)
   const [selectedEstablishment, setSelectedEstablishment] = useState(
     establishmentId > 0 ? String(establishmentId) : ''
   )
   const [actionId, setActionId] = useState<number | null>(null)
+  // One refusal is written at a time; the reason belongs to the item it opened on.
+  const [refusal, setRefusal] = useState<Refusal | null>(null)
   const [policyProcessing, setPolicyProcessing] = useState(false)
   const [policyForm, setPolicyForm] = useState<PolicyForm>({
     requireExperienceApproval: booleanValue(policy, 'require_experience_approval'),
@@ -108,18 +147,31 @@ export default function BackofficePartnerContentPage({
     minEventNotice: String(numeric(policy, 'min_event_notice_minutes') || 0),
   })
 
-  const kindMeta = partnerContentKinds.find((item) => item.path === kind)!
-  const canApprove = can('establishments.approve')
-  const canReject = can('establishments.reject')
-  const canArchive = can('establishments.archive')
-  const canEdit = can('establishments.update')
+  const permissions = {
+    approve: can('establishments.approve'),
+    reject: can('establishments.reject'),
+    archive: can('establishments.archive'),
+    edit: can('establishments.update'),
+  }
   const canUpdatePolicy = platformAccess === 'platform_admin' && can('settings.update')
+  const totalAll = partnerContentKinds.reduce((sum, kind) => sum + (counts[kind.path] ?? 0), 0)
+  const statusLabel = partnerContentStatusMeta[status].label.toLowerCase()
+
+  function scopeHref(next: Scope, page?: number): string {
+    return buildPageHref(QUEUE_PATH, {
+      kind: next,
+      status,
+      establishment_id: establishmentId > 0 ? String(establishmentId) : '',
+      per_page: String(perPage),
+      ...(page ? { page } : {}),
+    })
+  }
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     router.get(
       buildPageHref(QUEUE_PATH, {
-        kind: selectedKind,
+        kind: scope,
         status: selectedStatus,
         establishment_id: selectedEstablishment,
         per_page: String(perPage),
@@ -127,19 +179,9 @@ export default function BackofficePartnerContentPage({
     )
   }
 
-  function pageHref(nextPage: number): string {
-    return buildPageHref(QUEUE_PATH, {
-      kind,
-      status,
-      establishment_id: establishmentId > 0 ? String(establishmentId) : '',
-      per_page: String(perPage),
-      page: nextPage,
-    })
-  }
-
-  function action(path: string, id: number) {
+  function action(path: string, id: number, data: Record<string, string> = {}) {
     setActionId(id)
-    router.post(path, {}, { preserveScroll: true, onFinish: () => setActionId(null) })
+    router.post(path, data, { preserveScroll: true, onFinish: () => setActionId(null) })
   }
 
   function savePolicy(event: FormEvent<HTMLFormElement>) {
@@ -159,6 +201,17 @@ export default function BackofficePartnerContentPage({
     )
   }
 
+  const tabs: Array<{ scope: Scope; label: string; count: number }> = [
+    { scope: 'all', label: 'Todos os tipos', count: totalAll },
+    ...partnerContentKinds.map((kind) => ({
+      scope: kind.path as Scope,
+      label: kind.label,
+      count: counts[kind.path] ?? 0,
+    })),
+  ]
+  const visibleSections =
+    scope === 'all' ? sections.filter((section) => section.total > 0) : sections
+
   return (
     <MainLayout>
       <Head title="Conteúdo de parceiros" />
@@ -168,29 +221,43 @@ export default function BackofficePartnerContentPage({
           eyebrow="Backoffice"
           icon={Megaphone}
           title="Conteúdo de parceiros"
-          description="Modere experiências, eventos e itens de vitrine sem misturar essa fila ao workflow da ficha da unidade."
+          description="Experiências, eventos e itens de vitrine que os parceiros enviaram."
         />
+
+        <nav aria-label="Tipos de conteúdo" className="flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const selected = tab.scope === scope
+            return (
+              <Link
+                key={tab.scope}
+                href={scopeHref(tab.scope)}
+                aria-current={selected ? 'page' : undefined}
+                className={cn(
+                  'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  selected
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-foreground hover:bg-accent'
+                )}
+              >
+                {tab.label}
+                <span
+                  className={cn(
+                    'inline-flex min-w-6 justify-center rounded-full px-1.5 text-xs font-bold tabular-nums',
+                    selected ? 'bg-primary-foreground/20' : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {tab.count.toLocaleString('pt-BR')}
+                </span>
+              </Link>
+            )
+          })}
+        </nav>
 
         <form
           onSubmit={applyFilters}
           aria-label="Filtros de conteúdo de parceiros"
-          className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end"
+          className="grid gap-4 rounded-lg border border-border bg-card p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
         >
-          <EditorField htmlFor="content-kind" label="Tipo">
-            <select
-              id="content-kind"
-              value={selectedKind}
-              onChange={(event) => setSelectedKind(event.target.value as PartnerContentPath)}
-              className={editorSelectClassName}
-            >
-              {partnerContentKinds.map((item) => (
-                <option key={item.path} value={item.path}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </EditorField>
-
           <EditorField htmlFor="content-status" label="Estado">
             <select
               id="content-status"
@@ -218,206 +285,79 @@ export default function BackofficePartnerContentPage({
           <div className="flex gap-2">
             <Button type="submit">Filtrar</Button>
             <Button asChild type="button" variant="outline">
-              <Link href={QUEUE_PATH + '?kind=' + kind}>Limpar</Link>
+              <Link href={QUEUE_PATH}>Limpar</Link>
             </Button>
           </div>
         </form>
 
-        <section className="rounded-lg border border-border bg-card p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
-              <ClipboardCheck aria-hidden="true" className="size-4.5" />
-            </span>
-            <div>
-              <p className="font-bold">
-                {numeric(meta, 'total').toLocaleString('pt-BR')}{' '}
-                {numeric(meta, 'total') === 1 ? 'item' : 'itens'} · {kindMeta.label}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Estado atual: {partnerContentStatusMeta[status].label}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {rows.length === 0 ? (
+        {visibleSections.every((section) => section.rows.length === 0) ? (
           <EmptyState
             icon={ClipboardCheck}
             headingLevel={2}
-            title="Nenhum conteúdo nesta visão"
-            description="Altere o tipo ou o estado para consultar outros itens da operação."
+            title={
+              scope === 'all'
+                ? 'Nenhum conteúdo ' + statusLabel
+                : 'Nenhum item de ' + kindLabel(scope).toLowerCase() + ' ' + statusLabel
+            }
+            description={
+              scope !== 'all' && totalAll > 0
+                ? 'Há itens de outros tipos neste estado. Veja em "Todos os tipos".'
+                : 'Quando um parceiro enviar algo neste estado, aparece aqui.'
+            }
             className="rounded-lg border border-dashed border-border bg-card"
           />
         ) : (
-          <section aria-label="Conteúdo de parceiros" className="space-y-3">
-            {rows.map((row) => {
-              const id = numeric(row, 'id')
-              const rowStatus = statusValue(text(row, 'status'))
-              const statusMeta = partnerContentStatusMeta[rowStatus]
-              const establishment = record(row.establishment)
-              const organization = record(establishment?.organization)
-              const publishedRevision = record(establishment?.published_revision)
-              const city = record(publishedRevision?.city)
-              const snapshot = record(row.published_snapshot)
-              const busy = actionId === id
-              const startsAt = text(row, 'starts_at') || null
-              const endsAt = text(row, 'ends_at') || null
-              const timeZone = text(city, 'timezone') || null
-              const media = partnerContentMediaItems(row.media)
+          visibleSections.map((section) => (
+            <section
+              key={section.kind}
+              aria-labelledby={'section-' + section.kind}
+              className="space-y-3"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id={'section-' + section.kind} className="text-lg font-bold">
+                  {kindLabel(section.kind)}{' '}
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    · {section.total.toLocaleString('pt-BR')} {statusLabel}
+                  </span>
+                </h2>
+                {scope === 'all' && section.total > section.rows.length ? (
+                  <Link
+                    href={scopeHref(section.kind)}
+                    className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    Ver todos os {section.total.toLocaleString('pt-BR')}
+                  </Link>
+                ) : null}
+              </div>
 
-              return (
-                <article key={id} className="rounded-lg border border-border bg-card p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={cn(
-                            'inline-flex rounded-full border px-2.5 py-0.5 text-[0.68rem] font-semibold',
-                            statusMeta.className
-                          )}
-                        >
-                          {statusMeta.label}
-                        </span>
-                        {snapshot && rowStatus === 'pending_review' ? (
-                          <span className="text-xs font-medium text-primary">
-                            versão pública anterior preservada
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <h2 className="mt-3 text-lg font-bold tracking-[-0.02em]">
-                        {text(row, 'title', 'Conteúdo sem título')}
-                      </h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {text(
-                          publishedRevision,
-                          'public_name',
-                          'Unidade ' + numeric(row, 'establishment_id')
-                        )}
-                        {text(organization, 'trade_name')
-                          ? ' · ' + text(organization, 'trade_name')
-                          : ''}
-                      </p>
-
-                      {text(row, 'description') ? (
-                        <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                          {text(row, 'description')}
-                        </p>
-                      ) : null}
-
-                      {startsAt && endsAt ? (
-                        <p className="mt-3 text-sm font-medium">
-                          {formatPartnerContentDate(startsAt, timeZone)} →{' '}
-                          {formatPartnerContentDate(endsAt, timeZone)}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      {rowStatus === 'pending_review' && canApprove ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() =>
-                            action('/backoffice/content/' + kind + '/' + id + '/approve', id)
-                          }
-                        >
-                          {busy ? (
-                            <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
-                          ) : (
-                            <Check aria-hidden="true" className="size-3.5" />
-                          )}
-                          Aprovar
-                        </Button>
-                      ) : null}
-
-                      {rowStatus === 'pending_review' && canReject ? (
-                        <ConfirmDialog
-                          title="Recusar esta versão?"
-                          description="O item volta para rascunho. Se já existia uma versão aprovada, ela continua pública."
-                          confirmLabel="Recusar versão"
-                          processing={busy}
-                          onConfirm={() =>
-                            action('/backoffice/content/' + kind + '/' + id + '/reject', id)
-                          }
-                          trigger={
-                            <Button type="button" variant="outline" size="sm" disabled={busy}>
-                              <X aria-hidden="true" className="size-3.5" />
-                              Recusar
-                            </Button>
-                          }
-                        />
-                      ) : null}
-
-                      {rowStatus !== 'archived' && canArchive ? (
-                        <ConfirmDialog
-                          title="Retirar este conteúdo?"
-                          description="O item sai da descoberta imediatamente. O histórico permanece para auditoria."
-                          confirmLabel="Retirar conteúdo"
-                          destructive
-                          processing={busy}
-                          onConfirm={() =>
-                            action('/backoffice/content/' + kind + '/' + id + '/archive', id)
-                          }
-                          trigger={
-                            <Button type="button" variant="ghost" size="sm" disabled={busy}>
-                              <Archive aria-hidden="true" className="size-3.5" />
-                              Arquivar
-                            </Button>
-                          }
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                  <PartnerContentMediaModeration
+              {section.rows.map((row) => {
+                const id = numeric(row, 'id')
+                return (
+                  <ModerationItem
+                    key={section.kind + ':' + id}
+                    kind={section.kind}
+                    row={row}
                     tenantId={tenantId}
-                    kind={kind}
-                    contentId={id}
-                    media={media}
-                    canApprove={canApprove}
-                    canReject={canReject}
+                    busy={actionId === id}
+                    permissions={permissions}
+                    refusal={refusal?.id === id ? refusal : null}
+                    onRefusalChange={setRefusal}
+                    onAction={action}
                   />
-                  <div className="mt-4 flex flex-col gap-2">
-                    {canEdit ? (
-                      <PartnerContentAdminEditor
-                        key={id + ':' + text(row, 'updated_at')}
-                        kind={kind}
-                        contentId={id}
-                        status={rowStatus}
-                        title={text(row, 'title')}
-                        description={text(row, 'description') || null}
-                        startsAt={startsAt}
-                        endsAt={endsAt}
-                        priceCents={
-                          row.informational_price_cents === null ||
-                          row.informational_price_cents === undefined
-                            ? null
-                            : numeric(row, 'informational_price_cents')
-                        }
-                        timeZone={timeZone}
-                      />
-                    ) : null}
-                    <PartnerContentHistory
-                      key={'history:' + id + ':' + text(row, 'updated_at')}
-                      tenantId={tenantId}
-                      kind={kind}
-                      contentId={id}
-                      timeZone={timeZone}
-                    />
-                  </div>
-                </article>
-              )
-            })}
-          </section>
-        )}
+                )
+              })}
 
-        <PaginationNav
-          currentPage={page}
-          lastPage={lastPage}
-          buildHref={pageHref}
-          label="Paginação do conteúdo de parceiros"
-        />
+              {scope !== 'all' ? (
+                <PaginationNav
+                  currentPage={section.page}
+                  lastPage={section.lastPage}
+                  buildHref={(nextPage) => scopeHref(section.kind, nextPage)}
+                  label={'Paginação de ' + kindLabel(section.kind).toLowerCase()}
+                />
+              ) : null}
+            </section>
+          ))
+        )}
 
         {platformAccess === 'platform_admin' && policy ? (
           <section className="rounded-lg border border-border bg-card p-5 sm:p-6">
@@ -431,8 +371,7 @@ export default function BackofficePartnerContentPage({
                 </p>
                 <h2 className="mt-1 text-xl font-bold">Publicação e limites</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Estes valores são configuração por tenant; mudar a política não reescreve conteúdo
-                  já publicado.
+                  Valem para esta operação. Mudar a política não reescreve conteúdo já publicado.
                 </p>
               </div>
             </div>
@@ -520,5 +459,198 @@ export default function BackofficePartnerContentPage({
         ) : null}
       </div>
     </MainLayout>
+  )
+}
+
+interface ModerationItemProps {
+  kind: PartnerContentPath
+  row: JsonRecord
+  tenantId: number
+  busy: boolean
+  permissions: { approve: boolean; reject: boolean; archive: boolean; edit: boolean }
+  refusal: Refusal | null
+  onRefusalChange: (refusal: Refusal | null) => void
+  onAction: (path: string, id: number, data?: Record<string, string>) => void
+}
+
+/**
+ * One item of the queue. A component of its own, not a closure of the page, so
+ * the refusal reason keeps its focus while the page re-renders.
+ */
+function ModerationItem({
+  kind,
+  row,
+  tenantId,
+  busy,
+  permissions,
+  refusal,
+  onRefusalChange,
+  onAction,
+}: ModerationItemProps) {
+  const id = numeric(row, 'id')
+  const rowStatus = statusValue(text(row, 'status'))
+  const statusMeta = partnerContentStatusMeta[rowStatus]
+  const establishment = record(row.establishment)
+  const organization = record(establishment?.organization)
+  const publishedRevision = record(establishment?.published_revision)
+  const city = record(publishedRevision?.city)
+  const snapshot = record(row.published_snapshot)
+  const startsAt = text(row, 'starts_at') || null
+  const endsAt = text(row, 'ends_at') || null
+  const timeZone = text(city, 'timezone') || null
+  const media = partnerContentMediaItems(row.media)
+  const base = '/backoffice/content/' + kind + '/' + id
+
+  return (
+    <article className="rounded-lg border border-border bg-card p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                'inline-flex rounded-full border px-2.5 py-0.5 text-[0.68rem] font-semibold',
+                statusMeta.className
+              )}
+            >
+              {statusMeta.label}
+            </span>
+            {snapshot && rowStatus === 'pending_review' ? (
+              <span className="text-xs font-medium text-primary">
+                versão pública anterior preservada
+              </span>
+            ) : null}
+          </div>
+
+          <h3 className="mt-3 text-lg font-bold tracking-[-0.02em]">
+            {text(row, 'title', 'Conteúdo sem título')}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {text(publishedRevision, 'public_name', 'Unidade ' + numeric(row, 'establishment_id'))}
+            {text(organization, 'trade_name') ? ' · ' + text(organization, 'trade_name') : ''}
+          </p>
+
+          {text(row, 'description') ? (
+            <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted-foreground">
+              {text(row, 'description')}
+            </p>
+          ) : null}
+
+          {startsAt && endsAt ? (
+            <p className="mt-3 text-sm font-medium">
+              {formatPartnerContentDate(startsAt, timeZone)} →{' '}
+              {formatPartnerContentDate(endsAt, timeZone)}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {rowStatus === 'pending_review' && permissions.approve ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => onAction(base + '/approve', id)}
+            >
+              {busy ? (
+                <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+              ) : (
+                <Check aria-hidden="true" className="size-3.5" />
+              )}
+              Aprovar
+            </Button>
+          ) : null}
+
+          {rowStatus === 'pending_review' && permissions.reject ? (
+            <ConfirmDialog
+              title="Recusar esta versão?"
+              description="O parceiro recebe o motivo junto do item e pode corrigir. Se já existia uma versão aprovada, ela continua pública."
+              confirmLabel="Recusar versão"
+              processing={busy}
+              disabled={(refusal?.reason.trim().length ?? 0) < 3}
+              onOpenChange={(open) => onRefusalChange(open ? { id, reason: '' } : null)}
+              onConfirm={() =>
+                onAction(base + '/reject', id, { reason: refusal?.reason.trim() ?? '' })
+              }
+              trigger={
+                <Button type="button" variant="outline" size="sm" disabled={busy}>
+                  <X aria-hidden="true" className="size-3.5" />
+                  Recusar
+                </Button>
+              }
+            >
+              <div className="space-y-2">
+                <Label htmlFor={'refusal-reason-' + id}>Motivo da recusa</Label>
+                <Textarea
+                  id={'refusal-reason-' + id}
+                  value={refusal?.reason ?? ''}
+                  onChange={(event) =>
+                    onRefusalChange({ id, reason: event.target.value.slice(0, 2000) })
+                  }
+                  rows={4}
+                  required
+                  aria-describedby={'refusal-reason-help-' + id}
+                  placeholder="Ex.: a foto mostra outro estabelecimento; troque pela do seu lugar."
+                />
+                <p id={'refusal-reason-help-' + id} className="text-xs text-muted-foreground">
+                  Escreva o que o parceiro precisa mudar. Ele lê este texto no portal.
+                </p>
+              </div>
+            </ConfirmDialog>
+          ) : null}
+
+          {rowStatus !== 'archived' && permissions.archive ? (
+            <ConfirmDialog
+              title="Retirar este conteúdo?"
+              description="O item sai da descoberta imediatamente. O histórico permanece para auditoria."
+              confirmLabel="Retirar conteúdo"
+              destructive
+              processing={busy}
+              onConfirm={() => onAction(base + '/archive', id)}
+              trigger={
+                <Button type="button" variant="ghost" size="sm" disabled={busy}>
+                  <Archive aria-hidden="true" className="size-3.5" />
+                  Arquivar
+                </Button>
+              }
+            />
+          ) : null}
+        </div>
+      </div>
+      <PartnerContentMediaModeration
+        tenantId={tenantId}
+        kind={kind}
+        contentId={id}
+        media={media}
+        canApprove={permissions.approve}
+        canReject={permissions.reject}
+      />
+      <div className="mt-4 flex flex-col gap-2">
+        {permissions.edit ? (
+          <PartnerContentAdminEditor
+            key={id + ':' + text(row, 'updated_at')}
+            kind={kind}
+            contentId={id}
+            status={rowStatus}
+            title={text(row, 'title')}
+            description={text(row, 'description') || null}
+            startsAt={startsAt}
+            endsAt={endsAt}
+            priceCents={
+              row.informational_price_cents === null || row.informational_price_cents === undefined
+                ? null
+                : numeric(row, 'informational_price_cents')
+            }
+            timeZone={timeZone}
+          />
+        ) : null}
+        <PartnerContentHistory
+          key={'history:' + id + ':' + text(row, 'updated_at')}
+          tenantId={tenantId}
+          kind={kind}
+          contentId={id}
+          timeZone={timeZone}
+        />
+      </div>
+    </article>
   )
 }

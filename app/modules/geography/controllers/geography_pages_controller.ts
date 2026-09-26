@@ -9,6 +9,19 @@ import {
   updateCityValidator,
   updateRegionValidator,
 } from '#modules/geography/validators/geography_validator'
+import { activationMessage } from '#shared/utils/activation_message'
+
+const REGION_MESSAGES = {
+  updated: 'Região atualizada.',
+  deactivated: 'Região desativada. As unidades das cidades dela saíram da descoberta.',
+  reactivated: 'Região reativada. As unidades das cidades dela voltam à descoberta.',
+}
+
+const CITY_MESSAGES = {
+  updated: 'Cidade atualizada.',
+  deactivated: 'Cidade desativada. As unidades dela saíram da descoberta.',
+  reactivated: 'Cidade reativada. As unidades dela voltam à descoberta.',
+}
 
 /**
  * Regions and cities — Anexo I item 12.
@@ -50,7 +63,7 @@ export default class GeographyPagesController {
   async updateRegion({ params, request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(updateRegionValidator)
     await this.regions.update(tenant!.id, Number(params.id), payload)
-    session.flash('success', 'Região atualizada.')
+    session.flash('success', activationMessage(REGION_MESSAGES, payload.is_active))
     return response.redirect().back()
   }
 
@@ -64,7 +77,7 @@ export default class GeographyPagesController {
   async updateCity({ params, request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(updateCityValidator)
     await this.cities.update(tenant!.id, Number(params.id), payload)
-    session.flash('success', 'Cidade atualizada.')
+    session.flash('success', activationMessage(CITY_MESSAGES, payload.is_active))
     return response.redirect().back()
   }
 

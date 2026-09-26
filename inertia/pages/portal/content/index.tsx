@@ -6,9 +6,11 @@ import {
   Eye,
   Loader2,
   Megaphone,
+  MessageSquareWarning,
   PackageOpen,
   Plus,
   Rocket,
+  Send,
   Store,
   X,
 } from 'lucide-react'
@@ -66,6 +68,8 @@ interface PartnerContentPageProps {
     showcase_items: unknown
   }
   establishments: EstablishmentOption[]
+  /** Per kind: whether sending queues the item for a person to review. */
+  requires_approval?: Partial<Record<PartnerContentPath, boolean>>
   tenant_id: number
   errors?: Record<string, string>
 }
@@ -81,6 +85,9 @@ interface ContentRow {
   informationalPriceCents: number | null
   publishedAt: string | null
   publishedSnapshot: JsonRecord | null
+  /** Set while the moderation's last refusal is the item's current state. */
+  rejectionReason: string | null
+  rejectedAt: string | null
   media: PartnerContentMediaItem[]
 }
 
@@ -127,6 +134,8 @@ function contentRows(value: unknown): ContentRow[] {
           : numeric(row, 'informational_price_cents'),
       publishedAt: text(row, 'published_at') || null,
       publishedSnapshot: record(row.published_snapshot),
+      rejectionReason: text(row, 'rejection_reason') || null,
+      rejectedAt: text(row, 'rejected_at') || null,
       media: partnerContentMediaItems(row.media),
     }))
     .filter((row) => row.id > 0 && row.establishmentId > 0)
@@ -135,6 +144,7 @@ function contentRows(value: unknown): ContentRow[] {
 export default function PartnerContentPage({
   content,
   establishments,
+  requires_approval: requiresApproval = {},
   errors = {},
   tenant_id: tenantId,
 }: PartnerContentPageProps) {
@@ -166,6 +176,7 @@ export default function PartnerContentPage({
   const publishedCount = rows.filter((row) => row.status === 'published').length
   const pendingCount = rows.filter((row) => row.status === 'pending_review').length
   const draftCount = rows.filter((row) => row.status === 'draft').length
+  const needsReview = requiresApproval[kind] === true
 
   function resetForm() {
     setForm(emptyForm)
@@ -526,14 +537,20 @@ export default function PartnerContentPage({
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={cn(
-                              'inline-flex rounded-full border px-2.5 py-0.5 text-[0.68rem] font-semibold',
-                              meta.className
-                            )}
-                          >
-                            {meta.label}
-                          </span>
+                          {row.rejectionReason && row.status === 'draft' ? (
+                            <span className="inline-flex rounded-full border border-destructive/30 bg-destructive-soft px-2.5 py-0.5 text-[0.68rem] font-semibold text-destructive-accent">
+                              Recusado
+                            </span>
+                          ) : (
+                            <span
+                              className={cn(
+                                'inline-flex rounded-full border px-2.5 py-0.5 text-[0.68rem] font-semibold',
+                                meta.className
+                              )}
+                            >
+                              {meta.label}
+                            </span>
+                          )}
                           {row.status === 'pending_review' && row.publishedSnapshot ? (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
                               <Eye aria-hidden="true" className="size-3.5" />
@@ -557,6 +574,35 @@ export default function PartnerContentPage({
                         <Megaphone aria-hidden="true" className="size-5 shrink-0 text-primary" />
                       )}
                     </div>
+
+                    {row.rejectionReason ? (
+                      <section
+                        aria-label="Recusa da moderação"
+                        className="mt-4 rounded-md border border-destructive/30 bg-destructive-soft p-4 text-destructive-accent"
+                      >
+                        <p className="flex items-center gap-2 text-sm font-bold">
+                          <MessageSquareWarning aria-hidden="true" className="size-4 shrink-0" />
+                          {row.status === 'published'
+                            ? 'Sua alteração foi recusada pela moderação'
+                            : 'Recusado pela moderação'}
+                          {row.rejectedAt
+                            ? ' · ' +
+                              formatPartnerContentDate(
+                                row.rejectedAt,
+                                establishment?.city?.timezone
+                              )
+                            : ''}
+                        </p>
+                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-foreground">
+                          {row.rejectionReason}
+                        </p>
+                        <p className="mt-2 text-xs text-foreground">
+                          {row.status === 'published'
+                            ? 'A versão aprovada continua no ar. Edite e a alteração volta para análise.'
+                            : 'Edite o item e envie de novo quando estiver pronto.'}
+                        </p>
+                      </section>
+                    ) : null}
 
                     {row.description ? (
                       <p className="mt-4 whitespace-pre-line text-sm leading-6 text-muted-foreground">
@@ -619,10 +665,12 @@ export default function PartnerContentPage({
                         >
                           {busy ? (
                             <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                          ) : needsReview ? (
+                            <Send aria-hidden="true" className="size-3.5" />
                           ) : (
                             <Rocket aria-hidden="true" className="size-3.5" />
                           )}
-                          Publicar
+                          {needsReview ? 'Enviar para análise' : 'Publicar'}
                         </Button>
                       ) : null}
 

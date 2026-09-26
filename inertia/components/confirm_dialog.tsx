@@ -33,6 +33,8 @@ interface ConfirmDialogProps {
   /** Optional controlled state, for callers that keep the dialog open while processing. */
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /** Fields the decision needs, such as the reason for a refusal. */
+  children?: ReactNode
 }
 
 /**
@@ -51,6 +53,7 @@ export function ConfirmDialog({
   onConfirm,
   open,
   onOpenChange,
+  children,
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -60,6 +63,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={processing}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction

@@ -113,6 +113,21 @@ export default class PartnerContentRepository {
     return rows.paginate(query.page ?? 1, query.per_page ?? 20)
   }
 
+  /** How many items of a kind match a moderation filter, without loading them. */
+  async countForTenant(
+    kind: IPartnerContent.ContentKind,
+    tenantId: number,
+    query: Pick<IPartnerContent.ListQuery, 'status' | 'establishment_id'>
+  ): Promise<number> {
+    const rows = this.model(kind).query().where('tenant_id', tenantId)
+    if (query.status !== undefined) rows.where('status', query.status)
+    if (query.establishment_id !== undefined) {
+      rows.where('establishment_id', query.establishment_id)
+    }
+    const result = await rows.count('* as total')
+    return Number(result[0].$extras.total)
+  }
+
   /**
    * Public reading.
    *

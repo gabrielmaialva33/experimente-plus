@@ -43,8 +43,8 @@ import type { PaginatedResponse } from '~/types'
 
 interface UserRole {
   id: number
+  slug: string
   name: string
-  display_name?: string
 }
 
 interface UserRow {
@@ -169,7 +169,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
               <div className="flex flex-wrap gap-1">
                 {roles.map((role) => (
                   <Badge key={role.id} variant="secondary" appearance="light" size="sm">
-                    {globalRoleLabel(role.name, role.display_name)}
+                    {globalRoleLabel(role.slug, role.name)}
                   </Badge>
                 ))}
               </div>

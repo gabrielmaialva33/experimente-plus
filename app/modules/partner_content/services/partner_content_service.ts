@@ -109,6 +109,7 @@ export default class PartnerContentService {
 
       if (content.status === 'published' && needsApproval) {
         content.status = 'pending_review'
+        this.clearRejection(content)
       }
 
       this.assertEventWindow(kind, content, policy.min_event_notice_minutes)
@@ -165,6 +166,7 @@ export default class PartnerContentService {
       } else {
         this.publish(content, kind)
       }
+      this.clearRejection(content)
 
       await content.save()
       await this.record(client, kind, content, actor, 'submitted', fromStatus, content.status)
@@ -176,6 +178,23 @@ export default class PartnerContentService {
 
       return content
     })
+  }
+
+  /**
+   * Whether sending an item publishes it or queues it, per kind. The partner's
+   * screen names its button after this: "Enviar para análise" when a person
+   * reviews first, "Publicar" when it goes live at once.
+   */
+  async approvalRequirements(
+    tenantId: number
+  ): Promise<Record<IPartnerContent.ContentPath, boolean>> {
+    const policy = await this.policyRepository.getForTenant(tenantId)
+    return Object.fromEntries(
+      IPartnerContent.CANONICAL_CONTENT_PATHS.map((path) => [
+        path,
+        this.policyRepository.requiresApproval(policy, IPartnerContent.kindOfPath(path)),
+      ])
+    ) as Record<IPartnerContent.ContentPath, boolean>
   }
 
   /** Moderation. `admin` reaches this by inheriting `moderator` (ADR-0007). */
@@ -232,7 +251,13 @@ export default class PartnerContentService {
    * exists it stays public: refusing an edit is not a reason to take down what
    * was already accepted.
    */
-  async reject(kind: IPartnerContent.ContentKind, tenantId: number, id: number, actor: User) {
+  async reject(
+    kind: IPartnerContent.ContentKind,
+    tenantId: number,
+    id: number,
+    actor: User,
+    reason: string
+  ) {
     await this.organizationPolicy.requirePlatformModerator(actor)
 
     return db.transaction(async (client) => {
@@ -244,8 +269,23 @@ export default class PartnerContentService {
 
       content.useTransaction(client)
       content.status = content.published_snapshot ? 'published' : 'draft'
+      // The partner reads the reason on the item until they send a new version;
+      // the history keeps it for good (ADR-0028, revision of 27/09/2026).
+      content.rejection_reason = reason.trim()
+      content.rejected_at = DateTime.utc()
       await content.save()
-      await this.record(client, kind, content, actor, 'rejected', 'pending_review', content.status)
+      await this.record(
+        client,
+        kind,
+        content,
+        actor,
+        'rejected',
+        'pending_review',
+        content.status,
+        {
+          metadata: { reason: content.rejection_reason },
+        }
+      )
       return content
     })
   }
@@ -418,6 +458,28 @@ export default class PartnerContentService {
     return this.contentRepository.paginateForTenant(kind, tenantId, query)
   }
 
+  /**
+   * How many items of each kind match the moderation filter. The queue shows
+   * these next to each kind, so an item waiting in a kind nobody selected is
+   * still counted on screen.
+   */
+  async countForModeration(
+    tenantId: number,
+    actor: User,
+    query: Pick<IPartnerContent.ListQuery, 'status' | 'establishment_id'>
+  ): Promise<Record<IPartnerContent.ContentPath, number>> {
+    await this.organizationPolicy.requirePlatformModerator(actor)
+    const counts = {} as Record<IPartnerContent.ContentPath, number>
+    for (const path of IPartnerContent.CANONICAL_CONTENT_PATHS) {
+      counts[path] = await this.contentRepository.countForTenant(
+        IPartnerContent.kindOfPath(path),
+        tenantId,
+        query
+      )
+    }
+    return counts
+  }
+
   /** Public discovery: no session, no membership (ADR-0003). */
   async listPublic(kind: IPartnerContent.ContentKind, tenantId: number, establishmentId: number) {
     return this.contentRepository.listPublished(kind, tenantId, establishmentId, new Date())
@@ -539,6 +601,12 @@ export default class PartnerContentService {
       if (previous !== value) changes[field] = { from: previous, to: value }
     }
     return changes
+  }
+
+  /** A new version answers the last refusal, so it is no longer the item's state. */
+  private clearRejection(content: IPartnerContent.ContentRow): void {
+    content.rejection_reason = null
+    content.rejected_at = null
   }
 
   private async record(

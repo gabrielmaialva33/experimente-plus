@@ -12,6 +12,7 @@ import {
   createContentValidator,
   listContentQueryValidator,
   publicContentParamsValidator,
+  rejectContentValidator,
   updateContentValidator,
   updatePartnerContentPolicyValidator,
 } from '#modules/partner_content/validators/partner_content_validator'
@@ -115,10 +116,11 @@ export default class PartnerContentController {
     return this.contentService.approve(kind, tenant!.id, id, auth.getUserOrFail())
   }
 
-  async reject({ tenant, auth, params }: HttpContext) {
+  async reject({ tenant, auth, params, request }: HttpContext) {
     const { kind: path, id } = await contentIdParamsValidator.validate(params)
+    const { reason } = await request.validateUsing(rejectContentValidator)
     const kind = IPartnerContent.kindOfPath(path)
-    return this.contentService.reject(kind, tenant!.id, id, auth.getUserOrFail())
+    return this.contentService.reject(kind, tenant!.id, id, auth.getUserOrFail(), reason)
   }
 
   /**

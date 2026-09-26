@@ -26,8 +26,10 @@ test.group('Canonical homologation baseline', () => {
     // + 1 for the content favourites of ADR-0030 (revision of 23/09/2026)
     // + 1 for the uniqueness of an anonymous report's origin (ADR-0027 §14)
     // + 1 for the Concierge parameters per operation (ADR-0029, revision of
-    // 26/09/2026).
-    assert.lengthOf(files, 77)
+    // 26/09/2026)
+    // + 1 for the moderation's refusal reason on partner content (ADR-0028,
+    // revision of 27/09/2026).
+    assert.lengthOf(files, 78)
     assert.isFalse(files.some((name) => /1788556800|178881480[123]/.test(name)))
     const history = await db.from('adonis_schema').select('name')
     assert.lengthOf(history, files.length)

@@ -110,6 +110,7 @@ export default function BackofficeGeography({ regions, cities }: GeographyPagePr
           createLabel="Nova região"
           emptyLabel="Nenhuma região cadastrada"
           describe={describeRegion}
+          deactivateEffect="As unidades de todas as cidades desta região saem da descoberta até a região ser reativada. Nada é apagado."
           canCreate={can('regions.create')}
           canUpdate={can('regions.update')}
         />
@@ -125,6 +126,7 @@ export default function BackofficeGeography({ regions, cities }: GeographyPagePr
           createLabel="Nova cidade"
           emptyLabel="Nenhuma cidade cadastrada"
           describe={describeCity}
+          deactivateEffect="As unidades desta cidade saem da descoberta até a cidade ser reativada. Nada é apagado."
           canCreate={can('cities.create') && regionRows.length > 0}
           canUpdate={can('cities.update')}
         />

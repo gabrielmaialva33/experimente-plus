@@ -224,13 +224,10 @@ export function PartnerContentHistory({
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(
-        '/api/v1/admin/content/' + kind + '/' + contentId + '/history',
-        {
-          credentials: 'same-origin',
-          headers: { 'Accept': 'application/json', 'x-tenant-id': String(tenantId) },
-        }
-      )
+      const response = await fetch('/api/v1/admin/content/' + kind + '/' + contentId + '/history', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'x-tenant-id': String(tenantId) },
+      })
       if (!response.ok) throw new Error('history request failed')
       setEvents(partnerContentEvents(await response.json()))
     } catch {
@@ -279,6 +276,9 @@ export function PartnerContentHistory({
                 {event.actorName ?? 'Autor desconhecido'} ·{' '}
                 {formatPartnerContentDate(event.createdAt, timeZone) ?? event.createdAt}
               </p>
+              {event.reason ? (
+                <p className="mt-1 whitespace-pre-line text-xs leading-5">Motivo: {event.reason}</p>
+              ) : null}
               {describeChanges(event.changes, timeZone).map((line) => (
                 <p key={line} className="mt-1 whitespace-pre-line text-xs leading-5">
                   {line}

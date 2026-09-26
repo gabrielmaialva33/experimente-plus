@@ -289,9 +289,12 @@ export default function BenefitsBackofficePage({
           }
         />
 
+        {/* One explicit mobile column (minmax(0, 1fr)): an implicit grid track
+            grows to its widest content, and at 390px the page scrolled
+            sideways — web audit W25. */}
         <div
           className={cn(
-            'grid gap-6 xl:items-start',
+            'grid grid-cols-1 gap-6 xl:items-start',
             (canCreate || canUpdate) && 'xl:grid-cols-[minmax(19rem,0.8fr)_minmax(0,1.2fr)]'
           )}
         >
@@ -324,7 +327,11 @@ export default function BenefitsBackofficePage({
               </div>
 
               {showEditionForm ? (
-                <form onSubmit={submit} aria-busy={processing} className="mt-6 grid gap-4">
+                <form
+                  onSubmit={submit}
+                  aria-busy={processing}
+                  className="mt-6 grid grid-cols-1 gap-4"
+                >
                   <EditorField
                     htmlFor="edition-city"
                     label="Cidade"
@@ -392,7 +399,7 @@ export default function BenefitsBackofficePage({
                     </div>
                   </EditorField>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <EditorField htmlFor="edition-usage-start" label="Início de uso">
                       <Input
                         id="edition-usage-start"
@@ -415,7 +422,7 @@ export default function BenefitsBackofficePage({
                     </EditorField>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <EditorField
                       htmlFor="edition-sales-start"
                       label="Início das vendas"
@@ -529,7 +536,7 @@ export default function BenefitsBackofficePage({
                 className="rounded-lg border border-dashed border-border bg-card"
               />
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 {editions.map((edition) => {
                   const meta = statusMeta[edition.status] ?? statusMeta.draft
                   const activeOffers = edition.offers.filter(

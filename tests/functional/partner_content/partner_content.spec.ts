@@ -227,6 +227,7 @@ test.group('Partner content', (group) => {
       .post(`/api/v1/admin/content/events/${id}/reject`)
       .headers(tenantHeader(scenario.tenant.id))
       .loginAs(moderator)
+      .json({ reason: 'A entrada não é franca segundo o cadastro.' })
 
     rejected.assertStatus(200)
     rejected.assertBodyContains({ status: 'published' })

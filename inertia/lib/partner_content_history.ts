@@ -9,6 +9,8 @@ export interface PartnerContentEvent {
   actorName: string | null
   changes: Record<string, { from: unknown; to: unknown }>
   republished: boolean
+  /** Why a refusal was made; only refusals carry one. */
+  reason: string | null
   createdAt: string
 }
 
@@ -39,7 +41,7 @@ export function partnerContentEvents(value: unknown): PartnerContentEvent[] {
     if (!row || typeof row !== 'object') return []
     const entry = row as Record<string, unknown>
     const actor = entry.actor as { full_name?: unknown } | null
-    const metadata = entry.metadata as { republished?: unknown } | null
+    const metadata = entry.metadata as { republished?: unknown; reason?: unknown } | null
     const changes =
       entry.changes && typeof entry.changes === 'object'
         ? (entry.changes as PartnerContentEvent['changes'])
@@ -54,6 +56,7 @@ export function partnerContentEvents(value: unknown): PartnerContentEvent[] {
         actorName: actor && typeof actor.full_name === 'string' ? actor.full_name : null,
         changes,
         republished: metadata?.republished === true,
+        reason: typeof metadata?.reason === 'string' && metadata.reason ? metadata.reason : null,
         createdAt: String(entry.created_at ?? ''),
       },
     ]

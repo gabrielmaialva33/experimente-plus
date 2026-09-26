@@ -3,6 +3,7 @@ import { Pencil, Plus, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { ResourceForm } from '~/components/backoffice/resource_form'
+import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
 import { Button } from '~/components/ui/button'
 import { numeric, type JsonRecord } from '~/lib/json'
@@ -21,6 +22,8 @@ interface ResourceSectionProps {
   createLabel: string
   emptyLabel: string
   describe: (record: JsonRecord) => { name: string; meta: string }
+  /** What deactivating does to discovery, said before it happens. */
+  deactivateEffect: string
   canCreate: boolean
   canUpdate: boolean
 }
@@ -30,7 +33,8 @@ interface ResourceSectionProps {
  *
  * There is no delete. The domain retires these records by deactivating them,
  * because published establishments and saved preferences still point at them,
- * and the screen offers exactly what the domain does.
+ * and the screen offers exactly what the domain does. Deactivating asks first,
+ * saying what leaves discovery (web audit W9); reactivating is immediate.
  */
 export function ResourceSection({
   id,
@@ -43,6 +47,7 @@ export function ResourceSection({
   createLabel,
   emptyLabel,
   describe,
+  deactivateEffect,
   canCreate,
   canUpdate,
 }: ResourceSectionProps) {
@@ -53,7 +58,10 @@ export function ResourceSection({
     router.put(`${basePath}/${recordId}`, { is_active: !active }, { preserveScroll: true })
 
   return (
-    <section aria-labelledby={`${id}-heading`} className="rounded-lg border border-border bg-card p-5 sm:p-6">
+    <section
+      aria-labelledby={`${id}-heading`}
+      className="rounded-lg border border-border bg-card p-5 sm:p-6"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
@@ -132,15 +140,35 @@ export function ResourceSection({
                           <Pencil aria-hidden="true" className="size-4" />
                           Editar
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          aria-label={active ? `Desativar ${name}` : `Ativar ${name}`}
-                          onClick={() => toggleActive(recordId, active)}
-                        >
-                          {active ? 'Desativar' : 'Ativar'}
-                        </Button>
+                        {active ? (
+                          <ConfirmDialog
+                            trigger={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                aria-label={`Desativar ${name}`}
+                              >
+                                Desativar
+                              </Button>
+                            }
+                            title={`Desativar ${name}?`}
+                            description={deactivateEffect}
+                            confirmLabel="Desativar"
+                            destructive
+                            onConfirm={() => toggleActive(recordId, active)}
+                          />
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            aria-label={`Ativar ${name}`}
+                            onClick={() => toggleActive(recordId, active)}
+                          >
+                            Ativar
+                          </Button>
+                        )}
                       </>
                     ) : null}
                   </div>

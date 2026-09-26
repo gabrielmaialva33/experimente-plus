@@ -76,6 +76,16 @@ export const rejectPartnerContentMediaValidator = vine.compile(
   })
 )
 
+/**
+ * A refusal says why — ADR-0028, revision of 27/09/2026. Without a reason the
+ * partner cannot tell what to change, so the moderation cannot refuse silently.
+ */
+export const rejectContentValidator = vine.compile(
+  vine.object({
+    reason: vine.string().trim().minLength(3).maxLength(2000),
+  })
+)
+
 export const createContentValidator = vine.compile(
   vine.object({
     establishment_id: vine.number().min(1),
