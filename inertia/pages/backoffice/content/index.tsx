@@ -26,6 +26,8 @@ import {
 } from '~/components/portal/establishment_editor/editor_field'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
+import { Textarea } from '~/components/ui/textarea'
 import { MainLayout } from '~/layouts/main_layout'
 import { useAuth } from '~/hooks/use_auth'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
@@ -99,6 +101,8 @@ export default function BackofficePartnerContentPage({
     establishmentId > 0 ? String(establishmentId) : ''
   )
   const [actionId, setActionId] = useState<number | null>(null)
+  // One refusal is written at a time; the reason belongs to the item it opened on.
+  const [refusal, setRefusal] = useState<{ id: number; reason: string } | null>(null)
   const [policyProcessing, setPolicyProcessing] = useState(false)
   const [policyForm, setPolicyForm] = useState<PolicyForm>({
     requireExperienceApproval: booleanValue(policy, 'require_experience_approval'),
@@ -137,9 +141,9 @@ export default function BackofficePartnerContentPage({
     })
   }
 
-  function action(path: string, id: number) {
+  function action(path: string, id: number, data: Record<string, string> = {}) {
     setActionId(id)
-    router.post(path, {}, { preserveScroll: true, onFinish: () => setActionId(null) })
+    router.post(path, data, { preserveScroll: true, onFinish: () => setActionId(null) })
   }
 
   function savePolicy(event: FormEvent<HTMLFormElement>) {
@@ -335,11 +339,15 @@ export default function BackofficePartnerContentPage({
                       {rowStatus === 'pending_review' && canReject ? (
                         <ConfirmDialog
                           title="Recusar esta versão?"
-                          description="O item volta para rascunho. Se já existia uma versão aprovada, ela continua pública."
+                          description="O parceiro recebe o motivo junto do item e pode corrigir. Se já existia uma versão aprovada, ela continua pública."
                           confirmLabel="Recusar versão"
                           processing={busy}
+                          disabled={refusal?.id !== id || (refusal?.reason.trim().length ?? 0) < 3}
+                          onOpenChange={(open) => setRefusal(open ? { id, reason: '' } : null)}
                           onConfirm={() =>
-                            action('/backoffice/content/' + kind + '/' + id + '/reject', id)
+                            action('/backoffice/content/' + kind + '/' + id + '/reject', id, {
+                              reason: refusal?.id === id ? refusal.reason.trim() : '',
+                            })
                           }
                           trigger={
                             <Button type="button" variant="outline" size="sm" disabled={busy}>
@@ -347,7 +355,28 @@ export default function BackofficePartnerContentPage({
                               Recusar
                             </Button>
                           }
-                        />
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor={'refusal-reason-' + id}>Motivo da recusa</Label>
+                            <Textarea
+                              id={'refusal-reason-' + id}
+                              value={refusal?.id === id ? refusal.reason : ''}
+                              onChange={(event) =>
+                                setRefusal({ id, reason: event.target.value.slice(0, 2000) })
+                              }
+                              rows={4}
+                              required
+                              aria-describedby={'refusal-reason-help-' + id}
+                              placeholder="Ex.: a foto mostra outro estabelecimento; troque pela do seu lugar."
+                            />
+                            <p
+                              id={'refusal-reason-help-' + id}
+                              className="text-xs text-muted-foreground"
+                            >
+                              Escreva o que o parceiro precisa mudar. Ele lê este texto no portal.
+                            </p>
+                          </div>
+                        </ConfirmDialog>
                       ) : null}
 
                       {rowStatus !== 'archived' && canArchive ? (

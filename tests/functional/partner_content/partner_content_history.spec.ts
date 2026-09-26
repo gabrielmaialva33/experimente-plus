@@ -69,6 +69,7 @@ test.group('Partner content history and administrative edit (ADR-0028 §4)', (gr
       .post(`/api/v1/admin/content/events/${id}/reject`)
       .headers(headers)
       .loginAs(moderator)
+      .json({ reason: 'Ajuste o texto antes de publicar.' })
     await client
       .post(`/api/v1/portal/content/events/${id}/submit`)
       .headers(headers)

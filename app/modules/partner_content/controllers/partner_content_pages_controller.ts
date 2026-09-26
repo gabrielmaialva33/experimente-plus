@@ -11,6 +11,7 @@ import {
   contentKindParamsValidator,
   createContentValidator,
   listContentQueryValidator,
+  rejectContentValidator,
   updateContentValidator,
   updatePartnerContentPolicyValidator,
 } from '#modules/partner_content/validators/partner_content_validator'
@@ -78,6 +79,7 @@ export default class PartnerContentPagesController {
         },
       },
       establishments: await this.portalEstablishments(tenantId, overview),
+      requires_approval: await this.contentService.approvalRequirements(tenantId),
       tenant_id: tenantId,
     })
   }
@@ -204,17 +206,19 @@ export default class PartnerContentPagesController {
     return response.redirect().back()
   }
 
-  async reject({ auth, params, response, session, tenant }: HttpContext) {
+  async reject({ auth, params, request, response, session, tenant }: HttpContext) {
     const { kind: path, id } = await contentIdParamsValidator.validate(params)
+    const { reason } = await request.validateUsing(rejectContentValidator)
     await this.contentService.reject(
       IPartnerContent.kindOfPath(path),
       tenant!.id,
       id,
-      auth.getUserOrFail()
+      auth.getUserOrFail(),
+      reason
     )
     session.flash(
       'success',
-      'Versão recusada. O parceiro pode corrigir o rascunho e a versão aprovada anterior foi preservada.'
+      'Versão recusada. O parceiro vê o motivo e pode corrigir; a versão aprovada anterior continua no ar.'
     )
     return response.redirect().back()
   }

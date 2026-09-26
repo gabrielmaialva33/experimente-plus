@@ -73,6 +73,14 @@ A **edição pelo administrador** (Anexo I item 7), que o texto acima deixava se
 
 O histórico ainda não é exibido ao parceiro. Mostrar a ele quem da operação alterou seu conteúdo é desejável, mas decide o que o parceiro vê sobre a moderação, e fica como pendência.
 
+**Revisão — 27/09/2026: a recusa diz por quê.** A auditoria de usabilidade da web encontrou que recusar devolvia o item ao rascunho em silêncio: o parceiro via "Rascunho" e não distinguia uma recusa de um item nunca enviado. Agora:
+
+- Recusar **exige motivo** (3 a 2.000 caracteres), na API (`POST /api/v1/admin/content/{kind}/{id}/reject` com `{ reason }`, 422 sem ele) e na tela de moderação, cujo diálogo só confirma com o motivo escrito.
+- O motivo e o momento ficam **no próprio item** (`rejection_reason`, `rejected_at`, nova migration) enquanto a recusa for o estado corrente, e o parceiro os lê no portal como "Recusado pela moderação", ou "Sua alteração foi recusada" quando a versão aprovada continua no ar.
+- Os dois campos são **limpos quando o parceiro manda uma nova versão** — ao submeter, ou ao editar conteúdo publicado que por isso volta à análise. Uma restrição no banco impede motivo sem data e data sem motivo.
+- O evento `rejected` do histórico passa a guardar o motivo em `metadata.reason`, e a tela do moderador o mostra. O histórico continua sendo a memória de todas as recusas; o campo no item é só a atual.
+- No portal, o botão de envio diz **"Enviar para análise"** quando a política da operação exige aprovação para aquele tipo, e "Publicar" quando não exige. Antes dizia sempre "Publicar", mesmo quando mandava para a fila.
+
 ### 5. A projeção pública não sabe destes conteúdos
 
 A projeção reconstruível do ADR-0016 conhece hoje apenas as fontes do estabelecimento. Publicar, arquivar ou moderar um conteúdo novo não apareceria na descoberta sem decisão explícita.
