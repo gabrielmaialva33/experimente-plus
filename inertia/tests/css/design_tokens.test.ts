@@ -332,6 +332,8 @@ describe('flat foundation token contract', () => {
     expect(choiceStyles).toContain('[data-state=')
     expect(choiceStyles).toContain('[data-selected=')
     expect(choiceStyles).toContain('.choice-marker')
+    // An idle choice reserves no blank slot for its check: the label stays centred.
+    expect(choiceStyles).toMatch(/& \.choice-marker \{\s*display: none;/)
     expect(choiceStyles).not.toMatch(/underline|shadow/)
   })
 

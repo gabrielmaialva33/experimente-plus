@@ -67,6 +67,7 @@ describe('distinct catalog color roles', () => {
     const chip = checkbox.closest('label')
     expect(chip).toHaveClass('choice-control', 'rounded-full', 'min-h-11')
     expect(chip).toHaveAttribute('data-selected', 'false')
+    expect(chip?.querySelector('.choice-marker')).toBeInTheDocument()
     await user.click(checkbox)
     expect(checkbox).toBeChecked()
     expect(chip).toHaveAttribute('data-selected', 'true')

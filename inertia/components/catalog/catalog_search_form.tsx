@@ -194,6 +194,7 @@ export function CatalogSearchForm({
               value="true"
               checked={openNow}
               onChange={(event) => setOpenNow(event.target.checked)}
+              className="h-13 px-5 text-[0.9375rem]"
             >
               Aberto agora
             </FilterChip>
