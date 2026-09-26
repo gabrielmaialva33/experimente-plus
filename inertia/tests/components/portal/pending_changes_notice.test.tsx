@@ -23,8 +23,8 @@ describe('PendingChangesNotice', () => {
       />
     )
 
-    expect(screen.getByRole('alert')).toHaveTextContent('2 etapas possuem mudanças locais')
-    expect(screen.getByRole('alert')).toHaveTextContent('dados já salvos no servidor')
+    expect(screen.getByRole('alert')).toHaveTextContent('2 etapas possuem alterações não salvas')
+    expect(screen.getByRole('alert')).toHaveTextContent('Só o que foi salvo vai para a análise')
 
     await user.click(screen.getByRole('button', { name: /revisar identidade/i }))
     expect(onReview).toHaveBeenCalledOnce()
@@ -33,7 +33,7 @@ describe('PendingChangesNotice', () => {
   it('announces an operation in progress without presenting a review action', () => {
     render(<PendingChangesNotice dirtySectionCount={0} busy onReview={() => undefined} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('Atualizando os dados da unidade')
+    expect(screen.getByRole('status')).toHaveTextContent('Atualizando os dados do lugar')
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

@@ -32,6 +32,8 @@ interface EstablishmentEditorNavigationProps {
   submitLabel: string
   statusLabel: string
   lockedLabel: string
+  /** Unresolved moderation requests: the data is not "ready" while any is open. */
+  correctionCount?: number
 }
 
 function NavigationButton({
@@ -106,6 +108,7 @@ export function EstablishmentEditorNavigation({
   submitLabel,
   statusLabel,
   lockedLabel,
+  correctionCount = 0,
 }: EstablishmentEditorNavigationProps) {
   const mobileNavigationRef = useRef<HTMLElement>(null)
   const hasUnsavedChanges = unsavedSectionCount > 0
@@ -178,7 +181,7 @@ export function EstablishmentEditorNavigation({
                 <span className="text-sm font-bold tabular-nums">{score}%</span>
               </ProgressCircle>
               <div className="min-w-0">
-                <p className="text-sm font-semibold">Prontidão da ficha</p>
+                <p className="text-sm font-semibold">Andamento dos dados</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">{statusLabel}</p>
               </div>
             </div>
@@ -192,12 +195,17 @@ export function EstablishmentEditorNavigation({
             ) : busy ? (
               <Badge variant="secondary" appearance="light" className="w-full justify-start">
                 <LoaderCircle className="animate-spin" />
-                Atualizando a ficha
+                Atualizando os dados
+              </Badge>
+            ) : correctionCount > 0 ? (
+              <Badge variant="warning" appearance="light" className="w-full justify-start">
+                <AlertTriangle />
+                {correctionCount} {correctionCount === 1 ? 'correção pedida' : 'correções pedidas'}
               </Badge>
             ) : eligible ? (
               <Badge variant="success" appearance="light" className="w-full justify-start">
                 <CheckCircle2 />
-                {submitAllowed ? 'Pronta para moderação' : 'Checklist concluído'}
+                {submitAllowed ? 'Pronto para enviar' : 'Tudo preenchido'}
               </Badge>
             ) : (
               <Badge variant="warning" appearance="light" className="w-full justify-start">
@@ -223,7 +231,8 @@ export function EstablishmentEditorNavigation({
               <div className="w-full space-y-2">
                 <Button
                   type="button"
-                  size="lg"
+                  size="xl"
+                  shape="pill"
                   className="w-full"
                   disabled={!eligible || operationBusy || hasUnsavedChanges}
                   aria-describedby={helperText ? 'editor-submit-help' : undefined}

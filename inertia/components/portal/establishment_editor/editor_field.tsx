@@ -14,6 +14,8 @@ interface EditorFieldProps {
   children: ReactElement<EditorControlProps>
   hint?: string
   error?: string | null
+  /** What the moderation asked to change in this field, shown where the edit happens. */
+  note?: string | null
   required?: boolean
   className?: string
 }
@@ -27,12 +29,14 @@ export function EditorField({
   children,
   hint,
   error,
+  note,
   required = false,
   className,
 }: EditorFieldProps) {
   const hintId = hint ? `${htmlFor}-hint` : undefined
+  const noteId = note ? `${htmlFor}-note` : undefined
   const errorId = error ? `${htmlFor}-error` : undefined
-  const describedBy = [children.props['aria-describedby'], hintId, errorId]
+  const describedBy = [children.props['aria-describedby'], hintId, noteId, errorId]
     .filter(Boolean)
     .join(' ')
   const control = cloneElement(children, {
@@ -62,6 +66,15 @@ export function EditorField({
         ) : null}
       </div>
       {control}
+      {note ? (
+        <p
+          id={noteId}
+          className="rounded-xl border border-warning/30 bg-warning-soft px-3 py-2 text-[0.8125rem] leading-5 text-foreground"
+        >
+          <span className="font-bold text-warning-accent">Correção pedida pela moderação:</span>{' '}
+          {note}
+        </p>
+      ) : null}
       {error ? (
         <p id={errorId} role="alert" className="text-xs text-destructive">
           {error}

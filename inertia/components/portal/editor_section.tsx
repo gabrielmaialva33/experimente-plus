@@ -49,14 +49,14 @@ export function EditorSection({
       aria-describedby={[descriptionId, issuesId].filter(Boolean).join(' ')}
       className={cn('scroll-mt-36 lg:scroll-mt-24', className)}
     >
-      <Card className="overflow-hidden border-border/70">
+      <Card className="overflow-hidden rounded-card border-border-subtle">
         <CardHeader className="min-h-0 items-start px-5 py-5 sm:flex-nowrap sm:px-6">
           <div className="flex min-w-0 items-start gap-3.5">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Icon aria-hidden="true" className="size-5" />
             </span>
             <div className="min-w-0">
-              <h2 id={titleId} className="text-lg font-semibold tracking-[-0.02em]">
+              <h2 id={titleId} className="font-display text-lg font-bold tracking-[-0.02em]">
                 {title}
               </h2>
               <p
@@ -69,12 +69,12 @@ export function EditorSection({
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {issues.length > 0 ? (
-              <Badge variant="warning" appearance="light" size="sm">
+              <Badge variant="warning" appearance="light" shape="pill" size="sm">
                 <AlertTriangle />
                 {issues.length} {issues.length === 1 ? 'pendência' : 'pendências'}
               </Badge>
             ) : (
-              <Badge variant="success" appearance="light" size="sm">
+              <Badge variant="success" appearance="light" shape="pill" size="sm">
                 <CheckCircle2 />
                 Em dia
               </Badge>
@@ -88,24 +88,22 @@ export function EditorSection({
             id={issuesId}
             role="status"
             aria-live="polite"
-            className="border-b border-border/70 bg-warning/5 px-5 py-4 sm:px-6"
+            className="border-b border-border-subtle bg-warning-soft/60 px-5 py-4 sm:px-6"
           >
             <div className="grid gap-2 sm:grid-cols-2">
               {issues.map((issue) => (
                 <div
                   key={issue.key}
-                  className="flex items-start gap-2.5 rounded-lg border border-warning/20 bg-background/75 px-3 py-2.5"
+                  className="flex items-start gap-2.5 rounded-xl border border-warning/20 bg-background/75 px-3 py-2.5"
                 >
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-foreground" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium leading-5">{issue.message}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[0.68rem] text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       {issue.source === 'moderation' ? (
-                        <span className="font-semibold uppercase tracking-[0.12em] text-warning-foreground">
-                          Moderação
-                        </span>
+                        <span className="font-bold text-warning-accent">Pedido da moderação</span>
                       ) : (
-                        <span className="font-semibold uppercase tracking-[0.12em]">Checklist</span>
+                        <span className="font-semibold">Falta preencher</span>
                       )}
                       {issue.field ? <span>· {editorIssueFieldLabel(issue.field)}</span> : null}
                     </div>
@@ -154,7 +152,7 @@ export function EditorSaveBar({
         : 'Nenhuma alteração pendente.'
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border/70 bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div className="flex flex-col gap-3 border-t border-border-subtle bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div
         className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground"
         role="status"
@@ -182,6 +180,7 @@ export function EditorSaveBar({
             type="button"
             variant="outline"
             size="lg"
+            shape="pill"
             disabled={disabled || processing}
             onClick={onDiscard}
           >
@@ -189,7 +188,7 @@ export function EditorSaveBar({
             {discardLabel}
           </Button>
         ) : null}
-        <Button type="submit" size="lg" disabled={disabled || processing || !dirty}>
+        <Button type="submit" size="lg" shape="pill" disabled={disabled || processing || !dirty}>
           <Save />
           {processing ? processingLabel : label}
         </Button>

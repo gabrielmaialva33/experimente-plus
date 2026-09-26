@@ -92,7 +92,7 @@ export function MediaSection({
     <EditorSection
       id="media"
       icon={Images}
-      title="Mídia da unidade"
+      title="Fotos do lugar"
       description="Envie imagens representativas, escolha a capa e acompanhe o status de moderação de cada item."
       issues={issues}
       toolbar={
@@ -188,7 +188,7 @@ export function MediaSection({
                 className="mt-0.5 size-4 rounded border-input accent-primary"
               />
               <span>
-                <span className="block text-sm font-medium">Usar como capa da unidade</span>
+                <span className="block text-sm font-medium">Usar como capa do lugar</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   A capa atual será substituída. A imagem precisa continuar elegível após a
                   moderação.
@@ -234,7 +234,7 @@ export function MediaSection({
             <Images className="mx-auto size-7 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">Nenhuma imagem adicionada</p>
             <p className="mx-auto mt-1 max-w-lg text-sm leading-6 text-muted-foreground">
-              Adicione imagens reais da unidade. A primeira imagem é escolhida como capa por padrão.
+              Adicione fotos reais do lugar. A primeira foto vira a capa, e você pode trocar depois.
             </p>
           </div>
         ) : (
@@ -268,7 +268,7 @@ export function MediaSection({
                     {url ? (
                       <img
                         src={url}
-                        alt={stringValue(item, 'alt_text', 'Imagem da unidade')}
+                        alt={stringValue(item, 'alt_text', 'Foto do lugar')}
                         className="size-full object-cover"
                         loading="lazy"
                       />
@@ -367,7 +367,7 @@ export function MediaSection({
               <AlertDialogTitle>Remover esta imagem?</AlertDialogTitle>
               <AlertDialogDescription>
                 A imagem “{stringValue(pendingDelete ?? null, 'alt_text', 'sem descrição')}” será
-                removida da revisão atual. Essa ação não pode ser desfeita.
+                removida desta versão dos dados. Essa ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

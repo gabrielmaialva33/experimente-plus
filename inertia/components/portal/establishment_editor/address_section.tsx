@@ -9,6 +9,7 @@ import {
 import { Button } from '~/components/ui/button'
 import { Checkbox } from '~/components/ui/checkbox'
 import { Input } from '~/components/ui/input'
+import { formatCep } from '~/lib/br_format'
 import { firstError } from '~/lib/form_errors'
 import { EditorField } from './editor_field'
 import type { AddressForm } from './types'
@@ -31,7 +32,7 @@ export function AddressSection({ form, editable, busy, issues, onSubmit }: Addre
       id="address"
       icon={MapPin}
       title="Endereço e localização"
-      description="O endereço sustenta a descoberta regional; as coordenadas posicionam corretamente a unidade no mapa."
+      description="O endereço aparece na página do lugar; as coordenadas colocam o pino no ponto certo do mapa."
       issues={issues}
       toolbar={
         coordinatesAvailable ? (
@@ -65,6 +66,7 @@ export function AddressSection({ form, editable, busy, issues, onSubmit }: Addre
                 disabled={controlsDisabled}
                 value={form.data.postal_code}
                 onChange={(event) => form.setData('postal_code', event.target.value)}
+                onBlur={(event) => form.setData('postal_code', formatCep(event.target.value))}
                 placeholder="00000-000"
               />
             </EditorField>

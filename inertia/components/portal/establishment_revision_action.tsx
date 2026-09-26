@@ -28,8 +28,8 @@ export function EstablishmentRevisionAction({
   return (
     <Button
       type="button"
-      variant="outline"
-      size="lg"
+      size="xl"
+      shape="pill"
       disabled={processing}
       onClick={() => onCreate(source)}
     >
@@ -38,7 +38,7 @@ export function EstablishmentRevisionAction({
       ) : (
         <FilePenLine aria-hidden="true" />
       )}
-      Criar nova revisão
+      Editar dados do lugar
     </Button>
   )
 }

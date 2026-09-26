@@ -25,4 +25,18 @@ describe('EditorField', () => {
     expect(screen.getByText('Até 120 caracteres')).toHaveAttribute('id', 'public-name-hint')
     expect(screen.getByRole('alert')).toHaveAttribute('id', 'public-name-error')
   })
+
+  it('shows the moderation request next to the field it applies to', () => {
+    render(
+      <EditorField htmlFor="public-phone" label="Telefone" note="O telefone não atende.">
+        <Input id="public-phone" />
+      </EditorField>
+    )
+
+    const input = screen.getByRole('textbox', { name: 'Telefone' })
+    expect(input).toHaveAttribute('aria-describedby', 'public-phone-note')
+    expect(input).toHaveAccessibleDescription(
+      'Correção pedida pela moderação: O telefone não atende.'
+    )
+  })
 })
