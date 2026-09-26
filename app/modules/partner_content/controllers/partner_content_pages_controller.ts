@@ -17,6 +17,9 @@ import {
 } from '#modules/partner_content/validators/partner_content_validator'
 import PartnerPortalService from '#modules/portal/services/partner_portal_service'
 
+/** Items shown per kind when the queue shows every kind at once. */
+const PREVIEW_PER_KIND = 10
+
 @inject()
 export default class PartnerContentPagesController {
   constructor(
@@ -147,42 +150,55 @@ export default class PartnerContentPagesController {
     return response.redirect().back()
   }
 
+  /**
+   * The moderation queue.
+   *
+   * It opens on every kind at once: a queue that opened on one kind showed
+   * "0 itens" while an experience waited unseen under another. Each kind shows
+   * its count, the first items and a link to its own paginated list.
+   */
   async moderation({ auth, inertia, request, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
     const tenantId = tenant!.id
     const actor = auth.getUserOrFail()
-    const rawKind = String(request.input('kind', 'events'))
+    const rawKind = String(request.input('kind', 'all'))
     const path = IPartnerContent.CANONICAL_CONTENT_PATHS.includes(
       rawKind as IPartnerContent.ContentPath
     )
       ? (rawKind as IPartnerContent.ContentPath)
-      : 'events'
+      : null
     const query = await request.validateUsing(listContentQueryValidator)
     const status = query.status ?? 'pending_review'
-    const items = await this.contentService.listForModeration(
-      IPartnerContent.kindOfPath(path),
-      tenantId,
-      actor,
-      {
+    const counts = await this.contentService.countForModeration(tenantId, actor, {
+      status,
+      establishment_id: query.establishment_id,
+    })
+
+    const sections = []
+    for (const sectionPath of path ? [path] : IPartnerContent.CANONICAL_CONTENT_PATHS) {
+      const kind = IPartnerContent.kindOfPath(sectionPath)
+      const items = await this.contentService.listForModeration(kind, tenantId, actor, {
         ...query,
         status,
-      }
-    )
+        page: path ? query.page : 1,
+        per_page: path ? query.per_page : PREVIEW_PER_KIND,
+      })
+      sections.push({
+        kind: sectionPath,
+        meta: items.getMeta(),
+        data: await this.mediaService.projectAdministrativeContents(kind, tenantId, items.all()),
+      })
+    }
+
     const authorizationContext = await this.resourceAuthorization.forActorContext(tenantId, actor)
     const isAdmin = authorizationContext.access_snapshot.platform_access === 'platform_admin'
     const policy = isAdmin ? await this.contentService.getPolicy(tenantId, actor) : null
 
     return inertia.render('backoffice/content/index', {
-      items: {
-        meta: items.getMeta(),
-        data: await this.mediaService.projectAdministrativeContents(
-          IPartnerContent.kindOfPath(path),
-          tenantId,
-          items.all()
-        ),
-      },
+      sections,
+      counts,
       filters: {
-        kind: path,
+        kind: path ?? 'all',
         status,
         establishment_id: query.establishment_id,
         page: query.page ?? 1,

@@ -458,6 +458,28 @@ export default class PartnerContentService {
     return this.contentRepository.paginateForTenant(kind, tenantId, query)
   }
 
+  /**
+   * How many items of each kind match the moderation filter. The queue shows
+   * these next to each kind, so an item waiting in a kind nobody selected is
+   * still counted on screen.
+   */
+  async countForModeration(
+    tenantId: number,
+    actor: User,
+    query: Pick<IPartnerContent.ListQuery, 'status' | 'establishment_id'>
+  ): Promise<Record<IPartnerContent.ContentPath, number>> {
+    await this.organizationPolicy.requirePlatformModerator(actor)
+    const counts = {} as Record<IPartnerContent.ContentPath, number>
+    for (const path of IPartnerContent.CANONICAL_CONTENT_PATHS) {
+      counts[path] = await this.contentRepository.countForTenant(
+        IPartnerContent.kindOfPath(path),
+        tenantId,
+        query
+      )
+    }
+    return counts
+  }
+
   /** Public discovery: no session, no membership (ADR-0003). */
   async listPublic(kind: IPartnerContent.ContentKind, tenantId: number, establishmentId: number) {
     return this.contentRepository.listPublished(kind, tenantId, establishmentId, new Date())

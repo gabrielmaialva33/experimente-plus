@@ -74,10 +74,14 @@ describe('BackofficePartnerContentPage', () => {
     const { user } = render(
       <BackofficePartnerContentPage
         tenant_id={7}
-        items={{
-          data: [pendingEvent],
-          meta: { current_page: 1, last_page: 1, total: 1 },
-        }}
+        sections={[
+          {
+            kind: 'events',
+            data: [pendingEvent],
+            meta: { current_page: 1, last_page: 1, total: 1 },
+          },
+        ]}
+        counts={{ 'experiences': 0, 'events': 1, 'showcase-items': 0 }}
         filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
         policy={null}
         platform_access="platform_moderator"
@@ -108,7 +112,8 @@ describe('BackofficePartnerContentPage', () => {
     const { user } = render(
       <BackofficePartnerContentPage
         tenant_id={7}
-        items={{ data: [], meta: { current_page: 1, last_page: 1, total: 0 } }}
+        sections={[{ kind: 'events', data: [], meta: { current_page: 1, last_page: 1, total: 0 } }]}
+        counts={{ 'experiences': 0, 'events': 0, 'showcase-items': 0 }}
         filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
         policy={{
           require_experience_approval: false,
@@ -136,6 +141,97 @@ describe('BackofficePartnerContentPage', () => {
         max_media_per_content: 4,
         min_event_notice_minutes: 120,
       }),
+      expect.objectContaining({ preserveScroll: true })
+    )
+  })
+
+  it('opens on every kind, so an item waiting in another kind is never hidden', () => {
+    mocks.permissions = ['establishments.approve']
+
+    render(
+      <BackofficePartnerContentPage
+        tenant_id={7}
+        sections={[
+          {
+            kind: 'experiences',
+            data: [{ ...pendingEvent, id: 31, title: 'Oficina de preparo', starts_at: null }],
+            meta: { current_page: 1, last_page: 1, total: 1 },
+          },
+          { kind: 'events', data: [], meta: { current_page: 1, last_page: 1, total: 0 } },
+          {
+            kind: 'showcase-items',
+            data: [],
+            meta: { current_page: 1, last_page: 1, total: 0 },
+          },
+        ]}
+        counts={{ 'experiences': 1, 'events': 0, 'showcase-items': 0 }}
+        filters={{ kind: 'all', status: 'pending_review', per_page: 20 }}
+        policy={null}
+        platform_access="platform_moderator"
+      />
+    )
+
+    const tabs = screen.getByRole('navigation', { name: 'Tipos de conteúdo' })
+    expect(tabs).toHaveTextContent('Todos os tipos1')
+    expect(tabs).toHaveTextContent('Experiências1')
+    expect(screen.getByRole('link', { name: /Todos os tipos/ })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    expect(screen.getByRole('heading', { name: /Experiências/, level: 2 })).toBeVisible()
+    expect(screen.getByText('Oficina de preparo')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: /Eventos/, level: 2 })).not.toBeInTheDocument()
+  })
+
+  it('points to the other kinds when the selected one is empty', () => {
+    render(
+      <BackofficePartnerContentPage
+        tenant_id={7}
+        sections={[{ kind: 'events', data: [], meta: { current_page: 1, last_page: 1, total: 0 } }]}
+        counts={{ 'experiences': 1, 'events': 0, 'showcase-items': 0 }}
+        filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
+        policy={null}
+        platform_access="platform_moderator"
+      />
+    )
+
+    expect(screen.getByText('Nenhum item de eventos em análise')).toBeVisible()
+    expect(screen.getByText(/Há itens de outros tipos neste estado/)).toBeVisible()
+  })
+
+  it('refuses only with a written reason, and sends it', async () => {
+    mocks.permissions = ['establishments.reject']
+
+    const { user } = render(
+      <BackofficePartnerContentPage
+        tenant_id={7}
+        sections={[
+          {
+            kind: 'events',
+            data: [pendingEvent],
+            meta: { current_page: 1, last_page: 1, total: 1 },
+          },
+        ]}
+        counts={{ 'experiences': 0, 'events': 1, 'showcase-items': 0 }}
+        filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
+        policy={null}
+        platform_access="platform_moderator"
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Recusar' }))
+    const confirm = screen.getByRole('button', { name: 'Recusar versão' })
+    expect(confirm).toBeDisabled()
+
+    await user.type(screen.getByLabelText('Motivo da recusa'), 'ok')
+    expect(confirm).toBeDisabled()
+    await user.type(screen.getByLabelText('Motivo da recusa'), ' — a data não confere')
+    expect(confirm).toBeEnabled()
+
+    await user.click(confirm)
+    expect(mocks.post).toHaveBeenCalledWith(
+      '/backoffice/content/events/22/reject',
+      { reason: 'ok — a data não confere' },
       expect.objectContaining({ preserveScroll: true })
     )
   })
