@@ -372,7 +372,7 @@ test.group('Update own profile', (group) => {
     response.assertStatus(302)
     response.assertHeader('location', '/settings')
     response.assertFlashMessage('inputErrorsBag', {
-      username: ['The username has already been taken'],
+      username: ['Usuário já está em uso.'],
     })
     response.assertFlashMissing('errors')
   })

@@ -26,6 +26,12 @@ export default class DetectUserLocaleMiddleware {
    * Feel free to use different mechanism for finding user language.
    */
   protected getRequestLocale(ctx: HttpContext) {
+    // The web interface is written only in Portuguese, so its validation and
+    // error messages are too, whatever the browser prefers: an English browser
+    // used to get "The name field must be defined" inside a Portuguese screen
+    // (web audit W7). The API keeps negotiating by Accept-Language.
+    if (!ctx.request.url().startsWith('/api/')) return 'pt'
+
     const userLanguages = ctx.request.languages()
     return i18nManager.getSupportedLocaleFor(userLanguages)
   }

@@ -185,7 +185,7 @@ test.group('Web authentication', (group) => {
     response.assertStatus(302)
     response.assertHeader('location', '/register')
     response.assertFlashMessage('inputErrorsBag', {
-      username: ['The username has already been taken'],
+      username: ['Usuário já está em uso.'],
     })
     response.assertFlashMissing('errors')
   })
@@ -403,7 +403,7 @@ test.group('Web authentication', (group) => {
     rateLimited.assertHeader('x-ratelimit-remaining', '0')
     rateLimited.assertHeader('retry-after')
     rateLimited.assertFlashMessage('errors', {
-      general: 'Too many authentication attempts. Please try again later.',
+      general: 'Muitas tentativas de autenticação. Por favor, tente novamente mais tarde.',
     })
   })
 
@@ -451,7 +451,7 @@ test.group('Web authentication', (group) => {
     rateLimited.assertHeader('x-ratelimit-remaining', '0')
     rateLimited.assertHeader('retry-after')
     rateLimited.assertFlashMessage('errors', {
-      general: 'Too many authentication attempts. Please try again later.',
+      general: 'Muitas tentativas de autenticação. Por favor, tente novamente mais tarde.',
     })
     assert.isNull(await User.findBy('email', payload.email))
   })
