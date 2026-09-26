@@ -23,15 +23,15 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
     () => new Date(presentation.expires_at).getTime(),
     [presentation.expires_at]
   )
-  const [remaining, setRemaining] = useState(() =>
-    Math.max(0, Math.ceil((expiry - Date.now()) / 1000))
-  )
+  // Start from the server's count so the first client render matches the server-rendered
+  // HTML (reading the clock here made "5:00" hydrate as "4:59"); the effect then follows it.
+  const [remaining, setRemaining] = useState(() => Math.max(0, presentation.expires_in_seconds))
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setRemaining(Math.max(0, Math.ceil((expiry - Date.now()) / 1000)))
-    }, 1000)
+    const tick = () => setRemaining(Math.max(0, Math.ceil((expiry - Date.now()) / 1000)))
+    tick()
+    const timer = window.setInterval(tick, 1000)
 
     return () => window.clearInterval(timer)
   }, [expiry])

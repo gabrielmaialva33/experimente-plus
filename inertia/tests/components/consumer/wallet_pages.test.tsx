@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { screen, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
+import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import WalletPage from '~/pages/wallet/index'
@@ -107,6 +108,36 @@ const receipt: RedemptionReceipt = {
   redeemed_by: 13,
 }
 
+function makePresentation(): RedemptionPresentation {
+  return {
+    token: 'opaque-token',
+    validation_url: 'http://experimente.test/portal/redemptions/validate?token=opaque-token',
+    qr_data_url: 'data:image/png;base64,AAAA',
+    issued_at: new Date(Date.now() - 1_000).toISOString(),
+    expires_at: new Date(Date.now() + 300_000).toISOString(),
+    expires_in_seconds: 300,
+    benefit: {
+      access_id: 7,
+      offer_id: 11,
+      edition_id: 3,
+      edition_name: 'Edição Norte do Paraná',
+      organization_id: 4,
+      establishment_id: 5,
+      establishment_name: 'Café Central',
+      offer_title: 'Café cortesia',
+      offer_description: 'Uma bebida conforme as regras da oferta.',
+      terms: 'Válido de segunda a sexta.',
+      benefit_type: 'complimentary_item',
+      reservation_required: false,
+      on_premise_only: true,
+      minimum_party_size: 1,
+      max_redemptions_per_access: 2,
+      redeemed_count: 1,
+      remaining_redemptions: 1,
+    },
+  }
+}
+
 describe('consumer wallet pages', () => {
   it('identifies a standalone voucher separately from the edition package', () => {
     const single = structuredClone(walletWithBenefit.passes[0])
@@ -197,33 +228,7 @@ describe('consumer wallet pages', () => {
   })
 
   it('explains that presentation is temporary and server-confirmed', () => {
-    const presentation: RedemptionPresentation = {
-      token: 'opaque-token',
-      validation_url: 'http://experimente.test/portal/redemptions/validate?token=opaque-token',
-      qr_data_url: 'data:image/png;base64,AAAA',
-      issued_at: new Date(Date.now() - 1_000).toISOString(),
-      expires_at: new Date(Date.now() + 300_000).toISOString(),
-      expires_in_seconds: 300,
-      benefit: {
-        access_id: 7,
-        offer_id: 11,
-        edition_id: 3,
-        edition_name: 'Edição Norte do Paraná',
-        organization_id: 4,
-        establishment_id: 5,
-        establishment_name: 'Café Central',
-        offer_title: 'Café cortesia',
-        offer_description: 'Uma bebida conforme as regras da oferta.',
-        terms: 'Válido de segunda a sexta.',
-        benefit_type: 'complimentary_item',
-        reservation_required: false,
-        on_premise_only: true,
-        minimum_party_size: 1,
-        max_redemptions_per_access: 2,
-        redeemed_count: 1,
-        remaining_redemptions: 1,
-      },
-    }
+    const presentation = makePresentation()
 
     render(<PresentBenefitPage presentation={presentation} />)
 
@@ -240,6 +245,22 @@ describe('consumer wallet pages', () => {
     const rules = screen.getByText(/A apresentação não conclui o uso sozinha/)
     expect(offer.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(code.compareDocumentPosition(rules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('renders the countdown from the server count, then follows the clock', async () => {
+    // The code was issued 100 s ago: the server said 300 s, the clock now says 200 s.
+    const presentation = {
+      ...makePresentation(),
+      expires_at: new Date(Date.now() + 200_000).toISOString(),
+      expires_in_seconds: 300,
+    }
+
+    // Server and first client render agree, so hydration keeps the server's HTML.
+    expect(renderToString(<PresentBenefitPage presentation={presentation} />)).toContain(
+      'Expira em 5:00'
+    )
+    render(<PresentBenefitPage presentation={presentation} />)
+    expect(await screen.findByText(/Expira em 3:(19|20)/)).toBeInTheDocument()
   })
 
   it('keeps consumer-owned source flat and free of dead operational destinations', () => {
