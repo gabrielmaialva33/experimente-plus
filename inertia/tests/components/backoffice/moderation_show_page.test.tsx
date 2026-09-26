@@ -89,6 +89,9 @@ describe('ModerationRevisionPage', () => {
     expect(screen.queryByRole('region', { name: 'Horários' })).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Contatos' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Decidir' })).toHaveAttribute('href', '#decisao')
+    // Orange is for conversion; the moderation decision is the navy main action.
+    expect(screen.getByRole('link', { name: 'Decidir' })).toHaveClass('bg-primary')
+    expect(screen.getByRole('link', { name: 'Decidir' })).not.toHaveClass('bg-cta')
   })
 
   it('says a first publication instead of pretending nothing changed', () => {
