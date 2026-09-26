@@ -155,6 +155,16 @@ export default function PartnerPortalIndex({
           className="sm:items-end"
           actions={
             <>
+              {/* The day's main action leads on a phone and for assistive tech; on wider
+                  screens it closes the row, where the eye ends. */}
+              {canValidateRedemptions ? (
+                <Button asChild variant="cta" size="2xl" shape="pill" className="sm:order-last">
+                  <Link href="/portal/redemptions/validate">
+                    <ScanLine aria-hidden="true" className="size-5" />
+                    Validar benefício
+                  </Link>
+                </Button>
+              ) : null}
               {canReadRedemptions ? (
                 <Button asChild variant="outline" size="lg" shape="pill">
                   <Link href="/portal/redemptions">
@@ -168,14 +178,6 @@ export default function PartnerPortalIndex({
                   <Link href="/portal/organizations/new">
                     <Plus aria-hidden="true" />
                     Nova organização
-                  </Link>
-                </Button>
-              ) : null}
-              {canValidateRedemptions ? (
-                <Button asChild variant="cta" size="2xl" shape="pill">
-                  <Link href="/portal/redemptions/validate">
-                    <ScanLine aria-hidden="true" className="size-5" />
-                    Validar benefício
                   </Link>
                 </Button>
               ) : null}

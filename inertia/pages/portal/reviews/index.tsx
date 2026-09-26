@@ -104,7 +104,7 @@ export default function PartnerReviewsPage({
   const filters = place ? (
     <nav
       aria-label="Filtrar avaliações"
-      className="flex max-w-full gap-1 self-start overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex"
+      className="flex min-w-0 max-w-full gap-1 self-start overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex"
     >
       {(['unanswered', 'answered', 'all'] as const).map((item) => (
         <Link
@@ -137,7 +137,7 @@ export default function PartnerReviewsPage({
           className="sm:items-end"
           actions={
             places.length > 1 || filters ? (
-              <div className="flex flex-wrap items-end gap-3">
+              <div className="flex w-full min-w-0 flex-wrap items-end gap-3 sm:w-auto">
                 {places.length > 1 ? (
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="review-place" className="font-bold">
