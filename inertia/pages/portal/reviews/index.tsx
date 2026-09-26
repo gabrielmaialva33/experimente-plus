@@ -104,7 +104,7 @@ export default function PartnerReviewsPage({
   const filters = place ? (
     <nav
       aria-label="Filtrar avaliações"
-      className="flex w-full min-w-0 max-w-full gap-1 self-start overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex sm:w-auto"
+      className="flex w-full min-w-0 max-w-full gap-1 overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex sm:w-auto"
     >
       {(['unanswered', 'answered', 'all'] as const).map((item) => (
         <Link
