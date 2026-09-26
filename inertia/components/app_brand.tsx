@@ -12,6 +12,10 @@ interface AppBrandProps {
   tone?: 'default' | 'inverse'
 }
 
+/**
+ * The provisional E+ monogram of direction A (the app icon uses the same
+ * shapes): a pill-built E in the tile's foreground, the + in the action color.
+ */
 export function BrandMark({
   className,
   tone = 'default',
@@ -30,7 +34,18 @@ export function BrandMark({
         className
       )}
     >
-      <span className="text-sm font-black tracking-[-0.08em]">E+</span>
+      <svg viewBox="-280 -305 560 560" className="size-6" focusable="false">
+        <g fill="currentColor">
+          <rect x="-247" y="-224" width="100" height="448" rx="50" />
+          <rect x="-247" y="-224" width="250" height="100" rx="50" />
+          <rect x="-247" y="-50" width="214" height="100" rx="50" />
+          <rect x="-247" y="124" width="300" height="100" rx="50" />
+        </g>
+        <g className="fill-cta">
+          <rect x="47" y="-205" width="200" height="62" rx="31" />
+          <rect x="116" y="-274" width="62" height="200" rx="31" />
+        </g>
+      </svg>
     </span>
   )
 }
