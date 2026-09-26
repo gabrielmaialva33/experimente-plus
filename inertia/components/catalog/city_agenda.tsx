@@ -3,6 +3,7 @@ import { CalendarClock, CalendarDays, Sparkles, type LucideIcon } from 'lucide-r
 import type { ReactNode } from 'react'
 
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import { formatEventWindow } from '~/components/catalog/establishment_partner_content'
 import { EmptyState } from '~/components/empty_state'
 
@@ -170,14 +171,70 @@ function establishmentHref(citySlug: string, establishmentSlug: string): string 
   return `/cidades/${encodeURIComponent(citySlug)}/estabelecimentos/${encodeURIComponent(establishmentSlug)}`
 }
 
+/**
+ * Direction A's date tile: weekday as an overline, the day large, the month
+ * below — read in the city's timezone. Decorative: the card's own text carries
+ * the full window, so without a trustworthy timezone there is simply no tile.
+ */
+function dateTileParts(
+  value: string,
+  timeZone: string | null
+): { weekday: string; day: string; month: string } | null {
+  const date = new Date(value)
+  if (!timeZone || Number.isNaN(date.getTime())) return null
+
+  let parts: Intl.DateTimeFormatPart[]
+  try {
+    parts = new Intl.DateTimeFormat('pt-BR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      timeZone,
+    }).formatToParts(date)
+  } catch {
+    return null
+  }
+
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    (parts.find((entry) => entry.type === type)?.value ?? '').replace('.', '')
+  return {
+    weekday: part('weekday').toLocaleUpperCase('pt-BR'),
+    day: part('day'),
+    month: part('month').toLocaleUpperCase('pt-BR'),
+  }
+}
+
+function DateTile({ startsAt, timeZone }: { startsAt: string; timeZone: string | null }) {
+  const parts = dateTileParts(startsAt, timeZone)
+  if (!parts) return null
+
+  return (
+    <span
+      aria-hidden="true"
+      data-slot="date-tile"
+      className="absolute left-3 top-3 flex h-[4.5rem] w-16 flex-col items-center justify-center rounded-2xl bg-card text-foreground"
+    >
+      <span className="text-[0.6875rem] font-extrabold tracking-[0.1em] text-primary-accent">
+        {parts.weekday}
+      </span>
+      <span className="font-display text-[1.625rem] font-extrabold leading-none">{parts.day}</span>
+      <span className="mt-0.5 text-[0.6875rem] font-bold text-muted-foreground">{parts.month}</span>
+    </span>
+  )
+}
+
 function AgendaCard({
   item,
   meta,
   bandKey,
+  startsAt = null,
+  timeZone = null,
 }: {
   item: CityAgendaItemBase
   meta: string | null
   bandKey: string
+  startsAt?: string | null
+  timeZone?: string | null
 }) {
   const titleId = `city-agenda-${bandKey}-${item.id}-title`
   const placeId = `city-agenda-${bandKey}-${item.id}-place`
@@ -188,35 +245,41 @@ function AgendaCard({
         href={establishmentHref(item.citySlug, item.establishmentSlug)}
         aria-labelledby={titleId}
         aria-describedby={placeId}
-        className="group block h-full min-w-0 rounded-lg outline-none transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
+        className="group block h-full min-w-0 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
-          {item.cover ? (
-            <img
-              src={item.cover.url}
-              alt={item.cover.altText}
-              width={item.cover.width ?? undefined}
-              height={item.cover.height ?? undefined}
-              loading="lazy"
-              decoding="async"
-              className="aspect-[16/9] w-full border-b object-cover"
-            />
-          ) : (
-            <CatalogImageFallback
-              name={item.title}
-              categoryName={item.establishmentName}
-              className="aspect-[16/9] w-full border-b"
-            />
-          )}
+        <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
+          <div className="relative">
+            {item.cover ? (
+              <img
+                src={item.cover.url}
+                alt={item.cover.altText}
+                width={item.cover.width ?? undefined}
+                height={item.cover.height ?? undefined}
+                loading="lazy"
+                decoding="async"
+                className="aspect-[16/9] w-full object-cover"
+              />
+            ) : (
+              <CatalogImageFallback
+                name={item.title}
+                categoryName={item.establishmentName}
+                className="aspect-[16/9] w-full"
+              />
+            )}
+            {startsAt ? <DateTile startsAt={startsAt} timeZone={timeZone} /> : null}
+          </div>
 
           <div className="flex flex-1 flex-col p-4">
             {meta ? (
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+              <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                 {meta}
               </p>
             ) : null}
 
-            <h4 id={titleId} className="mt-2 text-base font-semibold leading-6">
+            <h4
+              id={titleId}
+              className="mt-1.5 font-display text-[1.0625rem] font-extrabold leading-snug underline-offset-4 group-hover:underline"
+            >
               {item.title}
             </h4>
 
@@ -255,16 +318,19 @@ function AgendaBand({
 
   return (
     <section aria-labelledby={headingId}>
-      <div className="mb-3">
-        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-          <Icon aria-hidden="true" className="size-3.5" />
-          {eyebrow}
-        </p>
-        <h3 id={headingId} className="mt-1 text-lg font-semibold">
-          {title}
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </div>
+      <CatalogSectionHeader
+        id={headingId}
+        level={3}
+        className="mb-3"
+        overline={
+          <>
+            <Icon aria-hidden="true" className="size-3.5" />
+            {eyebrow}
+          </>
+        }
+        title={title}
+        description={description}
+      />
       <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">{children}</ul>
     </section>
   )
@@ -286,6 +352,7 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
       items: parsed.happeningToday.map((item) => ({
         item,
         meta: formatEventWindow(item.startsAt, item.endsAt, timeZone),
+        startsAt: item.startsAt,
       })),
     },
     {
@@ -297,6 +364,7 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
       items: parsed.upcoming.map((item) => ({
         item,
         meta: formatEventWindow(item.startsAt, item.endsAt, timeZone),
+        startsAt: item.startsAt,
       })),
     },
     {
@@ -307,29 +375,25 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
       // Chronological, and said out loud: this is recency, not a ranking, not a
       // curation and not a paid placement.
       description: 'Experiências publicadas mais recentemente, da mais nova para a mais antiga.',
-      items: parsed.newExperiences.map((item) => ({ item, meta: null })),
+      items: parsed.newExperiences.map((item) => ({ item, meta: null, startsAt: null })),
     },
   ].filter((band) => band.items.length > 0)
 
   return (
     <section aria-labelledby="city-agenda-heading" className="mt-8">
-      <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Agenda da cidade
-        </p>
-        <h2 id="city-agenda-heading" className="mt-1 text-xl font-semibold">
-          O que está acontecendo em {parsed.city.name}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Eventos e experiências publicados pelos estabelecimentos, em ordem cronológica.
-        </p>
-      </div>
+      <CatalogSectionHeader
+        id="city-agenda-heading"
+        className="mb-5"
+        overline="Agenda da cidade"
+        title={`O que está acontecendo em ${parsed.city.name}`}
+        description="Eventos e experiências publicados pelos lugares da cidade, em ordem cronológica."
+      />
 
       {bands.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-card">
+        <div className="rounded-card border border-dashed bg-card">
           <EmptyState
             title="Nenhuma programação publicada para estes dias"
-            description="Assim que um estabelecimento publicar um evento ou uma nova experiência, a agenda aparece aqui."
+            description="Assim que um lugar publicar um evento ou uma nova experiência, a agenda aparece aqui."
             icon={CalendarClock}
           />
         </div>
@@ -344,8 +408,15 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
               description={band.description}
               icon={band.icon}
             >
-              {band.items.map(({ item, meta }) => (
-                <AgendaCard key={item.id} item={item} meta={meta} bandKey={band.key} />
+              {band.items.map(({ item, meta, startsAt }) => (
+                <AgendaCard
+                  key={item.id}
+                  item={item}
+                  meta={meta}
+                  bandKey={band.key}
+                  startsAt={startsAt}
+                  timeZone={timeZone}
+                />
               ))}
             </AgendaBand>
           ))}

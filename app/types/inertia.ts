@@ -15,6 +15,7 @@ import type { WebPermission } from '#modules/web/services/list_all_permissions_s
 import type { PartnerPlacesPageProps } from '#modules/portal/interfaces/portal_pages'
 import type { BackofficeTodayPageProps } from '#modules/portal/interfaces/backoffice_today_page'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
+import type { PublicReviewsPayload } from '#modules/reviews/interfaces/public_reviews_page'
 
 type SettingsProfile = {
   id: number
@@ -125,6 +126,7 @@ declare module '@adonisjs/inertia/types' {
       catalog: any
       city_slug: string | null
       partner_content: PublicPartnerContent
+      reviews: PublicReviewsPayload
     }
 
     // Files

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react'
 import { ArrowRight, Grid2X2Plus } from 'lucide-react'
 
+import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { EmptyState } from '~/components/empty_state'
 import { catalogCategories } from '~/lib/catalog'
@@ -18,7 +19,7 @@ export default function CatalogCategories({ catalog }: CatalogCategoriesProps) {
   return (
     <CatalogShell
       title={`Categorias em ${cityName}`}
-      description="Navegue pelas categorias com estabelecimentos publicados e encontre informações de endereço, horários e contato."
+      description="Navegue pelas categorias com lugares publicados e encontre informações de endereço, horários e contato."
       eyebrow="Categorias locais"
       citySlug={resolvedCitySlug}
       activeSection="categories"
@@ -32,24 +33,21 @@ export default function CatalogCategories({ catalog }: CatalogCategoriesProps) {
       ]}
     >
       {listing.categories.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-card">
+        <div className="rounded-card border border-dashed bg-card">
           <EmptyState
             icon={Grid2X2Plus}
             headingLevel={2}
             title="Nenhuma categoria publicada"
-            description="Esta cidade ainda não possui categorias com estabelecimentos disponíveis no catálogo."
+            description="Esta cidade ainda não tem categorias com lugares publicados no catálogo."
           />
         </div>
       ) : (
         <section aria-labelledby="available-categories-title">
-          <div className="mb-4">
-            <h2 id="available-categories-title" className="text-xl font-semibold">
-              Categorias disponíveis
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Escolha uma categoria para ver os estabelecimentos publicados.
-            </p>
-          </div>
+          <CatalogSectionHeader
+            id="available-categories-title"
+            title="Categorias disponíveis"
+            description="Escolha uma categoria para ver os lugares publicados."
+          />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {listing.categories.map((category) =>
@@ -58,34 +56,36 @@ export default function CatalogCategories({ catalog }: CatalogCategoriesProps) {
                   key={category.slug}
                   href={`/cidades/${encodeURIComponent(resolvedCitySlug)}/categorias/${encodeURIComponent(category.slug)}`}
                   aria-labelledby={`category-${category.slug}`}
-                  className="group rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="group rounded-card outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <article className="flex h-full min-w-0 flex-col rounded-lg border bg-card p-5 transition-colors group-hover:border-primary motion-reduce:transition-none sm:p-6">
+                  <article className="flex h-full min-w-0 flex-col rounded-card border border-border-subtle bg-card p-5 transition-colors group-hover:border-primary motion-reduce:transition-none sm:p-6">
                     <div className="flex items-start justify-between gap-4">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-base font-semibold text-primary-accent">
+                      <span
+                        aria-hidden="true"
+                        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-lg font-extrabold leading-tight text-primary-accent"
+                      >
                         {category.name.charAt(0).toLocaleUpperCase('pt-BR')}
                       </span>
-                      <span className="rounded-md border bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
+                      <span className="inline-flex h-7 items-center rounded-full bg-background px-3 text-xs font-semibold text-muted-foreground">
                         {category.establishmentsCount}{' '}
                         {category.establishmentsCount === 1 ? 'opção' : 'opções'}
                       </span>
                     </div>
                     {category.familyName ? (
-                      <p className="mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                      <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                         {category.familyName}
                       </p>
                     ) : null}
                     <h3
                       id={`category-${category.slug}`}
-                      className="mt-2 text-xl font-semibold tracking-tight"
+                      className="mt-1.5 font-display text-xl font-extrabold leading-tight tracking-[-0.01em]"
                     >
                       {category.name}
                     </h3>
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
-                      {category.description ??
-                        'Explore estabelecimentos publicados nesta categoria.'}
+                      {category.description ?? 'Explore os lugares publicados nesta categoria.'}
                     </p>
-                    <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-primary group-hover:underline group-hover:underline-offset-4">
+                    <span className="mt-auto inline-flex items-center gap-2 pt-5 text-[0.9375rem] font-bold text-primary-accent group-hover:underline group-hover:underline-offset-4">
                       Explorar categoria <ArrowRight aria-hidden="true" className="size-4" />
                     </span>
                   </article>

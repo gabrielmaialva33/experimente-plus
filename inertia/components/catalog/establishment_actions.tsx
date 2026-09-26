@@ -11,7 +11,7 @@ import { useState } from 'react'
 
 import { Button } from '~/components/ui/button'
 import { analyticsEventId, trackAnalyticsEvents, trackedActionHref } from '~/lib/analytics'
-import type { CatalogDetail } from '~/lib/catalog'
+import { formatPhoneBR, type CatalogDetail } from '~/lib/catalog'
 
 interface EstablishmentActionsProps {
   detail: CatalogDetail
@@ -75,20 +75,23 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
   return (
     <section
       aria-labelledby="contact-actions-title"
-      className="rounded-lg border border-border bg-card p-5"
+      className="rounded-card border border-border-subtle bg-card p-5"
     >
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cta-accent">
+        <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
           Contato e rota
         </p>
-        <h2 id="contact-actions-title" className="mt-1 text-lg font-semibold">
+        <h2
+          id="contact-actions-title"
+          className="mt-1 font-display text-lg font-extrabold leading-tight"
+        >
           Entre em contato
         </h2>
       </div>
 
       <div className="mt-5 grid gap-2.5">
         {detail.contacts.whatsapp ? (
-          <Button variant="cta" size="lg" className="h-12 justify-start" asChild>
+          <Button variant="cta" size="xl" shape="pill" className="justify-start" asChild>
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'whatsapp')}
               target="_blank"
@@ -103,8 +106,9 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         {routeAvailable ? (
           <Button
             variant={primaryAction === 'route' ? 'cta' : 'contact'}
-            size="lg"
-            className="h-12 justify-start"
+            size="xl"
+            shape="pill"
+            className="justify-start"
             asChild
           >
             <a
@@ -121,12 +125,13 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         {detail.contacts.phone ? (
           <Button
             variant={primaryAction === 'phone' ? 'cta' : 'contact'}
-            size="lg"
-            className="h-12 justify-start"
+            size="xl"
+            shape="pill"
+            className="justify-start"
             asChild
           >
             <a href={trackedActionHref(detail.city.slug, detail.slug, 'phone')}>
-              <Phone className="size-4" /> Ligar para {detail.contacts.phone}
+              <Phone className="size-4" /> Ligar para {formatPhoneBR(detail.contacts.phone)}
             </a>
           </Button>
         ) : null}
@@ -134,8 +139,9 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         {detail.contacts.website ? (
           <Button
             variant={primaryAction === 'website' ? 'cta' : 'contact'}
-            size="lg"
-            className="h-12 justify-start"
+            size="xl"
+            shape="pill"
+            className="justify-start"
             asChild
           >
             <a
@@ -152,8 +158,9 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         {detail.contacts.bookingUrl ? (
           <Button
             variant={primaryAction === 'booking' ? 'cta' : 'contact'}
-            size="lg"
-            className="h-12 justify-start"
+            size="xl"
+            shape="pill"
+            className="justify-start"
             asChild
           >
             <a href={detail.contacts.bookingUrl} target="_blank" rel="noopener noreferrer">
@@ -164,7 +171,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         ) : null}
 
         {detail.contacts.instagram ? (
-          <Button variant="ghost" size="lg" className="h-12 justify-start" asChild>
+          <Button variant="ghost" size="xl" shape="pill" className="justify-start" asChild>
             <a
               href={externalInstagramHref(detail.contacts.instagram)}
               target="_blank"
@@ -179,8 +186,9 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         <Button
           type="button"
           variant="ghost"
-          size="lg"
-          className="h-12 justify-start"
+          size="xl"
+          shape="pill"
+          className="justify-start"
           onClick={() => void shareEstablishment()}
         >
           <Share2 className="size-4" /> Compartilhar

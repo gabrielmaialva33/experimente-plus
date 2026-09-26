@@ -17,7 +17,7 @@ export default function LoginPage({ errors }: LoginPageProps) {
         title="Entrar"
         subtitle="Acesse sua carteira e, quando tiver uma organização, o Portal do parceiro."
         contextTitle="O catálogo não exige login"
-        contextDescription="Você pode explorar cidades, categorias e estabelecimentos antes de criar uma conta."
+        contextDescription="Você pode explorar cidades, categorias e lugares antes de criar uma conta."
         footer={
           <>
             <span className="text-muted-foreground">Ainda não tem conta? </span>

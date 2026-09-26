@@ -43,7 +43,7 @@ export function AuthSplitLayout({
           <div className="flex items-center gap-1.5">
             <Link
               href="/cidades"
-              className="hidden min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
+              className="hidden min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:inline-flex"
             >
               <Compass className="size-4" aria-hidden="true" />
               Explorar catálogo
@@ -60,24 +60,38 @@ export function AuthSplitLayout({
       >
         <div className={cn('w-full', contentWidth === 'wide' ? 'max-w-[32rem]' : 'max-w-[28rem]')}>
           <header className="mb-6">
-            <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">{subtitle}</p>
+            <h1 className="font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.125rem]">
+              {title}
+            </h1>
+            <p className="mt-2 text-[0.9375rem] leading-6 text-muted-foreground sm:text-base">
+              {subtitle}
+            </p>
           </header>
 
-          <section aria-label={title} className="rounded-lg border bg-card p-5 sm:p-6">
+          <section
+            aria-label={title}
+            className="rounded-card border border-border-subtle bg-card p-5 sm:p-7"
+          >
             {children}
           </section>
 
           {footer ? <div className="mt-5 text-center text-sm">{footer}</div> : null}
 
           {contextTitle || contextDescription ? (
-            <aside className="mt-6 rounded-lg border bg-muted p-4" aria-label="Sobre este acesso">
+            <aside
+              className="mt-6 rounded-card border border-primary/15 bg-primary-soft p-4 sm:p-5"
+              aria-label="Sobre este acesso"
+            >
               <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-primary">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-primary-accent">
                   <ShieldCheck className="size-4" aria-hidden="true" />
                 </span>
                 <div>
-                  {contextTitle ? <h2 className="text-sm font-semibold">{contextTitle}</h2> : null}
+                  {contextTitle ? (
+                    <h2 className="font-display text-[0.9375rem] font-extrabold leading-tight">
+                      {contextTitle}
+                    </h2>
+                  ) : null}
                   {contextDescription ? (
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       {contextDescription}
@@ -90,7 +104,7 @@ export function AuthSplitLayout({
 
           <Link
             href="/cidades"
-            className="mx-auto mt-5 flex min-h-10 w-fit items-center gap-2 rounded-md px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:hidden"
+            className="mx-auto mt-5 flex min-h-11 w-fit items-center gap-2 rounded-full px-4 text-sm font-semibold text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:hidden"
           >
             <Compass className="size-3.5" aria-hidden="true" />
             Explorar sem entrar

@@ -1,4 +1,5 @@
 import { CatalogPagination } from '~/components/catalog/catalog_pagination'
+import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
 import EstablishmentGrid from '~/components/catalog/establishment_grid'
@@ -62,31 +63,25 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
           aria-describedby="category-sponsored-description"
           className="mt-8"
         >
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Patrocinado
-            </p>
-            <h2 id="category-sponsored" className="mt-1 text-xl font-semibold">
-              Anúncios nesta categoria
-            </h2>
-            <p id="category-sponsored-description" className="mt-1 text-sm text-muted-foreground">
-              Estes estabelecimentos pagaram por esta posição. Isso não representa uma avaliação de
-              qualidade.
-            </p>
-          </div>
+          <CatalogSectionHeader
+            id="category-sponsored"
+            overline="Patrocinado"
+            title="Anúncios nesta categoria"
+            descriptionId="category-sponsored-description"
+            description="Estes lugares pagaram por esta posição. Isso não representa uma avaliação de qualidade."
+          />
           <EstablishmentGrid entries={result.sponsored} citySlug={resolvedCitySlug} sponsored />
         </section>
       ) : null}
 
       <section aria-labelledby="category-results" className="mt-8">
-        <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Catálogo publicado
-          </p>
-          <h2 id="category-results" className="mt-1 text-xl font-semibold">
-            {result.query.q ? `Resultados para “${result.query.q}”` : `Opções de ${categoryName}`}
-          </h2>
-        </div>
+        <CatalogSectionHeader
+          id="category-results"
+          overline="Catálogo publicado"
+          title={
+            result.query.q ? `Resultados para “${result.query.q}”` : `Opções de ${categoryName}`
+          }
+        />
         <EstablishmentGrid
           entries={result.organic}
           citySlug={resolvedCitySlug}
@@ -96,7 +91,7 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
           emptyMessage={
             hasSponsoredResults
               ? 'Os anúncios patrocinados acima são exibidos separadamente e não entram na paginação do catálogo.'
-              : 'Ainda não há estabelecimentos nesta categoria com os filtros escolhidos.'
+              : 'Ainda não há lugares nesta categoria com os filtros escolhidos.'
           }
         />
       </section>

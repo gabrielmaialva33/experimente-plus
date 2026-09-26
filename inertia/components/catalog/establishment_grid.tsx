@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { ArrowRight, ImageIcon, MapPin } from 'lucide-react'
+import { ImageIcon, MapPin } from 'lucide-react'
 
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
 import { EstablishmentStatus } from '~/components/catalog/establishment_status'
@@ -19,12 +19,12 @@ export default function EstablishmentGrid({
   entries,
   citySlug,
   emptyTitle = 'Nada por aqui ainda',
-  emptyMessage = 'Nenhum estabelecimento publicado foi encontrado com esses filtros.',
+  emptyMessage = 'Nenhum lugar publicado foi encontrado com esses filtros.',
   sponsored = false,
 }: EstablishmentGridProps) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed bg-card">
+      <div className="rounded-card border border-dashed bg-card">
         <EmptyState title={emptyTitle} description={emptyMessage} icon={ImageIcon} />
       </div>
     )
@@ -49,67 +49,67 @@ export default function EstablishmentGrid({
             href={href}
             aria-labelledby={titleId}
             aria-describedby={`${paidPlacement ? `${sponsorshipId} ` : ''}${statusId}`}
-            className="group block min-w-0 rounded-lg outline-none transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
+            className="group block min-w-0 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
-              {entry.cover ? (
-                <img
-                  src={entry.cover.url}
-                  alt={entry.cover.altText || `Imagem de ${entry.name}`}
-                  width={entry.cover.width ?? undefined}
-                  height={entry.cover.height ?? undefined}
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-[4/3] w-full border-b object-cover"
-                />
-              ) : (
-                <CatalogImageFallback
-                  name={entry.name}
-                  categoryName={entry.primaryCategory?.name}
-                  className="aspect-[4/3] w-full border-b"
-                />
-              )}
-              <div className="flex flex-1 flex-col p-4 sm:p-5">
-                <div className="flex flex-wrap items-center gap-2">
+            {/* Direction A's place card: the photo leads and carries the state. */}
+            <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
+              <div className="relative">
+                {entry.cover ? (
+                  <img
+                    src={entry.cover.url}
+                    alt={entry.cover.altText || `Imagem de ${entry.name}`}
+                    width={entry.cover.width ?? undefined}
+                    height={entry.cover.height ?? undefined}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                ) : (
+                  <CatalogImageFallback
+                    name={entry.name}
+                    categoryName={entry.primaryCategory?.name}
+                    className="aspect-[16/9] w-full"
+                  />
+                )}
+                <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
                   {paidPlacement && (
-                    <Badge id={sponsorshipId} variant="secondary" appearance="outline" size="sm">
+                    <Badge id={sponsorshipId} variant="secondary" shape="pill">
                       Patrocinado
                     </Badge>
                   )}
                   <EstablishmentStatus
                     id={statusId}
-                    size="sm"
                     businessStatus={entry.businessStatus}
                     isOpenNow={entry.isOpenNow}
                   />
                 </div>
-
+              </div>
+              <div className="flex flex-1 flex-col p-4">
                 {entry.primaryCategory ? (
-                  <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                     {entry.primaryCategory.name}
                   </p>
                 ) : null}
 
-                <h3 id={titleId} className="mt-2 text-xl font-semibold tracking-tight">
+                <h3
+                  id={titleId}
+                  className="mt-1 font-display text-[1.1875rem] font-extrabold leading-tight tracking-[-0.01em] underline-offset-4 group-hover:underline"
+                >
                   {entry.name}
                 </h3>
 
                 {location ? (
-                  <p className="mt-2 flex min-w-0 items-start gap-1.5 text-sm text-muted-foreground">
-                    <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin aria-hidden="true" className="size-4 shrink-0" />
                     <span className="truncate">{location}</span>
                   </p>
                 ) : null}
 
                 {entry.shortDescription ? (
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
                     {entry.shortDescription}
                   </p>
                 ) : null}
-
-                <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-primary group-hover:underline group-hover:underline-offset-4">
-                  Ver detalhes <ArrowRight aria-hidden="true" className="size-4" />
-                </span>
               </div>
             </article>
           </Link>

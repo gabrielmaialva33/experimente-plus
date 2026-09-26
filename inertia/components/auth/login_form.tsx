@@ -12,7 +12,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
-  const { data, setData, post, processing, errors } = useForm({
+  const { data, setData, post, processing, errors, reset } = useForm({
     uid: '',
     password: '',
   })
@@ -21,7 +21,9 @@ export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    post('/login')
+    // W44: a failed attempt never leaves the password behind in the field. The
+    // identifier stays, so the next try is only the part that was wrong.
+    post('/login', { onError: () => reset('password') })
   }
 
   return (
@@ -67,7 +69,14 @@ export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
         autoComplete="current-password"
       />
 
-      <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
+      <Button
+        type="submit"
+        variant="primary"
+        size="xl"
+        shape="pill"
+        disabled={processing}
+        className="w-full"
+      >
         {processing ? <Loader2 className="size-4 animate-spin" /> : null}
         <span aria-live="polite">{processing ? 'Entrando...' : 'Entrar'}</span>
       </Button>
