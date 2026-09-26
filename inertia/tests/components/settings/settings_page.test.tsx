@@ -17,7 +17,8 @@ vi.mock('@inertiajs/react', async () => {
 
   return {
     Head: () => null,
-    router: { post: mocks.post },
+    // The profile form's unsaved-changes guard listens to visits.
+    router: { post: mocks.post, on: () => () => undefined },
     usePage: () => ({
       url: '/settings',
       props: {
