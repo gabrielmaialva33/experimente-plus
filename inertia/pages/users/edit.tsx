@@ -68,8 +68,10 @@ export default function EditUserPage({ user }: EditUserPageProps) {
                 type="email"
                 value={user.email}
                 hint="O e-mail de acesso não pode ser alterado por esta tela."
-                disabled
+                // Read-only, not disabled: a disabled field fades to half opacity and fails
+                // contrast; same treatment as "E-mail de acesso" in Conta e preferências.
                 readOnly
+                aria-readonly="true"
               />
             </CardContent>
             <CardFooter className="flex-wrap justify-end gap-2 border-t border-border-subtle pt-5">

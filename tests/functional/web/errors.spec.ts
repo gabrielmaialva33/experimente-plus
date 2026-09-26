@@ -125,4 +125,26 @@ test.group('Web error pages', (group) => {
     response.assertStatus(404)
     assert.equal(parseInertiaPage(response).component, 'errors/not_found')
   })
+
+  // The edit screen received the Lucid model's internals and showed empty fields
+  // and the title "Editar usuário: undefined".
+  test('editing a user sends the serialized account to the form', async ({ client, assert }) => {
+    const scenario = await createEstablishmentScenario('edit-user')
+    const admin = await createUser({
+      prefix: 'edit-user-admin',
+      tenant: scenario.tenant,
+      globalRole: IRoles.Slugs.ADMIN,
+    })
+
+    const response = await client.get(`/users/${admin.id}/edit`).loginAs(admin).accept('html')
+
+    response.assertStatus(200)
+    const page = parseInertiaPage(response)
+    assert.equal(page.component, 'users/edit')
+    const user = page.props.user as Record<string, unknown>
+    assert.equal(user.full_name, admin.full_name)
+    assert.equal(user.email, admin.email)
+    assert.notProperty(user, '$attributes')
+    assert.notProperty(user, 'password')
+  })
 })
