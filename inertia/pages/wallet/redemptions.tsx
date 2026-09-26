@@ -80,18 +80,15 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
                   <CalendarClock className="size-4" aria-hidden="true" />
                   {formatDate(redemption.redeemed_at)}
                 </p>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="xl"
-                  shape="pill"
-                  className="mt-5 w-full sm:mt-auto"
-                >
-                  <Link href={`/wallet/redemptions/${redemption.receipt_code}`}>
-                    <ReceiptText aria-hidden="true" />
-                    Ver comprovante
-                  </Link>
-                </Button>
+                {/* Pinned to the card floor with a constant gap, even under a two-line title. */}
+                <div className="mt-auto pt-5">
+                  <Button asChild variant="outline" size="xl" shape="pill" className="w-full">
+                    <Link href={`/wallet/redemptions/${redemption.receipt_code}`}>
+                      <ReceiptText aria-hidden="true" />
+                      Ver comprovante
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
