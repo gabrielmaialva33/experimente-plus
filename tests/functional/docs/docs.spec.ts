@@ -5,6 +5,8 @@ import router from '@adonisjs/core/services/router'
 import { test } from '@japa/runner'
 import { parse } from 'yaml'
 
+import IConcierge from '#modules/concierge/interfaces/concierge_interface'
+import ConciergePolicy from '#modules/concierge/models/concierge_policy'
 import EstablishmentEvent from '#modules/partner_content/models/establishment_event'
 import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
 import EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
@@ -839,6 +841,68 @@ test.group('Documentation', () => {
       if (!schemaName.startsWith('Explorer')) continue
       const serialised = JSON.stringify(specification.components!.schemas![schemaName])
       assert.notMatch(serialised, /"(user_id|email|full_name)"/, `${schemaName} names a person`)
+    }
+  })
+
+  /**
+   * The Concierge — ADR-0029, revision of 26/09/2026.
+   *
+   * Router and document compared in both directions, like the Explorer layer:
+   * a Concierge route without documentation, or a documented one the router
+   * lost, fails here. The public route must stay public and every other one
+   * must require a session, and the policy schema is derived from the model
+   * and from the ranges the validator and the table share.
+   */
+  test('documents every Concierge route and the policy it reads', async ({ assert }) => {
+    const specification = await readOpenApi()
+    const conciergePath = /concierge/
+
+    const runtime = Object.values(router.toJSON())
+      .flatMap((routes) => routes)
+      .filter((route) => route.pattern.startsWith('/api/') && conciergePath.test(route.pattern))
+      .flatMap((route) =>
+        route.methods
+          .filter((method) => method !== 'HEAD')
+          .map((method) => `${method.toLowerCase()} ${route.pattern}`)
+      )
+    const documented = Object.entries(specification.paths ?? {})
+      .filter(([pathName]) => conciergePath.test(pathName))
+      .flatMap(([pathName, operations]) =>
+        Object.keys(operations as object).map((method) => `${method} ${pathName}`)
+      )
+
+    assert.sameMembers(documented, runtime)
+    assert.sameMembers(runtime, [
+      'post /api/v1/catalog/concierge',
+      'post /api/v1/me/concierge',
+      'get /api/v1/admin/concierge-policy',
+      'put /api/v1/admin/concierge-policy',
+    ])
+
+    for (const operation of documented) {
+      const [method, pathName] = operation.split(' ')
+      const security = operationAt(specification, pathName, method as HttpMethod)?.security
+      assert.deepEqual(
+        security,
+        pathName === '/api/v1/catalog/concierge' ? [] : [{ bearerAuth: [] }],
+        `${operation} has the wrong authentication`
+      )
+    }
+
+    const schemas = specification.components!.schemas!
+    const columns = [...ConciergePolicy.$columnsDefinitions.values()].map(
+      (definition) => definition.serializeAs
+    )
+    assert.sameMembers(Object.keys(schemas.ConciergePolicy.properties!), columns)
+    assert.sameMembers(Object.keys(schemas.UpdateConciergePolicyRequest.properties!), [
+      ...Object.keys(IConcierge.DEFAULT_POLICY),
+    ])
+    for (const [field, range] of Object.entries(IConcierge.POLICY_RANGES)) {
+      for (const schema of ['ConciergePolicy', 'UpdateConciergePolicyRequest']) {
+        const property = schemas[schema].properties![field]
+        assert.equal(property.minimum, range.min, `${schema}.${field} minimum`)
+        assert.equal(property.maximum, range.max, `${schema}.${field} maximum`)
+      }
     }
   })
 
