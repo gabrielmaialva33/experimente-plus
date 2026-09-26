@@ -96,3 +96,22 @@ describe('establishment editor utilities', () => {
     expect(hasAttributeInputValue(null, [])).toBe(false)
   })
 })
+
+describe('revision status badges', () => {
+  // Web audit W6: white `-foreground` text on the soft tint measured 1.13:1.
+  it('writes a soft status background with its accent text, never its foreground', () => {
+    for (const status of [
+      'draft',
+      'changes_requested',
+      'pending_review',
+      'approved',
+      'rejected',
+      'published',
+    ]) {
+      const { className } = getRevisionStatusMeta(status)
+      expect(className).not.toMatch(/foreground,|-foreground\)/)
+      const tone = className.match(/bg-(\w+)-soft/)?.[1]
+      if (tone) expect(className).toContain('text-' + tone + '-accent')
+    }
+  })
+})

@@ -64,6 +64,9 @@ export interface RevisionStatusMeta {
   className: string
 }
 
+// Text on a soft status background uses that status's accent token. The
+// `-foreground` tokens are made for the solid status colour; on the soft tint
+// they measured 1.13:1 (web audit W6).
 const STATUS_META: Record<string, RevisionStatusMeta> = {
   draft: {
     label: 'Rascunho',
@@ -73,31 +76,27 @@ const STATUS_META: Record<string, RevisionStatusMeta> = {
   changes_requested: {
     label: 'Correções solicitadas',
     description: 'A moderação devolveu a ficha para ajustes.',
-    className:
-      'border-[var(--color-warning-alpha,var(--color-yellow-200))] bg-[var(--color-warning-soft,var(--color-yellow-50))] text-[var(--color-warning-foreground,var(--color-yellow-700))] dark:border-[var(--color-warning-alpha,var(--color-yellow-900))] dark:bg-[var(--color-warning-soft,var(--color-yellow-950))]',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   pending_review: {
     label: 'Em moderação',
     description: 'A ficha está bloqueada enquanto a equipe faz a análise.',
-    className:
-      'border-[var(--color-info-alpha,var(--color-violet-200))] bg-[var(--color-info-soft,var(--color-violet-50))] text-[var(--color-info-foreground,var(--color-violet-700))] dark:border-[var(--color-info-alpha,var(--color-violet-900))] dark:bg-[var(--color-info-soft,var(--color-violet-950))]',
+    className: 'border-info/30 bg-info-soft text-info-accent',
   },
   approved: {
     label: 'Aprovada',
     description: 'A revisão foi aprovada e aguarda a publicação.',
-    className:
-      'border-[var(--color-success-alpha,var(--color-green-200))] bg-[var(--color-success-soft,var(--color-green-50))] text-[var(--color-success-foreground,var(--color-green-700))] dark:border-[var(--color-success-alpha,var(--color-green-900))] dark:bg-[var(--color-success-soft,var(--color-green-950))]',
+    className: 'border-success/30 bg-success-soft text-success-accent',
   },
   rejected: {
     label: 'Rejeitada',
     description: 'A revisão foi encerrada sem publicação.',
-    className: 'border-destructive/20 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
   published: {
     label: 'Publicada',
     description: 'Esta revisão está disponível no catálogo público.',
-    className:
-      'border-[var(--color-success-alpha,var(--color-green-200))] bg-[var(--color-success-soft,var(--color-green-50))] text-[var(--color-success-foreground,var(--color-green-700))] dark:border-[var(--color-success-alpha,var(--color-green-900))] dark:bg-[var(--color-success-soft,var(--color-green-950))]',
+    className: 'border-success/30 bg-success-soft text-success-accent',
   },
 }
 
