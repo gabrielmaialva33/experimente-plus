@@ -2,6 +2,7 @@ import { MessageSquareText } from 'lucide-react'
 
 import { RatingStars, formatRating } from '~/components/catalog/rating_stars'
 import { ReportDialog } from '~/components/catalog/report_dialog'
+import { EmptyState } from '~/components/empty_state'
 
 export type PublicReviewItem = {
   id: number
@@ -92,12 +93,13 @@ export function EstablishmentReviews({
       </div>
 
       {latest.length === 0 ? (
-        <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl bg-background px-4 py-8 text-center">
-          <MessageSquareText aria-hidden="true" className="size-6 text-muted-foreground" />
-          <p className="font-semibold">Ainda não há avaliações deste lugar.</p>
-          <p className="text-sm text-muted-foreground">
-            Quem visitar pode avaliar pelo app Experimente+.
-          </p>
+        <div className="mt-5 rounded-2xl bg-background">
+          <EmptyState
+            icon={MessageSquareText}
+            title="Ainda não há avaliações deste lugar"
+            description="Quem visitar pode avaliar pelo app Experimente+."
+            className="py-8"
+          />
         </div>
       ) : (
         <ul className="mt-5 flex flex-col gap-3">

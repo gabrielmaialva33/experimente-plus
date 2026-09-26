@@ -794,3 +794,39 @@ export function formatPostalCodeBR(value: string | null): string | null {
   const digits = value.replace(/\D/g, '')
   return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : value
 }
+
+const CURRENCY_UNITS = new Set(['brl', 'r$', 'reais'])
+
+/**
+ * An attribute as a visitor reads it: "Sim", the chosen options, or a number
+ * in pt-BR. A currency unit (BRL, R$) reads as money — "R$ 42,50", never
+ * "42.5 BRL" — and any other unit follows the number as the partner typed it.
+ */
+export function formatCatalogAttributeValue(
+  attribute: Pick<CatalogAttribute, 'options' | 'value' | 'unit' | 'type'>
+): string {
+  if (attribute.options.length > 0) {
+    return attribute.options.map((option) => option.label).join(', ')
+  }
+  const { value } = attribute
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Não'
+  if (value === null || value === '') return 'Não informado'
+
+  const numeric =
+    typeof value === 'number'
+      ? value
+      : ['integer', 'decimal', 'number'].includes(attribute.type) &&
+          /^-?\d+(?:\.\d+)?$/.test(value.trim())
+        ? Number(value)
+        : null
+  const unit = attribute.unit?.trim() || null
+
+  if (numeric === null || !Number.isFinite(numeric)) {
+    return unit ? `${value} ${unit}` : String(value)
+  }
+  if (unit && CURRENCY_UNITS.has(unit.toLowerCase())) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numeric)
+  }
+  const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(numeric)
+  return unit ? `${number} ${unit}` : number
+}

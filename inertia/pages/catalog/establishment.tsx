@@ -23,8 +23,8 @@ import {
   availabilityLabel,
   catalogDetail,
   formatCatalogAddress,
+  formatCatalogAttributeValue,
   formatPostalCodeBR,
-  type CatalogAttribute,
   type CatalogDetail,
   type CatalogHistoricalDetail,
 } from '~/lib/catalog'
@@ -96,14 +96,6 @@ export function CatalogPublicationMetadata({
   )
 }
 
-function formatAttribute(attribute: CatalogAttribute): string {
-  if (attribute.options.length > 0)
-    return attribute.options.map((option) => option.label).join(', ')
-  if (typeof attribute.value === 'boolean') return attribute.value ? 'Sim' : 'Não'
-  if (attribute.value === null || attribute.value === '') return 'Não informado'
-  return `${attribute.value}${attribute.unit ? ` ${attribute.unit}` : ''}`
-}
-
 function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }) {
   return (
     <CatalogShell
@@ -125,7 +117,7 @@ function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }
           title="Este estabelecimento encerrou as atividades"
           description={`${detail.message} Os contatos foram removidos e esta página mantém apenas a informação histórica publicada.`}
         >
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="lg" shape="pill" asChild>
             <Link href={`/cidades/${encodeURIComponent(detail.city.slug)}`}>
               Voltar ao catálogo de {detail.city.name}
             </Link>
@@ -283,13 +275,12 @@ function PublishedEstablishment({
               ))}
             </div>
 
-            {detail.shortDescription ? (
-              <p className="mt-5 text-base font-medium leading-7 text-foreground">
-                {detail.shortDescription}
-              </p>
-            ) : null}
-            {detail.description ? (
-              <p className="mt-4 whitespace-pre-line leading-7 text-muted-foreground">
+            {/* The page header already reads the summary (the short description, or the
+                description when there is none); the card carries only what it has not said. */}
+            {detail.shortDescription &&
+            detail.description &&
+            detail.description !== detail.shortDescription ? (
+              <p className="mt-5 whitespace-pre-line leading-7 text-muted-foreground">
                 {detail.description}
               </p>
             ) : null}
@@ -304,7 +295,7 @@ function PublishedEstablishment({
               aria-labelledby="address-title"
               className="rounded-card border border-border-subtle bg-card p-5"
             >
-              <span className="flex size-10 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
+              <span className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                 <MapPin aria-hidden="true" className="size-4" />
               </span>
               <h2
@@ -353,15 +344,16 @@ function PublishedEstablishment({
                   </h2>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Clock3 className="size-4" /> {availabilityLabel(detail.availabilityType)}
+                  <Clock3 aria-hidden="true" className="size-4" />{' '}
+                  {availabilityLabel(detail.availabilityType)}
                 </span>
               </div>
 
               {detail.availabilityType === 'regular_hours' ? (
                 <CatalogWeeklyHours hours={detail.weeklyHours} timeZone={detail.city.timezone} />
               ) : (
-                <div className="mt-5 flex items-start gap-3 rounded-md border bg-primary-soft p-4 text-sm">
-                  <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm">
+                  <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary-accent" />
                   <p className="leading-6 text-muted-foreground">
                     {detail.availabilityType === 'always_open'
                       ? 'Este estabelecimento informa atendimento contínuo, 24 horas por dia.'
@@ -373,24 +365,40 @@ function PublishedEstablishment({
               {detail.specialDays.length > 0 ? (
                 <div className="mt-6">
                   <h3 className="flex items-center gap-2 text-sm font-semibold">
-                    <CalendarClock className="size-4 text-primary" /> Datas especiais
+                    <CalendarClock aria-hidden="true" className="size-4 text-primary-accent" />{' '}
+                    Datas especiais
                   </h3>
                   <div className="mt-3 grid gap-2">
+                    {/* The note explains the date ("feriado de Natal"); it no longer trails
+                        the hours, where a closed day read "Fechado — Fechado no feriado". */}
                     {detail.specialDays.map((day) => (
                       <div
                         key={day.date}
-                        className="flex flex-col gap-1 rounded-2xl border border-border-subtle bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 rounded-2xl border border-border-subtle bg-card px-4 py-3 text-sm"
                       >
-                        <span className="font-medium">
-                          {formatDate(day.date, detail.city.timezone) ?? day.date}
+                        <span className="min-w-0">
+                          <span className="block font-medium">
+                            {formatDate(day.date, detail.city.timezone) ?? day.date}
+                          </span>
+                          {day.note ? (
+                            <span className="mt-0.5 block text-[0.8125rem] leading-5 text-muted-foreground">
+                              {day.note}
+                            </span>
+                          ) : null}
                         </span>
-                        <span className="text-muted-foreground">
+                        <span
+                          className={cn(
+                            'shrink-0 tabular-nums',
+                            day.status === 'closed'
+                              ? 'font-semibold text-foreground'
+                              : 'text-muted-foreground'
+                          )}
+                        >
                           {day.status === 'closed'
                             ? 'Fechado'
                             : day.intervals
                                 .map((interval) => `${interval.opensAt}–${interval.closesAt}`)
                                 .join(' · ')}
-                          {day.note ? ` — ${day.note}` : ''}
                         </span>
                       </div>
                     ))}
@@ -401,7 +409,10 @@ function PublishedEstablishment({
           ) : (
             <section className="rounded-card border border-border-subtle bg-status-neutral p-5 sm:p-6">
               <div className="flex items-start gap-3">
-                <CircleAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                <CircleAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-muted-foreground"
+                />
                 <div>
                   <h2 className="font-semibold">Atendimento indisponível</h2>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
@@ -488,7 +499,7 @@ function PublishedEstablishment({
                   >
                     <dt className="text-sm font-medium">{attribute.name}</dt>
                     <dd className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                      {formatAttribute(attribute)}
+                      {formatCatalogAttributeValue(attribute)}
                     </dd>
                     {attribute.description ? (
                       <p className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -552,7 +563,7 @@ export default function CatalogEstablishment({
             title="Não foi possível exibir esta ficha"
             description="O conteúdo pode ter sido removido, ainda não estar publicado ou estar temporariamente indisponível."
           >
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="lg" shape="pill" asChild>
               <Link href="/cidades">Explorar outras cidades</Link>
             </Button>
           </EmptyState>
