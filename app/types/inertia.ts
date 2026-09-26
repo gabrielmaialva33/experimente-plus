@@ -142,7 +142,7 @@ declare module '@adonisjs/inertia/types' {
     }
     'users/create': Record<string, never>
     'users/edit': {
-      user: Record<string, any> | null
+      user: Record<string, any>
     }
 
     // Error pages

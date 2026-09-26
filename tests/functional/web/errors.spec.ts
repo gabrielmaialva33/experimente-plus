@@ -109,4 +109,20 @@ test.group('Web error pages', (group) => {
     api.assertStatus(404)
     api.assertBody({ status: 404, message: 'Establishment revision not found' })
   })
+
+  // Web audit W28: the edit screen received `user: null` and crashed reading
+  // `full_name`.
+  test('editing an unknown user renders the not-found page', async ({ client, assert }) => {
+    const scenario = await createEstablishmentScenario('missing-user')
+    const admin = await createUser({
+      prefix: 'missing-user-admin',
+      tenant: scenario.tenant,
+      globalRole: IRoles.Slugs.ADMIN,
+    })
+
+    const response = await client.get('/users/99999999/edit').loginAs(admin).accept('html')
+
+    response.assertStatus(404)
+    assert.equal(parseInertiaPage(response).component, 'errors/not_found')
+  })
 })
