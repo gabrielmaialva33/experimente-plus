@@ -68,7 +68,7 @@ export default function CatalogCategories({ catalog }: CatalogCategoriesProps) {
                       </span>
                       <span className="inline-flex h-7 items-center rounded-full bg-background px-3 text-xs font-semibold text-muted-foreground">
                         {category.establishmentsCount}{' '}
-                        {category.establishmentsCount === 1 ? 'opção' : 'opções'}
+                        {category.establishmentsCount === 1 ? 'lugar' : 'lugares'}
                       </span>
                     </div>
                     {category.familyName ? (
