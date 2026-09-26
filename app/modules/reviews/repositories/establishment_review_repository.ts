@@ -7,6 +7,13 @@ import type IReview from '#modules/reviews/interfaces/review_interface'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import LucidRepository from '#shared/lucid/lucid_repository'
 
+/** A reply exists for the review in the outer query: the partner's "answered". */
+const PARTNER_REPLY_EXISTS_SQL = `EXISTS (
+  SELECT 1 FROM establishment_review_replies
+  WHERE establishment_review_replies.review_id = establishment_reviews.id
+    AND establishment_review_replies.tenant_id = establishment_reviews.tenant_id
+)`
+
 export default class EstablishmentReviewRepository extends LucidRepository<
   typeof EstablishmentReview
 > {
@@ -122,6 +129,88 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     const page = query.page ?? 1
     const perPage = query.per_page ?? 10
     return rows.paginate(page, perPage)
+  }
+
+  /**
+   * The reviews a partner answers, one page at a time — Anexo I items 3 and 8.
+   *
+   * The portal's Avaliações page and the count on its overview both read
+   * `partnerReviews`, so the list and the number can never disagree: published
+   * reviews of the given places, without a banned author's, which the public no
+   * longer sees either (ADR-0027 §6). A reply of any status counts as an answer:
+   * a reply the moderation holds was still written, and answering twice is not
+   * allowed.
+   */
+  async paginateForPartner(
+    tenantId: number,
+    establishmentIds: number[],
+    filter: IReview.PartnerReviewFilter,
+    page: number,
+    perPage: number
+  ) {
+    const rows = this.partnerReviews(tenantId, establishmentIds)
+      .preload('photos', (photoQuery) => {
+        photoQuery.orderBy('sort_order', 'asc').preload('asset', (asset) => asset.preload('file'))
+      })
+      .preload('reply')
+      .preload('author', (userQuery) => {
+        userQuery.select('id', 'full_name', 'username')
+      })
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc')
+
+    if (filter === 'answered') rows.whereRaw(PARTNER_REPLY_EXISTS_SQL)
+    if (filter === 'unanswered') rows.whereRaw(`NOT ${PARTNER_REPLY_EXISTS_SQL}`)
+
+    return rows.paginate(page, perPage)
+  }
+
+  /** Per place: how many reviews, how many answered, and their average rating. */
+  async partnerSummaries(
+    tenantId: number,
+    establishmentIds: number[]
+  ): Promise<Map<number, IReview.PartnerReviewSummary>> {
+    const summaries = new Map<number, IReview.PartnerReviewSummary>()
+    if (establishmentIds.length === 0) return summaries
+
+    const rows = await this.partnerReviews(tenantId, establishmentIds)
+      .leftJoin('establishment_review_replies', (join) => {
+        join
+          .on('establishment_review_replies.review_id', 'establishment_reviews.id')
+          .andOn('establishment_review_replies.tenant_id', 'establishment_reviews.tenant_id')
+      })
+      .groupBy('establishment_reviews.establishment_id')
+      .select('establishment_reviews.establishment_id')
+      .select(db.raw('count(*)::int as total'))
+      .select(db.raw('count(establishment_review_replies.id)::int as answered'))
+      .select(db.raw('avg(establishment_reviews.rating)::float as average'))
+      .pojo<{ establishment_id: number; total: number; answered: number; average: number | null }>()
+
+    for (const row of rows) {
+      const total = Number(row.total)
+      const answered = Number(row.answered)
+      summaries.set(Number(row.establishment_id), {
+        total,
+        answered,
+        unanswered: total - answered,
+        average: row.average === null ? null : Number(row.average),
+      })
+    }
+    return summaries
+  }
+
+  private partnerReviews(tenantId: number, establishmentIds: number[]) {
+    return EstablishmentReview.query()
+      .where('establishment_reviews.tenant_id', tenantId)
+      .whereIn('establishment_reviews.establishment_id', establishmentIds)
+      .where('establishment_reviews.status', 'published')
+      .whereNotExists((membership) => {
+        membership
+          .from('user_tenants')
+          .whereColumn('user_tenants.user_id', 'establishment_reviews.user_id')
+          .whereColumn('user_tenants.tenant_id', 'establishment_reviews.tenant_id')
+          .whereNotNull('user_tenants.banned_at')
+      })
   }
 
   /**

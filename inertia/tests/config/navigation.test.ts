@@ -21,13 +21,18 @@ describe('navigation configuration', () => {
   it('prefers the most specific child route', () => {
     expect(resolveRouteMetadata('/portal/establishments/42/benefits')).toMatchObject({
       id: 'portal-establishment-benefits',
-      title: 'Benefícios da unidade',
+      title: 'Benefícios do lugar',
     })
     expect(resolveRouteMetadata('/portal/establishments/42')).toMatchObject({
       id: 'portal-establishment',
-      title: 'Editor da unidade',
+      title: 'Dados do lugar',
     })
-    expect(matchNavigationItem('/portal/redemptions/ABC-123')).toBeNull()
+    // A receipt lives under Utilizações; validation is its own, more specific entry.
+    expect(matchNavigationItem('/portal/redemptions/ABC-123')?.id).toBe('portal-redemptions')
+    expect(matchNavigationItem('/portal/redemptions/validate')?.id).toBe(
+      'portal-redemption-validation'
+    )
+    expect(matchNavigationItem('/portal/establishments/42')?.id).toBe('portal-establishments')
     expect(resolveRouteMetadata('/portal/redemptions/ABC-123')).toMatchObject({
       id: 'portal-receipt',
       title: 'Comprovante de utilização',
@@ -40,7 +45,7 @@ describe('navigation configuration', () => {
     )
     expect(resolveRouteMetadata('/portal/content')).toMatchObject({
       id: 'portal-content',
-      title: 'Conteúdo do parceiro',
+      title: 'Experiências e eventos',
     })
     expect(resolveRouteMetadata('/backoffice/content?status=pending_review')).toMatchObject({
       id: 'backoffice-content',
@@ -52,7 +57,7 @@ describe('navigation configuration', () => {
     expect(isNavigationHrefActive('/wallet/?tab=active#offer', '/wallet')).toBe(true)
     expect(matchNavigationItem('/wallet/accesses/7/offers/11/use')?.id).toBe('consumer-wallet')
     expect(matchNavigationItem('/portal/?page=2')?.id).toBe('portal-home')
-    expect(matchNavigationItem('/portal/redemptions/?page=2')).toBeNull()
+    expect(matchNavigationItem('/portal/redemptions/?page=2')?.id).toBe('portal-redemptions')
     expect(isNavigationHrefActive('/portal/establishments/42', '/portal', true)).toBe(false)
   })
 
@@ -73,7 +78,25 @@ describe('navigation configuration', () => {
       platformAccess: 'platform_moderator',
     })
 
-    expect(portalItems.map((item) => item.href)).toEqual(['/portal', '/portal/content'])
+    // The partner's daily tasks, in the order the portal presents them.
+    expect(portalItems.map((item) => item.label)).toEqual([
+      'Visão geral',
+      'Validar benefício',
+      'Utilizações',
+      'Avaliações',
+      'Experiências e eventos',
+      'Dados do lugar',
+      'Desempenho',
+    ])
+    expect(portalItems.map((item) => item.href)).toEqual([
+      '/portal',
+      '/portal/redemptions/validate',
+      '/portal/redemptions',
+      '/portal/reviews',
+      '/portal/content',
+      '/portal/establishments',
+      '/portal/performance',
+    ])
     expect(portalItems.every((item) => item.surface === 'portal')).toBe(true)
     expect(backofficeItems.every((item) => item.surface === 'backoffice')).toBe(true)
     expect(backofficeItems.some((item) => item.href.startsWith('/portal'))).toBe(false)
@@ -214,6 +237,12 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/backoffice/moderation')?.capability).toBe('establishments.list')
     expect(resolveRouteMetadata('/backoffice/benefits')?.capability).toBe('benefit_editions.list')
     expect(resolveRouteMetadata('/portal/content')?.capability).toBe('establishments.read')
+    expect(resolveRouteMetadata('/portal/reviews')?.capability).toBe('establishments.read')
+    expect(resolveRouteMetadata('/portal/establishments')?.capability).toBe('establishments.read')
+    expect(resolveRouteMetadata('/portal/performance')?.capability).toBe('analytics.read')
+    expect(resolveRouteMetadata('/portal/redemptions/validate')?.capability).toBe(
+      'benefit_offers.update'
+    )
     expect(resolveRouteMetadata('/backoffice/content')?.capability).toBe('establishments.list')
     expect(resolveRouteMetadata('/backoffice/reports')?.capability).toBe('establishments.list')
     expect(resolveRouteMetadata('/backoffice/taxonomy')?.capability).toBe('categories.list')

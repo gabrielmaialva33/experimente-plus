@@ -39,7 +39,7 @@ describe('SidebarNav', () => {
     mocks.permissions = []
   })
 
-  it('keeps organization-scoped Portal actions out of the global sidebar', () => {
+  it('lists the partner day-to-day destinations the permissions allow, marking the current one', () => {
     mocks.url = '/portal/redemptions'
     mocks.activeTenantId = 7
     mocks.permissions = ['benefit_offers.read', 'dashboard.read']
@@ -48,7 +48,12 @@ describe('SidebarNav', () => {
 
     expect(screen.getByRole('navigation', { name: 'Navegação — Portal do parceiro' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Visão geral' })).not.toHaveAttribute('aria-current')
-    expect(screen.queryByRole('link', { name: 'Utilizações' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Utilizações' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    // Validating needs benefit_offers.update, which this partner does not have.
+    expect(screen.queryByRole('link', { name: 'Validar benefício' })).not.toBeInTheDocument()
     expect(screen.queryByText('Painel operacional')).not.toBeInTheDocument()
   })
 
@@ -71,7 +76,10 @@ describe('SidebarNav', () => {
 
     render(<SidebarNav surface="portal" />)
 
-    expect(screen.getByRole('link', { name: 'Conteúdo' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Experiências e eventos' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
     expect(screen.getByRole('link', { name: 'Visão geral' })).not.toHaveAttribute('aria-current')
   })
 

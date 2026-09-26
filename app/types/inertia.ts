@@ -12,6 +12,8 @@ import type { FileListResult } from '#modules/files/services/list_files_service'
 import type { DashboardStats } from '#modules/web/services/get_dashboard_stats_service'
 import type { WebRole } from '#modules/web/services/list_roles_with_permissions_service'
 import type { WebPermission } from '#modules/web/services/list_all_permissions_service'
+import type { PartnerPlacesPageProps } from '#modules/portal/interfaces/portal_pages'
+import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 
 type SettingsProfile = {
   id: number
@@ -65,6 +67,8 @@ declare module '@adonisjs/inertia/types' {
     'portal/organizations/new': Record<string, never>
     'portal/organizations/show': Record<string, any>
     'portal/establishments/new': Record<string, any>
+    'portal/establishments/index': PartnerPlacesPageProps
+    'portal/reviews/index': PartnerReviewsPageProps
     'portal/establishments/edit': Record<string, any>
     'portal/establishments/benefits': Record<string, any>
     'portal/redemptions/index': Record<string, any>

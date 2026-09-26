@@ -1,4 +1,5 @@
 import { inject } from '@adonisjs/core'
+import db from '@adonisjs/lucid/services/db'
 
 import NotFoundException from '#exceptions/not_found_exception'
 import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
@@ -17,7 +18,16 @@ import OrganizationResourceAuthorizationService, {
   type OrganizationActorAuthorizationContext,
 } from '#modules/organizations/services/organization_resource_authorization_service'
 import type IPortal from '#modules/portal/interfaces/portal_interface'
-import { feedbackTargetsFromOverview } from '#modules/portal/services/portal_overview_projection'
+import type {
+  PartnerPlacesPageProps,
+  PartnerPlaceState,
+  PortalTasks,
+} from '#modules/portal/interfaces/portal_pages'
+import {
+  feedbackTargetsFromOverview,
+  readablePlacesFromOverview,
+} from '#modules/portal/services/portal_overview_projection'
+import PartnerReviewService from '#modules/reviews/services/partner_review_service'
 import Category from '#modules/taxonomy/models/category'
 import type User from '#modules/users/models/user'
 
@@ -29,8 +39,85 @@ export default class PartnerPortalService {
     private completenessService: EstablishmentCompletenessService,
     private effectiveAttributesService: EffectiveCategoryAttributesService,
     private resourceAuthorization: OrganizationResourceAuthorizationService,
-    private revisionRepository: EstablishmentRevisionRepository
+    private revisionRepository: EstablishmentRevisionRepository,
+    private partnerReviews: PartnerReviewService
   ) {}
+
+  /**
+   * The overview's three task cards: reviews waiting for an answer, where the
+   * places stand, and the partner's experiences and events. Every number is
+   * counted over the places the overview already shows the partner.
+   */
+  async tasks(tenantId: number, overview: IPortal.Overview): Promise<PortalTasks> {
+    const readable = overview.organizations.filter(
+      (organization) => organization.allowed_actions.establishments.read
+    )
+    const places = readable.flatMap((organization) => organization.establishments)
+    const placeIds = readablePlacesFromOverview(overview).map((place) => place.id)
+
+    const states: PortalTasks['places'] = {
+      total: places.length,
+      published: 0,
+      pending_review: 0,
+      changes_requested: 0,
+      draft: 0,
+    }
+    for (const place of places) states[placeState(place)] += 1
+
+    return {
+      unanswered_reviews: await this.partnerReviews.unansweredTotal(tenantId, placeIds),
+      places: states,
+      content: await this.contentCounts(tenantId, placeIds),
+    }
+  }
+
+  /** The "Dados do lugar" chooser, grouped by organization. */
+  placesPage(overview: IPortal.Overview): PartnerPlacesPageProps {
+    return {
+      organizations: overview.organizations
+        .filter((organization) => organization.allowed_actions.establishments.read)
+        .map((organization) => ({
+          id: organization.id,
+          name: organization.trade_name,
+          can_read_analytics: organization.allowed_actions.analytics.read,
+          places: organization.establishments.map((place) => ({
+            id: place.id,
+            name: place.public_name,
+            state: placeState(place),
+            can_list_benefits: organization.allowed_actions.benefit_offers.list,
+          })),
+        })),
+    }
+  }
+
+  /** Experiences, events and showcase items of these places, by lifecycle status. */
+  private async contentCounts(
+    tenantId: number,
+    placeIds: number[]
+  ): Promise<PortalTasks['content']> {
+    const counts: PortalTasks['content'] = { pending_review: 0, draft: 0, published: 0 }
+    if (placeIds.length === 0) return counts
+
+    // Sequential on purpose: one query per table, never concurrent on a client.
+    for (const table of [
+      'establishment_experiences',
+      'establishment_events',
+      'establishment_showcase_items',
+    ]) {
+      const rows = await db
+        .from(table)
+        .where('tenant_id', tenantId)
+        .whereIn('establishment_id', placeIds)
+        .whereIn('status', ['pending_review', 'draft', 'published'])
+        .groupBy('status')
+        .select('status')
+        .count('* as total')
+      for (const row of rows) {
+        counts[row.status as keyof PortalTasks['content']] += Number(row.total)
+      }
+    }
+    return counts
+  }
 
   async overview(
     tenantId: number,
@@ -296,7 +383,7 @@ export default class PartnerPortalService {
       summaries.push({
         id: establishment.id,
         organization_id: establishment.organization_id,
-        public_name: revision?.public_name?.trim() || `Unidade ${establishment.id}`,
+        public_name: revision?.public_name?.trim() || `Lugar ${establishment.id}`,
         lifecycle_status: establishment.lifecycle_status,
         business_status: establishment.business_status,
         published_revision_id: establishment.published_revision_id,
@@ -517,4 +604,16 @@ export default class PartnerPortalService {
     const value = record?.[key]
     return typeof value === 'string' ? value : null
   }
+}
+
+/**
+ * Where a place stands, as a partner reads it. What the moderation asked to
+ * correct comes first, then what waits for it, then what is live.
+ */
+function placeState(place: IPortal.EstablishmentSummary): PartnerPlaceState {
+  const status = place.revision?.status
+  if (status === 'changes_requested') return 'changes_requested'
+  if (status === 'pending_review') return 'pending_review'
+  if (place.published_revision_id !== null) return 'published'
+  return 'draft'
 }

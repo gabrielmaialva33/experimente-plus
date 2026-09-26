@@ -11,6 +11,8 @@ const PartnerContentPagesController = () =>
   import('#modules/partner_content/controllers/partner_content_pages_controller')
 const ContentReportPagesController = () =>
   import('#modules/reviews/controllers/content_report_pages_controller')
+const PartnerReviewPagesController = () =>
+  import('#modules/reviews/controllers/partner_review_pages_controller')
 const ReviewPolicyPagesController = () =>
   import('#modules/reviews/controllers/review_policy_pages_controller')
 const ConciergePolicyPagesController = () =>
@@ -33,6 +35,35 @@ const permissions = (...pairs: [IPermission.Resources, IPermission.Actions][]) =
 router
   .group(() => {
     router.get('/', [PartnerPortalController, 'index']).as('portal.index')
+
+    /**
+     * Avaliações — Anexo I items 3 and 8. The route permissions are the ones
+     * the rest of the portal carries; the reply service resolves the
+     * organization policy on every write, as `/api/v1/portal/reviews` does.
+     */
+    router
+      .get('/reviews', [PartnerReviewPagesController, 'index'])
+      .as('portal.reviews.index')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.READ))
+    router
+      .post('/reviews/:reviewId/reply', [PartnerReviewPagesController, 'reply'])
+      .where('reviewId', router.matchers.number())
+      .as('portal.reviews.reply')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+    router
+      .put('/reviews/:reviewId/reply', [PartnerReviewPagesController, 'updateReply'])
+      .where('reviewId', router.matchers.number())
+      .as('portal.reviews.reply.update')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
+
+    router
+      .get('/establishments', [PartnerPortalController, 'places'])
+      .as('portal.establishments.index')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.READ))
+    router
+      .get('/performance', [PartnerPortalController, 'performance'])
+      .as('portal.performance')
+      .use(permission(IPermission.Resources.ANALYTICS, IPermission.Actions.READ))
 
     router
       .get('/content', [PartnerContentPagesController, 'portal'])
