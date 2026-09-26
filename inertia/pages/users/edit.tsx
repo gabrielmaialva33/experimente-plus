@@ -5,6 +5,7 @@ import { Field } from '~/components/forms/field'
 import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/components/ui/card'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts'
 import type { User } from '~/types'
 
@@ -13,12 +14,15 @@ interface EditUserPageProps {
 }
 
 export default function EditUserPage({ user }: EditUserPageProps) {
-  const { data, setData, put, processing, errors } = useForm({
+  const { data, setData, put, processing, errors, isDirty } = useForm({
     full_name: user.full_name || '',
   })
 
+  const { allowNextVisit } = useUnsavedChangesGuard({ enabled: isDirty && !processing })
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    allowNextVisit()
     put(`/users/${user.id}`)
   }
 
@@ -28,12 +32,13 @@ export default function EditUserPage({ user }: EditUserPageProps) {
 
       <div className="space-y-6">
         <PageHeader
+          eyebrow="Pessoas e acesso"
           title="Editar usuário"
           description="Atualize os dados editáveis desta conta."
           actions={
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="lg" shape="pill">
               <Link href="/users">
-                <ArrowLeft className="size-4" />
+                <ArrowLeft aria-hidden="true" className="size-4" />
                 Voltar para usuários
               </Link>
             </Button>
@@ -43,7 +48,9 @@ export default function EditUserPage({ user }: EditUserPageProps) {
         <form onSubmit={handleSubmit} aria-busy={processing}>
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle>Dados do usuário</CardTitle>
+              <CardTitle className="font-display text-lg font-extrabold">
+                Dados do usuário
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field
@@ -65,11 +72,11 @@ export default function EditUserPage({ user }: EditUserPageProps) {
                 readOnly
               />
             </CardContent>
-            <CardFooter className="justify-end gap-2 border-t pt-5">
-              <Button asChild variant="outline">
+            <CardFooter className="flex-wrap justify-end gap-2 border-t border-border-subtle pt-5">
+              <Button asChild variant="ghost" size="xl" shape="pill">
                 <Link href="/users">Cancelar</Link>
               </Button>
-              <Button variant="primary" type="submit" disabled={processing}>
+              <Button variant="primary" size="xl" shape="pill" type="submit" disabled={processing}>
                 {processing ? 'Salvando…' : 'Salvar alterações'}
               </Button>
             </CardFooter>

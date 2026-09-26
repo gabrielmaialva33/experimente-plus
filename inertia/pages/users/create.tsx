@@ -1,6 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react'
 import { ArrowLeft } from 'lucide-react'
 
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
@@ -8,15 +9,18 @@ import { Field } from '~/components/forms/field'
 import { PageHeader } from '~/components/page_header'
 
 export default function CreateUserPage() {
-  const { data, setData, post, processing, errors } = useForm({
+  const { data, setData, post, processing, errors, isDirty } = useForm({
     full_name: '',
     email: '',
     password: '',
     password_confirmation: '',
   })
 
+  const { allowNextVisit } = useUnsavedChangesGuard({ enabled: isDirty && !processing })
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    allowNextVisit()
     post('/users')
   }
 
@@ -26,12 +30,13 @@ export default function CreateUserPage() {
 
       <div className="space-y-6">
         <PageHeader
+          eyebrow="Pessoas e acesso"
           title="Adicionar usuário"
           description="Crie uma conta administrativa com os dados necessários."
           actions={
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="lg" shape="pill">
               <Link href="/users">
-                <ArrowLeft className="size-4" />
+                <ArrowLeft aria-hidden="true" className="size-4" />
                 Voltar para usuários
               </Link>
             </Button>
@@ -41,7 +46,9 @@ export default function CreateUserPage() {
         <form onSubmit={handleSubmit} aria-busy={processing}>
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle>Dados do usuário</CardTitle>
+              <CardTitle className="font-display text-lg font-extrabold">
+                Dados do usuário
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field
@@ -85,11 +92,11 @@ export default function CreateUserPage() {
                 required
               />
             </CardContent>
-            <CardFooter className="justify-end gap-2 border-t pt-5">
-              <Button asChild variant="outline">
+            <CardFooter className="flex-wrap justify-end gap-2 border-t border-border-subtle pt-5">
+              <Button asChild variant="ghost" size="xl" shape="pill">
                 <Link href="/users">Cancelar</Link>
               </Button>
-              <Button variant="primary" type="submit" disabled={processing}>
+              <Button variant="primary" size="xl" shape="pill" type="submit" disabled={processing}>
                 {processing ? 'Salvando…' : 'Salvar usuário'}
               </Button>
             </CardFooter>

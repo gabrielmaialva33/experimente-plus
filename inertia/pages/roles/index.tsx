@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react'
 import { useMemo } from 'react'
-import { ShieldCheck, Users } from 'lucide-react'
+import { ChevronDown, ShieldCheck, Users } from 'lucide-react'
 
 import { MainLayout } from '~/layouts'
 import {
@@ -69,11 +69,11 @@ function RoleCard({ role }: { role: RoleRow }) {
       <CardHeader>
         <CardHeading>
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <ShieldCheck className="size-4.5" />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
+              <ShieldCheck aria-hidden="true" className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-display text-lg font-extrabold">
                 {globalRoleLabel(role.slug, role.name)}
               </CardTitle>
               <p className="mt-0.5 text-sm text-muted-foreground">
@@ -83,45 +83,62 @@ function RoleCard({ role }: { role: RoleRow }) {
           </div>
         </CardHeading>
         <CardToolbar>
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Users className="size-4" />
-            <span>{role.users_count}</span>
-          </div>
+          <Badge variant="secondary" appearance="light" shape="pill">
+            <Users aria-hidden="true" />
+            {role.users_count} {role.users_count === 1 ? 'pessoa' : 'pessoas'}
+          </Badge>
         </CardToolbar>
       </CardHeader>
       <CardContent>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium">Permissões atribuídas</p>
-          <Badge variant={SLUG_BADGE[role.slug] ?? 'secondary'} appearance="light" size="sm">
-            {role.permissions.length}
-          </Badge>
-        </div>
-
         {role.permissions.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma permissão atribuída.</p>
         ) : (
-          <div className="space-y-3">
-            {grouped.map(([resource, permissions]) => (
-              <div key={resource}>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {permissionResourceLabel(resource)}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {permissions.map((permission) => (
-                    <Badge key={permission.id} variant="info" appearance="outline" size="sm">
-                      {permissionActionLabel(permission.action)}
-                      {permission.context !== 'any' && (
-                        <span className="text-muted-foreground">
-                          {' '}
-                          · {permissionContextLabel(permission.context)}
-                        </span>
-                      )}
-                    </Badge>
-                  ))}
+          // The matrix is reference material, not what a person scans for;
+          // it opens on request (audit W57).
+          <details className="group rounded-xl bg-muted/50">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              <span>
+                {role.permissions.length}{' '}
+                {role.permissions.length === 1 ? 'permissão' : 'permissões'} em {grouped.length}{' '}
+                {grouped.length === 1 ? 'área' : 'áreas'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-primary-accent">
+                <span className="group-open:hidden">Ver permissões</span>
+                <span className="hidden group-open:inline">Recolher</span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 transition-transform group-open:rotate-180"
+                />
+              </span>
+            </summary>
+            <div className="space-y-3 px-4 pb-4">
+              {grouped.map(([resource, permissions]) => (
+                <div key={resource}>
+                  <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                    {permissionResourceLabel(resource)}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {permissions.map((permission) => (
+                      <Badge
+                        key={permission.id}
+                        variant={SLUG_BADGE[role.slug] ?? 'secondary'}
+                        appearance="light"
+                        size="sm"
+                      >
+                        {permissionActionLabel(permission.action)}
+                        {permission.context !== 'any' && (
+                          <span className="opacity-75">
+                            {' '}
+                            · {permissionContextLabel(permission.context)}
+                          </span>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </details>
         )}
       </CardContent>
     </Card>
@@ -135,7 +152,8 @@ export default function RolesPage({ roles }: RolesPageProps) {
 
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Administração global"
+          eyebrow="Pessoas e acesso"
+          icon={ShieldCheck}
           title="Papéis"
           description="Papéis agrupam capacidades da plataforma. O acesso a organizações continua dependendo do vínculo e das regras de domínio."
         />
