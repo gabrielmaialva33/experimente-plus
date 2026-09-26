@@ -81,6 +81,9 @@ export default class PurchaseRepository {
         kind,
         dedupe_key: key,
         refund_id: refundId ?? null,
+        // claim() compares against the application clock; the column default would use
+        // PostgreSQL's, whose microseconds can land after a claim in the same millisecond.
+        available_at: new Date(),
       },
       client
     )
