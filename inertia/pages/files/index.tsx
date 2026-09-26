@@ -11,7 +11,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '~/components/ui/card'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts'
-import { fileCategoryLabel } from '~/lib/file_presentation'
+import { fileCategoryLabel, formatFileDate } from '~/lib/file_presentation'
 
 interface FileRow {
   id: number
@@ -48,14 +48,6 @@ function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB']
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
   return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return '—'
-  return new Date(value).toLocaleString('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
 }
 
 export default function FilesPage({ files }: FilesPageProps) {
@@ -160,7 +152,7 @@ export default function FilesPage({ files }: FilesPageProps) {
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span>{formatFileSize(file.file_size)}</span>
                           <span>Enviado por {file.owner.full_name}</span>
-                          <span>{formatDate(file.created_at)}</span>
+                          <span>{formatFileDate(file.created_at)}</span>
                           <span className="break-all text-[0.68rem]">
                             Formato técnico: {file.file_type}
                           </span>
