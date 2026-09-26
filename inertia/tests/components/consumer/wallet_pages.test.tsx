@@ -226,6 +226,13 @@ describe('consumer wallet pages', () => {
     ).toBeVisible()
     expect(screen.getByText(/A apresentação não conclui o uso sozinha/)).toBeVisible()
     expect(screen.getByRole('button', { name: 'Copiar link de validação' })).toBeEnabled()
+
+    // A phone reads the offer, then the code for the counter, then the details and rules.
+    const offer = screen.getByRole('heading', { level: 2 })
+    const code = screen.getByRole('img', { name: 'QR Code temporário para validar o benefício' })
+    const rules = screen.getByText(/A apresentação não conclui o uso sozinha/)
+    expect(offer.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(code.compareDocumentPosition(rules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('keeps consumer-owned source flat and free of dead operational destinations', () => {
