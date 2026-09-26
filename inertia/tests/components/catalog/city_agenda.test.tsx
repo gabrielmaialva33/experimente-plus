@@ -75,8 +75,9 @@ describe('city agenda', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { level: 2, name: /O que está acontecendo em Londrina/ }))
-      .toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: /O que está acontecendo em Londrina/ })
+    ).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Acontecendo hoje' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Em breve' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Novidades' })).toBeInTheDocument()
@@ -111,11 +112,7 @@ describe('city agenda', () => {
   })
 
   it('renders an item without a cover using the catalogue fallback tile', () => {
-    render(
-      <CityAgendaSection
-        agenda={agenda({ happening_today: [eventItem({ cover: null })] })}
-      />
-    )
+    render(<CityAgendaSection agenda={agenda({ happening_today: [eventItem({ cover: null })] })} />)
 
     expect(screen.getByRole('link', { name: 'Sarau no quintal' })).toBeInTheDocument()
     expect(
@@ -165,9 +162,7 @@ describe('city agenda', () => {
   it('shows an empty state when the city has nothing scheduled', () => {
     render(<CityAgendaSection agenda={agenda()} />)
 
-    expect(
-      screen.getByText('Nenhuma programação publicada para estes dias')
-    ).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma programação publicada para estes dias')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 3, name: 'Acontecendo hoje' })).toBeNull()
   })
 

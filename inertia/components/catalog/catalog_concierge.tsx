@@ -168,9 +168,7 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
                         {KIND_LABEL[kind]} em {host}
                       </p>
                     ) : null}
-                    {meta ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p>
-                    ) : null}
+                    {meta ? <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p> : null}
                   </>
                 )
 
