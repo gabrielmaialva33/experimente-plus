@@ -173,6 +173,27 @@ describe('foundation primitives', () => {
     expect(screen.getByText('1 rascunho')).toHaveClass('bg-muted', 'text-muted-foreground')
   })
 
+  // `secondary` is the card colour and dark `muted` matches the card: both need an outline.
+  it('outlines the neutral and secondary soft badges so they stay visible on a card', () => {
+    render(
+      <>
+        <Badge variant="neutral" shape="pill">
+          0 rascunhos
+        </Badge>
+        <Badge variant="secondary" appearance="light" shape="pill">
+          3 edições
+        </Badge>
+        <Badge variant="neutral" appearance="ghost">
+          Sem contorno
+        </Badge>
+      </>
+    )
+    expect(screen.getByText('0 rascunhos')).toHaveClass('border-border-subtle')
+    expect(screen.getByText('3 edições')).toHaveClass('border-border-subtle', 'bg-secondary')
+    expect(screen.getByText('Sem contorno')).toHaveClass('border-transparent')
+    expect(screen.getByText('Sem contorno')).not.toHaveClass('border-border-subtle')
+  })
+
   it('makes a task card a heading and one action link stretched over the card', () => {
     render(
       <>
