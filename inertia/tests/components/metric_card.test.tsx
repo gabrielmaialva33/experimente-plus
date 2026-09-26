@@ -50,4 +50,15 @@ describe('MetricCard', () => {
     expect(link).toHaveAttribute('href', '/portal/organizations')
     expect(link).toHaveClass('focus-visible:ring-2')
   })
+
+  // `warning-foreground` is dark in both themes: on the dark card the icon disappeared.
+  it('tints its icon with a soft fill and strong text that read in both themes', () => {
+    const { container } = render(
+      <MetricCard label="Papéis globais" value={5} icon={ChartNoAxesColumn} tone="warning" />
+    )
+
+    const tile = container.querySelector('svg')?.parentElement
+    expect(tile).toHaveClass('bg-warning-soft', 'text-warning-accent')
+    expect(tile).not.toHaveClass('text-warning-foreground')
+  })
 })

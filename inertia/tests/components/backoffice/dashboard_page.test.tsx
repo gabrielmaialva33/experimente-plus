@@ -62,6 +62,16 @@ describe('DashboardPage', () => {
     )
   })
 
+  // The band is chrome, not the action blue: `primary` turns light blue in the dark theme.
+  it('paints the Hoje band with the navy chrome in both themes', () => {
+    mocks.permissions = ['establishments.list']
+    render(<DashboardPage stats={stats} />)
+
+    const band = screen.getByRole('region', { name: 'O que pede atenção hoje' })
+    expect(band).toHaveClass('bg-chrome', 'text-chrome-foreground')
+    expect(band).not.toHaveClass('bg-primary')
+  })
+
   it('leaves Hoje out for someone who cannot open it', () => {
     mocks.permissions = []
     render(<DashboardPage stats={stats} />)
