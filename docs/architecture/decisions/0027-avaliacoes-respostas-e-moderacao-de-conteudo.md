@@ -148,6 +148,16 @@ Os cenários 13 e 14 estavam decididos e sem código: toda denúncia exigia cont
 - **Resposta é só o protocolo.** Nem a denúncia, nem os hashes, nem como a origem foi registrada. A resposta leva cabeçalhos privados.
 - **Limite próprio:** cinco por hora por conexão, depois uma hora de bloqueio. É a única rota de escrita sem sessão do produto, e o caminho óbvio para inundar a fila.
 
+### Tela de respostas do parceiro — 26/09/2026
+
+Os itens 3 e 8 do Anexo I pedem que o parceiro **responda** avaliações. A resposta existia como escrita em `POST`/`PUT /api/v1/portal/reviews/:reviewId/replies`, sem listagem e sem tela: o parceiro não tinha onde ver o que esperava resposta. O portal web ganha a página **Avaliações** (`/portal/reviews`).
+
+- **Uma só porta de escrita.** A página publica e edita pelo mesmo `EstablishmentReviewReplyService` da API, que resolve de novo a policy da organização: quem não é membro recebe 404, quem é membro sem `manage_establishments` recebe 403. A página não tem regra de autorização própria para escrever; a projeção `can_reply` só decide se o formulário aparece. As rotas são web (Inertia, sessão, CSRF), e o contrato da API e o OpenAPI não mudam.
+- **O que o parceiro lê é o que o público lê.** Entram só avaliações publicadas de autor não banido na operação, dos lugares que o snapshot de autorização do portal concede para leitura. Lugar fora desse escopo, inclusive de outra operação, responde 404.
+- **"Sem resposta" tem uma definição.** Uma avaliação está respondida quando existe resposta a ela, em qualquer estado: a resposta retida pela moderação automática já foi escrita, e o parceiro a vê marcada como "Em análise pela moderação", editável. A mesma consulta alimenta o filtro da página (Sem resposta, Respondidas, Todas, com contagens) e o cartão da visão geral do portal, que não podem divergir.
+- **A página abre no trabalho pendente:** no primeiro lugar com avaliações sem resposta e no filtro "Sem resposta"; quando nada espera, em "Todas". Quem administra vários lugares troca de lugar num seletor.
+- **Mensagens do parceiro em português.** O formulário passa suas mensagens de validação explicitamente, porque o provedor de i18n da requisição venceria o do validador. Os limites são os da API (1 a 4.000 caracteres), para a página não ser porta mais frouxa nem mais estreita que o endpoint.
+
 ## Consequências
 
 Cria um domínio novo com leitura pública e escrita autenticada, aumentando superfície de abuso: spam, avaliação em massa, conteúdo ofensivo e disputa entre parceiro e consumidor. A fila de moderação humana passa a receber volume que hoje não recebe, e isso é operação contínua — que o escopo contratado coloca **fora** da entrega.
