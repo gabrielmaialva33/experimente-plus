@@ -16,13 +16,14 @@ export function PublicFooter() {
             </p>
           </div>
 
-          <nav aria-label="Navegação do rodapé">
-            <ul className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
+          {/* 44 px targets; the negative margin keeps the text on the brand's top line. */}
+          <nav aria-label="Navegação do rodapé" className="-my-3">
+            <ul className="flex flex-wrap gap-x-6 text-sm font-medium">
               {PUBLIC_NAVIGATION.footer.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-muted-foreground transition-colors hover:text-foreground"
+                    className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground underline-offset-4 outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {item.label}
                   </Link>
