@@ -25,6 +25,8 @@ export interface FieldSpec {
   step?: string
   /** Starting value for a new record. Checkboxes start unchecked unless said. */
   defaultValue?: string | boolean
+  /** Technical detail (slugs, codes, ordering): folded under "Avançado" (audit W47/W43). */
+  advanced?: boolean
 }
 
 export type FormValues = Record<string, string | boolean>

@@ -60,22 +60,31 @@ export function ResourceSection({
   return (
     <section
       aria-labelledby={`${id}-heading`}
-      className="rounded-lg border border-border bg-card p-5 sm:p-6"
+      className="rounded-card border border-border-subtle bg-card p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
             <Icon aria-hidden="true" className="size-4.5" />
           </span>
           <div>
-            <h2 id={`${id}-heading`} className="text-xl font-bold">
+            <h2
+              id={`${id}-heading`}
+              className="font-display text-xl font-extrabold tracking-[-0.01em]"
+            >
               {title}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
         </div>
         {canCreate && !creating ? (
-          <Button type="button" variant="outline" onClick={() => setCreating(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            shape="pill"
+            onClick={() => setCreating(true)}
+          >
             <Plus aria-hidden="true" className="size-4" />
             {createLabel}
           </Button>
@@ -83,7 +92,7 @@ export function ResourceSection({
       </div>
 
       {creating ? (
-        <div className="mt-5 rounded-md border border-dashed border-border p-4">
+        <div className="mt-5 rounded-xl border border-dashed border-border p-4">
           <ResourceForm
             idPrefix={`${id}-new`}
             fields={fields}
@@ -99,7 +108,7 @@ export function ResourceSection({
         <EmptyState
           headingLevel={3}
           title={emptyLabel}
-          className="mt-5 rounded-lg border border-dashed border-border"
+          className="mt-5 rounded-card border border-dashed border-border"
         />
       ) : (
         <ul className="mt-5 divide-y divide-border" aria-label={title}>
@@ -120,7 +129,7 @@ export function ResourceSection({
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
-                        'rounded-md border px-2 py-1 text-xs font-semibold',
+                        'rounded-full border px-2.5 py-1 text-xs font-semibold',
                         active
                           ? 'border-success/25 bg-success/10 text-success'
                           : 'border-border bg-muted text-muted-foreground'
@@ -133,7 +142,8 @@ export function ResourceSection({
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
+                          size="md"
+                          shape="pill"
                           aria-label={`Editar ${name}`}
                           onClick={() => setEditing(editing === recordId ? null : recordId)}
                         >
@@ -145,8 +155,9 @@ export function ResourceSection({
                             trigger={
                               <Button
                                 type="button"
-                                variant="outline"
-                                size="sm"
+                                variant="dim"
+                                size="md"
+                                shape="pill"
                                 aria-label={`Desativar ${name}`}
                               >
                                 Desativar
@@ -162,7 +173,8 @@ export function ResourceSection({
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
+                            size="md"
+                            shape="pill"
                             aria-label={`Ativar ${name}`}
                             onClick={() => toggleActive(recordId, active)}
                           >
@@ -175,7 +187,7 @@ export function ResourceSection({
                 </div>
 
                 {editing === recordId ? (
-                  <div className="mt-3 rounded-md border border-border p-4">
+                  <div className="mt-3 rounded-xl border border-border-subtle p-4">
                     <ResourceForm
                       idPrefix={`${id}-${recordId}`}
                       fields={fields}

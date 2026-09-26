@@ -13,6 +13,29 @@ interface GeographyPageProps {
   cities: unknown
 }
 
+/**
+ * Brazilian time zones by the name people use (audit W63), stored as the IANA
+ * identifier the server keeps. A stored zone outside the list stays selectable
+ * under its own identifier, so editing a city never changes it by accident.
+ */
+const TIMEZONES: Array<{ value: string; label: string }> = [
+  { value: 'America/Sao_Paulo', label: 'Horário de Brasília' },
+  { value: 'America/Manaus', label: 'Horário do Amazonas (−1h)' },
+  { value: 'America/Rio_Branco', label: 'Horário do Acre (−2h)' },
+  { value: 'America/Noronha', label: 'Horário de Fernando de Noronha (+1h)' },
+]
+
+export function timezoneLabel(value: string): string {
+  return TIMEZONES.find((zone) => zone.value === value)?.label ?? value
+}
+
+function timezoneOptions(cities: JsonRecord[]) {
+  const stored = cities
+    .map((city) => text(city, 'timezone'))
+    .filter((zone) => zone && !TIMEZONES.some((known) => known.value === zone))
+  return [...TIMEZONES, ...[...new Set(stored)].map((zone) => ({ value: zone, label: zone }))]
+}
+
 const regionFields: FieldSpec[] = [
   { name: 'name', label: 'Nome', type: 'text', required: true },
   {
@@ -21,9 +44,17 @@ const regionFields: FieldSpec[] = [
     type: 'text',
     omitWhenBlank: true,
     hint: 'Em branco, é gerado a partir do nome',
+    advanced: true,
   },
   { name: 'description', label: 'Descrição', type: 'textarea', nullable: true },
-  { name: 'sort_order', label: 'Ordem', type: 'number', defaultValue: '0', step: '1' },
+  {
+    name: 'sort_order',
+    label: 'Ordem',
+    type: 'number',
+    defaultValue: '0',
+    step: '1',
+    advanced: true,
+  },
 ]
 
 export default function BackofficeGeography({ regions, cities }: GeographyPageProps) {
@@ -52,14 +83,16 @@ export default function BackofficeGeography({ regions, cities }: GeographyPagePr
       type: 'text',
       omitWhenBlank: true,
       hint: 'Em branco, é gerado a partir do nome',
+      advanced: true,
     },
     { name: 'state_code', label: 'UF', type: 'text', required: true, defaultValue: 'PR' },
     {
       name: 'timezone',
       label: 'Fuso horário',
-      type: 'text',
-      omitWhenBlank: true,
+      type: 'select',
+      required: true,
       defaultValue: 'America/Sao_Paulo',
+      options: timezoneOptions(cityRows),
       // The timezone decides when an event is "today" in this city (ADR-0028),
       // not the visitor's device and not the server.
       hint: 'Decide o que é "hoje" na agenda desta cidade',
@@ -70,20 +103,42 @@ export default function BackofficeGeography({ regions, cities }: GeographyPagePr
       type: 'text',
       nullable: true,
       hint: 'Sete dígitos',
+      advanced: true,
     },
-    { name: 'latitude', label: 'Latitude', type: 'number', nullable: true, step: 'any' },
-    { name: 'longitude', label: 'Longitude', type: 'number', nullable: true, step: 'any' },
-    { name: 'sort_order', label: 'Ordem', type: 'number', defaultValue: '0', step: '1' },
+    {
+      name: 'latitude',
+      label: 'Latitude',
+      type: 'number',
+      nullable: true,
+      step: 'any',
+      advanced: true,
+    },
+    {
+      name: 'longitude',
+      label: 'Longitude',
+      type: 'number',
+      nullable: true,
+      step: 'any',
+      advanced: true,
+    },
+    {
+      name: 'sort_order',
+      label: 'Ordem',
+      type: 'number',
+      defaultValue: '0',
+      step: '1',
+      advanced: true,
+    },
   ]
 
   const describeRegion = (row: JsonRecord) => ({
     name: text(row, 'name'),
-    meta: text(row, 'slug'),
+    meta: text(row, 'description'),
   })
 
   const describeCity = (row: JsonRecord) => ({
     name: `${text(row, 'name')} · ${text(row, 'state_code')}`,
-    meta: [regionName.get(numeric(row, 'region_id')), text(row, 'timezone'), text(row, 'slug')]
+    meta: [regionName.get(numeric(row, 'region_id')), timezoneLabel(text(row, 'timezone'))]
       .filter(Boolean)
       .join(' · '),
   })
@@ -91,9 +146,9 @@ export default function BackofficeGeography({ regions, cities }: GeographyPagePr
   return (
     <MainLayout>
       <Head title="Regiões e cidades" />
-      <div className="space-y-7">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Administração"
+          eyebrow="Administração · catálogo"
           icon={MapPinned}
           title="Regiões e cidades"
           description="Onde a operação atua. Desativar uma cidade a tira da descoberta pública sem apagar o que existe nela."

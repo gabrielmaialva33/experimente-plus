@@ -175,8 +175,22 @@ describe('backoffice administration screens', () => {
     )
 
     expect(screen.getByTestId('cities-row-9')).toHaveTextContent('Norte do Paraná')
+    // Audit W63: the zone reads as people say it, not as an IANA identifier.
+    expect(screen.getByTestId('cities-row-9')).toHaveTextContent('Horário de Brasília')
+    expect(screen.getByTestId('cities-row-9')).not.toHaveTextContent('America/Sao_Paulo')
     fireEvent.click(screen.getByRole('button', { name: 'Editar Londrina · PR' }))
+    expect((screen.getByLabelText(/^Fuso horário/) as HTMLSelectElement).value).toBe(
+      'America/Sao_Paulo'
+    )
+    // Audit W47/W43: slug, IBGE code, coordinates and order sit under "Avançado".
+    const advanced = screen.getByText('Avançado').closest('details')!
+    expect(advanced.open).toBe(false)
+    expect(advanced).toContainElement(screen.getByLabelText('Código IBGE'))
     fireEvent.submit(screen.getByRole('form', { name: 'Salvar alterações' }))
+
+    expect(mocks.transform).toHaveBeenCalledWith(
+      expect.objectContaining({ timezone: 'America/Sao_Paulo' })
+    )
 
     expect(mocks.formPut).toHaveBeenCalledWith(
       '/backoffice/geography/cities/9',
