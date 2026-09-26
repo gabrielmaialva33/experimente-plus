@@ -237,7 +237,8 @@ export function Header({ surface }: { surface: NavigationSurface }) {
             <SheetContent
               side="left"
               closeLabel="Fechar navegação"
-              closeClassName="text-chrome-foreground opacity-90 ring-offset-chrome data-[state=open]:bg-chrome-hover"
+              // A 44 px circle centred in the 72 px brand row, not a 16 px corner glyph.
+              closeClassName="end-3 top-[calc(0.875rem+env(safe-area-inset-top))] flex size-11 items-center justify-center rounded-full text-chrome-foreground opacity-90 ring-offset-chrome hover:bg-chrome-hover data-[state=open]:bg-chrome-hover"
               className="w-[304px] gap-0 border-chrome bg-chrome px-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-chrome-foreground"
             >
               <SheetHeader className="sr-only">
