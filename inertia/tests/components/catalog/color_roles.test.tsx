@@ -34,6 +34,8 @@ describe('distinct catalog color roles', () => {
     expect(current).toHaveTextContent('Segunda-feira')
     expect(current).toHaveTextContent('Hoje')
     expect(current).toHaveTextContent('Fechado')
+    // A day reads on one line when it fits, the hours wrapping under the name only when long.
+    expect(current).toHaveClass('flex', 'flex-wrap', 'justify-between')
     act(() => vi.advanceTimersByTime(60_000))
     expect(container.querySelector('[aria-current="date"]')).toHaveTextContent('Terça-feira')
     expect(container.querySelectorAll('[aria-current="date"]')).toHaveLength(1)

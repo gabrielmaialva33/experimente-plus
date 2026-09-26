@@ -38,7 +38,7 @@ export function CatalogWeeklyHours({
   }, [timeZone])
 
   return (
-    <div className="mt-5 divide-y overflow-hidden rounded-md border bg-card">
+    <div className="mt-5 divide-y divide-border-subtle overflow-hidden rounded-2xl border border-border-subtle bg-card">
       {weekdays.map((_, weekday) => {
         const intervals = hours
           .filter((hour) => hour.weekday === weekday)
@@ -48,8 +48,10 @@ export function CatalogWeeklyHours({
           <div
             key={weekday}
             aria-current={isToday ? 'date' : undefined}
+            // One line per day while it fits (a phone included); a long split day wraps
+            // its hours under the name instead of every day taking two lines.
             className={cn(
-              'grid gap-1 border-l-4 px-4 py-3 text-sm sm:grid-cols-[12rem_1fr] sm:gap-4',
+              'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 border-l-4 px-4 py-3 text-sm',
               isToday
                 ? 'border-l-temporal-emphasis-border bg-temporal-emphasis text-temporal-emphasis-foreground'
                 : 'border-l-transparent'
@@ -57,9 +59,13 @@ export function CatalogWeeklyHours({
           >
             <span className="flex items-center gap-2 font-medium">
               {weekdayLabel(weekday)}
-              {isToday ? <span className="text-xs font-bold">Hoje</span> : null}
+              {isToday ? (
+                <span className="rounded-full border border-temporal-emphasis-border px-2 text-[0.6875rem] font-bold leading-5">
+                  Hoje
+                </span>
+              ) : null}
             </span>
-            <span className={cn('sm:text-end', !isToday && 'text-muted-foreground')}>
+            <span className={cn('tabular-nums', !isToday && 'text-muted-foreground')}>
               {intervals.length === 0
                 ? 'Fechado'
                 : intervals
