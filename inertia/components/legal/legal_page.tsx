@@ -1,7 +1,8 @@
-import { Link } from '@inertiajs/react'
+import { Link, usePage } from '@inertiajs/react'
 import type { ReactNode } from 'react'
 
 import { PublicShell } from '~/components/public/public_shell'
+import type { AuthSharedProps } from '~/types'
 
 interface LegalSection {
   title: string
@@ -23,6 +24,10 @@ export function LegalPage({
   relatedHref,
   relatedLabel,
 }: LegalPageProps) {
+  // Only a visitor can go back to the sign-up form; a signed-in reader would be bounced.
+  const auth = usePage().props.auth as AuthSharedProps | undefined
+  const signedIn = Boolean(auth?.user)
+
   return (
     <PublicShell title={title} description={description}>
       <article className="app-container max-w-4xl py-10 sm:py-14">
@@ -70,12 +75,14 @@ export function LegalPage({
           >
             {relatedLabel}
           </Link>
-          <Link
-            href="/register"
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-sm font-semibold text-foreground outline-none transition-colors hover:border-primary hover:text-primary-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
-          >
-            Voltar ao cadastro
-          </Link>
+          {signedIn ? null : (
+            <Link
+              href="/register"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-sm font-semibold text-foreground outline-none transition-colors hover:border-primary hover:text-primary-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
+            >
+              Voltar ao cadastro
+            </Link>
+          )}
         </nav>
       </article>
     </PublicShell>
