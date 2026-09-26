@@ -259,9 +259,8 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
           </div>
         ) : (
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <ShieldQuestion aria-hidden="true" className="size-4" />
-            O conteúdo denunciado não existe mais. O caso permanece na fila porque o protocolo
-            continua válido.
+            <ShieldQuestion aria-hidden="true" className="size-4" />O conteúdo denunciado não existe
+            mais. O caso permanece na fila porque o protocolo continua válido.
           </p>
         )}
       </section>

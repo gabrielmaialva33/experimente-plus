@@ -287,7 +287,8 @@ describe('ContentReportCard', () => {
       automatic_evidence: 'e-mail j***@gmail.com',
       holds_content: true,
       reporter: null,
-      details: 'Aberta por regra automática: dados de contato (e-mail j***@gmail.com) — conteúdo retido.',
+      details:
+        'Aberta por regra automática: dados de contato (e-mail j***@gmail.com) — conteúdo retido.',
     })
 
     render(<ContentReportCard report={report} />)

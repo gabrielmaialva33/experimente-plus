@@ -59,7 +59,6 @@ export default function BackofficeReports({
     )
   }
 
-
   const total = numeric(meta, 'total')
   const currentPage = numeric(meta, 'current_page') || 1
   const lastPage = numeric(meta, 'last_page') || 1
@@ -136,8 +135,8 @@ export default function BackofficeReports({
                 data-testid="overdue-total"
               >
                 <AlertTriangle aria-hidden="true" className="size-4" />
-                {overdueTotal}{' '}
-                {overdueTotal === 1 ? 'denúncia vencida' : 'denúncias vencidas'} na operação
+                {overdueTotal} {overdueTotal === 1 ? 'denúncia vencida' : 'denúncias vencidas'} na
+                operação
               </p>
             ) : null}
           </div>
