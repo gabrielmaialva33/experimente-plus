@@ -46,6 +46,25 @@ test.group('Backoffice administration screens (Anexo I item 12)', (group) => {
     assert.equal(page.header('x-robots-tag'), 'noindex, nofollow')
   })
 
+  // Web audit W29: the first visit of an operation said "0 dias", a reload "5 dias".
+  test('the first visit shows the database deadline for reports', async ({ client, assert }) => {
+    const { scenario, admin, headers } = await staff('adm-policy-first')
+    const before = await db.from('review_policies').where('tenant_id', scenario.tenant.id).first()
+    assert.isNull(before)
+
+    const page = await client
+      .get('/backoffice/review-policy')
+      .headers(headers)
+      .loginAs(admin)
+      .accept('html')
+    page.assertStatus(200)
+    const payload = page
+      .text()
+      .match(/<script data-page="app" type="application\/json">([\s\S]*?)<\/script>/)
+    const props = JSON.parse(payload![1]).props as { policy: Record<string, unknown> }
+    assert.equal(props.policy.report_moderation_days, 5)
+  })
+
   test('saving the review policy through the screen persists it', async ({ client, assert }) => {
     const { scenario, admin, headers } = await staff('adm-policy-save')
 
