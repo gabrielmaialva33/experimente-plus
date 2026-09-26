@@ -422,7 +422,7 @@ export default function BenefitAccessesPage({
                           className={cn(
                             'flex size-10 shrink-0 items-center justify-center rounded-full border',
                             isActive
-                              ? 'border-success/20 bg-success/10 text-success'
+                              ? 'border-success/20 bg-success-soft text-success-accent'
                               : 'border-border bg-muted text-muted-foreground'
                           )}
                         >
@@ -436,7 +436,7 @@ export default function BenefitAccessesPage({
                           className={cn(
                             'rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold',
                             isActive
-                              ? 'border-success/25 bg-success/10 text-success'
+                              ? 'border-success/25 bg-success-soft text-success-accent'
                               : 'border-border bg-muted text-muted-foreground'
                           )}
                         >

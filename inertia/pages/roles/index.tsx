@@ -96,15 +96,16 @@ function RoleCard({ role }: { role: RoleRow }) {
           // The matrix is reference material, not what a person scans for;
           // it opens on request (audit W57).
           <details className="group rounded-xl bg-background">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-              <span>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">
                 {role.permissions.length}{' '}
                 {role.permissions.length === 1 ? 'permissão' : 'permissões'} em {grouped.length}{' '}
                 {grouped.length === 1 ? 'área' : 'áreas'}
               </span>
-              <span className="inline-flex items-center gap-1 text-primary-accent">
-                <span className="group-open:hidden">Ver permissões</span>
-                <span className="hidden group-open:inline">Recolher</span>
+              {/* On a phone the chevron alone says it opens; the words would wrap both sides. */}
+              <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-primary-accent">
+                <span className="group-open:hidden max-sm:sr-only">Ver permissões</span>
+                <span className="hidden group-open:inline max-sm:group-open:sr-only">Recolher</span>
                 <ChevronDown
                   aria-hidden="true"
                   className="size-4 transition-transform group-open:rotate-180"

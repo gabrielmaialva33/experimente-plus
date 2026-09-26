@@ -114,11 +114,11 @@ const statusMeta: Record<string, { label: string; className: string }> = {
   },
   active: {
     label: 'Ativa',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   paused: {
     label: 'Pausada',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   archived: {
     label: 'Arquivada',
@@ -774,7 +774,7 @@ export default function EstablishmentBenefitsPage({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                          <p className="text-xs font-semibold uppercase leading-5 tracking-[0.12em] text-primary">
                             {offer.edition.name}
                           </p>
                           <h2 className="mt-1 font-display text-lg font-bold tracking-[-0.02em]">

@@ -68,7 +68,8 @@ function TenantSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="h-9 max-w-[230px] gap-2 rounded-md bg-background px-2.5"
+          className="h-9 max-w-[280px] gap-2 rounded-md bg-background px-2.5"
+          title={activeTenant?.name}
         >
           <Avatar className="size-6">
             <AvatarFallback className="bg-primary/10 text-[0.62rem] font-bold text-primary">

@@ -97,11 +97,11 @@ const statusMeta: Record<string, { label: string; className: string }> = {
   },
   published: {
     label: 'Publicada',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   paused: {
     label: 'Pausada',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   archived: {
     label: 'Arquivada',
@@ -570,7 +570,7 @@ export default function BenefitsBackofficePage({
                           <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                             {edition.city.name} · {edition.city.state_code}
                           </p>
-                          <h2 className="mt-1 truncate font-display text-lg font-extrabold tracking-[-0.01em]">
+                          <h2 className="mt-1 font-display text-lg font-extrabold leading-snug tracking-[-0.01em] text-balance">
                             {edition.name}
                           </h2>
                         </div>
@@ -622,6 +622,7 @@ export default function BenefitsBackofficePage({
                         </div>
                       </dl>
 
+                      {/* Stacked on a phone; `flex-1` only in the row, or the column squeezes each pill flat. */}
                       <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row sm:flex-wrap">
                         {canListAccesses ? (
                           <Button
@@ -629,7 +630,7 @@ export default function BenefitsBackofficePage({
                             variant="outline"
                             size="lg"
                             shape="pill"
-                            className="flex-1"
+                            className="sm:flex-1"
                           >
                             <Link href="/backoffice/accesses">
                               <UsersRound aria-hidden="true" />
@@ -643,7 +644,7 @@ export default function BenefitsBackofficePage({
                             variant="outline"
                             size="lg"
                             shape="pill"
-                            className="flex-1"
+                            className="sm:flex-1"
                             onClick={() => beginEdit(edition)}
                             disabled={busy}
                           >
@@ -658,7 +659,7 @@ export default function BenefitsBackofficePage({
                             variant="primary"
                             size="lg"
                             shape="pill"
-                            className="flex-1"
+                            className="sm:flex-1"
                             onClick={() =>
                               runAction(
                                 `/backoffice/benefits/${edition.id}/publish`,
@@ -687,7 +688,7 @@ export default function BenefitsBackofficePage({
                             variant="outline"
                             size="lg"
                             shape="pill"
-                            className="flex-1"
+                            className="sm:flex-1"
                             onClick={() =>
                               runAction(
                                 `/backoffice/benefits/${edition.id}/pause`,
