@@ -58,6 +58,8 @@ describe('LoginForm', () => {
       'href',
       '/forgot-password'
     )
+    // A 44 px target that does not grow the label row it sits in.
+    expect(screen.getByRole('link', { name: /Esqueceu a senha/i })).toHaveClass('min-h-11', '-my-3')
   })
 
   it('keeps the skip link as the first keyboard target', async () => {
