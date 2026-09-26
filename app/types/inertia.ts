@@ -6,6 +6,7 @@
  * the props passed from the controller. Pages without page-specific props use
  * an empty object.
  */
+import type IConcierge from '#modules/concierge/interfaces/concierge_interface'
 import type IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
 import type { FileListResult } from '#modules/files/services/list_files_service'
 import type { DashboardStats } from '#modules/web/services/get_dashboard_stats_service'
@@ -80,6 +81,10 @@ declare module '@adonisjs/inertia/types' {
     'backoffice/content/index': Record<string, any>
     'backoffice/reports/index': Record<string, any>
     'backoffice/review_policy/index': Record<string, any>
+    'backoffice/concierge/index': {
+      policy: IConcierge.PolicyValues
+      infrastructure: IConcierge.InfrastructureStatus
+    }
     'backoffice/taxonomy/index': Record<string, any>
     'backoffice/geography/index': Record<string, any>
 

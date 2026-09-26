@@ -219,6 +219,7 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/backoffice/taxonomy')?.capability).toBe('categories.list')
     expect(resolveRouteMetadata('/backoffice/geography')?.capability).toBe('cities.list')
     expect(resolveRouteMetadata('/backoffice/review-policy')?.capability).toBe('settings.read')
+    expect(resolveRouteMetadata('/backoffice/concierge')?.capability).toBe('settings.read')
   })
 
   it('does not expose the conditional UI demo route in central navigation', () => {

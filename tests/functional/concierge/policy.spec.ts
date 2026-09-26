@@ -168,6 +168,62 @@ test.group('Concierge policy — administration (ADR-0029, 26/09/2026)', (group)
     assert.equal(inBeta.body().tenant_id, beta.scenario.tenant.id)
     assert.equal(inBeta.body().daily_questions_per_person, 20)
   })
+
+  test('the screen is for administrators and shows the infrastructure without the key', async ({
+    client,
+    assert,
+  }) => {
+    const { scenario, admin, moderator, headers } = await operation('cp-screen')
+
+    for (const outsider of [scenario.owner, moderator]) {
+      const denied = await client.get('/backoffice/concierge').headers(headers).loginAs(outsider)
+      denied.assertStatus(403)
+    }
+
+    const html = await client.get('/backoffice/concierge').headers(headers).loginAs(admin)
+    html.assertStatus(200)
+    assert.equal(html.header('cache-control'), 'private, no-store')
+    assert.equal(html.header('x-robots-tag'), 'noindex, nofollow')
+    assert.include(html.text(), 'backoffice/concierge/index')
+    assert.include(html.text(), '"daily_questions_per_person"')
+    assert.include(html.text(), '"provider_configured"')
+    assert.notMatch(html.text(), /api_key|apiKey|NVIDIA_API_KEY/)
+  })
+
+  test('saving through the screen persists through the same rules as the API', async ({
+    client,
+    assert,
+  }) => {
+    const { scenario, admin, headers } = await operation('cp-save')
+
+    const saved = await client
+      .put('/backoffice/concierge')
+      .headers(headers)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ enabled: false, max_catalog_items: 10, daily_questions_per_person: 5 })
+    assert.oneOf(saved.status(), [200, 302])
+
+    const row = await db.from('concierge_policies').where('tenant_id', scenario.tenant.id).first()
+    assert.isFalse(row.enabled)
+    assert.equal(row.max_catalog_items, 10)
+    assert.equal(row.daily_questions_per_person, 5)
+
+    const refused = await client
+      .put('/backoffice/concierge')
+      .headers(headers)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ max_catalog_items: 99 })
+    assert.notEqual(refused.status(), 500)
+    const unchanged = await db
+      .from('concierge_policies')
+      .where('tenant_id', scenario.tenant.id)
+      .first()
+    assert.equal(unchanged.max_catalog_items, 10)
+  })
 })
 
 test.group('Concierge policy — enforcement (ADR-0029, 26/09/2026)', (group) => {

@@ -13,6 +13,8 @@ const ContentReportPagesController = () =>
   import('#modules/reviews/controllers/content_report_pages_controller')
 const ReviewPolicyPagesController = () =>
   import('#modules/reviews/controllers/review_policy_pages_controller')
+const ConciergePolicyPagesController = () =>
+  import('#modules/concierge/controllers/concierge_policy_pages_controller')
 const TaxonomyPagesController = () =>
   import('#modules/taxonomy/controllers/taxonomy_pages_controller')
 const GeographyPagesController = () =>
@@ -251,6 +253,14 @@ router
     router
       .put('/moderation-rules', [ReviewPolicyPagesController, 'updateModerationRules'])
       .as('backoffice.moderation_rules.update')
+      .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))
+    router
+      .get('/concierge', [ConciergePolicyPagesController, 'show'])
+      .as('backoffice.concierge.show')
+      .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.READ))
+    router
+      .put('/concierge', [ConciergePolicyPagesController, 'update'])
+      .as('backoffice.concierge.update')
       .use(permission(IPermission.Resources.SETTINGS, IPermission.Actions.UPDATE))
 
     router
