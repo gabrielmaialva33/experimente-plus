@@ -176,6 +176,63 @@ describe('Portal server-projected allowed actions', () => {
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
   })
 
+  it('does not show an empty offer form when every edition already has an offer', () => {
+    const actions: OrganizationAllowedActions = {
+      ...readOnlyActions,
+      benefit_offers: { ...readOnlyActions.benefit_offers, create: true, update: true },
+    }
+    const edition = {
+      id: 3,
+      name: 'Experimente Londrina',
+      status: 'published',
+      currency: 'BRL',
+      usage_starts_at: '2026-09-01T00:00:00.000-03:00',
+      usage_ends_at: '2026-12-31T23:59:59.000-03:00',
+      city: { id: 2, name: 'Londrina', state_code: 'PR' },
+    }
+
+    render(
+      <EstablishmentBenefitsPage
+        establishment={{
+          id: 8,
+          organization_id: 4,
+          public_name: 'Café Central',
+          city_id: 2,
+          published: true,
+        }}
+        editions={[edition]}
+        offers={[
+          {
+            id: 10,
+            status: 'active',
+            edition_id: edition.id,
+            title: 'Café em dobro',
+            description: 'Compre um café e receba outro.',
+            benefit_type: 'buy_one_get_one' as const,
+            discount_percentage: null,
+            discount_amount_cents: null,
+            terms: null,
+            available_weekdays_mask: 127,
+            daily_start_time: null,
+            daily_end_time: null,
+            reservation_required: false,
+            on_premise_only: true,
+            minimum_party_size: 1,
+            max_redemptions_per_access: 1,
+            edition,
+          },
+        ]}
+        allowed_actions={actions}
+      />
+    )
+
+    expect(screen.queryByRole('heading', { name: 'Nova oferta' })).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Este lugar já tem uma oferta em cada edição disponível.')
+    ).toBeVisible()
+    expect(screen.getByRole('heading', { level: 1, name: 'Benefícios do lugar' })).toBeVisible()
+  })
+
   it('maps edit and activate controls to their distinct projected actions', () => {
     const edition = {
       id: 3,
