@@ -125,6 +125,13 @@ describe('consumer wallet pages', () => {
       screen.getByRole('heading', { name: 'Voucher avulso · Café cortesia' })
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Edição Norte do Paraná' })).toBeInTheDocument()
+    // Summary numbers share a floor even when a label wraps to two lines on a phone.
+    const summaryTiles = within(
+      screen.getByRole('region', { name: 'Resumo da carteira' })
+    ).getAllByText(/^\d+$/)
+    for (const tile of summaryTiles) {
+      expect(tile.parentElement).toHaveClass('flex', 'h-full', 'justify-between')
+    }
   })
 
   it('uses the canonical empty state and honest access copy', () => {
