@@ -190,7 +190,8 @@ export default function NewEstablishmentPage({
             {form.data.short_description.length.toLocaleString('pt-BR')} de 280 caracteres
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Bottom-aligned: the WhatsApp hint wraps and would drop only that input. */}
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
             <EditorField
               htmlFor="establishment-public-phone"
               label="Telefone público"

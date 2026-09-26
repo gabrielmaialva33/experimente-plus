@@ -550,7 +550,8 @@ export default function PortalOrganizationPage({
               </Alert>
             ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Bottom-aligned: a hint that wraps under one label must not drop only its input. */}
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
               <EditorField
                 htmlFor="organization-legal-name"
                 label="Razão social"
