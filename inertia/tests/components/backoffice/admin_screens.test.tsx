@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 
 import { fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -25,7 +25,13 @@ vi.mock('@inertiajs/react', async () => {
   const React = await import('react')
   return {
     Head: () => null,
-    router: { put: mocks.put },
+    Link: ({ children, href, ...props }: ComponentProps<'a'>) => (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    ),
+    // The unsaved-changes guard of every backoffice form listens to visits.
+    router: { put: mocks.put, on: () => () => undefined },
     useForm: <T extends Record<string, unknown>>(initial: T) => {
       const [data, setData] = React.useState<T>(initial)
       return {
@@ -178,7 +184,7 @@ describe('backoffice administration screens', () => {
     )
   })
 
-  it('says the review rules are provisional, pending the contracting party', () => {
+  it('says the review rules are provisional, pending the operation', () => {
     mocks.permissions = ['settings.update']
     render(
       <BackofficeReviewPolicy
@@ -203,8 +209,11 @@ describe('backoffice administration screens', () => {
       />
     )
 
-    expect(screen.getByRole('note')).toHaveTextContent('Valores provisórios')
-    expect(screen.getByRole('note')).toHaveTextContent('Anexo I, item 15')
+    // Audit W42: neutral wording, no contract clause quoted to the operator.
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Valor provisório até a definição da operação'
+    )
+    expect(screen.getByRole('note')).not.toHaveTextContent('Anexo I')
     expect(screen.getByText('5 dias')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Fotos por avaliação'), { target: { value: '2' } })
@@ -213,6 +222,50 @@ describe('backoffice administration screens', () => {
     expect(mocks.transform).toHaveBeenCalledWith(expect.objectContaining({ max_photos: 2 }))
     expect(mocks.formPut).toHaveBeenCalledWith(
       '/backoffice/review-policy',
+      expect.objectContaining({ preserveScroll: true })
+    )
+  })
+
+  it('edits the content publication policy among the rules of the operation', () => {
+    mocks.permissions = ['settings.update']
+    render(
+      <BackofficeReviewPolicy
+        policy={{ report_moderation_days: 5 }}
+        moderation_rules={{ link_mode: 'flag', blocked_terms_text: '' }}
+        content_policy={{
+          require_experience_approval: false,
+          require_event_approval: true,
+          require_showcase_item_approval: false,
+          max_media_per_content: 4,
+          min_event_notice_minutes: 60,
+        }}
+      />
+    )
+
+    // Audit W35: moved here from the daily content queue, same route.
+    expect(screen.getByRole('heading', { name: 'Publicação e limites' })).toBeInTheDocument()
+    expect(
+      (screen.getByLabelText('Aprovar eventos antes de publicar') as HTMLInputElement).checked
+    ).toBe(true)
+    expect(screen.getByRole('link', { name: 'Abrir Concierge' })).toHaveAttribute(
+      'href',
+      '/backoffice/concierge'
+    )
+
+    fireEvent.change(screen.getByLabelText('Antecedência mínima do evento'), {
+      target: { value: '120' },
+    })
+    fireEvent.submit(screen.getByRole('form', { name: 'Salvar regras de publicação' }))
+
+    expect(mocks.transform).toHaveBeenCalledWith(
+      expect.objectContaining({
+        require_event_approval: true,
+        max_media_per_content: 4,
+        min_event_notice_minutes: 120,
+      })
+    )
+    expect(mocks.formPut).toHaveBeenCalledWith(
+      '/backoffice/content/policy',
       expect.objectContaining({ preserveScroll: true })
     )
   })
@@ -277,8 +330,10 @@ describe('backoffice administration screens', () => {
       />
     )
 
-    expect(screen.getByRole('note')).toHaveTextContent('Valores provisórios')
-    expect(screen.getByRole('note')).toHaveTextContent('Anexo I, item 15')
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Valor provisório até a definição da operação'
+    )
+    expect(screen.getByRole('note')).not.toHaveTextContent('Anexo I')
     expect(
       (screen.getByLabelText('Concierge ativo nesta operação') as HTMLInputElement).checked
     ).toBe(true)

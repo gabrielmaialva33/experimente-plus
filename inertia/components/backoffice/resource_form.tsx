@@ -9,12 +9,8 @@ import {
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import {
-  initialValues,
-  toPayload,
-  type FieldSpec,
-  type FormValues,
-} from '~/lib/resource_form'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
+import { initialValues, toPayload, type FieldSpec, type FormValues } from '~/lib/resource_form'
 
 interface ResourceFormProps {
   idPrefix: string
@@ -32,6 +28,10 @@ interface ResourceFormProps {
  * Validation stays on the server: its errors come back per field and are shown
  * next to the control that caused them, so the screen never holds a second copy
  * of the rules.
+ *
+ * Every backoffice form asks before a visit would throw away what was typed
+ * (audit W68/W69), the same guard the partner editor uses. Its own save is let
+ * through, and a saved form counts as clean again.
  */
 export function ResourceForm({
   idPrefix,
@@ -43,14 +43,19 @@ export function ResourceForm({
   onDone,
 }: ResourceFormProps) {
   const form = useForm<FormValues>(initialValues(fields, record))
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.isDirty === true && !form.processing,
+  })
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     form.transform((data) => toPayload(fields, data))
+    allowNextVisit()
     form[method](url, {
       preserveScroll: true,
       onSuccess: () => {
         if (method === 'post') form.reset()
+        else form.setDefaults?.()
         onDone?.()
       },
     })
@@ -135,13 +140,20 @@ export function ResourceForm({
         })}
       </div>
 
-      <div className="flex justify-end gap-2">
-        {onDone && method === 'put' ? (
-          <Button type="button" variant="outline" onClick={onDone} disabled={form.processing}>
+      <div className="flex flex-wrap justify-end gap-2">
+        {onDone ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xl"
+            shape="pill"
+            onClick={onDone}
+            disabled={form.processing}
+          >
             Cancelar
           </Button>
         ) : null}
-        <Button type="submit" disabled={form.processing}>
+        <Button type="submit" variant="primary" size="xl" shape="pill" disabled={form.processing}>
           {form.processing ? (
             <Loader2 aria-hidden="true" className="size-4 animate-spin" />
           ) : (

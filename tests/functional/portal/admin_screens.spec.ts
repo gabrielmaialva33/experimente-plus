@@ -61,8 +61,20 @@ test.group('Backoffice administration screens (Anexo I item 12)', (group) => {
     const payload = page
       .text()
       .match(/<script data-page="app" type="application\/json">([\s\S]*?)<\/script>/)
-    const props = JSON.parse(payload![1]).props as { policy: Record<string, unknown> }
+    const props = JSON.parse(payload![1]).props as {
+      policy: Record<string, unknown>
+      content_policy: Record<string, unknown>
+    }
     assert.equal(props.policy.report_moderation_days, 5)
+    // Audit W35: the publication policy of partner content is a rule of the
+    // operation and is edited on this screen, from the same service.
+    assert.sameMembers(Object.keys(props.content_policy), [
+      'require_experience_approval',
+      'require_event_approval',
+      'require_showcase_item_approval',
+      'max_media_per_content',
+      'min_event_notice_minutes',
+    ])
   })
 
   test('saving the review policy through the screen persists it', async ({ client, assert }) => {

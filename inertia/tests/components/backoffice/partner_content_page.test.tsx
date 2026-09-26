@@ -68,7 +68,7 @@ describe('BackofficePartnerContentPage', () => {
     mocks.put.mockReset()
   })
 
-  it('lets moderators approve/reject while keeping tenant policy hidden', async () => {
+  it('lets moderators approve/reject while keeping the rules link hidden', async () => {
     mocks.permissions = ['establishments.approve', 'establishments.reject']
 
     const { user } = render(
@@ -83,15 +83,14 @@ describe('BackofficePartnerContentPage', () => {
         ]}
         counts={{ 'experiences': 0, 'events': 1, 'showcase-items': 0 }}
         filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
-        policy={null}
         platform_access="platform_moderator"
       />
     )
 
     expect(screen.getByText('versão pública anterior preservada')).toBeVisible()
-    expect(screen.queryByText('Política da operação')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Regras de publicação' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Aprovar' }))
+    await user.click(screen.getByRole('button', { name: 'Aprovar e publicar' }))
     expect(mocks.post).toHaveBeenCalledWith(
       '/backoffice/content/events/22/approve',
       {},
@@ -106,42 +105,25 @@ describe('BackofficePartnerContentPage', () => {
     expect(screen.getByText('Recusar esta versão?')).toBeVisible()
   })
 
-  it('lets platform admins change the policy when settings.update is granted', async () => {
+  it('sends platform admins to the rules of the operation for the publication policy', () => {
     mocks.permissions = ['settings.update']
 
-    const { user } = render(
+    render(
       <BackofficePartnerContentPage
         tenant_id={7}
         sections={[{ kind: 'events', data: [], meta: { current_page: 1, last_page: 1, total: 0 } }]}
         counts={{ 'experiences': 0, 'events': 0, 'showcase-items': 0 }}
         filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
-        policy={{
-          require_experience_approval: false,
-          require_event_approval: true,
-          require_showcase_item_approval: false,
-          max_media_per_content: 4,
-          min_event_notice_minutes: 60,
-        }}
         platform_access="platform_admin"
       />
     )
 
-    expect(screen.getByText('Política da operação')).toBeVisible()
-    expect(screen.getByLabelText('Máximo de mídias por conteúdo')).toHaveValue(4)
-    expect(screen.getByLabelText('Antecedência mínima do evento')).toHaveValue(60)
-
-    await user.clear(screen.getByLabelText('Antecedência mínima do evento'))
-    await user.type(screen.getByLabelText('Antecedência mínima do evento'), '120')
-    await user.click(screen.getByRole('button', { name: 'Salvar política' }))
-
-    expect(mocks.put).toHaveBeenCalledWith(
-      '/backoffice/content/policy',
-      expect.objectContaining({
-        require_event_approval: true,
-        max_media_per_content: 4,
-        min_event_notice_minutes: 120,
-      }),
-      expect.objectContaining({ preserveScroll: true })
+    // Audit W35: the policy is a rule of the operation, not part of the daily queue.
+    expect(screen.queryByText('Publicação e limites')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Salvar/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Regras de publicação' })).toHaveAttribute(
+      'href',
+      '/backoffice/review-policy#publicacao'
     )
   })
 
@@ -166,7 +148,6 @@ describe('BackofficePartnerContentPage', () => {
         ]}
         counts={{ 'experiences': 1, 'events': 0, 'showcase-items': 0 }}
         filters={{ kind: 'all', status: 'pending_review', per_page: 20 }}
-        policy={null}
         platform_access="platform_moderator"
       />
     )
@@ -190,7 +171,6 @@ describe('BackofficePartnerContentPage', () => {
         sections={[{ kind: 'events', data: [], meta: { current_page: 1, last_page: 1, total: 0 } }]}
         counts={{ 'experiences': 1, 'events': 0, 'showcase-items': 0 }}
         filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
-        policy={null}
         platform_access="platform_moderator"
       />
     )
@@ -214,7 +194,6 @@ describe('BackofficePartnerContentPage', () => {
         ]}
         counts={{ 'experiences': 0, 'events': 1, 'showcase-items': 0 }}
         filters={{ kind: 'events', status: 'pending_review', per_page: 20 }}
-        policy={null}
         platform_access="platform_moderator"
       />
     )

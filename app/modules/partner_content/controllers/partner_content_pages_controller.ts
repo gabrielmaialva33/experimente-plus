@@ -190,9 +190,9 @@ export default class PartnerContentPagesController {
       })
     }
 
+    // The publication policy is edited with the other rules of the operation
+    // (/backoffice/review-policy, audit W35); the queue only links there.
     const authorizationContext = await this.resourceAuthorization.forActorContext(tenantId, actor)
-    const isAdmin = authorizationContext.access_snapshot.platform_access === 'platform_admin'
-    const policy = isAdmin ? await this.contentService.getPolicy(tenantId, actor) : null
 
     return inertia.render('backoffice/content/index', {
       sections,
@@ -204,7 +204,6 @@ export default class PartnerContentPagesController {
         page: query.page ?? 1,
         per_page: query.per_page ?? 20,
       },
-      policy,
       platform_access: authorizationContext.access_snapshot.platform_access,
       tenant_id: tenantId,
     })

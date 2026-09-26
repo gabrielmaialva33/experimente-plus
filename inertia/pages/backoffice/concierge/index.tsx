@@ -1,8 +1,9 @@
-import { Head } from '@inertiajs/react'
-import { AlertTriangle, Sparkles } from 'lucide-react'
+import { Head, Link } from '@inertiajs/react'
+import { ArrowLeft, Info, Server, Sparkles } from 'lucide-react'
 
 import { ResourceForm } from '~/components/backoffice/resource_form'
 import { PageHeader } from '~/components/page_header'
+import { Button } from '~/components/ui/button'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { record, text } from '~/lib/json'
@@ -54,31 +55,46 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
   return (
     <MainLayout>
       <Head title="Concierge IA" />
-      <div className="space-y-7">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Administração"
+          eyebrow="Regras da operação"
           icon={Sparkles}
           title="Concierge IA"
           description="Como o assistente de descoberta responde nesta operação. Ele só cita lugares, experiências e eventos publicados no catálogo."
+          actions={
+            <Button asChild variant="outline" size="lg" shape="pill">
+              <Link href="/backoffice/review-policy">
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Todas as regras
+              </Link>
+            </Button>
+          }
         />
 
         <section
           role="note"
-          className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm"
+          className="flex items-start gap-3 rounded-card border border-warning/30 bg-warning-soft p-4 text-sm"
         >
-          <AlertTriangle
-            aria-hidden="true"
-            className="mt-0.5 size-4 shrink-0 text-warning-foreground"
-          />
+          <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning-accent" />
           <p>
-            <strong>Valores provisórios.</strong> Pelo contrato (Anexo I, item 15), o provedor, o
-            modelo e os limites de consumo de IA são definidos pelo contratante antes da produção.
-            Os números abaixo existem para a plataforma funcionar até lá, e não registram uma
-            decisão dele.
+            <strong>Valor provisório até a definição da operação.</strong> Provedor, modelo e
+            limites de consumo de IA mantêm o assistente funcionando até lá e podem mudar.
           </p>
         </section>
 
-        <section className="rounded-lg border border-border bg-card p-5 sm:p-6">
+        <section
+          aria-labelledby="concierge-policy-heading"
+          className="rounded-card border border-border-subtle bg-card p-5 sm:p-7"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+            Nesta operação
+          </p>
+          <h2
+            id="concierge-policy-heading"
+            className="mb-6 font-display text-xl font-extrabold tracking-[-0.01em]"
+          >
+            Parâmetros do assistente
+          </h2>
           {current && canUpdate ? (
             <ResourceForm
               idPrefix="concierge-policy"
@@ -89,7 +105,7 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
               submitLabel="Salvar configuração"
             />
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
               Você pode consultar, mas não alterar, a configuração do Concierge desta operação.
             </p>
           )}
@@ -97,39 +113,42 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
 
         <section
           aria-labelledby="concierge-infrastructure-heading"
-          className="rounded-lg border border-border bg-card p-5 sm:p-6"
+          className="rounded-card border border-border-subtle bg-card p-5 sm:p-7"
         >
-          <h2 id="concierge-infrastructure-heading" className="text-base font-semibold">
-            Infraestrutura
-          </h2>
-          <p className="mt-1 mb-5 text-sm text-muted-foreground">
-            Definida na implantação, não nesta tela. A chave de acesso ao provedor nunca é exibida.
-          </p>
-          <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <div className="mb-5 flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Server aria-hidden="true" className="size-4.5" />
+            </span>
             <div>
-              <dt className="text-muted-foreground">Assistente na implantação</dt>
-              <dd className="font-medium">
-                {yesNo(status?.globally_enabled, 'Ligado', 'Desligado')}
-              </dd>
+              <h2
+                id="concierge-infrastructure-heading"
+                className="font-display text-xl font-extrabold tracking-[-0.01em]"
+              >
+                Infraestrutura
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Definida na implantação, não nesta tela. A chave de acesso ao provedor nunca é
+                exibida.
+              </p>
             </div>
-            <div>
-              <dt className="text-muted-foreground">Provedor de IA</dt>
-              <dd className="font-medium">
-                {yesNo(status?.provider_configured, 'Configurado', 'Não configurado')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Modelo principal</dt>
-              <dd className="font-medium break-all">
-                {text(status, 'primary_model') || 'Não definido'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Modelo de reserva</dt>
-              <dd className="font-medium break-all">
-                {text(status, 'fallback_model') || 'Não definido'}
-              </dd>
-            </div>
+          </div>
+          <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
+            {[
+              ['Assistente na implantação', yesNo(status?.globally_enabled, 'Ligado', 'Desligado')],
+              [
+                'Provedor de IA',
+                yesNo(status?.provider_configured, 'Configurado', 'Não configurado'),
+              ],
+              ['Modelo principal', text(status, 'primary_model') || 'Não definido'],
+              ['Modelo de reserva', text(status, 'fallback_model') || 'Não definido'],
+            ].map(([term, value]) => (
+              <div key={term} className="border-t border-border-subtle pt-3">
+                <dt className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  {term}
+                </dt>
+                <dd className="mt-1 font-semibold break-all">{value}</dd>
+              </div>
+            ))}
           </dl>
         </section>
       </div>

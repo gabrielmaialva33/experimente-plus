@@ -96,7 +96,7 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
   }
 
   return (
-    <article className="rounded-lg border border-border bg-card p-5">
+    <article className="rounded-card border border-border-subtle bg-card p-5 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-sm font-bold">{protocol}</p>
@@ -106,14 +106,14 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {overdue ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-danger/25 bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-danger/25 bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger">
               <AlertTriangle aria-hidden="true" className="size-3.5" />
               Prazo vencido
             </span>
           ) : null}
           <span
             className={cn(
-              'inline-flex rounded-md border px-2 py-1 text-xs font-semibold',
+              'inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold',
               statusMeta.className
             )}
           >
@@ -259,9 +259,8 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
           </div>
         ) : (
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <ShieldQuestion aria-hidden="true" className="size-4" />
-            O conteúdo denunciado não existe mais. O caso permanece na fila porque o protocolo
-            continua válido.
+            <ShieldQuestion aria-hidden="true" className="size-4" />O conteúdo denunciado não existe
+            mais. O caso permanece na fila porque o protocolo continua válido.
           </p>
         )}
       </section>
@@ -327,7 +326,13 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
           </EditorField>
 
           <div className="flex flex-col gap-2 md:mt-7">
-            <Button type="submit" variant="primary" disabled={form.processing}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              shape="pill"
+              disabled={form.processing}
+            >
               {form.processing ? (
                 <>
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />
@@ -340,6 +345,8 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
             <Button
               type="button"
               variant="outline"
+              size="lg"
+              shape="pill"
               // Dismissing says the report did not hold. Hiding the content says
               // it did. Allowing both at once would hide a review on the
               // strength of a report the same click rejected.

@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core'
 import { errors } from '@vinejs/vine'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import PartnerContentService from '#modules/partner_content/services/partner_content_service'
 import AutomaticModerationService from '#modules/reviews/services/automatic_moderation_service'
 import ReviewPolicyService from '#modules/reviews/services/review_policy_service'
 import { updateAutomaticModerationPolicyValidator } from '#modules/reviews/validators/automatic_moderation_validator'
@@ -25,7 +26,8 @@ import { updateReviewPolicyValidator } from '#modules/reviews/validators/review_
 export default class ReviewPolicyPagesController {
   constructor(
     private policies: ReviewPolicyService,
-    private automod: AutomaticModerationService
+    private automod: AutomaticModerationService,
+    private contentService: PartnerContentService
   ) {}
 
   async show({ auth, inertia, response, tenant }: HttpContext) {
@@ -33,8 +35,18 @@ export default class ReviewPolicyPagesController {
     const actor = auth.getUserOrFail()
     const policy = await this.policies.getPolicy(tenant!.id, actor)
     const rules = await this.automod.getPolicy(tenant!.id, actor)
+    // The publication policy of partner content is a rule of the operation too
+    // (audit W35): it lives here, beside the others, not inside the daily queue.
+    const contentPolicy = await this.contentService.getPolicy(tenant!.id, actor)
     return inertia.render('backoffice/review_policy/index', {
       policy: policy.serialize(),
+      content_policy: {
+        require_experience_approval: contentPolicy.require_experience_approval,
+        require_event_approval: contentPolicy.require_event_approval,
+        require_showcase_item_approval: contentPolicy.require_showcase_item_approval,
+        max_media_per_content: contentPolicy.max_media_per_content,
+        min_event_notice_minutes: contentPolicy.min_event_notice_minutes,
+      },
       moderation_rules: {
         link_mode: rules.link_mode,
         contact_mode: rules.contact_mode,
