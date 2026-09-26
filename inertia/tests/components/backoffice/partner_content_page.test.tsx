@@ -179,6 +179,22 @@ describe('BackofficePartnerContentPage', () => {
     expect(screen.getByText(/Há itens de outros tipos neste estado/)).toBeVisible()
   })
 
+  it('agrees the header count with the state and keeps amber for work waiting', () => {
+    render(
+      <BackofficePartnerContentPage
+        tenant_id={7}
+        sections={[{ kind: 'events', data: [], meta: { current_page: 1, last_page: 1, total: 0 } }]}
+        counts={{ 'experiences': 2, 'events': 1, 'showcase-items': 0 }}
+        filters={{ kind: 'events', status: 'published', per_page: 20 }}
+        platform_access="platform_moderator"
+      />
+    )
+
+    const count = screen.getByText('3 itens publicados')
+    expect(count).toHaveClass('bg-muted')
+    expect(count).not.toHaveClass('bg-warning-soft')
+  })
+
   it('refuses only with a written reason, and sends it', async () => {
     mocks.permissions = ['establishments.reject']
 
