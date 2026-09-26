@@ -1,8 +1,11 @@
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 import { test } from '@japa/runner'
+import { DateTime } from 'luxon'
 
 import type Establishment from '#modules/establishments/models/establishment'
+import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
+import type { PartnerPlacesPageProps, PortalTasks } from '#modules/portal/interfaces/portal_pages'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 import EstablishmentReview from '#modules/reviews/models/establishment_review'
 import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
@@ -321,5 +324,102 @@ test.group('Partner portal — reviews', (group) => {
       .loginAs(home.scenario.owner)
       .json({ comment: 'Resposta cruzada.' })
     foreignReply.assertStatus(404)
+  })
+})
+
+test.group('Partner portal — overview tasks and entry points', (group) => {
+  group.each.setup(() => testUtils.db().withGlobalTransaction())
+
+  test('counts the day tasks from the same definitions the pages use', async ({
+    client,
+    assert,
+  }) => {
+    const { scenario, place } = await placeWithReviews('pr-tasks')
+    for (const status of ['draft', 'draft', 'pending_review', 'published'] as const) {
+      await EstablishmentExperience.create({
+        tenant_id: scenario.tenant.id,
+        establishment_id: place.id,
+        created_by: scenario.owner.id,
+        title: 'Degustação guiada',
+        description: 'Uma hora de cafés especiais.',
+        status,
+        published_snapshot:
+          status === 'published'
+            ? { title: 'Degustação guiada', description: 'Uma hora de cafés especiais.' }
+            : null,
+        published_at: status === 'published' ? DateTime.utc() : null,
+        archived_by: null,
+        archived_at: null,
+      })
+    }
+
+    const overview = await client
+      .get('/portal')
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+    overview.assertStatus(200)
+    const { tasks } = parsePage<{ tasks: PortalTasks }>(overview, 'portal/index')
+
+    assert.equal(tasks.unanswered_reviews, 1)
+    assert.deepEqual(tasks.places, {
+      total: 1,
+      published: 1,
+      pending_review: 0,
+      changes_requested: 0,
+      draft: 0,
+    })
+    assert.deepEqual(tasks.content, { pending_review: 1, draft: 2, published: 1 })
+  })
+
+  test('sends the menu entries straight to the only place and organization, or lets the partner choose', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('pr-entry')
+    const first = await createPublishedEstablishment(scenario, 'Ateliê do Café')
+    const headers = tenantHeader(scenario.tenant.id)
+
+    const onePlace = await client
+      .get('/portal/establishments')
+      .redirects(0)
+      .headers(headers)
+      .loginAs(scenario.owner)
+    onePlace.assertStatus(302)
+    onePlace.assertHeader('location', `/portal/establishments/${first.id}`)
+
+    const performance = await client
+      .get('/portal/performance')
+      .redirects(0)
+      .headers(headers)
+      .loginAs(scenario.owner)
+    performance.assertStatus(302)
+    performance.assertHeader('location', `/organizations/${scenario.organization.id}/analytics`)
+
+    const second = await createPublishedEstablishment(scenario, 'Casa de Petiscos')
+    const chooser = await client
+      .get('/portal/establishments')
+      .headers(headers)
+      .loginAs(scenario.owner)
+    chooser.assertStatus(200)
+    assert.equal(chooser.header('cache-control'), 'private, no-store')
+    const page = parsePage<PartnerPlacesPageProps>(chooser, 'portal/establishments/index')
+    assert.sameMembers(
+      page.organizations[0].places.map((item) => item.id),
+      [first.id, second.id]
+    )
+    assert.isTrue(page.organizations[0].places.every((item) => item.state === 'published'))
+
+    const customer = await createUser({
+      prefix: 'pr-entry-customer',
+      tenant: scenario.tenant,
+      tenantRole: 'member',
+    })
+    const nothing = await client
+      .get('/portal/establishments')
+      .redirects(0)
+      .headers(headers)
+      .loginAs(customer)
+    nothing.assertStatus(302)
+    nothing.assertHeader('location', '/portal')
   })
 })

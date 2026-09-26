@@ -65,6 +65,7 @@ test.group('Partner Portal overview batching', () => {
       completenessService as never,
       {} as never,
       resourceAuthorization as never,
+      {} as never,
       {} as never
     )
     const authorization = {

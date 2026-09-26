@@ -54,6 +54,7 @@ export default class PartnerPortalController {
 
     return inertia.render('portal/index', {
       overview,
+      tasks: await this.portalService.tasks(tenant!.id, overview),
       feedback_targets: feedbackTargets,
       allowed_actions: authorizationContext.allowed_actions,
     })
@@ -149,6 +150,44 @@ export default class PartnerPortalController {
 
     session.flash('success', 'Unidade criada. Continue preenchendo a ficha antes de submeter.')
     return response.redirect().toPath(`/portal/establishments/${establishmentId}`)
+  }
+
+  /**
+   * "Dados do lugar" in the partner menu. A partner with one place goes
+   * straight to it; with several, chooses; with none, starts on the overview.
+   */
+  async places({ auth, inertia, response, tenant }: HttpContext) {
+    this.setPrivateHeaders(response)
+    const actor = auth.getUserOrFail()
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
+    const overview = await this.portalService.overview(tenant!.id, actor, authorizationContext)
+    const page = this.portalService.placesPage(overview)
+    const places = page.organizations.flatMap((organization) => organization.places)
+
+    if (places.length === 0) return response.redirect().toPath('/portal')
+    if (places.length === 1) {
+      return response.redirect().toPath(`/portal/establishments/${places[0].id}`)
+    }
+    return inertia.render('portal/establishments/index', page)
+  }
+
+  /**
+   * "Desempenho" in the partner menu. Discovery analytics belong to an
+   * organization, so one organization goes straight to its numbers and several
+   * choose on the places page, where each has its link.
+   */
+  async performance({ auth, response, tenant }: HttpContext) {
+    const actor = auth.getUserOrFail()
+    const authorizationContext = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
+    const overview = await this.portalService.overview(tenant!.id, actor, authorizationContext)
+    const readable = overview.organizations.filter(
+      (organization) => organization.allowed_actions.analytics.read
+    )
+
+    if (readable.length === 1) {
+      return response.redirect().toPath(`/organizations/${readable[0].id}/analytics`)
+    }
+    return response.redirect().toPath(readable.length === 0 ? '/portal' : '/portal/establishments')
   }
 
   async establishment({ auth, inertia, params, response, tenant }: HttpContext) {

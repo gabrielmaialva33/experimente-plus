@@ -1,26 +1,28 @@
 import { Head, Link } from '@inertiajs/react'
 import {
   ArrowRight,
-  BadgeCheck,
   Building2,
+  CalendarDays,
   CheckCircle2,
   CircleDashed,
-  Clock3,
   MapPin,
+  MessageSquareText,
   Plus,
   ReceiptText,
   ScanLine,
   Store,
 } from 'lucide-react'
+import type { ReactNode } from 'react'
 
-import { MetricCard } from '~/components/metric_card'
 import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts/main_layout'
 import { organizationRoleLabel, organizationStatusLabel } from '~/lib/labels'
+import { PLACE_STATE, type PlaceState } from '~/lib/partner_places'
 import { cn } from '~/lib/utils'
 import type { OrganizationAllowedActions } from '~/types'
 
@@ -80,8 +82,16 @@ interface FeedbackTarget {
   organization_id?: number
 }
 
+/** The overview's task cards; every count comes from the server. */
+interface PortalTasks {
+  unanswered_reviews: number
+  places: Record<PlaceState, number> & { total: number }
+  content: { pending_review: number; draft: number; published: number }
+}
+
 interface PortalIndexProps {
   overview: Overview
+  tasks: PortalTasks
   allowed_actions: OrganizationAllowedActions
   feedback_targets: {
     organizations: FeedbackTarget[]
@@ -103,8 +113,21 @@ function statusClassName(status: string): string {
   return styles[status] ?? 'border-border bg-muted text-muted-foreground'
 }
 
+function plural(count: number, one: string, many: string) {
+  return count === 1 ? `1 ${one}` : `${count} ${many}`
+}
+
+/** The place state that asks for the partner first: a correction, then a wait, then live. */
+function placesHeadline(places: PortalTasks['places']): PlaceState {
+  if (places.changes_requested > 0) return 'changes_requested'
+  if (places.pending_review > 0) return 'pending_review'
+  if (places.published > 0) return 'published'
+  return 'draft'
+}
+
 export default function PartnerPortalIndex({
   overview,
+  tasks,
   allowed_actions: allowedActions,
   feedback_targets,
 }: PortalIndexProps) {
@@ -113,36 +136,10 @@ export default function PartnerPortalIndex({
   const canCreateFeedback = can('pilot_feedback.create')
   const canReadRedemptions = allowedActions.redemptions.read
   const canValidateRedemptions = allowedActions.redemptions.validate
-  const stats = [
-    {
-      label: 'Organizações',
-      value: overview.totals.organizations,
-      icon: Building2,
-      tone: 'primary' as const,
-    },
-    {
-      label: 'Unidades',
-      value: overview.totals.establishments,
-      icon: Store,
-      tone: 'info' as const,
-      helper:
-        overview.totals.complete === 1
-          ? '1 ficha completa'
-          : `${overview.totals.complete} fichas completas`,
-    },
-    {
-      label: 'Publicadas',
-      value: overview.totals.published,
-      icon: BadgeCheck,
-      tone: 'success' as const,
-    },
-    {
-      label: 'Em análise',
-      value: overview.totals.pending_review,
-      icon: Clock3,
-      tone: 'warning' as const,
-    },
-  ]
+  const canReadPlaces = overview.organizations.some(
+    (organization) => organization.allowed_actions.establishments.read
+  )
+  const headline = placesHeadline(tasks.places)
 
   return (
     <MainLayout>
@@ -153,9 +150,17 @@ export default function PartnerPortalIndex({
           eyebrow="Portal do parceiro"
           icon={Store}
           title="Visão geral"
-          description="Organize empresas e unidades, acompanhe a qualidade das fichas e envie conteúdo para moderação."
+          description="O que pede sua atenção hoje, seus lugares e o que está em análise."
           actions={
             <>
+              {canValidateRedemptions ? (
+                <Button asChild variant="cta">
+                  <Link href="/portal/redemptions/validate">
+                    <ScanLine aria-hidden="true" className="size-4" />
+                    Validar benefício
+                  </Link>
+                </Button>
+              ) : null}
               {canReadRedemptions ? (
                 <Button asChild variant="outline">
                   <Link href="/portal/redemptions">
@@ -164,16 +169,8 @@ export default function PartnerPortalIndex({
                   </Link>
                 </Button>
               ) : null}
-              {canValidateRedemptions ? (
-                <Button asChild variant="outline">
-                  <Link href="/portal/redemptions/validate">
-                    <ScanLine aria-hidden="true" className="size-4" />
-                    Validar benefício
-                  </Link>
-                </Button>
-              ) : null}
               {canCreateOrganization && overview.organizations.length > 0 ? (
-                <Button asChild variant="primary">
+                <Button asChild variant="outline">
                   <Link href="/portal/organizations/new">
                     <Plus aria-hidden="true" className="size-4" />
                     Nova organização
@@ -184,21 +181,78 @@ export default function PartnerPortalIndex({
           }
         />
 
-        <section
-          aria-label="Indicadores do portal"
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-        >
-          {stats.map((stat) => (
-            <MetricCard
-              key={stat.label}
-              label={stat.label}
-              value={stat.value.toLocaleString('pt-BR')}
-              icon={stat.icon}
-              tone={stat.tone}
-              helper={stat.helper}
-            />
-          ))}
-        </section>
+        {canReadPlaces ? (
+          <section aria-label="Tarefas de hoje" className="grid gap-4 md:grid-cols-3">
+            <TaskCard
+              title="Avaliações sem resposta"
+              href="/portal/reviews"
+              action={tasks.unanswered_reviews > 0 ? 'Responder agora' : 'Ver avaliações'}
+              icon={MessageSquareText}
+            >
+              <p className="text-4xl font-extrabold tabular-nums text-primary-accent">
+                {tasks.unanswered_reviews}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {tasks.unanswered_reviews > 0
+                  ? 'Responder mostra cuidado a quem lê as avaliações.'
+                  : 'Nenhuma avaliação esperando resposta.'}
+              </p>
+            </TaskCard>
+
+            <TaskCard
+              title="Dados do lugar"
+              href="/portal/establishments"
+              action="Editar dados"
+              icon={MapPin}
+            >
+              <Badge
+                variant={PLACE_STATE[headline].variant}
+                appearance="light"
+                className="self-start"
+              >
+                {PLACE_STATE[headline].label}
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                {tasks.places.total === 0
+                  ? 'Nenhum lugar cadastrado ainda.'
+                  : [
+                      plural(tasks.places.published, 'publicado', 'publicados'),
+                      tasks.places.pending_review > 0
+                        ? plural(tasks.places.pending_review, 'em análise', 'em análise')
+                        : null,
+                      tasks.places.changes_requested > 0
+                        ? plural(
+                            tasks.places.changes_requested,
+                            'com correções pedidas',
+                            'com correções pedidas'
+                          )
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+              </p>
+            </TaskCard>
+
+            <TaskCard
+              title="Experiências e eventos"
+              href="/portal/content"
+              action="Ver experiências e eventos"
+              icon={CalendarDays}
+            >
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="info" appearance="light">
+                  {tasks.content.pending_review} em análise
+                </Badge>
+                <Badge variant="secondary" appearance="light">
+                  {plural(tasks.content.draft, 'rascunho', 'rascunhos')}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {plural(tasks.content.published, 'publicado', 'publicados')} no app e no site.
+              </p>
+            </TaskCard>
+          </section>
+        ) : null}
 
         {overview.organizations.length === 0 ? (
           <EmptyState
@@ -210,7 +264,7 @@ export default function PartnerPortalIndex({
             }
             description={
               canCreateOrganization
-                ? 'Cadastre a identidade legal da empresa. Depois você poderá criar uma ou várias unidades em cidades diferentes.'
+                ? 'Cadastre a identidade legal da empresa. Depois você poderá criar um ou vários lugares em cidades diferentes.'
                 : 'Não há organizações disponíveis para o seu acesso na operação ativa.'
             }
           >
@@ -291,7 +345,7 @@ export default function PartnerPortalIndex({
                           <p className="text-xl font-bold tabular-nums">
                             {organization.totals.establishments}
                           </p>
-                          <p className="mt-0.5 text-[0.68rem] text-muted-foreground">unidades</p>
+                          <p className="mt-0.5 text-[0.68rem] text-muted-foreground">lugares</p>
                         </div>
                         <div className="border-x border-border/70 p-3">
                           <p className="text-xl font-bold tabular-nums">
@@ -307,71 +361,78 @@ export default function PartnerPortalIndex({
                         </div>
                       </div>
 
-                      <div className="mt-6">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-semibold">Progresso da configuração</span>
-                          <span className="font-semibold tabular-nums text-primary">
-                            {progress}%
-                          </span>
-                        </div>
-                        <div
-                          className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
-                          role="progressbar"
-                          aria-label={`Progresso da configuração de ${organization.trade_name}`}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={progress}
-                        >
-                          <div
-                            className="h-full rounded-full bg-primary"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {completedSteps} de {organization.onboarding.length} etapas concluídas
+                      {progress === 100 ? (
+                        <p className="mt-6 flex items-center gap-2 text-sm font-semibold text-success-accent">
+                          <CheckCircle2 aria-hidden="true" className="size-4 shrink-0" />
+                          Configuração concluída
                         </p>
+                      ) : (
+                        <div className="mt-6">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-semibold">Progresso da configuração</span>
+                            <span className="font-semibold tabular-nums text-primary">
+                              {progress}%
+                            </span>
+                          </div>
+                          <div
+                            className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            aria-label={`Progresso da configuração de ${organization.trade_name}`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={progress}
+                          >
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {completedSteps} de {organization.onboarding.length} etapas concluídas
+                          </p>
 
-                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                          {organization.onboarding.map((step) => {
-                            const className = cn(
-                              'flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                              step.completed
-                                ? 'border-success/20 bg-success/[0.06] text-foreground hover:bg-success/10'
-                                : 'border-border hover:border-primary/25 hover:bg-accent/50'
-                            )
-                            const content = (
-                              <>
-                                {step.completed ? (
-                                  <CheckCircle2 className="size-4 shrink-0 text-success" />
-                                ) : (
-                                  <CircleDashed className="size-4 shrink-0 text-muted-foreground" />
-                                )}
-                                <span>{step.label}</span>
-                              </>
-                            )
+                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                            {organization.onboarding.map((step) => {
+                              const className = cn(
+                                'flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                step.completed
+                                  ? 'border-success/20 bg-success/[0.06] text-foreground hover:bg-success/10'
+                                  : 'border-border hover:border-primary/25 hover:bg-accent/50'
+                              )
+                              const content = (
+                                <>
+                                  {step.completed ? (
+                                    <CheckCircle2 className="size-4 shrink-0 text-success" />
+                                  ) : (
+                                    <CircleDashed className="size-4 shrink-0 text-muted-foreground" />
+                                  )}
+                                  <span>{step.label}</span>
+                                </>
+                              )
 
-                            return step.available ? (
-                              <Link key={step.key} href={step.href} className={className}>
-                                {content}
-                              </Link>
-                            ) : (
-                              <div
-                                key={step.key}
-                                className={cn(className, 'pointer-events-none opacity-65')}
-                              >
-                                {content}
-                              </div>
-                            )
-                          })}
+                              return step.available ? (
+                                <Link key={step.key} href={step.href} className={className}>
+                                  {content}
+                                </Link>
+                              ) : (
+                                <div
+                                  key={step.key}
+                                  className={cn(className, 'pointer-events-none opacity-65')}
+                                >
+                                  {content}
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {organization.allowed_actions.establishments.read &&
                       organization.establishments.length > 0 && (
                         <div className="border-t border-border/70 bg-muted/20 px-5 py-4 sm:px-6">
                           <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                            Unidades recentes
+                            Lugares
                           </p>
                           <div className="space-y-1">
                             {organization.establishments.slice(0, 3).map((establishment) => (
@@ -383,7 +444,7 @@ export default function PartnerPortalIndex({
                                 <span className="flex min-w-0 items-center gap-2">
                                   <MapPin className="size-4 shrink-0 text-muted-foreground" />
                                   <span className="truncate text-sm font-medium">
-                                    {establishment.public_name || `Unidade ${establishment.id}`}
+                                    {establishment.public_name || `Lugar ${establishment.id}`}
                                   </span>
                                 </span>
                                 <span className="text-xs font-semibold tabular-nums text-muted-foreground">
@@ -406,5 +467,36 @@ export default function PartnerPortalIndex({
         ) : null}
       </div>
     </MainLayout>
+  )
+}
+
+function TaskCard({
+  title,
+  href,
+  action,
+  icon: Icon,
+  children,
+}: {
+  title: string
+  href: string
+  action: string
+  icon: typeof Store
+  children: ReactNode
+}) {
+  return (
+    <article className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+        <Icon aria-hidden="true" className="size-4" />
+        {title}
+      </h2>
+      {children}
+      <Link
+        href={href}
+        className="mt-auto inline-flex min-h-10 items-center gap-1.5 self-start text-sm font-bold text-primary-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {action}
+        <ArrowRight aria-hidden="true" className="size-4" />
+      </Link>
+    </article>
   )
 }

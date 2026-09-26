@@ -57,6 +57,15 @@ router
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.UPDATE))
 
     router
+      .get('/establishments', [PartnerPortalController, 'places'])
+      .as('portal.establishments.index')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.READ))
+    router
+      .get('/performance', [PartnerPortalController, 'performance'])
+      .as('portal.performance')
+      .use(permission(IPermission.Resources.ANALYTICS, IPermission.Actions.READ))
+
+    router
       .get('/content', [PartnerContentPagesController, 'portal'])
       .as('portal.content.index')
       .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.READ))
