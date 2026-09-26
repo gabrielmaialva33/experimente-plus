@@ -90,7 +90,13 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
           title="Dados de lugares para revisar"
           description="Versões enviadas pelos parceiros, das mais antigas para as mais novas. Nada fica público sem aprovação."
           meta={
-            <Badge variant="warning" appearance="light" shape="pill" size="lg">
+            // Amber means work waiting; an empty queue is neutral, not a warning.
+            <Badge
+              variant={total === 0 ? 'neutral' : 'warning'}
+              appearance="light"
+              shape="pill"
+              size="lg"
+            >
               {total === 0
                 ? 'Nada esperando'
                 : total === 1

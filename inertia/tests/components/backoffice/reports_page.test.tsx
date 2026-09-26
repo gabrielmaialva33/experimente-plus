@@ -54,6 +54,19 @@ describe('Report queue page', () => {
     )
   })
 
+  it('makes the status agree with the count in the header', () => {
+    render(
+      <BackofficeReports
+        reports={emptyPage}
+        filters={{ status: 'pending' }}
+        tenant_id={1}
+        overdue_total={0}
+      />
+    )
+
+    expect(screen.getByText('0 denúncias · pendentes')).toBeInTheDocument()
+  })
+
   it('says nothing about deadlines when none is missed', () => {
     render(
       <BackofficeReports

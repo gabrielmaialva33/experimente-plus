@@ -63,7 +63,7 @@ export default function EditUserPage({ user }: EditUserPageProps) {
                 required
               />
               <Field
-                label="Email"
+                label="E-mail"
                 name="email"
                 type="email"
                 value={user.email}

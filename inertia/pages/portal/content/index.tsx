@@ -102,18 +102,24 @@ interface FormState {
 }
 
 /** Partner-facing copy per kind; the shared labels also serve the backoffice. */
-const KIND_COPY: Record<PartnerContentPath, { description: string; empty: string }> = {
+const KIND_COPY: Record<
+  PartnerContentPath,
+  { description: string; empty: string; createFirst: string }
+> = {
   'experiences': {
     description: 'Atividades e vivências que o lugar oferece.',
     empty: 'Nenhuma experiência ainda',
+    createFirst: 'Use o formulário acima para criar a primeira.',
   },
   'events': {
     description: 'Programação com data e horário de início e fim.',
     empty: 'Nenhum evento ainda',
+    createFirst: 'Use o formulário acima para criar o primeiro.',
   },
   'showcase-items': {
     description: 'Itens em destaque, com preço opcional só para exibição.',
     empty: 'Nenhum item de vitrine ainda',
+    createFirst: 'Use o formulário acima para criar o primeiro.',
   },
 }
 
@@ -543,7 +549,7 @@ export default function PartnerContentPage({
               title={KIND_COPY[kind].empty}
               description={
                 manageableEstablishments.length > 0
-                  ? 'Use o formulário acima para criar o primeiro.'
+                  ? KIND_COPY[kind].createFirst
                   : 'Ainda não há conteúdo deste tipo nos lugares da sua conta.'
               }
               className="rounded-card border border-dashed border-border bg-card"

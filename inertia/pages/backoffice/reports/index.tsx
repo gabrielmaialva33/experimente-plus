@@ -32,6 +32,14 @@ interface BackofficeReportsProps {
 
 const QUEUE_PATH = '/backoffice/reports'
 
+/** The status agrees with the count: "0 denúncias · pendentes", "1 denúncia · resolvida". */
+const STATUS_COUNT_LABEL: Record<ReportStatus, [one: string, many: string]> = {
+  pending: ['pendente', 'pendentes'],
+  under_review: ['em análise', 'em análise'],
+  resolved: ['resolvida', 'resolvidas'],
+  dismissed: ['descartada', 'descartadas'],
+}
+
 export default function BackofficeReports({
   reports,
   filters,
@@ -78,7 +86,7 @@ export default function BackofficeReports({
             <>
               <Badge variant="secondary" appearance="light" shape="pill">
                 {total.toLocaleString('pt-BR')} {total === 1 ? 'denúncia' : 'denúncias'} ·{' '}
-                {reportStatusMeta[status].label.toLowerCase()}
+                {STATUS_COUNT_LABEL[status][total === 1 ? 0 : 1]}
               </Badge>
               {overdueTotal > 0 ? (
                 <Badge
