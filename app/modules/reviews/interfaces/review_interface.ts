@@ -321,6 +321,17 @@ export namespace IReview {
     status?: ReportStatus
     target_type?: ReportTargetType
   }
+
+  /** The portal's Avaliações filter, as a partner says it: waiting, answered, or every one. */
+  export const PARTNER_REVIEW_FILTERS = ['unanswered', 'answered', 'all'] as const
+  export type PartnerReviewFilter = (typeof PARTNER_REVIEW_FILTERS)[number]
+
+  export interface PartnerReviewSummary {
+    total: number
+    answered: number
+    unanswered: number
+    average: number | null
+  }
 }
 
 export default IReview
