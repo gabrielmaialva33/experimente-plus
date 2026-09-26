@@ -448,6 +448,17 @@ describe('flat foundation token contract', () => {
     expect(projectFile('inertia/app/app.tsx')).toContain("progress: { color: 'var(--primary)' }")
   })
 
+  it.each(['verify_email_html', 'password_reset_html'])(
+    'sends the %s email in the brand navy with a pill action',
+    (template) => {
+      const email = projectFile(`resources/views/emails/${template}.edge`)
+      expect(email).toContain('background: #13467c')
+      expect(email).toContain('border-radius: 999px')
+      expect(email).toContain('border-radius: 20px')
+      expect(email).not.toMatch(/#2563eb|#f4f4f5|#71717a/)
+    }
+  )
+
   it('loads the direction A display face and exposes it apart from the text face', () => {
     expect(inertiaLayout).toContain('plus-jakarta-sans:600,700,800')
     const display = tailwindCss.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
