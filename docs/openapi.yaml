@@ -4312,6 +4312,12 @@ components:
                 pix_url:
                   type: string
                   format: uri
+                simulated:
+                  type: boolean
+                  description: >-
+                    Only in development and homologation (fake payment provider): nothing is
+                    charged and there is no code to pay; the operation confirms the order.
+                    Clients should say so instead of asking the buyer to pay.
         created_at:
           type: string
           format: date-time

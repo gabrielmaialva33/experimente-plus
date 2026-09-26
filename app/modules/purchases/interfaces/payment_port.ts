@@ -13,7 +13,12 @@ export interface PaymentObservation {
   state: PaymentState
   paidAt: string | null
   refundedCents: number
-  instructions: { pix_code?: string; pix_url?: string } | null
+  /**
+   * What the buyer needs to pay. `simulated` comes only from the fake adapter
+   * (development and homologation): nothing is charged, there is no code to pay,
+   * and the operation confirms the order with `purchases:simulate`.
+   */
+  instructions: { pix_code?: string; pix_url?: string; simulated?: boolean } | null
 }
 export interface PaymentInput {
   email: string

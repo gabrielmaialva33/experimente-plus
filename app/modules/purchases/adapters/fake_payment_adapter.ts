@@ -32,7 +32,8 @@ export default class FakePaymentAdapter extends PaymentPort {
       state: 'pending',
       paidAt: null,
       refundedCents: 0,
-      instructions: { pix_code: `SIMULATION:${id}` },
+      // No code that looks payable: clients say the payment is simulated instead.
+      instructions: { simulated: true },
     }
     await db
       .table('purchase_fake_payments')

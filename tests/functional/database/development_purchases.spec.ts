@@ -65,6 +65,9 @@ test.group('Development paid edition seed', (group) => {
       email: s.users.holder.email,
     })
     await processor.drain()
+    const pending = (await repository.get(purchase.id))!
+    // A simulated payment has no payable code; clients say it is simulated.
+    assert.deepEqual(pending.instructions, { simulated: true })
     await fake.simulate('fake_' + purchase.id, { state: 'paid', paidAt: new Date().toISOString() })
     await processor.reconcile()
     await processor.drain()
