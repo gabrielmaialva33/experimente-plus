@@ -79,7 +79,7 @@ export function CatalogPublicationMetadata({
         <Check aria-hidden="true" className="size-4" />
       </span>
       <div className="min-w-0">
-        <h2 id="publication-title" className="font-display font-extrabold">
+        <h2 id="publication-title" className="font-display font-extrabold leading-tight">
           Conteúdo publicado
         </h2>
         <p className="mt-1 leading-6 text-muted-foreground">
@@ -196,7 +196,7 @@ function PublishedEstablishment({
         detail.description ??
         `Informações públicas de ${detail.name} em ${detail.city.name}.`
       }
-      eyebrow={primaryCategory?.name ?? 'Estabelecimento local'}
+      eyebrow={primaryCategory?.name ?? 'Lugar'}
       citySlug={detail.city.slug}
       activeSection="places"
       image={detail.cover?.url}
@@ -307,7 +307,10 @@ function PublishedEstablishment({
               <span className="flex size-10 items-center justify-center rounded-md border border-primary/15 bg-primary-soft text-primary-accent">
                 <MapPin aria-hidden="true" className="size-4" />
               </span>
-              <h2 id="address-title" className="mt-4 font-display text-lg font-extrabold">
+              <h2
+                id="address-title"
+                className="mt-4 font-display text-lg font-extrabold leading-tight"
+              >
                 Endereço
               </h2>
               {addressLine ? (
@@ -344,7 +347,7 @@ function PublishedEstablishment({
                   </p>
                   <h2
                     id="hours-title"
-                    className="mt-1 font-display text-[1.3125rem] font-extrabold"
+                    className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
                   >
                     Horários
                   </h2>
@@ -428,7 +431,7 @@ function PublishedEstablishment({
                 </p>
                 <h2
                   id="gallery-title"
-                  className="mt-1 font-display text-[1.3125rem] font-extrabold"
+                  className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
                 >
                   Fotos publicadas
                 </h2>
@@ -472,7 +475,7 @@ function PublishedEstablishment({
                 </p>
                 <h2
                   id="attributes-title"
-                  className="mt-1 font-display text-[1.3125rem] font-extrabold"
+                  className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
                 >
                   Informações úteis
                 </h2>

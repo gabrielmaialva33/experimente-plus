@@ -93,7 +93,9 @@ export function ReportDialog({
       </DialogTrigger>
       <DialogContent className="max-w-lg rounded-card">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl font-extrabold">{title}</DialogTitle>
+          <DialogTitle className="font-display text-xl font-extrabold leading-tight">
+            {title}
+          </DialogTitle>
           <DialogDescription>
             {protocol === null
               ? `Sobre: ${subject}. A denúncia é anônima: não fica ligada a você nem a uma conta.`
@@ -103,7 +105,7 @@ export function ReportDialog({
 
         {protocol !== null ? (
           <div className="flex flex-col items-start gap-3" role="status">
-            <p className="font-display text-lg font-extrabold">Denúncia registrada</p>
+            <p className="font-display text-lg font-extrabold leading-tight">Denúncia registrada</p>
             {protocol ? (
               <p className="text-sm text-muted-foreground">
                 Guarde o protocolo para acompanhar o caso:{' '}
@@ -157,7 +159,7 @@ export function ReportDialog({
                 maxLength={4000}
                 rows={3}
                 onChange={(event) => setDetails(event.target.value)}
-                className="rounded-2xl text-[0.9375rem]"
+                className="rounded-2xl text-[0.9375rem] shadow-none"
               />
             </div>
 

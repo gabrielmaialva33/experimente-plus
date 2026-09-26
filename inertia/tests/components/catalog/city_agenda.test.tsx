@@ -75,8 +75,9 @@ describe('city agenda', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { level: 2, name: /O que está acontecendo em Londrina/ }))
-      .toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: /O que está acontecendo em Londrina/ })
+    ).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Acontecendo hoje' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Em breve' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Novidades' })).toBeInTheDocument()
@@ -110,12 +111,40 @@ describe('city agenda', () => {
     expect(screen.getByText(/18 de set\. de 2026 · 19:00–23:00/)).toBeInTheDocument()
   })
 
-  it('renders an item without a cover using the catalogue fallback tile', () => {
-    render(
+  it('dates each event with a tile in the city day, and leaves experiences undated', () => {
+    const { container } = render(
       <CityAgendaSection
-        agenda={agenda({ happening_today: [eventItem({ cover: null })] })}
+        agenda={agenda({
+          // 02:30Z on Friday the 18th is still Thursday the 17th in Londrina.
+          upcoming: [eventItem({ starts_at: '2026-09-18T02:30:00.000Z' })],
+          new_experiences: [experienceItem()],
+        })}
       />
     )
+
+    const tiles = container.querySelectorAll('[data-slot="date-tile"]')
+    expect(tiles).toHaveLength(1)
+    // Decorative: the card's own text already reads the full window.
+    expect(tiles[0]).toHaveAttribute('aria-hidden', 'true')
+    expect(tiles[0]).toHaveTextContent(/^QUI17SET$/)
+    expect(within(screen.getByRole('link', { name: 'Sarau no quintal' })).queryByText('17')).toBe(
+      tiles[0].children[1]
+    )
+  })
+
+  it('draws no date tile when the city timezone is unknown', () => {
+    const { container } = render(
+      <CityAgendaSection
+        agenda={agenda({ city: { ...city, timezone: null }, upcoming: [eventItem()] })}
+      />
+    )
+
+    expect(screen.getByRole('link', { name: 'Sarau no quintal' })).toBeInTheDocument()
+    expect(container.querySelector('[data-slot="date-tile"]')).toBeNull()
+  })
+
+  it('renders an item without a cover using the catalogue fallback tile', () => {
+    render(<CityAgendaSection agenda={agenda({ happening_today: [eventItem({ cover: null })] })} />)
 
     expect(screen.getByRole('link', { name: 'Sarau no quintal' })).toBeInTheDocument()
     expect(
@@ -165,9 +194,7 @@ describe('city agenda', () => {
   it('shows an empty state when the city has nothing scheduled', () => {
     render(<CityAgendaSection agenda={agenda()} />)
 
-    expect(
-      screen.getByText('Nenhuma programação publicada para estes dias')
-    ).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma programação publicada para estes dias')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 3, name: 'Acontecendo hoje' })).toBeNull()
   })
 

@@ -21,9 +21,9 @@ function positiveInteger(value: number, fallback: number): number {
 }
 
 const directionClassName =
-  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none sm:flex-none'
+  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border bg-card px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none sm:flex-none'
 const pageClassName =
-  'inline-flex size-10 items-center justify-center rounded-md border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none'
+  'inline-flex size-11 items-center justify-center rounded-full border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none'
 
 export function CatalogPagination({ path, query, meta }: CatalogPaginationProps) {
   const lastPage = positiveInteger(meta.lastPage, 1)

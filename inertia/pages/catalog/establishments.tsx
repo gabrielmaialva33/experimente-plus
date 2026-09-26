@@ -1,5 +1,6 @@
 import { CatalogConcierge } from '~/components/catalog/catalog_concierge'
 import { CatalogPagination } from '~/components/catalog/catalog_pagination'
+import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
 import { CityAgendaSection } from '~/components/catalog/city_agenda'
@@ -62,31 +63,23 @@ export default function CatalogEstablishments({
           aria-describedby="sponsored-results-description"
           className="mt-8"
         >
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Patrocinado
-            </p>
-            <h2 id="sponsored-results" className="mt-1 text-xl font-semibold">
-              Anúncios nesta cidade
-            </h2>
-            <p id="sponsored-results-description" className="mt-1 text-sm text-muted-foreground">
-              Estes estabelecimentos pagaram por esta posição. Isso não representa uma avaliação de
-              qualidade.
-            </p>
-          </div>
+          <CatalogSectionHeader
+            id="sponsored-results"
+            overline="Patrocinado"
+            title="Anúncios nesta cidade"
+            descriptionId="sponsored-results-description"
+            description="Estes lugares pagaram por esta posição. Isso não representa uma avaliação de qualidade."
+          />
           <EstablishmentGrid entries={result.sponsored} citySlug={resolvedCitySlug} sponsored />
         </section>
       ) : null}
 
       <section aria-labelledby="organic-results" className="mt-8">
-        <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Catálogo publicado
-          </p>
-          <h2 id="organic-results" className="mt-1 text-xl font-semibold">
-            {result.query.q ? `Resultados para “${result.query.q}”` : 'Todos os lugares'}
-          </h2>
-        </div>
+        <CatalogSectionHeader
+          id="organic-results"
+          overline="Catálogo publicado"
+          title={result.query.q ? `Resultados para “${result.query.q}”` : 'Todos os lugares'}
+        />
         <EstablishmentGrid
           entries={result.organic}
           citySlug={resolvedCitySlug}

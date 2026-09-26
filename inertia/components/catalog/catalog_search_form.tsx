@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react'
-import { RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import { AppliedFilterChip, FilterChip } from '~/components/ui/choice'
@@ -7,6 +7,19 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import type { CatalogCategory, CatalogSearchQuery } from '~/lib/catalog'
 import { cn } from '~/lib/utils'
+
+const SELECT_CLASS =
+  'h-13 w-full appearance-none rounded-full border border-input bg-background ps-5 pe-11 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30'
+
+/** Native selects keep their semantics; only the arrow is drawn, to sit inside the pill. */
+function SelectChevron() {
+  return (
+    <ChevronDown
+      aria-hidden="true"
+      className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+    />
+  )
+}
 
 interface CatalogSearchFormProps {
   path: string
@@ -74,14 +87,17 @@ export function CatalogSearchForm({
   return (
     <section
       aria-labelledby="catalog-search-title"
-      className="rounded-lg border bg-card p-4 sm:p-5"
+      className="rounded-card border border-border-subtle bg-card p-4 sm:p-6"
     >
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
             <SlidersHorizontal aria-hidden="true" className="size-3.5" /> Busca e filtros
           </p>
-          <h2 id="catalog-search-title" className="mt-1.5 text-lg font-semibold">
+          <h2
+            id="catalog-search-title"
+            className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+          >
             Encontre um lugar
           </h2>
         </div>
@@ -116,7 +132,7 @@ export function CatalogSearchForm({
           <span className="relative block">
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
             />
             <Input
               type="search"
@@ -126,7 +142,7 @@ export function CatalogSearchForm({
               maxLength={120}
               placeholder="Ex.: café, cinema ou tatuagem"
               autoComplete="off"
-              className="h-11 ps-10"
+              className="h-13 rounded-full ps-12 pe-5 text-[0.9375rem]"
             />
           </span>
         </label>
@@ -134,55 +150,64 @@ export function CatalogSearchForm({
         {showCategoryFilter ? (
           <label className="grid gap-1.5">
             <span className="text-sm font-medium">Categoria</span>
-            <select
-              name="category"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-            >
-              <option value="">Todas as categorias</option>
-              {categories.map((category) => (
-                <option key={category.slug} value={category.slug}>
-                  {category.name} ({category.establishmentsCount})
-                </option>
-              ))}
-            </select>
+            <span className="relative block">
+              <select
+                name="category"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                className={SELECT_CLASS}
+              >
+                <option value="">Todas as categorias</option>
+                {categories.map((category) => (
+                  <option key={category.slug} value={category.slug}>
+                    {category.name} ({category.establishmentsCount})
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </span>
           </label>
         ) : null}
 
         <label className="grid gap-1.5">
           <span className="text-sm font-medium">Ordenar por</span>
-          <select
-            name="sort"
-            value={sort}
-            onChange={(event) => setSort(event.target.value as CatalogSearchQuery['sort'])}
-            className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-          >
-            <option value="relevance">Mais relevantes</option>
-            <option value="name">Ordem alfabética</option>
-            <option value="recent">Publicados recentemente</option>
-          </select>
+          <span className="relative block">
+            <select
+              name="sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as CatalogSearchQuery['sort'])}
+              className={SELECT_CLASS}
+            >
+              <option value="relevance">Mais relevantes</option>
+              <option value="name">Ordem alfabética</option>
+              <option value="recent">Publicados recentemente</option>
+            </select>
+            <SelectChevron />
+          </span>
         </label>
 
         <div className="grid gap-1.5">
           <span className="text-sm font-medium">Disponibilidade</span>
-          <FilterChip
-            name="open_now"
-            value="true"
-            checked={openNow}
-            onChange={(event) => setOpenNow(event.target.checked)}
-          >
-            Aberto agora
-          </FilterChip>
+          <span className="flex h-13 items-center">
+            <FilterChip
+              name="open_now"
+              value="true"
+              checked={openNow}
+              onChange={(event) => setOpenNow(event.target.checked)}
+            >
+              Aberto agora
+            </FilterChip>
+          </span>
         </div>
 
         <input type="hidden" name="per_page" value={perPage} />
 
         <Button
           type="submit"
-          variant="cta"
-          size="lg"
-          className="h-11 w-full lg:w-auto"
+          variant="primary"
+          size="2xl"
+          shape="pill"
+          className="w-full lg:w-auto"
           disabled={isNavigating}
           aria-busy={isNavigating}
         >
@@ -194,7 +219,7 @@ export function CatalogSearchForm({
       {effectiveCategoryLabel || hasActiveFilters ? (
         <div
           aria-label="Filtros aplicados"
-          className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4 text-xs"
+          className="mt-5 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-4 text-xs"
         >
           {effectiveCategoryLabel ? (
             <AppliedFilterChip>Categoria: {effectiveCategoryLabel}</AppliedFilterChip>
@@ -209,7 +234,7 @@ export function CatalogSearchForm({
           {hasActiveFilters ? (
             <Link
               href={path}
-              className="ms-auto inline-flex min-h-10 items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold text-primary outline-none hover:bg-primary-soft focus-visible:ring-2 focus-visible:ring-ring"
+              className="ms-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-primary-accent outline-none hover:bg-primary-soft focus-visible:ring-2 focus-visible:ring-ring"
             >
               <RotateCcw aria-hidden="true" className="size-3.5" /> Limpar filtros
             </Link>

@@ -73,13 +73,16 @@ export function EstablishmentReviews({
           <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
             O que dizem
           </p>
-          <h2 id="reviews-title" className="mt-1 font-display text-[1.3125rem] font-extrabold">
+          <h2
+            id="reviews-title"
+            className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
+          >
             Avaliações
           </h2>
         </div>
         {summary.average !== null && summary.count > 0 ? (
           <p className="flex items-center gap-2 text-[0.9375rem] font-semibold">
-            <span className="font-display text-2xl font-extrabold">
+            <span className="font-display text-2xl font-extrabold leading-tight">
               {formatRating(summary.average)}
             </span>
             <RatingStars value={summary.average} size={18} />

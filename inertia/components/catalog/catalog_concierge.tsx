@@ -70,14 +70,17 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
   return (
     <section
       aria-labelledby="catalog-concierge-title"
-      className="mt-6 rounded-lg border bg-card p-5 sm:p-6"
+      className="mt-6 rounded-card border border-primary/15 bg-primary-soft p-5 sm:p-6"
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+          <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
             Concierge
           </p>
-          <h2 id="catalog-concierge-title" className="mt-1 text-xl font-semibold">
+          <h2
+            id="catalog-concierge-title"
+            className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+          >
             O que você quer fazer em {cityName}?
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
@@ -98,12 +101,13 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
             placeholder="Ex.: quero um café tranquilo e depois algo para fazer à tarde"
             maxLength={MAX_QUESTION_LENGTH}
             rows={3}
+            className="rounded-2xl bg-card text-[0.9375rem] shadow-none"
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-xs text-muted-foreground">
               {question.length}/{MAX_QUESTION_LENGTH}
             </span>
-            <Button type="submit" disabled={!canSubmit}>
+            <Button type="submit" variant="primary" size="xl" shape="pill" disabled={!canSubmit}>
               {loading ? 'Pensando…' : 'Perguntar'}
             </Button>
           </div>
@@ -113,7 +117,7 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
       {error ? (
         <p
           role="status"
-          className="mt-5 rounded-md border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive-accent"
+          className="mt-5 rounded-2xl border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive-accent"
         >
           Não foi possível consultar agora. Tente novamente em instantes.
         </p>
@@ -122,9 +126,9 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
       {reply ? (
         <div
           aria-live="polite"
-          className="mt-5 rounded-md border border-primary/15 bg-primary-soft p-4"
+          className="mt-5 rounded-2xl border border-border-subtle bg-card p-4 sm:p-5"
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary-accent">
+          <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
             {reply.outcome === 'grounded'
               ? 'Sugestão ancorada no catálogo'
               : reply.outcome === 'refused'
@@ -168,16 +172,14 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
                         {KIND_LABEL[kind]} em {host}
                       </p>
                     ) : null}
-                    {meta ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p>
-                    ) : null}
+                    {meta ? <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p> : null}
                   </>
                 )
 
                 return (
                   <li
                     key={item.ref ?? `${name}-${index}`}
-                    className="rounded-md border border-primary/15 bg-card px-3 py-2"
+                    className="rounded-2xl border border-border-subtle bg-background px-4 py-3"
                   >
                     {href ? (
                       <Link

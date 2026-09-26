@@ -81,7 +81,10 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
           Contato e rota
         </p>
-        <h2 id="contact-actions-title" className="mt-1 font-display text-lg font-extrabold">
+        <h2
+          id="contact-actions-title"
+          className="mt-1 font-display text-lg font-extrabold leading-tight"
+        >
           Entre em contato
         </h2>
       </div>
