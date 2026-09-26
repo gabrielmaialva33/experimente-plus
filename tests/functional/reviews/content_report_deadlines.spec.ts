@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import app from '@adonisjs/core/services/app'
 import ace from '@adonisjs/core/services/ace'
 import testUtils from '@adonisjs/core/services/test_utils'
@@ -46,7 +47,10 @@ async function operation(prefix: string): Promise<Operation> {
 /** Files a report through the API, as a person would, and returns its row. */
 async function file(client: ApiClient, target: Operation, comment = 'Comida fria e demorada.') {
   const establishment = await createPublishedEstablishment(target.scenario)
-  const author = await createUser({ prefix: 'sla-author', tenant: target.scenario.tenant })
+  const author = await createUser({
+    prefix: `${target.scenario.tenant.slug}-author`,
+    tenant: target.scenario.tenant,
+  })
   const review = await EstablishmentReview.create({
     tenant_id: target.scenario.tenant.id,
     establishment_id: establishment.id,
@@ -356,6 +360,9 @@ test.group('Content report deadlines (ADR-0027)', (group) => {
  * one's row locks, so the test proves what the single conditional UPDATE is for.
  */
 test.group('Content report deadlines under concurrency (independent transactions)', () => {
+  // Committed fixtures outlive the run, so a fixed prefix collides on the next one.
+  const committed = (prefix: string) => operation(`${prefix}-${randomUUID().slice(0, 8)}`)
+
   async function waitForLockWaiter() {
     for (let attempt = 0; attempt < 100; attempt++) {
       const { rows } = await db.rawQuery(
@@ -375,7 +382,7 @@ test.group('Content report deadlines under concurrency (independent transactions
     cleanup,
   }) => {
     assert.equal(db.connectionGlobalTransactions.size, 0)
-    const target = await operation('sla-race')
+    const target = await committed('sla-race')
     const filed = [await file(client, target), await file(client, target)]
     cleanup(async () => {
       await db
@@ -413,7 +420,7 @@ test.group('Content report deadlines under concurrency (independent transactions
 
   test('two sweeps at once send one message for the operation', async ({ client, assert }) => {
     assert.equal(db.connectionGlobalTransactions.size, 0)
-    const target = await operation('sla-sweeps')
+    const target = await committed('sla-sweeps')
     await file(client, target)
     await file(client, target)
     const { mails } = mail.fake()
