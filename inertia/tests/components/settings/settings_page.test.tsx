@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { renderToString } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import SettingsPage from '~/pages/settings'
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   setTheme: vi.fn(),
   permissions: [] as string[],
   tenants: [] as Array<{ id: number; name: string; role: string }>,
+  url: '/settings',
 }))
 
 vi.mock('@inertiajs/react', async () => {
@@ -20,7 +22,7 @@ vi.mock('@inertiajs/react', async () => {
     // The profile form's unsaved-changes guard listens to visits.
     router: { post: mocks.post, on: () => () => undefined },
     usePage: () => ({
-      url: '/settings',
+      url: mocks.url,
       props: {
         errors: {},
         auth: {
@@ -90,6 +92,16 @@ describe('SettingsPage', () => {
     vi.clearAllMocks()
     mocks.permissions = []
     mocks.tenants = []
+    mocks.url = '/settings'
+  })
+
+  it('renders the theme cards the same on the server and before hydration', () => {
+    mocks.url = '/settings?tab=appearance'
+    // The browser's saved theme is unknown to the server; no card may claim it yet.
+    const markup = renderToString(<SettingsPage profile={profile} />)
+
+    expect(markup).toContain('Tema da interface')
+    expect(markup).not.toContain('aria-pressed="true"')
   })
 
   it('presents personal settings in pt-BR without inventing an operation destination', async () => {

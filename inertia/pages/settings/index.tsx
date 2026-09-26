@@ -11,7 +11,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
@@ -153,6 +153,10 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
 
 function AppearanceTab() {
   const { theme, setTheme } = useTheme()
+  // The saved theme lives in this browser, so the server cannot know it: mark a choice only
+  // after hydration, or the server's unselected cards would not match the client's first render.
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => setHydrated(true), [])
 
   return (
     <Card className="max-w-3xl">
@@ -167,7 +171,7 @@ function AppearanceTab() {
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Tema da interface">
           {THEMES.map((option) => {
-            const active = theme === option.value
+            const active = hydrated && theme === option.value
             const Icon = option.icon
 
             return (
