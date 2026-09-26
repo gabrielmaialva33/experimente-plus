@@ -117,6 +117,9 @@ describe('labels', () => {
 
   it('presents permission identifiers as readable pt-BR labels', () => {
     expect(permissionResourceLabel('benefit_accesses')).toBe('Acessos a edições')
+    // The product calls it "Desempenho" everywhere; no English area name in the admin.
+    expect(permissionResourceLabel('analytics')).toBe('Desempenho')
+    expect(PILOT_FEEDBACK_CONTEXT_LABELS.analytics).toBe('Desempenho')
     expect(permissionActionLabel('request_changes')).toBe('Solicitar correções')
     expect(permissionContextLabel('own')).toBe('Próprios')
     expect(permissionResourceLabel('custom_resource')).toBe('Custom resource')

@@ -86,7 +86,7 @@ export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   benefit_editions: 'Edições de benefício',
   benefit_offers: 'Ofertas de benefício',
   benefit_accesses: 'Acessos a edições',
-  analytics: 'Analytics',
+  analytics: 'Desempenho',
   pilot_feedback: 'Feedback do piloto',
   settings: 'Configurações',
   reports: 'Relatórios',
@@ -145,7 +145,7 @@ export const PILOT_FEEDBACK_CONTEXT_LABELS: Record<string, string> = {
   organization: 'Organização',
   establishment: 'Unidade',
   catalog: 'Catálogo',
-  analytics: 'Analytics',
+  analytics: 'Desempenho',
   moderation: 'Moderação',
 }
 

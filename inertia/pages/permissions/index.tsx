@@ -80,7 +80,10 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
         />
 
         <div className="relative max-w-sm">
-          <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            aria-hidden="true"
+            className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
           <Input
             type="search"
             placeholder="Buscar permissões"
@@ -117,7 +120,8 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                       <KeyRound aria-hidden="true" className="size-4" />
                     </span>
-                    <span className="truncate font-display font-extrabold">
+                    {/* Wraps on a phone: a clipped area name ("Acessos a ediç…") hides which one it is. */}
+                    <span className="min-w-0 font-display font-extrabold leading-snug">
                       {permissionResourceLabel(resource)}
                     </span>
                   </span>

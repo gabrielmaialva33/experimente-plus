@@ -11,7 +11,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '~/components/ui/card'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts'
-import { fileCategoryLabel, formatFileDate } from '~/lib/file_presentation'
+import { fileCategoryLabel, formatFileDate, formatFileSize } from '~/lib/file_presentation'
 
 interface FileRow {
   id: number
@@ -41,13 +41,6 @@ interface FilesPageProps {
     }
     data: FileRow[]
   }
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-  return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`
 }
 
 export default function FilesPage({ files }: FilesPageProps) {
