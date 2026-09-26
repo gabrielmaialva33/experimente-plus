@@ -37,13 +37,13 @@ export function ConsumerShell({ children }: PropsWithChildren) {
                   href={item.href}
                   aria-current={selected ? 'page' : undefined}
                   className={cn(
-                    'flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                    'flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     selected
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-accent text-accent-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   )}
                 >
-                  <Icon className="size-4" />
+                  <Icon aria-hidden="true" className="size-4" />
                   {item.label}
                 </Link>
               )
@@ -52,15 +52,20 @@ export function ConsumerShell({ children }: PropsWithChildren) {
 
           <div className="ms-auto flex items-center gap-1 md:ms-2">
             <ThemeToggle />
+            {/* Same exit as the public header: labelled on a wide screen, an icon on a phone. */}
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              mode="icon"
+              size="md"
+              shape="pill"
+              className="w-10 px-0 md:w-auto md:px-4"
               aria-label="Sair"
               onClick={() => router.post('/logout')}
             >
               <LogOut aria-hidden="true" />
+              <span aria-hidden="true" className="hidden md:inline">
+                Sair
+              </span>
             </Button>
           </div>
         </div>
@@ -91,17 +96,17 @@ export function ConsumerShell({ children }: PropsWithChildren) {
                 href={item.href}
                 aria-current={selected ? 'page' : undefined}
                 className={cn(
-                  'flex min-h-16 flex-col items-center justify-center gap-1 rounded-md px-1 py-2 text-[0.68rem] font-semibold transition-colors',
+                  'group flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                   selected ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 <span
                   className={cn(
-                    'flex min-h-8 min-w-12 items-center justify-center rounded-md transition-colors',
-                    selected && 'bg-primary-soft'
+                    'flex h-7 w-12 items-center justify-center rounded-full transition-colors',
+                    selected ? 'bg-primary-soft' : 'group-hover:bg-accent'
                   )}
                 >
-                  <Icon className="size-5" />
+                  <Icon aria-hidden="true" className="size-4.5" />
                 </span>
                 {item.label}
               </Link>

@@ -34,7 +34,7 @@ export function PublicHeader() {
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   active
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -57,7 +57,8 @@ export function PublicHeader() {
                 key={item.href}
                 type="button"
                 variant="ghost"
-                size="sm"
+                size="md"
+                shape="pill"
                 className="hidden md:inline-flex"
                 onClick={() => router.post(item.href)}
               >
@@ -68,7 +69,8 @@ export function PublicHeader() {
               <Button
                 key={item.href}
                 variant={authenticated ? 'outline' : 'ghost'}
-                size="sm"
+                size="md"
+                shape="pill"
                 className="hidden md:inline-flex"
                 asChild
               >

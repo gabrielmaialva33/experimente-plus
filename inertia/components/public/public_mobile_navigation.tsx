@@ -27,11 +27,23 @@ export function PublicMobileNavigation() {
         {items.map((item) => {
           const active = isNavigationHrefActive(url, item.href)
           const Icon = item.icon
+          // Same grammar as the wallet's bar: the active icon sits in a pill, the label below.
           const className = cn(
-            'flex min-h-13 flex-col items-center justify-center gap-1 rounded-md px-1 text-[0.68rem] font-semibold transition-colors',
-            active
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            'group flex min-h-13 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+            active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+          )
+          const content = (
+            <>
+              <span
+                className={cn(
+                  'flex h-7 w-12 items-center justify-center rounded-full transition-colors',
+                  active ? 'bg-primary-soft' : 'group-hover:bg-accent'
+                )}
+              >
+                <Icon className="size-4.5" aria-hidden="true" />
+              </span>
+              <span className="max-w-full truncate">{item.label}</span>
+            </>
           )
 
           return item.method === 'post' ? (
@@ -41,8 +53,7 @@ export function PublicMobileNavigation() {
               className={className}
               onClick={() => router.post(item.href)}
             >
-              <Icon className="size-4.5" aria-hidden="true" />
-              <span className="truncate">{item.label}</span>
+              {content}
             </button>
           ) : (
             <Link
@@ -51,8 +62,7 @@ export function PublicMobileNavigation() {
               aria-current={active ? 'page' : undefined}
               className={className}
             >
-              <Icon className="size-4.5" aria-hidden="true" />
-              <span className="truncate">{item.label}</span>
+              {content}
             </Link>
           )
         })}
