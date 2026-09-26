@@ -142,14 +142,14 @@ export function EstablishmentReviews({
                             height={photo.height ?? undefined}
                             loading="lazy"
                             decoding="async"
-                            className="size-20 rounded-xl object-cover"
+                            className="size-20 rounded-2xl object-cover"
                           />
                         </li>
                       ))}
                     </ul>
                   ) : null}
                   {review.reply ? (
-                    <div className="rounded-xl bg-background px-4 py-3">
+                    <div className="rounded-2xl bg-background px-4 py-3">
                       <p className="text-[0.8125rem] font-bold text-primary-accent">
                         Resposta de {placeName}
                       </p>
