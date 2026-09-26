@@ -9,12 +9,7 @@ import {
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import {
-  initialValues,
-  toPayload,
-  type FieldSpec,
-  type FormValues,
-} from '~/lib/resource_form'
+import { initialValues, toPayload, type FieldSpec, type FormValues } from '~/lib/resource_form'
 
 interface ResourceFormProps {
   idPrefix: string

@@ -123,7 +123,10 @@ export default function BackofficeReviewPolicy({
           role="note"
           className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm"
         >
-          <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning-foreground" />
+          <AlertTriangle
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 text-warning-foreground"
+          />
           <p>
             <strong>Valores provisórios.</strong> Pelo contrato (Anexo I, item 15), estes parâmetros
             são definidos pelo contratante antes da produção. Os números abaixo existem para a
@@ -165,7 +168,8 @@ export default function BackofficeReviewPolicy({
           </h2>
           <p className="mt-1 mb-5 text-sm text-muted-foreground">
             Regras que examinam avaliações, respostas de parceiros e conteúdo publicado por eles.
-            Nenhuma regra apaga nada: cada ocorrência abre uma denúncia na fila, e uma pessoa decide.
+            Nenhuma regra apaga nada: cada ocorrência abre uma denúncia na fila, e uma pessoa
+            decide.
           </p>
           {rules && canUpdate ? (
             <ResourceForm
