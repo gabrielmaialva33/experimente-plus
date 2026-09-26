@@ -5,6 +5,8 @@ import { middleware } from '#start/kernel'
 
 const PartnerPortalController = () =>
   import('#modules/portal/controllers/partner_portal_controller')
+const BackofficeTodayController = () =>
+  import('#modules/portal/controllers/backoffice_today_controller')
 const BackofficePortalController = () =>
   import('#modules/portal/controllers/backoffice_portal_controller')
 const PartnerContentPagesController = () =>
@@ -177,6 +179,17 @@ router
 
 router
   .group(() => {
+    /**
+     * "Hoje" — the operation's landing: counts and the first items of the
+     * revision, content, report and (for administrators) feedback queues. The
+     * route carries the permission those queues carry; the service resolves
+     * platform access first and each queue's own service checks it again.
+     */
+    router
+      .get('/today', [BackofficeTodayController, 'index'])
+      .as('backoffice.today')
+      .use(permission(IPermission.Resources.ESTABLISHMENTS, IPermission.Actions.LIST))
+
     router
       .get('/content', [PartnerContentPagesController, 'moderation'])
       .as('backoffice.content.index')
