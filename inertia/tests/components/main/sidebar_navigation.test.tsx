@@ -91,11 +91,13 @@ describe('SidebarNav', () => {
 
     render(<SidebarNav surface="backoffice" />)
 
-    expect(screen.getByRole('link', { name: 'Fila de moderação' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Dados de lugares' })).toHaveAttribute(
       'aria-current',
       'page'
     )
     expect(screen.getByRole('link', { name: 'Acessos a edições' })).toBeVisible()
+    // The queues read as one inbox (direction A naming).
+    expect(screen.getByText('Caixa de moderação')).toBeVisible()
     expect(screen.queryByText('Visão geral')).not.toBeInTheDocument()
     expect(screen.queryByText('Edições e benefícios')).not.toBeInTheDocument()
   })
@@ -125,7 +127,7 @@ describe('SidebarNav', () => {
       'aria-current',
       'page'
     )
-    expect(screen.getByRole('link', { name: 'Fila de moderação' })).not.toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Dados de lugares' })).not.toHaveAttribute(
       'aria-current'
     )
   })
@@ -149,8 +151,9 @@ describe('SidebarNav', () => {
 
     render(<SidebarNav surface="backoffice" />)
 
-    expect(screen.queryByText('Fila de moderação')).not.toBeInTheDocument()
+    expect(screen.queryByText('Dados de lugares')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Usuários' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('Pessoas e acesso')).toBeVisible()
   })
 
   it('draws the sidebar on the authenticated chrome, the current item as a light plate', () => {
