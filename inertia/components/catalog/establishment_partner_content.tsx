@@ -193,13 +193,17 @@ export function EstablishmentPartnerContent({
   return (
     <section
       aria-labelledby="partner-content-title"
-      className="rounded-lg border bg-card p-5 sm:p-6"
+      className="rounded-card border border-border-subtle bg-card p-5 sm:p-6"
     >
+      {/* Same section grammar as Horários, Avaliações and Informações úteis around it. */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+        <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
           Novidades do parceiro
         </p>
-        <h2 id="partner-content-title" className="mt-1 text-xl font-semibold">
+        <h2
+          id="partner-content-title"
+          className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
+        >
           Descubra mais neste lugar
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -210,10 +214,12 @@ export function EstablishmentPartnerContent({
       <div className="mt-6 space-y-6">
         {sections.map((section) => (
           <div key={section.key}>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+            <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
               {section.eyebrow}
             </p>
-            <h3 className="mt-1 text-base font-semibold">{section.title}</h3>
+            <h3 className="mt-1 font-display text-lg font-extrabold leading-tight">
+              {section.title}
+            </h3>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {section.items.map((item) => {
@@ -228,7 +234,10 @@ export function EstablishmentPartnerContent({
                 const cover = item.media.find((media) => media.isCover) ?? item.media[0] ?? null
 
                 return (
-                  <article key={item.id} className="overflow-hidden rounded-md border bg-card">
+                  <article
+                    key={item.id}
+                    className="overflow-hidden rounded-2xl border border-border-subtle bg-card"
+                  >
                     {cover ? (
                       <figure>
                         <div className="aspect-[16/9] overflow-hidden bg-muted">
@@ -249,7 +258,7 @@ export function EstablishmentPartnerContent({
 
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
-                        <h4 className="font-semibold leading-6">{item.title}</h4>
+                        <h4 className="font-display font-extrabold leading-6">{item.title}</h4>
                         {price ? (
                           <span className="shrink-0 text-sm font-semibold text-cta-accent">
                             {price}
@@ -257,7 +266,9 @@ export function EstablishmentPartnerContent({
                         ) : null}
                       </div>
                       {eventWindow ? (
-                        <p className="mt-1 text-xs font-medium text-primary">{eventWindow}</p>
+                        <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.06em] text-primary-accent">
+                          {eventWindow}
+                        </p>
                       ) : null}
                       {item.description ? (
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
