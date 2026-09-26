@@ -120,7 +120,7 @@ export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
       <PasswordRequirements password={data.password} confirmation={data.password_confirmation} />
 
       <div className="space-y-2" data-invalid={errors.terms_accepted ? 'true' : undefined}>
-        <div className="flex items-start gap-3 rounded-md border bg-muted/35 p-3">
+        <div className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-background p-4">
           <Checkbox
             id="terms_accepted"
             name="terms_accepted"
