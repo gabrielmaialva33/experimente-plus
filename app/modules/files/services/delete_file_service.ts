@@ -28,7 +28,8 @@ export default class DeleteFileService {
       const databaseError = error as { code?: string; cause?: { code?: string } }
       const code = databaseError.code ?? databaseError.cause?.code
 
-      if (code === '23503') {
+      // PostgreSQL 18 reports ON DELETE RESTRICT as restrict_violation (23001), not 23503.
+      if (code === '23503' || code === '23001') {
         throw new BadRequestException(
           'File cannot be deleted while it is referenced by another resource'
         )
