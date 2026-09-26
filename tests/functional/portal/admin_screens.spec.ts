@@ -163,6 +163,32 @@ test.group('Backoffice administration screens (Anexo I item 12)', (group) => {
     assert.oneOf(deactivated.status(), [200, 302])
     const after = await db.from('categories').where('id', category.id).first()
     assert.isFalse(after.is_active)
+    // The notice says what changed for the visitor, not "atualizada" (web audit W9).
+    assert.equal(
+      deactivated.flashMessages().success,
+      'Categoria desativada. Ela saiu dos filtros da descoberta.'
+    )
+
+    const reactivated = await client
+      .put(`/backoffice/taxonomy/categories/${category.id}`)
+      .headers(headers)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ is_active: true })
+    assert.equal(
+      reactivated.flashMessages().success,
+      'Categoria reativada. Ela volta aos filtros da descoberta.'
+    )
+
+    const renamed = await client
+      .put(`/backoffice/taxonomy/categories/${category.id}`)
+      .headers(headers)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ name: 'Museus e galerias' })
+    assert.equal(renamed.flashMessages().success, 'Categoria atualizada.')
   })
 
   test('a moderator cannot write taxonomy through the web routes either', async ({
@@ -237,7 +263,7 @@ test.group('Backoffice administration screens (Anexo I item 12)', (group) => {
     assert.equal(city.region_id, region.id)
     assert.equal(city.ibge_code, '4119905')
 
-    await client
+    const deactivated = await client
       .put(`/backoffice/geography/cities/${city.id}`)
       .headers(headers)
       .loginAs(admin)
@@ -246,6 +272,10 @@ test.group('Backoffice administration screens (Anexo I item 12)', (group) => {
       .json({ is_active: false })
     const after = await db.from('cities').where('id', city.id).first()
     assert.isFalse(after.is_active)
+    assert.equal(
+      deactivated.flashMessages().success,
+      'Cidade desativada. As unidades dela saíram da descoberta.'
+    )
   })
 
   test('an invalid city is refused by the same validator as the API', async ({

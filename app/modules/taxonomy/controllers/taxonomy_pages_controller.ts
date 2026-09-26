@@ -9,6 +9,19 @@ import {
   updateCategoryFamilyValidator,
   updateCategoryValidator,
 } from '#modules/taxonomy/validators/taxonomy_validator'
+import { activationMessage } from '#shared/utils/activation_message'
+
+const FAMILY_MESSAGES = {
+  updated: 'Família atualizada.',
+  deactivated: 'Família desativada. As categorias dela saíram da descoberta.',
+  reactivated: 'Família reativada. As categorias dela voltam à descoberta.',
+}
+
+const CATEGORY_MESSAGES = {
+  updated: 'Categoria atualizada.',
+  deactivated: 'Categoria desativada. Ela saiu dos filtros da descoberta.',
+  reactivated: 'Categoria reativada. Ela volta aos filtros da descoberta.',
+}
 
 /**
  * Category families and categories — Anexo I item 12, "gestão de categorias".
@@ -50,7 +63,7 @@ export default class TaxonomyPagesController {
   async updateFamily({ params, request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(updateCategoryFamilyValidator)
     await this.families.update(tenant!.id, Number(params.id), payload)
-    session.flash('success', 'Família atualizada.')
+    session.flash('success', activationMessage(FAMILY_MESSAGES, payload.is_active))
     return response.redirect().back()
   }
 
@@ -64,7 +77,7 @@ export default class TaxonomyPagesController {
   async updateCategory({ params, request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(updateCategoryValidator)
     await this.categories.update(tenant!.id, Number(params.id), payload)
-    session.flash('success', 'Categoria atualizada.')
+    session.flash('success', activationMessage(CATEGORY_MESSAGES, payload.is_active))
     return response.redirect().back()
   }
 

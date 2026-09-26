@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import BackofficeConcierge from '~/pages/backoffice/concierge'
@@ -91,15 +91,36 @@ describe('backoffice administration screens', () => {
     expect(screen.queryByRole('button', { name: /excluir/i })).not.toBeInTheDocument()
   })
 
-  it('deactivates a category through its update route', () => {
+  it('deactivates a category only after saying what leaves discovery', async () => {
     mocks.permissions = ['categories.update']
     render(<BackofficeTaxonomy families={families} categories={categories} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Desativar Cafeterias' }))
 
+    // Web audit W9: one click used to take the category out of discovery at once.
+    expect(mocks.put).not.toHaveBeenCalled()
+    const dialog = await screen.findByRole('alertdialog', { name: 'Desativar Cafeterias?' })
+    expect(dialog).toHaveTextContent('A categoria sai dos filtros da descoberta.')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Desativar' }))
+
     expect(mocks.put).toHaveBeenCalledWith(
       '/backoffice/taxonomy/categories/10',
       { is_active: false },
+      { preserveScroll: true }
+    )
+  })
+
+  it('reactivates without asking, since nothing leaves discovery', () => {
+    mocks.permissions = ['categories.update']
+    render(<BackofficeTaxonomy families={families} categories={categories} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ativar Torrefações' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(mocks.put).toHaveBeenCalledWith(
+      '/backoffice/taxonomy/categories/11',
+      { is_active: true },
       { preserveScroll: true }
     )
   })
