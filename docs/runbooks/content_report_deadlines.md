@@ -23,15 +23,9 @@ Operação sem ninguém que possa agir não tem nada marcado: a marca significa 
 
 Duas execuções simultâneas não citam o mesmo caso duas vezes. A reivindicação é um único `UPDATE … WHERE sla_notified_at IS NULL`, e a segunda execução, ao esperar o lock da linha, encontra a marca já posta.
 
-## Agendamento — o que o operador precisa acrescentar
+## Agendamento
 
-O repositório não agenda comandos. `purchases:process` e `analytics:prune` seguem a mesma regra: rodam por um agendador do ambiente, que não é instalado automaticamente no piloto.
-
-Na VPS de homologação, a partir do diretório do deploy (`/opt/experimente-plus`), uma entrada de cron do host que rode o comando **de hora em hora** atende o propósito. O prazo é contado em dias, então um intervalo menor não muda nada para quem lê o aviso:
-
-```cron
-17 * * * * cd /opt/experimente-plus && docker compose -f docker-compose.vps.yml exec -T app node ace.js reports:notify-overdue >> /var/log/experimente-plus/reports-overdue.log 2>&1
-```
+O repositório não agenda comandos. Este, `purchases:process` e `analytics:prune` rodam por um agendador do ambiente, descrito em [comandos agendados](scheduled_commands.md). Na VPS de homologação ele roda de hora em hora, no minuto 17, por um timer do systemd. O prazo é contado em dias, então um intervalo menor não muda nada para quem lê o aviso.
 
 Antes de ativar, conferir:
 

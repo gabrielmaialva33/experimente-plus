@@ -63,7 +63,7 @@ Todos os POSTs exigem objeto JSON canônico. Rotas privadas aplicam autenticaç�
 
 ## Worker e recuperação
 
-Executar `pnpm ace purchases:process` a cada minuto por um scheduler do ambiente. Cada execução consulta até 100 notificações/100 pagamentos e processa até 100 comandos. Consultas circulam pelo último exame. A saída contém somente contagens; deferred resulta em exit 1 para monitoramento. Não instalar scheduler automaticamente no piloto.
+Executar `pnpm ace purchases:process` a cada minuto por um scheduler do ambiente (na homologação, um timer do systemd; ver [comandos agendados](scheduled_commands.md)). Cada execução consulta até 100 notificações/100 pagamentos e processa até 100 comandos. Consultas circulam pelo último exame. A saída contém somente contagens; deferred resulta em exit 1 para monitoramento. Não instalar scheduler automaticamente no piloto.
 
 A intenção e seu comando são gravados juntos. Dispatcher usa lease de 120 segundos por compra e fencing por UUID. Chamadas HTTP têm timeout de 15 segundos e ficam **fora** de transações e locks. Criação usa o UUID da compra; estorno usa o UUID do reembolso. Retry desconhecido consulta referência/ID antes de reenviar. Depois de 23 horas sem resultado conhecido, ou dez tentativas, fica em análise; não emitir nova chave para contornar a proteção. `purchases:process` mais consulta por referência recupera webhook perdido ou resposta perdida. Notificações fora de ordem provocam nova consulta atual, sem reaplicar estado antigo do corpo.
 
