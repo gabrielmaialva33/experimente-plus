@@ -1,8 +1,11 @@
 import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 
+import IRoles from '#modules/roles/interfaces/role_interface'
 import User from '#modules/users/models/user'
 import { JWT_COOKIE_NAME } from '#shared/jwt/constants'
+import { createEstablishmentScenario } from '#tests/functional/establishments/helpers'
+import { createUser } from '#tests/functional/organizations/helpers'
 
 interface TestInertiaPage {
   component: string
@@ -74,5 +77,36 @@ test.group('Web error pages', (group) => {
     assert.notInclude(response.text(), 'href="/login"')
     assert.notInclude(response.text(), 'Cadastrar negócio')
     assert.include(response.text(), 'Página não encontrada')
+  })
+
+  // Web audit W27: a stale link on a web route showed
+  // {"status":404,"message":"Establishment revision not found"} in English.
+  test('a web route with an unknown id renders the not-found page; the API keeps JSON', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('missing-id')
+    const moderator = await createUser({
+      prefix: 'missing-id-mod',
+      tenant: scenario.tenant,
+      globalRole: IRoles.Slugs.MODERATOR,
+    })
+    const headers = { 'x-tenant-id': String(scenario.tenant.id) }
+
+    const visit = await client
+      .get('/backoffice/moderation/999999')
+      .headers(headers)
+      .loginAs(moderator)
+      .accept('html')
+    visit.assertStatus(404)
+    assert.equal(parseInertiaPage(visit).component, 'errors/not_found')
+    assert.notInclude(visit.text(), 'Establishment revision not found')
+
+    const api = await client
+      .get('/api/v1/admin/establishment-revisions/999999')
+      .headers(headers)
+      .loginAs(moderator)
+    api.assertStatus(404)
+    api.assertBody({ status: 404, message: 'Establishment revision not found' })
   })
 })
