@@ -51,7 +51,7 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-lg border border-border bg-card">
+    <article className="overflow-hidden rounded-card border border-border-subtle bg-card">
       <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -136,14 +136,20 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
             />
           </EditorField>
           <div className="flex flex-col gap-2 md:mt-7">
-            <Button type="submit" variant="primary" disabled={form.processing}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              shape="pill"
+              disabled={form.processing}
+            >
               {form.processing ? (
                 <>
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />
                   Salvando…
                 </>
               ) : (
-                'Atualizar'
+                'Salvar triagem'
               )}
             </Button>
             <p role="status" aria-live="polite" className="text-xs text-success">

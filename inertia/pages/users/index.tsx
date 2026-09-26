@@ -7,7 +7,7 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table'
-import { Edit, MoreVertical, Plus, Search, Trash2 } from 'lucide-react'
+import { Edit, MoreVertical, Plus, Search, Trash2, Users as UsersIcon } from 'lucide-react'
 
 import { MainLayout } from '~/layouts'
 import { ConfirmDialog } from '~/components/confirm_dialog'
@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
+import { overlineHeaderRow } from '~/components/backoffice/admin_table'
 import { PageHeader } from '~/components/page_header'
 import { useAuth } from '~/hooks/use_auth'
 import { globalRoleLabel } from '~/lib/labels'
@@ -145,7 +146,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
           cell: ({ row }) => (
             <div className="flex items-center gap-3">
               <Avatar className="size-8">
-                <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                <AvatarFallback className="bg-primary-soft text-xs font-bold text-primary-accent">
                   {initialsOf(row.original.full_name)}
                 </AvatarFallback>
               </Avatar>
@@ -168,7 +169,13 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
             return (
               <div className="flex flex-wrap gap-1">
                 {roles.map((role) => (
-                  <Badge key={role.id} variant="secondary" appearance="light" size="sm">
+                  <Badge
+                    key={role.id}
+                    variant="secondary"
+                    appearance="light"
+                    shape="pill"
+                    size="sm"
+                  >
                     {globalRoleLabel(role.slug, role.name)}
                   </Badge>
                 ))}
@@ -182,11 +189,11 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
           header: 'Situação',
           cell: ({ row }) =>
             row.original.email_verified_at ? (
-              <Badge variant="success" appearance="light" size="sm">
+              <Badge variant="success" appearance="light" shape="pill" size="sm">
                 Verificado
               </Badge>
             ) : (
-              <Badge variant="warning" appearance="light" size="sm">
+              <Badge variant="warning" appearance="light" shape="pill" size="sm">
                 Não verificado
               </Badge>
             ),
@@ -287,13 +294,15 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
 
       <div className="space-y-6">
         <PageHeader
+          eyebrow="Pessoas e acesso"
+          icon={UsersIcon}
           title="Usuários"
           description="Administre contas e seus papéis globais na plataforma."
           actions={
             canCreate ? (
-              <Button asChild>
+              <Button asChild variant="primary" size="xl" shape="pill">
                 <Link href="/users/create">
-                  <Plus className="size-4" />
+                  <Plus aria-hidden="true" className="size-4" />
                   Adicionar usuário
                 </Link>
               </Button>
@@ -304,7 +313,9 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
         <Card>
           <CardHeader>
             <CardHeading>
-              <CardTitle>Todos os usuários</CardTitle>
+              <CardTitle className="font-display text-lg font-extrabold">
+                Todos os usuários
+              </CardTitle>
             </CardHeading>
             <CardToolbar>
               <form
@@ -331,6 +342,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
               table={table}
               recordCount={total}
               tableLayout={{ rowBorder: true, headerBackground: true }}
+              tableClassNames={{ headerRow: overlineHeaderRow }}
               emptyMessage="Nenhum usuário encontrado."
             >
               <DataGridContainer border={false} ariaLabel="Lista de usuários">

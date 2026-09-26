@@ -118,6 +118,7 @@ const ISSUE_MESSAGES: Record<string, string> = {
   media_missing: 'Adicione ao menos uma imagem do lugar.',
   cover_image_missing: 'Escolha uma imagem como capa do lugar.',
   media_quarantined: 'Remova as imagens bloqueadas antes de enviar os dados.',
+  review_issues_open: 'Resolva as pendências de moderação que bloqueiam a publicação.',
   establishment_not_active: 'O lugar precisa estar ativo antes do envio.',
   establishment_permanently_closed: 'Um lugar fechado definitivamente não pode ser enviado.',
   slug_already_published:

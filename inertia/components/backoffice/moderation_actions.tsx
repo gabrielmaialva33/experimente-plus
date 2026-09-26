@@ -162,7 +162,7 @@ export function ModerationActions({
             <form
               onSubmit={approve}
               aria-busy={activeOperation === 'approve'}
-              className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6"
+              className="space-y-4 rounded-card border border-border-subtle bg-card p-5 sm:p-6"
             >
               <div>
                 <h2 className="text-lg font-semibold">Aprovar e publicar</h2>
@@ -191,6 +191,8 @@ export function ModerationActions({
               <Button
                 type="submit"
                 variant="primary"
+                size="lg"
+                shape="pill"
                 className="w-full"
                 disabled={busy || blockingIssueCount > 0}
                 title={
@@ -215,7 +217,7 @@ export function ModerationActions({
             <form
               onSubmit={openChangesDialog}
               aria-busy={activeOperation === 'request_changes'}
-              className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6 xl:col-span-2"
+              className="space-y-4 rounded-card border border-border-subtle bg-card p-5 sm:p-6 xl:col-span-2"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -228,7 +230,8 @@ export function ModerationActions({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="md"
+                  shape="pill"
                   disabled={busy}
                   onClick={() =>
                     changesForm.setData('issues', [
@@ -269,7 +272,7 @@ export function ModerationActions({
                   return (
                     <div
                       key={issue.key}
-                      className="grid gap-3 rounded-md border border-border bg-muted/40 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
+                      className="grid gap-3 rounded-xl bg-muted/50 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
                     >
                       <EditorField
                         htmlFor={`${issue.key}-field`}
@@ -357,7 +360,14 @@ export function ModerationActions({
                 })}
               </div>
 
-              <Button type="submit" variant="outline" disabled={busy} title={busyReason}>
+              <Button
+                type="submit"
+                variant="outline"
+                size="lg"
+                shape="pill"
+                disabled={busy}
+                title={busyReason}
+              >
                 {activeOperation === 'request_changes' ? (
                   <>
                     <Loader2 aria-hidden="true" className="size-4 animate-spin" />
@@ -416,7 +426,14 @@ export function ModerationActions({
               className="resize-y"
             />
           </EditorField>
-          <Button type="submit" variant="destructive" disabled={busy} title={busyReason}>
+          <Button
+            type="submit"
+            variant="destructive"
+            size="lg"
+            shape="pill"
+            disabled={busy}
+            title={busyReason}
+          >
             {activeOperation === 'reject' ? (
               <>
                 <Loader2 aria-hidden="true" className="size-4 animate-spin" />

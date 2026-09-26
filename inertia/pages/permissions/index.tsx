@@ -1,16 +1,9 @@
 import { Head } from '@inertiajs/react'
 import { useMemo, useState } from 'react'
-import { KeyRound, Search } from 'lucide-react'
+import { ChevronDown, KeyRound, Search } from 'lucide-react'
 
 import { MainLayout } from '~/layouts'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardHeading,
-  CardTitle,
-  CardToolbar,
-} from '~/components/ui/card'
+import { Card, CardContent } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { EmptyState } from '~/components/empty_state'
 import { Input } from '~/components/ui/input'
@@ -71,6 +64,8 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
   }, [permissions, search])
 
   const grouped = useMemo(() => groupByResource(filtered), [filtered])
+  // Collapsed by area (audit W41); a search opens every area it matched.
+  const searching = search.trim() !== ''
 
   return (
     <MainLayout>
@@ -78,6 +73,8 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
 
       <div className="space-y-6">
         <PageHeader
+          eyebrow="Pessoas e acesso"
+          icon={KeyRound}
           title="Permissões"
           description="Capacidades globais agrupadas por recurso. As regras do domínio continuam limitando cada organização e unidade."
         />
@@ -105,55 +102,54 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <section
+            aria-label="Permissões por área"
+            className="divide-y divide-border-subtle overflow-hidden rounded-card border border-border-subtle bg-card"
+          >
             {grouped.map(([resource, items]) => (
-              <Card key={resource}>
-                <CardHeader>
-                  <CardHeading>
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <KeyRound className="size-4" />
-                      </div>
-                      <CardTitle>{permissionResourceLabel(resource)}</CardTitle>
-                    </div>
-                  </CardHeading>
-                  <CardToolbar>
-                    <Badge variant="secondary" appearance="light" size="sm">
-                      {items.length}
+              <details
+                key={resource + (searching ? ':search' : '')}
+                open={searching || undefined}
+                className="group"
+              >
+                <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
+                      <KeyRound aria-hidden="true" className="size-4" />
+                    </span>
+                    <span className="truncate font-display font-extrabold">
+                      {permissionResourceLabel(resource)}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <Badge variant="secondary" appearance="light" shape="pill">
+                      {items.length} {items.length === 1 ? 'permissão' : 'permissões'}
                     </Badge>
-                  </CardToolbar>
-                </CardHeader>
-                <CardContent className="space-y-2">
+                    <ChevronDown
+                      aria-hidden="true"
+                      className="size-4 text-muted-foreground transition-transform group-open:rotate-180"
+                    />
+                  </span>
+                </summary>
+                <ul className="flex flex-wrap gap-2 px-5 pb-5 sm:ps-17">
                   {items.map((permission) => (
-                    <div
-                      key={permission.id}
-                      className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {permissionActionLabel(permission.action)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <Badge
-                          variant={ACTION_BADGE[permission.action] ?? 'secondary'}
-                          appearance="light"
-                          size="sm"
-                        >
-                          {permissionActionLabel(permission.action)}
-                        </Badge>
-                        {permission.context !== 'any' && (
-                          <Badge variant="secondary" appearance="outline" size="sm">
-                            {permissionContextLabel(permission.context)}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                    <li key={permission.id}>
+                      <Badge
+                        variant={ACTION_BADGE[permission.action] ?? 'secondary'}
+                        appearance="light"
+                        shape="pill"
+                      >
+                        {permissionActionLabel(permission.action)}
+                        {permission.context !== 'any'
+                          ? ' · ' + permissionContextLabel(permission.context)
+                          : null}
+                      </Badge>
+                    </li>
                   ))}
-                </CardContent>
-              </Card>
+                </ul>
+              </details>
             ))}
-          </div>
+          </section>
         )}
       </div>
     </MainLayout>

@@ -23,6 +23,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '~/components/ui/card'
 import { Input } from '~/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { useAuth } from '~/hooks/use_auth'
 import { MainLayout } from '~/layouts'
 import { firstError } from '~/lib/form_errors'
@@ -53,18 +54,26 @@ const THEMES: { value: string; label: string; description: string; icon: LucideI
 
 function ProfileTab({ profile }: { profile: SettingsProfile }) {
   const form = useForm({ full_name: profile.full_name, username: profile.username ?? '' })
+  // Same guard as every admin form (audit W68/W69): leaving asks, saving is let through.
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.isDirty && !form.processing,
+  })
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (form.processing) return
-    form.post('/settings/profile', { preserveScroll: true })
+    allowNextVisit()
+    form.post('/settings/profile', {
+      preserveScroll: true,
+      onSuccess: () => form.setDefaults(),
+    })
   }
 
   return (
     <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle>Dados pessoais</CardTitle>
+          <CardTitle className="font-display text-lg font-extrabold">Dados pessoais</CardTitle>
           <p className="text-sm text-muted-foreground">
             Atualize como seu nome aparece nas áreas autenticadas.
           </p>
@@ -119,7 +128,13 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
             <p role="status" aria-live="polite" className="me-auto text-sm text-success">
               {form.recentlySuccessful ? 'Dados pessoais atualizados.' : ''}
             </p>
-            <Button type="submit" disabled={form.processing || !form.isDirty}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="xl"
+              shape="pill"
+              disabled={form.processing || !form.isDirty}
+            >
               {form.processing ? (
                 <>
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />
@@ -143,7 +158,7 @@ function AppearanceTab() {
     <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle>Aparência</CardTitle>
+          <CardTitle className="font-display text-lg font-extrabold">Aparência</CardTitle>
           <p className="text-sm text-muted-foreground">
             Escolha um tema. A preferência fica salva neste navegador.
           </p>
@@ -215,7 +230,9 @@ function AccountTab() {
     <Card className="max-w-3xl border-destructive/40">
       <CardHeader>
         <CardHeading>
-          <CardTitle className="text-destructive">Segurança e exclusão</CardTitle>
+          <CardTitle className="font-display text-lg font-extrabold text-destructive">
+            Segurança e exclusão
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             A exclusão desativa a conta, revoga as credenciais e anonimiza seus dados pessoais.
             Referências históricas exigidas para auditoria permanecem sem identificar você.
@@ -271,6 +288,8 @@ function AccountTab() {
           <Button
             type="submit"
             variant="destructive"
+            size="lg"
+            shape="pill"
             disabled={form.processing || !confirmationReady}
           >
             <Trash2 aria-hidden="true" className="size-4" />
@@ -326,7 +345,7 @@ function OperationsTab() {
     <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle>Operações</CardTitle>
+          <CardTitle className="font-display text-lg font-extrabold">Operações</CardTitle>
           <p className="text-sm text-muted-foreground">
             Operações isolam dados privados. Cidades e organizações continuam dentro da operação
             selecionada.
@@ -353,7 +372,13 @@ function OperationsTab() {
                   placeholder="Nome da operação"
                 />
               </EditorField>
-              <Button type="submit" disabled={form.processing || !form.data.name.trim()}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                shape="pill"
+                disabled={form.processing || !form.data.name.trim()}
+              >
                 {form.processing ? (
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />
                 ) : null}
@@ -371,7 +396,7 @@ function OperationsTab() {
             className="py-8"
           />
         ) : (
-          <ul className="divide-y divide-border" aria-busy={switchingId !== null}>
+          <ul className="divide-y divide-border-subtle" aria-busy={switchingId !== null}>
             {tenants.map((tenant) => {
               const active = tenant.id === activeTenantId
               const switching = switchingId === tenant.id
@@ -381,7 +406,7 @@ function OperationsTab() {
                   key={tenant.id}
                   className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
                 >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-accent">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                     <Building2 aria-hidden="true" className="size-4" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -391,14 +416,15 @@ function OperationsTab() {
                     </span>
                   </span>
                   {active ? (
-                    <Badge variant="primary" appearance="light" size="sm">
+                    <Badge variant="primary" appearance="light" shape="pill" size="sm">
                       Operação ativa
                     </Badge>
                   ) : (
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="md"
+                      shape="pill"
                       disabled={switchingId !== null}
                       onClick={() => switchOperation(tenant.id)}
                     >

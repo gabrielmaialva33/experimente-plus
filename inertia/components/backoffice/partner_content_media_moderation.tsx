@@ -110,7 +110,10 @@ export function PartnerContentMediaModeration({
           const status = partnerContentMediaStatusMeta[item.moderationStatus]
           const busy = actionId === item.id
           return (
-            <article key={item.id} className="overflow-hidden rounded-md border border-border">
+            <article
+              key={item.id}
+              className="overflow-hidden rounded-xl border border-border-subtle"
+            >
               <div className="aspect-[16/10] overflow-hidden bg-muted">
                 <img
                   src={item.asset.url}
@@ -153,7 +156,8 @@ export function PartnerContentMediaModeration({
                       {canApprove ? (
                         <Button
                           type="button"
-                          size="sm"
+                          size="md"
+                          shape="pill"
                           disabled={actionId !== null}
                           onClick={() => void decide(item.id, 'approve')}
                         >
@@ -169,7 +173,8 @@ export function PartnerContentMediaModeration({
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
+                          size="md"
+                          shape="pill"
                           disabled={actionId !== null}
                           onClick={() => {
                             setRejectingId((current) => (current === item.id ? null : item.id))
@@ -204,7 +209,8 @@ export function PartnerContentMediaModeration({
                           <Button
                             type="button"
                             variant="destructive"
-                            size="sm"
+                            size="md"
+                            shape="pill"
                             disabled={busy || !reason.trim()}
                             onClick={() => void decide(item.id, 'reject')}
                           >

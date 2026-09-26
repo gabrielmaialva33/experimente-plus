@@ -118,5 +118,22 @@ test.group('Dashboard workspace scoping', (group) => {
     assert.equal(stats.totals.files, 0)
     assert.deepEqual(stats.recentUsers, [])
     assert.isTrue(stats.signups.every((point) => point.users === 0))
+    // Audit W31: the months on the chart are Portuguese.
+    const months = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ]
+    assert.lengthOf(stats.signups, 6)
+    for (const point of stats.signups) assert.include(months, point.month)
   })
 })

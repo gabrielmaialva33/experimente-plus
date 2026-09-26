@@ -21,10 +21,18 @@ const familyFields: FieldSpec[] = [
     type: 'text',
     omitWhenBlank: true,
     hint: 'Em branco, é gerado a partir do nome',
+    advanced: true,
   },
   { name: 'description', label: 'Descrição', type: 'textarea', nullable: true },
-  { name: 'icon', label: 'Ícone', type: 'text', nullable: true },
-  { name: 'sort_order', label: 'Ordem', type: 'number', defaultValue: '0', step: '1' },
+  { name: 'icon', label: 'Ícone', type: 'text', nullable: true, advanced: true },
+  {
+    name: 'sort_order',
+    label: 'Ordem',
+    type: 'number',
+    defaultValue: '0',
+    step: '1',
+    advanced: true,
+  },
 ]
 
 export default function BackofficeTaxonomy({ families, categories }: TaxonomyPageProps) {
@@ -69,20 +77,17 @@ export default function BackofficeTaxonomy({ families, categories }: TaxonomyPag
     },
   ]
 
+  // Slugs and ordering are technical; the list says what a person reads.
   const describeFamily = (row: JsonRecord) => ({
     name: text(row, 'name'),
-    meta: text(row, 'slug'),
+    meta: text(row, 'description'),
   })
 
   const describeCategory = (row: JsonRecord) => {
     const parent = row.parent_id ? categoryName.get(numeric(row, 'parent_id')) : null
     return {
       name: text(row, 'name'),
-      meta: [
-        familyName.get(numeric(row, 'family_id')),
-        parent ? `dentro de ${parent}` : null,
-        text(row, 'slug'),
-      ]
+      meta: [familyName.get(numeric(row, 'family_id')), parent ? `dentro de ${parent}` : null]
         .filter(Boolean)
         .join(' · '),
     }
@@ -91,9 +96,9 @@ export default function BackofficeTaxonomy({ families, categories }: TaxonomyPag
   return (
     <MainLayout>
       <Head title="Categorias" />
-      <div className="space-y-7">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Administração"
+          eyebrow="Administração · catálogo"
           icon={Tags}
           title="Categorias"
           description="Famílias e categorias que organizam a descoberta. Nada é apagado: uma categoria sai de uso sendo desativada, e o histórico das unidades que a usaram continua de pé."

@@ -754,6 +754,71 @@ test.group('Establishment review workflow', (group) => {
     })
   })
 
+  test('shows the moderator every field of a revision and what changed since publication', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('review-compare')
+    const establishmentId = await createDraftEstablishment(client, scenario, 'Lugar comparado')
+    const mediaId = await completeProfile(client, scenario, establishmentId)
+    const firstSubmission = await submitRevision(client, scenario, establishmentId)
+    firstSubmission.assertStatus(200)
+    const first = await pendingRevision(establishmentId)
+    const moderator = await createModerator(scenario)
+
+    const firstDetail = await client
+      .get(`/api/v1/admin/establishment-revisions/${first.id}`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+    firstDetail.assertStatus(200)
+    const firstComparison = firstDetail.body().comparison
+    assert.isNull(firstComparison.published)
+    assert.isNull(firstComparison.published_version)
+    assert.equal(firstComparison.submitted['identity.public_name'], 'Lugar comparado')
+    assert.equal(firstComparison.submitted['contacts.public_phone'], '43999990000')
+    assert.isString(firstComparison.submitted['address.street'])
+    assert.isString(firstComparison.submitted['categories.all'])
+
+    const media = await approveMedia(client, scenario, moderator, mediaId)
+    media.assertStatus(200)
+    const approval = await client
+      .post(`/api/v1/admin/establishment-revisions/${first.id}/approve`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+      .json({})
+    approval.assertStatus(200)
+
+    const draft = await client
+      .post(`/api/v1/establishments/${establishmentId}/revisions`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ source: 'published' })
+    draft.assertStatus(201)
+    const edit = await client
+      .put(`/api/v1/establishments/${establishmentId}/revision`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(scenario.owner)
+      .json({ public_phone: '(43) 98888-1111' })
+    edit.assertStatus(200)
+    const secondSubmission = await submitRevision(client, scenario, establishmentId)
+    secondSubmission.assertStatus(200)
+    const second = await pendingRevision(establishmentId)
+
+    const detail = await client
+      .get(`/api/v1/admin/establishment-revisions/${second.id}`)
+      .headers(tenantHeader(scenario.tenant.id))
+      .loginAs(moderator)
+    detail.assertStatus(200)
+    const { comparison } = detail.body()
+    assert.equal(comparison.published_version, first.version)
+    assert.equal(comparison.submitted['contacts.public_phone'], '43988881111')
+    assert.equal(comparison.published['contacts.public_phone'], '43999990000')
+    const changed = Object.keys(comparison.submitted).filter(
+      (key) => comparison.submitted[key] !== comparison.published[key]
+    )
+    assert.deepEqual(changed, ['contacts.public_phone'])
+  })
+
   test('clones the latest rejected revision only when no publication exists', async ({
     client,
     assert,

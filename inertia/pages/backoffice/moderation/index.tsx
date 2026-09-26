@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
-import { ArrowRight, ClipboardCheck, Clock3 } from 'lucide-react'
+import { ArrowRight, ClipboardCheck } from 'lucide-react'
 
 import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
@@ -10,13 +10,13 @@ import {
   EditorField,
   editorSelectClassName,
 } from '~/components/portal/establishment_editor/editor_field'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import { formatDateTime, getRevisionStatusMeta } from '~/lib/labels'
-import { cn } from '~/lib/utils'
 
-interface ModerationIndexProps {
+type ModerationIndexProps = {
   revisions: unknown
   filters: JsonRecord
 }
@@ -82,40 +82,28 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
 
   return (
     <MainLayout>
-      <Head title="Fila de moderação" />
+      <Head title="Dados de lugares para revisar" />
 
       <div className="space-y-7">
         <PageHeader
-          eyebrow="Backoffice"
-          icon={ClipboardCheck}
-          title="Fila de moderação"
-          description="Analise revisões submetidas, registre correções estruturadas e publique somente conteúdo aprovado."
+          eyebrow="Caixa de moderação"
+          title="Dados de lugares para revisar"
+          description="Versões enviadas pelos parceiros, das mais antigas para as mais novas. Nada fica público sem aprovação."
+          meta={
+            <Badge variant="warning" appearance="light" shape="pill" size="lg">
+              {total === 0
+                ? 'Nada esperando'
+                : total === 1
+                  ? '1 versão esperando'
+                  : `${total.toLocaleString('pt-BR')} versões esperando`}
+            </Badge>
+          }
         />
-
-        <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-md border border-warning/20 bg-warning/15 text-warning-foreground">
-              <Clock3 aria-hidden="true" className="size-4.5" />
-            </span>
-            <div>
-              <p className="font-bold tracking-[-0.015em]">
-                {total.toLocaleString('pt-BR')}{' '}
-                {total === 1 ? 'revisão pendente' : 'revisões pendentes'}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                A fila prioriza as submissões mais antigas.
-              </p>
-            </div>
-          </div>
-          <span className="w-fit rounded-full bg-muted px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Operação ativa
-          </span>
-        </section>
 
         <form
           onSubmit={applyFilters}
           aria-label="Filtros da fila de moderação"
-          className="grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="grid gap-4 rounded-card border border-border-subtle bg-card p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
           <EditorField htmlFor="filter-organization" label="Organização">
             <select
@@ -156,11 +144,11 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
             </select>
           </EditorField>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" size="lg" shape="pill">
               Filtrar
             </Button>
             {hasActiveFilters ? (
-              <Button asChild variant="outline">
+              <Button asChild variant="ghost" size="lg" shape="pill">
                 <Link href={buildPageHref(QUEUE_PATH, { per_page: perPage })}>Limpar filtros</Link>
               </Button>
             ) : null}
@@ -171,16 +159,16 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
           <EmptyState
             icon={ClipboardCheck}
             headingLevel={2}
-            title="Fila vazia"
+            title="Nada para revisar"
             description={
               hasActiveFilters
                 ? 'Nenhuma revisão pendente corresponde aos filtros aplicados.'
-                : 'Não existem revisões aguardando decisão nesta operação.'
+                : 'Quando um parceiro enviar dados de um lugar, a versão aparece aqui.'
             }
-            className="rounded-lg border border-dashed border-border bg-card"
+            className="rounded-card border border-border-subtle bg-card"
           />
         ) : (
-          <section aria-label="Revisões aguardando moderação" className="space-y-3">
+          <section aria-label="Versões aguardando moderação" className="space-y-3">
             {items.map((item) => {
               const id = numeric(item, 'id')
               const statusMeta = getRevisionStatusMeta(text(item, 'status'))
@@ -189,45 +177,44 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
               return (
                 <article
                   key={id}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-4 rounded-card border border-border-subtle bg-card p-5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex min-w-0 items-start gap-3.5">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary/10 text-primary">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                       <ClipboardCheck aria-hidden="true" className="size-4.5" />
                     </span>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="truncate font-bold tracking-[-0.015em]">
-                          {text(item, 'public_name', 'Unidade sem nome')}
+                        <h2 className="truncate font-display text-lg font-bold">
+                          {text(item, 'public_name', 'Lugar sem nome')}
                         </h2>
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
+                        <Badge variant="neutral" appearance="light" shape="pill" size="md">
                           versão {numeric(item, 'version')}
-                        </span>
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.68rem] font-semibold',
-                            statusMeta.className
-                          )}
+                        </Badge>
+                        <Badge
+                          variant="neutral"
+                          appearance="light"
+                          shape="pill"
+                          size="md"
+                          className={statusMeta.className}
                         >
                           {statusMeta.label}
-                        </span>
+                        </Badge>
                       </div>
                       <p className="mt-1 truncate text-sm text-muted-foreground">
                         {text(item, 'organization_name', 'Organização não informada')} ·{' '}
                         {text(item, 'city_name', 'Cidade não informada')}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {submittedAt
-                          ? `Submetida em ${submittedAt}`
-                          : 'Data de submissão indisponível'}
+                        {submittedAt ? `Enviada em ${submittedAt}` : 'Data de envio indisponível'}
                       </p>
                     </div>
                   </div>
 
-                  <Button asChild variant="outline" size="sm" className="shrink-0">
+                  <Button asChild variant="outline" size="lg" shape="pill" className="shrink-0">
                     <Link href={`/backoffice/moderation/${id}`}>
                       Revisar
-                      <ArrowRight aria-hidden="true" className="size-3.5" />
+                      <ArrowRight aria-hidden="true" className="size-4" />
                     </Link>
                   </Button>
                 </article>

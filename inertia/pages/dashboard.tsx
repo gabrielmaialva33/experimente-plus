@@ -1,5 +1,14 @@
 import { Head, Link } from '@inertiajs/react'
-import { Building2, FileText, LayoutDashboard, ShieldCheck, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  Building2,
+  FileText,
+  Inbox,
+  LayoutDashboard,
+  ShieldCheck,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 
 import { MetricCard } from '~/components/metric_card'
@@ -56,8 +65,22 @@ function initialsOf(name: string) {
     .toUpperCase()
 }
 
-function firstNameOf(name: string | undefined): string {
-  return name?.trim().split(/\s+/)[0] || 'por aqui'
+/**
+ * "Bom dia, Ana" by the hour in Brasília (audit W30). Without a name the
+ * greeting stands alone instead of reading "Olá, por aqui".
+ */
+export function greetingFor(name: string | undefined, now = new Date()): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('pt-BR', {
+      hour: 'numeric',
+      hourCycle: 'h23',
+      timeZone: 'America/Sao_Paulo',
+    }).format(now)
+  )
+  const greeting =
+    hour >= 5 && hour < 12 ? 'Bom dia' : hour >= 12 && hour < 18 ? 'Boa tarde' : 'Boa noite'
+  const firstName = name?.trim().split(/\s+/)[0]
+  return firstName ? `${greeting}, ${firstName}` : greeting
 }
 
 function formatDate(iso: string | null) {
@@ -72,14 +95,16 @@ function formatDate(iso: string | null) {
 export default function DashboardPage({ stats }: DashboardPageProps) {
   const { user, activeTenant, can } = useAuth()
   const canListUsers = can('users.list')
+  // The daily work of the operation starts on "Hoje"; this page is the long view (audit W13).
+  const canOpenToday = Boolean(activeTenant) && can('establishments.list')
 
   return (
     <MainLayout>
       <Head title="Painel operacional" />
 
-      <div className="space-y-7">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow={`Olá, ${firstNameOf(user?.full_name)}`}
+          eyebrow={greetingFor(user?.full_name)}
           icon={LayoutDashboard}
           title="Painel operacional"
           description={
@@ -89,12 +114,46 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           }
           actions={
             can('users.create') ? (
-              <Button asChild variant="primary">
-                <Link href="/users/create">Adicionar usuário</Link>
+              <Button asChild variant="outline" size="lg" shape="pill">
+                <Link href="/users/create">
+                  <UserPlus aria-hidden="true" className="size-4" />
+                  Adicionar usuário
+                </Link>
               </Button>
             ) : undefined
           }
         />
+
+        {canOpenToday ? (
+          <section
+            aria-labelledby="dashboard-today-heading"
+            className="flex flex-col gap-4 rounded-card bg-primary p-5 text-primary-foreground sm:flex-row sm:items-center sm:justify-between sm:p-7"
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
+                <Inbox aria-hidden="true" className="size-5" />
+              </span>
+              <div>
+                <h2
+                  id="dashboard-today-heading"
+                  className="font-display text-xl font-extrabold tracking-[-0.01em]"
+                >
+                  O que pede atenção hoje
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm text-primary-foreground/80">
+                  Moderação, denúncias e prazos da operação em uma lista só. Comece o dia por lá;
+                  este painel mostra a visão de longo prazo.
+                </p>
+              </div>
+            </div>
+            <Button asChild variant="cta" size="xl" shape="pill" className="shrink-0">
+              <Link href="/backoffice/today">
+                Abrir Hoje
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            </Button>
+          </section>
+        ) : null}
 
         <section
           aria-label="Indicadores gerais"
@@ -132,10 +191,12 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
         </section>
 
         <section aria-label="Atividade recente" className="grid min-w-0 gap-5 xl:grid-cols-2">
-          <Card className="min-w-0 overflow-hidden border-border/70">
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardHeading>
-                <CardTitle>Novos usuários</CardTitle>
+                <CardTitle className="font-display text-lg font-extrabold">
+                  Novos usuários
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">Cadastros nos últimos seis meses</p>
               </CardHeading>
             </CardHeader>
@@ -161,10 +222,12 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
             </CardContent>
           </Card>
 
-          <Card className="min-w-0 overflow-hidden border-border/70">
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardHeading>
-                <CardTitle>Distribuição mensal</CardTitle>
+                <CardTitle className="font-display text-lg font-extrabold">
+                  Distribuição mensal
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Entradas registradas na operação ativa
                 </p>
@@ -186,17 +249,19 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           </Card>
         </section>
 
-        <Card className="overflow-hidden border-border/70">
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardHeading>
-              <CardTitle>Usuários recentes</CardTitle>
+              <CardTitle className="font-display text-lg font-extrabold">
+                Usuários recentes
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Pessoas adicionadas mais recentemente à operação
               </p>
             </CardHeading>
             {canListUsers && (
               <CardToolbar>
-                <Button asChild variant="outline" size="sm">
+                <Button asChild variant="outline" size="md" shape="pill">
                   <Link href="/users">Ver todos</Link>
                 </Button>
               </CardToolbar>
@@ -210,14 +275,14 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
                 description="Os usuários adicionados à operação aparecerão aqui."
               />
             ) : (
-              <ul className="divide-y divide-border/70">
+              <ul className="divide-y divide-border-subtle">
                 {stats.recentUsers.map((recent) => (
                   <li
                     key={recent.id}
                     className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-accent/45"
                   >
                     <Avatar className="size-9">
-                      <AvatarFallback className="bg-primary/10 text-primary">
+                      <AvatarFallback className="bg-primary-soft font-bold text-primary-accent">
                         {initialsOf(recent.full_name)}
                       </AvatarFallback>
                     </Avatar>
@@ -228,7 +293,13 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
                     <div className="hidden gap-1 sm:flex">
                       {recent.roles.length > 0 ? (
                         recent.roles.map((role) => (
-                          <Badge key={role} variant="secondary" appearance="light" size="sm">
+                          <Badge
+                            key={role}
+                            variant="secondary"
+                            appearance="light"
+                            shape="pill"
+                            size="sm"
+                          >
                             {globalRoleLabel(role)}
                           </Badge>
                         ))

@@ -75,7 +75,7 @@ describe('FeedbackCard', () => {
     const { user } = render(<FeedbackCard item={item} />)
 
     await user.selectOptions(screen.getByLabelText('Status'), 'resolved')
-    await user.click(screen.getByRole('button', { name: 'Atualizar' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar triagem' }))
 
     expect(mockPatch).toHaveBeenCalledTimes(1)
     expect(mockPatch).toHaveBeenCalledWith('/backoffice/feedback/3', { preserveScroll: true })
@@ -128,7 +128,7 @@ describe('FeedbackCard', () => {
     render(<FeedbackCard item={item} />)
 
     expect(screen.getByText(item.message)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Atualizar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Salvar triagem' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Status')).not.toBeInTheDocument()
   })
 })

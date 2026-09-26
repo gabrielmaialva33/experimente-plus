@@ -20,6 +20,7 @@ import {
   EditorField,
   editorSelectClassName,
 } from '~/components/portal/establishment_editor/editor_field'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
@@ -279,12 +280,12 @@ export default function BenefitsBackofficePage({
           description="Organize cada edição por cidade, validade e preço. A publicação só é liberada quando existe ao menos uma oferta ativa."
           meta={
             <>
-              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
+              <Badge variant="secondary" appearance="light" shape="pill">
                 {editions.length} {editions.length === 1 ? 'edição' : 'edições'}
-              </span>
-              <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+              </Badge>
+              <Badge variant="success" appearance="light" shape="pill">
                 {activeEditionCount} {activeEditionCount === 1 ? 'publicada' : 'publicadas'}
-              </span>
+              </Badge>
             </>
           }
         />
@@ -299,13 +300,13 @@ export default function BenefitsBackofficePage({
           )}
         >
           {canCreate || canUpdate ? (
-            <section className="rounded-lg border border-border bg-card p-5 sm:p-6 xl:sticky xl:top-6">
+            <section className="rounded-card border border-border-subtle bg-card p-5 sm:p-6 xl:sticky xl:top-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                     {editingId ? 'Editar edição' : canCreate ? 'Nova edição' : 'Edição existente'}
                   </p>
-                  <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
+                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-[-0.01em]">
                     {editingId
                       ? 'Ajuste o período e a apresentação'
                       : canCreate
@@ -468,9 +469,9 @@ export default function BenefitsBackofficePage({
                     {editingId ? (
                       <Button
                         type="button"
-                        variant="outline"
-                        size="lg"
-                        className="min-h-11"
+                        variant="ghost"
+                        size="xl"
+                        shape="pill"
                         onClick={resetForm}
                         disabled={processing}
                       >
@@ -481,8 +482,9 @@ export default function BenefitsBackofficePage({
                       canUpdate ? (
                         <Button
                           type="submit"
-                          size="lg"
-                          className="min-h-11"
+                          variant="primary"
+                          size="xl"
+                          shape="pill"
                           disabled={processing || cities.length === 0}
                         >
                           {processing ? (
@@ -496,8 +498,9 @@ export default function BenefitsBackofficePage({
                     ) : canCreate ? (
                       <Button
                         type="submit"
-                        size="lg"
-                        className="min-h-11"
+                        variant="primary"
+                        size="xl"
+                        shape="pill"
                         disabled={processing || cities.length === 0}
                       >
                         {processing ? (
@@ -533,7 +536,7 @@ export default function BenefitsBackofficePage({
                     ? 'Cadastre a primeira edição. Depois, cada parceiro poderá vincular uma oferta à sua unidade publicada.'
                     : 'Ainda não existem edições cadastradas nesta operação.'
                 }
-                className="rounded-lg border border-dashed border-border bg-card"
+                className="rounded-card border border-dashed border-border bg-card"
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
@@ -552,16 +555,16 @@ export default function BenefitsBackofficePage({
                     <article
                       key={edition.id}
                       className={cn(
-                        'flex min-h-full flex-col rounded-lg border border-border bg-card p-5 sm:p-6',
+                        'flex min-h-full flex-col rounded-card border border-border-subtle bg-card p-5 sm:p-6',
                         edition.status === 'archived' && 'opacity-70'
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                             {edition.city.name} · {edition.city.state_code}
                           </p>
-                          <h2 className="mt-1 truncate text-lg font-bold tracking-[-0.02em]">
+                          <h2 className="mt-1 truncate font-display text-lg font-extrabold tracking-[-0.01em]">
                             {edition.name}
                           </h2>
                         </div>
@@ -581,7 +584,7 @@ export default function BenefitsBackofficePage({
                         </p>
                       ) : null}
 
-                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/40 p-4 text-sm">
+                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-4 text-sm">
                         <div>
                           <dt className="text-xs text-muted-foreground">Utilização</dt>
                           <dd className="mt-1 font-semibold">
@@ -615,7 +618,13 @@ export default function BenefitsBackofficePage({
 
                       <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row sm:flex-wrap">
                         {canListAccesses ? (
-                          <Button asChild variant="outline" size="sm" className="min-h-10 flex-1">
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="lg"
+                            shape="pill"
+                            className="flex-1"
+                          >
                             <Link href="/backoffice/accesses">
                               <UsersRound aria-hidden="true" />
                               Acessos
@@ -626,8 +635,9 @@ export default function BenefitsBackofficePage({
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="min-h-10 flex-1"
+                            size="lg"
+                            shape="pill"
+                            className="flex-1"
                             onClick={() => beginEdit(edition)}
                             disabled={busy}
                           >
@@ -639,8 +649,10 @@ export default function BenefitsBackofficePage({
                         (edition.status === 'draft' || edition.status === 'paused') ? (
                           <Button
                             type="button"
-                            size="sm"
-                            className="min-h-10 flex-1"
+                            variant="primary"
+                            size="lg"
+                            shape="pill"
+                            className="flex-1"
                             onClick={() =>
                               runAction(
                                 `/backoffice/benefits/${edition.id}/publish`,
@@ -667,8 +679,9 @@ export default function BenefitsBackofficePage({
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="min-h-10 flex-1"
+                            size="lg"
+                            shape="pill"
+                            className="flex-1"
                             onClick={() =>
                               runAction(
                                 `/backoffice/benefits/${edition.id}/pause`,
@@ -689,9 +702,9 @@ export default function BenefitsBackofficePage({
                         {canArchive && edition.status !== 'archived' ? (
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="min-h-10"
+                            variant="dim"
+                            size="lg"
+                            shape="pill"
                             onClick={() => setArchiveTarget(edition)}
                             disabled={busy}
                           >
