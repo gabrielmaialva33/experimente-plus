@@ -23,26 +23,34 @@ export default function ServerError({ error }: ServerErrorProps) {
       <div className="app-container flex min-h-[60vh] items-center py-12 sm:py-16">
         <section
           aria-labelledby="server-error-title"
-          className="mx-auto w-full max-w-2xl rounded-xl border bg-card p-6 sm:p-10"
+          className="mx-auto w-full max-w-2xl rounded-card border border-border-subtle bg-card p-6 sm:p-10"
         >
-          <span className="flex size-11 items-center justify-center rounded-md bg-destructive-soft text-destructive-accent">
+          <span className="flex size-12 items-center justify-center rounded-full bg-destructive-soft text-destructive-accent">
             <CircleAlert className="size-5" aria-hidden="true" />
           </span>
-          <p className="mt-6 text-sm font-semibold text-destructive-accent">Erro {error.status}</p>
+          <p className="mt-6 text-xs font-extrabold uppercase tracking-[0.1em] text-destructive-accent">
+            Erro {error.status}
+          </p>
           <h1
             id="server-error-title"
-            className="mt-2 text-3xl font-bold tracking-tight text-balance sm:text-4xl"
+            className="mt-2 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
           >
             Não foi possível concluir
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">{error.message}</p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button type="button" variant="cta" size="lg" onClick={() => window.location.reload()}>
+            <Button
+              type="button"
+              variant="primary"
+              size="2xl"
+              shape="pill"
+              onClick={() => window.location.reload()}
+            >
               <RefreshCw aria-hidden="true" />
               Tentar novamente
             </Button>
-            <Button variant="outline" size="lg" asChild>
+            <Button variant="outline" size="2xl" shape="pill" asChild>
               <Link href="/">
                 <House aria-hidden="true" />
                 Voltar ao início
