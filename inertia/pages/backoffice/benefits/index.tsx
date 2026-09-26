@@ -525,7 +525,7 @@ export default function BenefitsBackofficePage({
                   headingLevel={3}
                   title="Nenhuma edição selecionada"
                   description="Escolha uma edição na lista para consultar e alterar seus dados."
-                  className="mt-6 border border-dashed border-border py-8"
+                  className="mt-6 rounded-2xl border border-dashed border-border py-8"
                 />
               )}
             </section>

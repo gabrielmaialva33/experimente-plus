@@ -171,7 +171,7 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
                 ? 'Nenhuma revisão pendente corresponde aos filtros aplicados.'
                 : 'Quando um parceiro enviar dados de um lugar, a versão aparece aqui.'
             }
-            className="rounded-card border border-border-subtle bg-card"
+            className="rounded-card border border-dashed border-border bg-card"
           />
         ) : (
           <section aria-label="Versões aguardando moderação" className="space-y-3">
