@@ -440,6 +440,14 @@ describe('flat foundation token contract', () => {
     expect(appCss).toContain('@utility app-container')
   })
 
+  it('lets the server-rendered page title come before the generic fallback', () => {
+    // Browsers and crawlers read the first <title>; the page's own must win before hydration.
+    expect(inertiaLayout.indexOf('@inertiaHead()')).toBeGreaterThan(-1)
+    expect(inertiaLayout.indexOf('<title inertia>')).toBeGreaterThan(
+      inertiaLayout.indexOf('@inertiaHead()')
+    )
+  })
+
   it('keeps the browser chrome and loaded font aligned with the product brand', () => {
     expect(inertiaLayout).toContain('<meta name="theme-color" content="#13467c" />')
     expect(inertiaLayout).toContain('instrument-sans:400,500,600,700')

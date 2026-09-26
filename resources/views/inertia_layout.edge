@@ -6,8 +6,6 @@
     <meta name="theme-color" content="#13467c" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <title inertia>Experimente+</title>
-
     <link rel="preconnect" href="https://fonts.bunny.net" />
     <link
       href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|plus-jakarta-sans:600,700,800"
@@ -17,6 +15,8 @@
     @stack('dumper')
     @viteReactRefresh()
     @inertiaHead()
+    {{-- After the rendered head: the first <title> wins, so this is only a fallback. --}}
+    <title inertia>Experimente+</title>
     @vite(['inertia/app/app.tsx', `inertia/pages/${page.component}.tsx`])
   </head>
 
