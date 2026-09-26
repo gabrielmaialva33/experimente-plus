@@ -21,6 +21,7 @@ import {
   EditorField,
   editorSelectClassName,
 } from '~/components/portal/establishment_editor/editor_field'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
@@ -198,12 +199,12 @@ export default function BenefitAccessesPage({
           description="Conceda uma edição a usuários já cadastrados na operação. A carteira é liberada imediatamente e seus benefícios são derivados das ofertas ativas."
           meta={
             <>
-              <span className="rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+              <Badge variant="success" appearance="light" shape="pill">
                 {activeCount} {activeCount === 1 ? 'acesso ativo' : 'acessos ativos'}
-              </span>
-              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
+              </Badge>
+              <Badge variant="secondary" appearance="light" shape="pill">
                 {courtesyCount} {courtesyCount === 1 ? 'cortesia' : 'cortesias'}
-              </span>
+              </Badge>
             </>
           }
         />
@@ -215,16 +216,16 @@ export default function BenefitAccessesPage({
           )}
         >
           {canCreate ? (
-            <section className="rounded-lg border border-border bg-card p-5 sm:p-6 xl:sticky xl:top-6">
+            <section className="rounded-card border border-border-subtle bg-card p-5 sm:p-6 xl:sticky xl:top-6">
               <div className="flex items-start gap-4">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary/10 text-primary">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                   <KeyRound aria-hidden="true" className="size-5" />
                 </span>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                     Nova concessão
                   </p>
-                  <h2 className="mt-1 text-xl font-bold tracking-[-0.025em]">
+                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-[-0.01em]">
                     Liberar uma carteira
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -321,8 +322,10 @@ export default function BenefitAccessesPage({
 
                 <Button
                   type="submit"
-                  size="lg"
-                  className="min-h-11 w-full"
+                  variant="primary"
+                  size="xl"
+                  shape="pill"
+                  className="w-full"
                   disabled={processing || editions.length === 0}
                 >
                   {processing ? (
@@ -334,7 +337,7 @@ export default function BenefitAccessesPage({
                 </Button>
 
                 {editions.length === 0 ? (
-                  <p className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-3 text-sm leading-6 text-muted-foreground">
+                  <p className="rounded-xl border border-dashed border-border bg-muted/40 px-3 py-3 text-sm leading-6 text-muted-foreground">
                     Publique uma edição antes de liberar acessos.
                   </p>
                 ) : null}
@@ -343,7 +346,7 @@ export default function BenefitAccessesPage({
           ) : null}
 
           <section className="space-y-4" aria-label="Histórico de acessos">
-            <div className="rounded-lg border border-border bg-card p-4">
+            <div className="rounded-card border border-border-subtle bg-card p-4">
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem_13rem]">
                 <label className="relative block">
                   <span className="sr-only">Buscar acessos</span>
@@ -398,7 +401,7 @@ export default function BenefitAccessesPage({
                     ? 'Ajuste os filtros ou use o formulário para conceder a primeira edição a um consumidor.'
                     : 'Ajuste os filtros para consultar os acessos desta operação.'
                 }
-                className="rounded-lg border border-dashed border-border bg-card"
+                className="rounded-card border border-dashed border-border bg-card"
               />
             ) : (
               <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
@@ -410,14 +413,14 @@ export default function BenefitAccessesPage({
                     <article
                       key={access.id}
                       className={cn(
-                        'flex min-h-full flex-col rounded-lg border border-border bg-card p-5 sm:p-6',
+                        'flex min-h-full flex-col rounded-card border border-border-subtle bg-card p-5 sm:p-6',
                         !isActive && 'opacity-75'
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <span
                           className={cn(
-                            'flex size-10 shrink-0 items-center justify-center rounded-md border',
+                            'flex size-10 shrink-0 items-center justify-center rounded-full border',
                             isActive
                               ? 'border-success/20 bg-success/10 text-success'
                               : 'border-border bg-muted text-muted-foreground'
@@ -442,14 +445,14 @@ export default function BenefitAccessesPage({
                       </div>
 
                       <p className="mt-4 break-all text-sm font-semibold">{access.holder.email}</p>
-                      <h2 className="mt-2 text-lg font-bold tracking-[-0.02em]">
+                      <h2 className="mt-2 font-display text-lg font-extrabold tracking-[-0.01em]">
                         {access.edition.name}
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {access.edition.city.name} · {access.edition.city.state_code}
                       </p>
 
-                      <dl className="mt-5 grid gap-3 rounded-md border border-border bg-muted/40 p-4 text-sm">
+                      <dl className="mt-5 grid gap-3 rounded-xl bg-muted/50 p-4 text-sm">
                         <div className="flex items-start justify-between gap-4">
                           <dt className="text-muted-foreground">Origem</dt>
                           <dd className="text-right font-semibold">
@@ -471,7 +474,7 @@ export default function BenefitAccessesPage({
                       </dl>
 
                       {access.notes ? (
-                        <p className="mt-4 rounded-md border border-border p-3 text-sm leading-6">
+                        <p className="mt-4 rounded-xl bg-muted/50 p-3 text-sm leading-6">
                           {access.notes}
                         </p>
                       ) : null}
@@ -486,7 +489,7 @@ export default function BenefitAccessesPage({
                       {isActive && canRevoke ? (
                         <div className="mt-auto pt-5">
                           {isRevoking ? (
-                            <div className="space-y-3 rounded-md border border-destructive/25 bg-destructive/5 p-4">
+                            <div className="space-y-3 rounded-xl border border-destructive/25 bg-destructive/5 p-4">
                               <div className="flex items-start justify-between gap-3">
                                 <div>
                                   <p className="text-sm font-semibold">Confirmar revogação</p>
@@ -524,7 +527,9 @@ export default function BenefitAccessesPage({
                               <Button
                                 type="button"
                                 variant="destructive"
-                                className="min-h-10 w-full"
+                                size="lg"
+                                shape="pill"
+                                className="w-full"
                                 onClick={() => setRevokeDialogOpen(true)}
                                 disabled={processing}
                               >
@@ -535,8 +540,10 @@ export default function BenefitAccessesPage({
                           ) : (
                             <Button
                               type="button"
-                              variant="outline"
-                              className="min-h-10 w-full"
+                              variant="dim"
+                              size="lg"
+                              shape="pill"
+                              className="w-full"
                               onClick={() => setRevokingId(access.id)}
                             >
                               <Ban aria-hidden="true" />
