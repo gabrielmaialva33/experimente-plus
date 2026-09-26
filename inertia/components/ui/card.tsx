@@ -18,11 +18,12 @@ const useCardContext = () => {
   return context
 }
 
-const cardVariants = cva('flex flex-col items-stretch rounded-lg text-card-foreground', {
+const cardVariants = cva('flex flex-col items-stretch rounded-card text-card-foreground', {
   variants: {
     variant: {
-      default: 'border border-border bg-card',
-      accent: 'border border-border bg-muted p-1',
+      // The outline is decorative: controls inside keep their own 3:1 boundaries.
+      default: 'border border-border-subtle bg-card',
+      accent: 'border border-border-subtle bg-muted p-1',
     },
   },
   defaultVariants: {
@@ -33,7 +34,7 @@ const cardVariants = cva('flex flex-col items-stretch rounded-lg text-card-foreg
 const cardHeaderVariants = cva('flex flex-wrap items-start justify-between gap-3 p-5', {
   variants: {
     variant: {
-      default: 'border-b border-border',
+      default: 'border-b border-border-subtle',
       accent: '',
     },
   },
@@ -69,7 +70,7 @@ const cardTableVariants = cva('grid grow', {
 const cardFooterVariants = cva('flex items-center gap-3 p-5', {
   variants: {
     variant: {
-      default: 'border-t border-border',
+      default: 'border-t border-border-subtle',
       accent: 'mt-px rounded-md bg-card',
     },
   },
@@ -152,7 +153,7 @@ function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
   return (
     <h3
       data-slot="card-title"
-      className={cn('text-base font-semibold leading-5', className)}
+      className={cn('font-display text-[1.0625rem] font-bold leading-6', className)}
       {...props}
     />
   )

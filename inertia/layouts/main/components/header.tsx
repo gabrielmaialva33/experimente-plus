@@ -236,7 +236,8 @@ export function Header({ surface }: { surface: NavigationSurface }) {
             <SheetContent
               side="left"
               closeLabel="Fechar navegação"
-              className="w-[304px] gap-0 px-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
+              closeClassName="text-chrome-foreground opacity-90 ring-offset-chrome data-[state=open]:bg-chrome-hover"
+              className="w-[304px] gap-0 border-chrome bg-chrome px-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-chrome-foreground"
             >
               <SheetHeader className="sr-only">
                 <SheetTitle>Navegação principal</SheetTitle>
@@ -245,8 +246,8 @@ export function Header({ surface }: { surface: NavigationSurface }) {
                   {SURFACE_LABELS[surface].toLocaleLowerCase('pt-BR')}.
                 </SheetDescription>
               </SheetHeader>
-              <div className="flex h-[72px] items-center border-b border-border/70 px-5">
-                <AppBrand onNavigate={() => setMobileOpen(false)} />
+              <div className="flex h-[72px] items-center border-b border-chrome-muted/25 px-5">
+                <AppBrand tone="inverse" onNavigate={() => setMobileOpen(false)} />
               </div>
               <SidebarNav surface={surface} onNavigate={() => setMobileOpen(false)} />
             </SheetContent>

@@ -9,7 +9,7 @@ async function signIn(page: Page, email: string, password: string) {
   await page.fill('input[name="uid"]', email)
   await page.fill('input[name="password"]', password)
   await page.getByRole('button', { name: 'Entrar' }).click()
-  await page.waitForURL('**/dashboard', { timeout: 30_000 })
+  await page.waitForURL('**/backoffice/today', { timeout: 30_000 })
 }
 
 test.group('Benefit administration browser flow', () => {

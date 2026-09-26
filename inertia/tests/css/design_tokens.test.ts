@@ -444,6 +444,77 @@ describe('flat foundation token contract', () => {
     expect(appCss).toContain('font-family: var(--font-sans)')
   })
 
+  it('loads the direction A display face and exposes it apart from the text face', () => {
+    expect(inertiaLayout).toContain('plus-jakarta-sans:600,700,800')
+    const display = tailwindCss.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
+    expect(display.trim().startsWith("'Plus Jakarta Sans'")).toBe(true)
+    expect(display).toContain('ui-sans-serif')
+    expect(tailwindCss).toContain('--radius-card: 1.25rem')
+    expect(tailwindCss).toContain('--color-border-subtle: var(--border-subtle)')
+    expect(tailwindCss).toContain('--color-chrome: var(--chrome)')
+  })
+
+  it.each([':root', '.dark'])(
+    '%s reads every state badge and the conversion action: strong text on its own fill',
+    (selector) => {
+      const block = blockFor(selector)
+      for (const [fill, text] of [
+        ['success-soft', 'success-accent'],
+        ['warning-soft', 'warning-accent'],
+        ['info-soft', 'info-accent'],
+        ['cta-soft', 'cta-accent'],
+        ['primary-soft', 'primary-accent'],
+        ['muted', 'muted-foreground'],
+        ['cta', 'cta-foreground'],
+        ['primary', 'primary-foreground'],
+      ]) {
+        expect(
+          contrastRatio(colorToken(block, fill), colorToken(block, text)),
+          `${text}/${fill}`
+        ).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  )
+
+  it.each([':root', '.dark'])(
+    '%s keeps the authenticated chrome readable and its active item unmistakable',
+    (selector) => {
+      const block = blockFor(selector)
+      for (const [fill, text] of [
+        ['chrome', 'chrome-foreground'],
+        ['chrome', 'chrome-muted'],
+        ['chrome-hover', 'chrome-foreground'],
+        ['chrome-hover', 'chrome-muted'],
+        ['chrome-active', 'chrome-active-foreground'],
+      ]) {
+        expect(
+          contrastRatio(colorToken(block, fill), colorToken(block, text)),
+          `${text}/${fill}`
+        ).toBeGreaterThanOrEqual(4.5)
+      }
+      expect(
+        contrastRatio(colorToken(block, 'chrome-active'), colorToken(block, 'chrome'))
+      ).toBeGreaterThanOrEqual(3)
+      expect(
+        contrastRatio(colorToken(block, 'chrome'), colorToken(block, 'background'))
+      ).toBeGreaterThanOrEqual(1.15)
+    }
+  )
+
+  it.each([':root', '.dark'])(
+    '%s keeps the card outline decorative: visible, lighter than an interactive boundary',
+    (selector) => {
+      const block = blockFor(selector)
+      for (const surface of ['background', 'card']) {
+        const subtle = contrastRatio(colorToken(block, 'border-subtle'), colorToken(block, surface))
+        expect(subtle, `border-subtle/${surface}`).toBeGreaterThanOrEqual(1.1)
+        expect(subtle).toBeLessThan(
+          contrastRatio(colorToken(block, 'border'), colorToken(block, surface))
+        )
+      }
+    }
+  )
+
   it.each([
     'icon-gradient-primary',
     'tech-gradient-primary',

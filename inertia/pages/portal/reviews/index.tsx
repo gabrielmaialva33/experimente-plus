@@ -101,38 +101,67 @@ export default function PartnerReviewsPage({
 }: PartnerReviewsPageProps) {
   const place = places.find((item) => item.id === selectedPlaceId) ?? null
 
+  const filters = place ? (
+    <nav
+      aria-label="Filtrar avaliações"
+      className="flex min-w-0 max-w-full gap-1 self-start overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex"
+    >
+      {(['unanswered', 'answered', 'all'] as const).map((item) => (
+        <Link
+          key={item}
+          href={reviewsHref(place.id, item)}
+          aria-current={filter === item ? 'true' : undefined}
+          className={cn(
+            'inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:px-4.5 sm:text-[0.9375rem]',
+            filter === item
+              ? 'bg-primary font-bold text-primary-foreground'
+              : 'font-semibold text-foreground hover:bg-background'
+          )}
+        >
+          {FILTER_LABELS[item]} ({counts[item]})
+        </Link>
+      ))}
+    </nav>
+  ) : null
+
   return (
     <MainLayout>
       <Head title="Avaliações" />
 
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Portal do parceiro"
-          icon={Star}
           title="Avaliações"
           description={
             place ? `${place.name} · ${describeAverage(average, counts.all)}` : undefined
           }
+          className="sm:items-end"
           actions={
-            places.length > 1 ? (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="review-place">Lugar</Label>
-                <select
-                  id="review-place"
-                  value={selectedPlaceId ?? ''}
-                  onChange={(event) =>
-                    router.get('/portal/reviews', { establishment: event.target.value })
-                  }
-                  className="h-10 min-w-56 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  {places.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.unanswered > 0
-                        ? `${item.name} (${item.unanswered} sem resposta)`
-                        : item.name}
-                    </option>
-                  ))}
-                </select>
+            places.length > 1 || filters ? (
+              <div className="flex w-full min-w-0 flex-wrap items-end gap-3 sm:w-auto">
+                {places.length > 1 ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="review-place" className="font-bold">
+                      Lugar
+                    </Label>
+                    <select
+                      id="review-place"
+                      value={selectedPlaceId ?? ''}
+                      onChange={(event) =>
+                        router.get('/portal/reviews', { establishment: event.target.value })
+                      }
+                      className="h-11 min-w-56 rounded-full border border-input bg-card px-4 text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {places.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.unanswered > 0
+                            ? `${item.name} (${item.unanswered} sem resposta)`
+                            : item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                {filters}
               </div>
             ) : null
           }
@@ -140,112 +169,94 @@ export default function PartnerReviewsPage({
 
         {place === null ? (
           <EmptyState
-            className="rounded-lg border border-dashed border-border bg-card"
+            className="rounded-card border border-dashed border-border bg-card"
             headingLevel={2}
             icon={MessageSquareText}
             title="Nenhum lugar para acompanhar"
             description="Quando um lugar da sua organização for publicado, as avaliações dele aparecem aqui."
           >
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="lg" shape="pill">
               <Link href="/portal">Voltar à visão geral</Link>
             </Button>
           </EmptyState>
         ) : (
-          <>
-            <nav aria-label="Filtrar avaliações" className="flex flex-wrap gap-2">
-              {(['unanswered', 'answered', 'all'] as const).map((item) => (
-                <Link
-                  key={item}
-                  href={reviewsHref(place.id, item)}
-                  aria-current={filter === item ? 'true' : undefined}
-                  className={cn(
-                    'inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    filter === item
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-input bg-background text-foreground hover:bg-accent'
-                  )}
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21.25rem]">
+            <section aria-label="Lista de avaliações" className="space-y-4">
+              {reviews.length === 0 ? (
+                <EmptyState
+                  className="rounded-card border border-dashed border-border bg-card"
+                  headingLevel={2}
+                  icon={MessageSquareText}
+                  title={
+                    filter === 'unanswered'
+                      ? 'Nenhuma avaliação esperando resposta'
+                      : filter === 'answered'
+                        ? 'Nenhuma avaliação respondida ainda'
+                        : 'Ainda não há avaliações deste lugar'
+                  }
+                  description={
+                    filter === 'all'
+                      ? 'Quando alguém avaliar este lugar pelo app ou pelo site, a avaliação aparece aqui.'
+                      : undefined
+                  }
                 >
-                  {FILTER_LABELS[item]} ({counts[item]})
-                </Link>
-              ))}
-            </nav>
+                  {filter !== 'all' && counts.all > 0 ? (
+                    <Button asChild variant="outline" size="lg" shape="pill">
+                      <Link href={reviewsHref(place.id, 'all')}>Ver todas as avaliações</Link>
+                    </Button>
+                  ) : null}
+                </EmptyState>
+              ) : (
+                reviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} canReply={place.can_reply} />
+                ))
+              )}
 
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-              <section aria-label="Lista de avaliações" className="space-y-4">
-                {reviews.length === 0 ? (
-                  <EmptyState
-                    className="rounded-lg border border-dashed border-border bg-card"
-                    headingLevel={2}
-                    icon={MessageSquareText}
-                    title={
-                      filter === 'unanswered'
-                        ? 'Nenhuma avaliação esperando resposta'
-                        : filter === 'answered'
-                          ? 'Nenhuma avaliação respondida ainda'
-                          : 'Ainda não há avaliações deste lugar'
-                    }
-                    description={
-                      filter === 'all'
-                        ? 'Quando alguém avaliar este lugar pelo app ou pelo site, a avaliação aparece aqui.'
-                        : undefined
-                    }
-                  >
-                    {filter !== 'all' && counts.all > 0 ? (
-                      <Button asChild variant="outline">
-                        <Link href={reviewsHref(place.id, 'all')}>Ver todas as avaliações</Link>
-                      </Button>
-                    ) : null}
-                  </EmptyState>
-                ) : (
-                  reviews.map((review) => (
-                    <ReviewCard key={review.id} review={review} canReply={place.can_reply} />
-                  ))
-                )}
+              {meta.last_page > 1 ? (
+                <div className="flex items-center justify-between gap-3">
+                  {meta.current_page > 1 ? (
+                    <Button asChild variant="outline" size="lg" shape="pill">
+                      <Link href={reviewsHref(place.id, filter, meta.current_page - 1)}>
+                        Mais recentes
+                      </Link>
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="text-sm text-muted-foreground">
+                    Página {meta.current_page} de {meta.last_page}
+                  </span>
+                  {meta.current_page < meta.last_page ? (
+                    <Button asChild variant="outline" size="lg" shape="pill">
+                      <Link href={reviewsHref(place.id, filter, meta.current_page + 1)}>
+                        Mais antigas
+                      </Link>
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+              ) : null}
+            </section>
 
-                {meta.last_page > 1 ? (
-                  <div className="flex items-center justify-between gap-3">
-                    {meta.current_page > 1 ? (
-                      <Button asChild variant="outline">
-                        <Link href={reviewsHref(place.id, filter, meta.current_page - 1)}>
-                          Mais recentes
-                        </Link>
-                      </Button>
-                    ) : (
-                      <span />
-                    )}
-                    <span className="text-sm text-muted-foreground">
-                      Página {meta.current_page} de {meta.last_page}
-                    </span>
-                    {meta.current_page < meta.last_page ? (
-                      <Button asChild variant="outline">
-                        <Link href={reviewsHref(place.id, filter, meta.current_page + 1)}>
-                          Mais antigas
-                        </Link>
-                      </Button>
-                    ) : (
-                      <span />
-                    )}
-                  </div>
-                ) : null}
-              </section>
-
-              <aside
-                aria-label="Dicas para responder"
-                className="space-y-3 rounded-lg border border-border bg-primary-soft p-5 text-sm"
-              >
-                <h2 className="text-base font-bold text-primary-accent">Uma boa resposta</h2>
-                <ul className="list-disc space-y-1.5 pl-5">
-                  <li>Agradece a visita.</li>
-                  <li>É cordial também com as críticas.</li>
-                  <li>Não expõe dados de clientes.</li>
-                </ul>
-                <p>
-                  Avaliação ofensiva ou falsa? Use o link Denunciar do app ou do site; a moderação
-                  analisa.
-                </p>
-              </aside>
-            </div>
-          </>
+            <aside
+              aria-label="Dicas para responder"
+              className="space-y-3 rounded-card bg-primary-soft p-5.5 text-sm"
+            >
+              <h2 className="font-display text-lg font-extrabold text-primary-accent">
+                Uma boa resposta
+              </h2>
+              <ul className="list-disc space-y-2 pl-5 text-[0.9375rem] leading-snug">
+                <li>Agradece a visita.</li>
+                <li>É cordial também com as críticas.</li>
+                <li>Não expõe dados de clientes.</li>
+              </ul>
+              <p>
+                Avaliação ofensiva ou falsa? Use o link Denunciar do app ou do site; a moderação
+                analisa.
+              </p>
+            </aside>
+          </div>
         )}
       </div>
     </MainLayout>
@@ -258,17 +269,17 @@ function ReviewCard({ review, canReply }: { review: Review; canReply: boolean })
   return (
     <article
       aria-labelledby={`review-${review.id}-author`}
-      className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6"
+      className="space-y-4 rounded-card border border-border-subtle bg-card p-5 sm:p-6.5"
     >
-      <header className="flex flex-wrap items-center gap-3">
+      <header className="flex flex-wrap items-center gap-3.5">
         <span
           aria-hidden="true"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary-accent"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-base font-extrabold text-primary-accent"
         >
           {initials(review.author_name) || '?'}
         </span>
         <div className="min-w-0 flex-1">
-          <p id={`review-${review.id}-author`} className="font-semibold">
+          <p id={`review-${review.id}-author`} className="text-[1.0625rem] font-bold">
             {review.author_name}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -276,14 +287,21 @@ function ReviewCard({ review, canReply }: { review: Review; canReply: boolean })
             {review.edited_at ? ' · editada' : ''}
           </p>
         </div>
-        <Badge variant="warning" appearance="light" aria-label={`Nota ${review.rating} de 5`}>
-          <Star aria-hidden="true" className="size-3.5 fill-current" />
+        <Badge
+          variant="warning"
+          appearance="light"
+          shape="pill"
+          size="lg"
+          className="h-9 px-3.5 text-[0.9375rem] font-extrabold [&_svg]:size-4"
+          aria-label={`Nota ${review.rating} de 5`}
+        >
+          <Star aria-hidden="true" className="fill-current" />
           {review.rating} de 5
         </Badge>
       </header>
 
       {review.comment ? (
-        <p className="whitespace-pre-line text-[0.95rem] leading-relaxed">{review.comment}</p>
+        <p className="whitespace-pre-line text-[1.0625rem] leading-relaxed">{review.comment}</p>
       ) : (
         <p className="text-sm text-muted-foreground">Avaliação só com a nota.</p>
       )}
@@ -296,7 +314,7 @@ function ReviewCard({ review, canReply }: { review: Review; canReply: boolean })
                 <img
                   src={photo.url}
                   alt={photo.alt_text ?? `Foto ${index + 1} da avaliação`}
-                  className="size-20 rounded-md object-cover"
+                  className="size-20 rounded-2xl object-cover"
                 />
               </li>
             ) : null
@@ -304,13 +322,13 @@ function ReviewCard({ review, canReply }: { review: Review; canReply: boolean })
         </ul>
       ) : null}
 
-      <div className="border-t border-border pt-4">
+      <div className="border-t border-border-subtle pt-4">
         {review.reply && !editing ? (
-          <div className="space-y-2 rounded-md bg-muted/60 p-4">
+          <div className="space-y-2.5 rounded-2xl bg-muted p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-primary-accent">Sua resposta</p>
+              <p className="text-sm font-bold text-primary-accent">Sua resposta</p>
               {review.reply.status === 'hidden' ? (
-                <Badge variant="info" appearance="light">
+                <Badge variant="info" appearance="light" shape="pill" className="font-bold">
                   Em análise pela moderação
                 </Badge>
               ) : null}
@@ -318,9 +336,11 @@ function ReviewCard({ review, canReply }: { review: Review; canReply: boolean })
                 <span className="text-xs text-muted-foreground">editada</span>
               ) : null}
             </div>
-            <p className="whitespace-pre-line text-sm leading-relaxed">{review.reply.comment}</p>
+            <p className="whitespace-pre-line text-[0.9375rem] leading-relaxed">
+              {review.reply.comment}
+            </p>
             {canReply ? (
-              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Button variant="outline" shape="pill" onClick={() => setEditing(true)}>
                 Editar resposta
               </Button>
             ) : null}
@@ -370,8 +390,8 @@ function ReplyForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2" noValidate>
-      <Label htmlFor={fieldId} className="text-sm font-semibold">
+    <form onSubmit={submit} className="space-y-2.5" noValidate>
+      <Label htmlFor={fieldId} className="text-base font-bold">
         {mode === 'create' ? 'Sua resposta pública' : 'Editar sua resposta'}
       </Label>
       <Textarea
@@ -381,10 +401,11 @@ function ReplyForm({
         value={form.data.comment}
         onChange={(event) => form.setData('comment', event.target.value)}
         placeholder="Agradeça a visita e, se fizer sentido, conte o que vocês fazem a respeito."
+        className="min-h-28 rounded-2xl px-4 py-3.5 text-base leading-normal shadow-none"
         aria-invalid={form.errors.comment ? true : undefined}
         aria-describedby={form.errors.comment ? `${hintId} ${errorId}` : hintId}
       />
-      <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
         <span id={hintId}>Aparece abaixo da avaliação, no app e no site. A nota não muda.</span>
         <span aria-hidden="true">
           {form.data.comment.length}/{MAX_REPLY}
@@ -396,11 +417,19 @@ function ReplyForm({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2 pt-1">
-        <Button type="submit" variant="primary" disabled={form.processing}>
+        <Button type="submit" variant="primary" size="xl" shape="pill" disabled={form.processing}>
           {mode === 'create' ? 'Publicar resposta' : 'Salvar resposta'}
         </Button>
         {onCancel ? (
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={form.processing}>
+          <Button
+            type="button"
+            variant="primary"
+            appearance="ghost"
+            size="xl"
+            shape="pill"
+            onClick={onCancel}
+            disabled={form.processing}
+          >
             Cancelar
           </Button>
         ) : null}

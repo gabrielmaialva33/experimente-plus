@@ -629,7 +629,7 @@ test.group('Web authentication', (group) => {
     assert.equal(login.header('location'), '/cidades')
   })
 
-  test('should send Root with an active operation to the operational dashboard', async ({
+  test('should send Root with an active operation to what the operation resolves today', async ({
     client,
     assert,
   }) => {
@@ -642,10 +642,10 @@ test.group('Web authentication', (group) => {
       .json({ uid: user.email, password: 'password123' })
 
     login.assertStatus(302)
-    assert.equal(login.header('location'), '/dashboard')
+    assert.equal(login.header('location'), '/backoffice/today')
   })
 
-  test('should send Admin with an active operation to the operational dashboard', async ({
+  test('should send Admin with an active operation to what the operation resolves today', async ({
     client,
     assert,
   }) => {
@@ -658,7 +658,7 @@ test.group('Web authentication', (group) => {
       .json({ uid: user.email, password: 'password123' })
 
     login.assertStatus(302)
-    assert.equal(login.header('location'), '/dashboard')
+    assert.equal(login.header('location'), '/backoffice/today')
   })
 
   test('should send Moderator with an active operation to its authorized queue', async ({

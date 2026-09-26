@@ -85,8 +85,13 @@ describe('Partner reviews page', () => {
       screen.getByText('Aparece abaixo da avaliação, no app e no site. A nota não muda.')
     ).toBeVisible()
 
+    // Replying is the navy primary action, never the orange conversion colour.
+    const publish = screen.getByRole('button', { name: 'Publicar resposta' })
+    expect(publish).toHaveClass('bg-primary', 'rounded-full', 'h-12')
+    expect(publish).not.toHaveClass('bg-cta')
+
     await user.type(field, 'Obrigado pela visita!')
-    await user.click(screen.getByRole('button', { name: 'Publicar resposta' }))
+    await user.click(publish)
 
     expect(mocks.post).toHaveBeenCalledWith(
       '/portal/reviews/31/reply',
@@ -100,6 +105,7 @@ describe('Partner reviews page', () => {
     const filters = screen.getByRole('navigation', { name: 'Filtrar avaliações' })
     const waiting = within(filters).getByRole('link', { name: 'Sem resposta (1)' })
     expect(waiting).toHaveAttribute('aria-current', 'true')
+    expect(waiting).toHaveClass('bg-primary', 'text-primary-foreground')
     expect(waiting).toHaveAttribute('href', '/portal/reviews?establishment=7&filter=unanswered')
     expect(within(filters).getByRole('link', { name: 'Respondidas (2)' })).toHaveAttribute(
       'href',

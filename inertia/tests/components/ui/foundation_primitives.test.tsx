@@ -8,6 +8,7 @@ import { Badge, BadgeButton } from '~/components/ui/badge'
 import { Button, buttonVariants } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Input, InputWrapper } from '~/components/ui/input'
+import { TaskCard } from '~/components/ui/task-card'
 import { render } from '~/tests/test_utils'
 
 describe('foundation primitives', () => {
@@ -127,6 +128,83 @@ describe('foundation primitives', () => {
     expect(wrapper.className).not.toContain('file:')
     expect(input).not.toHaveAttribute('readonly')
     expect(input).toHaveClass('read-only:cursor-not-allowed', 'read-only:bg-muted/70')
+  })
+
+  it('offers direction A pill actions at 48 and 52 px, keeping navy and orange apart', () => {
+    const cta = buttonVariants({ variant: 'cta', size: '2xl', shape: 'pill' })
+    expect(cta).toContain('h-13')
+    expect(cta).toContain('rounded-full')
+    expect(cta).toContain('bg-cta')
+    expect(cta).toContain('text-cta-foreground')
+    const submit = buttonVariants({ variant: 'primary', size: 'xl', shape: 'pill' })
+    expect(submit).toContain('h-12')
+    expect(submit).toContain('bg-primary')
+    expect(submit).not.toContain('bg-cta')
+    expect(buttonVariants({ size: 'xl', mode: 'icon' })).toContain('size-12')
+  })
+
+  it('draws cards with the 20px corner and a decorative outline, titles in the display face', () => {
+    render(
+      <Card data-testid="card">
+        <CardHeader data-testid="card-header">
+          <CardTitle>Dados do lugar</CardTitle>
+        </CardHeader>
+      </Card>
+    )
+    expect(screen.getByTestId('card')).toHaveClass('rounded-card', 'border-border-subtle')
+    expect(screen.getByTestId('card-header')).toHaveClass('border-border-subtle')
+    expect(screen.getByRole('heading', { name: 'Dados do lugar' })).toHaveClass('font-display')
+  })
+
+  it('shapes state badges as pills with a strong text on a soft fill', () => {
+    render(
+      <>
+        <Badge variant="success" appearance="light" shape="pill">
+          Publicados
+        </Badge>
+        <Badge variant="neutral" shape="pill">
+          1 rascunho
+        </Badge>
+      </>
+    )
+    const published = screen.getByText('Publicados')
+    expect(published).toHaveClass('rounded-full', 'bg-success-soft', 'text-success-accent')
+    expect(published).not.toHaveClass('rounded-md')
+    expect(screen.getByText('1 rascunho')).toHaveClass('bg-muted', 'text-muted-foreground')
+  })
+
+  it('makes a task card a heading and one action link stretched over the card', () => {
+    render(
+      <>
+        <TaskCard
+          title="Avaliações sem resposta"
+          value={2}
+          href="/portal/reviews"
+          actionLabel="Responder agora"
+        />
+        <TaskCard
+          title="Feedback do piloto"
+          headingLevel={3}
+          value={0}
+          tone="muted"
+          href="/backoffice/feedback"
+          actionLabel="Ver feedback"
+        />
+      </>
+    )
+    expect(screen.getByRole('heading', { level: 2, name: 'Avaliações sem resposta' })).toBeVisible()
+    const link = screen.getByRole('link', { name: 'Responder agora' })
+    expect(link).toHaveAttribute('href', '/portal/reviews')
+    expect(link).toHaveClass('after:absolute', 'after:inset-0', 'min-h-11')
+    const card = link.closest('[data-slot="task-card"]')
+    expect(card).toHaveClass('relative', 'rounded-card')
+    expect(card?.querySelector('[data-slot="task-card-value"]')).toHaveTextContent('2')
+    expect(card?.querySelector('[data-slot="task-card-value"]')).toHaveClass('text-primary')
+    const quiet = screen.getByRole('heading', { level: 3, name: 'Feedback do piloto' })
+    expect(
+      quiet.closest('[data-slot="task-card"]')?.querySelector('[data-slot="task-card-value"]')
+    ).toHaveClass('text-muted-foreground')
+    expect(screen.getAllByRole('link')).toHaveLength(2)
   })
 
   it('keeps card headings and badge actions semantic', async () => {

@@ -118,6 +118,14 @@ describe('Partner Portal overview resource actions', () => {
       />
     )
 
+    // Direction A greets the partner by the place on a one-organization portal.
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: /^(Bom dia|Boa tarde|Boa noite), Rede Aurora$/,
+      })
+    ).toBeVisible()
+
     const tasks = screen.getByRole('region', { name: 'Tarefas de hoje' })
     expect(within(tasks).getByRole('heading', { name: 'Avaliações sem resposta' })).toBeVisible()
     expect(within(tasks).getByText('2')).toBeVisible()
@@ -162,7 +170,12 @@ describe('Partner Portal overview resource actions', () => {
 
     const validate = screen.getByRole('link', { name: 'Validar benefício' })
     expect(validate).toHaveAttribute('href', '/portal/redemptions/validate')
-    expect(validate.className).toContain('bg-cta')
+    expect(validate).toHaveClass('bg-cta', 'rounded-full', 'h-13')
+    // First in reading and focus order (and first on a phone); the row puts it last
+    // only from `sm` up, where the eye ends on the right.
+    const actions = validate.closest('[data-slot="page-header-actions"]')!
+    expect(actions.querySelector('a')).toBe(validate)
+    expect(validate).toHaveClass('sm:order-last')
     expect(screen.getByText('Configuração concluída')).toBeVisible()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByText('Nenhuma avaliação esperando resposta.')).toBeVisible()

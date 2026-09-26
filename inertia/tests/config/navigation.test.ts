@@ -98,6 +98,8 @@ describe('navigation configuration', () => {
       '/portal/performance',
     ])
     expect(portalItems.every((item) => item.surface === 'portal')).toBe(true)
+    // The operation opens on what it has to resolve today.
+    expect(backofficeItems[0]).toMatchObject({ label: 'Hoje', href: '/backoffice/today' })
     expect(backofficeItems.every((item) => item.surface === 'backoffice')).toBe(true)
     expect(backofficeItems.some((item) => item.href.startsWith('/portal'))).toBe(false)
     expect(backofficeItems.some((item) => item.href === '/settings')).toBe(false)
@@ -235,6 +237,7 @@ describe('navigation configuration', () => {
 
     expect(resolveRouteMetadata('/portal/redemptions')?.capability).toBe('benefit_offers.read')
     expect(resolveRouteMetadata('/backoffice/moderation')?.capability).toBe('establishments.list')
+    expect(resolveRouteMetadata('/backoffice/today')?.capability).toBe('establishments.list')
     expect(resolveRouteMetadata('/backoffice/benefits')?.capability).toBe('benefit_editions.list')
     expect(resolveRouteMetadata('/portal/content')?.capability).toBe('establishments.read')
     expect(resolveRouteMetadata('/portal/reviews')?.capability).toBe('establishments.read')
