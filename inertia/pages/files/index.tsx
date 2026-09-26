@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react'
-import { ExternalLink, File as FileIcon, Trash2 } from 'lucide-react'
+import { ExternalLink, File as FileIcon, FolderOpen, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
@@ -87,15 +87,25 @@ export default function FilesPage({ files }: FilesPageProps) {
 
       <div className="space-y-6">
         <PageHeader
+          eyebrow="Administração"
+          icon={FolderOpen}
           title="Arquivos"
           description="Envie e administre arquivos privados da operação ativa."
+          meta={
+            <Badge variant="secondary" appearance="light" shape="pill">
+              {files.meta.total.toLocaleString('pt-BR')}{' '}
+              {files.meta.total === 1 ? 'arquivo' : 'arquivos'}
+            </Badge>
+          }
         />
 
         {canUpload && (
           <Card>
             <CardHeader>
               <CardHeading>
-                <CardTitle>Enviar arquivo</CardTitle>
+                <CardTitle className="font-display text-lg font-extrabold">
+                  Enviar arquivo
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Selecione um arquivo compatível de até 10 MB.
                 </p>
@@ -110,11 +120,9 @@ export default function FilesPage({ files }: FilesPageProps) {
         <Card>
           <CardHeader>
             <CardHeading>
-              <CardTitle>Arquivos da operação</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {files.meta.total.toLocaleString('pt-BR')}{' '}
-                {files.meta.total === 1 ? 'arquivo disponível' : 'arquivos disponíveis'}
-              </p>
+              <CardTitle className="font-display text-lg font-extrabold">
+                Arquivos da operação
+              </CardTitle>
             </CardHeading>
           </CardHeader>
           <CardContent className="p-0">
@@ -129,7 +137,7 @@ export default function FilesPage({ files }: FilesPageProps) {
                 }
               />
             ) : (
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-border-subtle">
                 {files.data.map((file) => {
                   const canDelete = canDeleteAny || (canDeleteOwn && file.owner.id === user?.id)
 
@@ -138,14 +146,20 @@ export default function FilesPage({ files }: FilesPageProps) {
                       key={file.id}
                       className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"
                     >
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                         <FileIcon aria-hidden="true" className="size-5" />
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-medium">{file.client_name}</p>
-                          <Badge variant="secondary" appearance="light" size="sm">
+                          <p className="truncate text-sm font-semibold">{file.client_name}</p>
+                          <Badge
+                            variant="secondary"
+                            appearance="light"
+                            shape="pill"
+                            size="sm"
+                            title={file.file_type}
+                          >
                             {fileCategoryLabel(file.file_category)}
                           </Badge>
                         </div>
@@ -153,28 +167,30 @@ export default function FilesPage({ files }: FilesPageProps) {
                           <span>{formatFileSize(file.file_size)}</span>
                           <span>Enviado por {file.owner.full_name}</span>
                           <span>{formatFileDate(file.created_at)}</span>
-                          <span className="break-all text-[0.68rem]">
-                            Formato técnico: {file.file_type}
-                          </span>
                         </div>
                       </div>
 
                       <div className="flex shrink-0 items-center gap-2">
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="md" shape="pill">
                           <a href={file.url} target="_blank" rel="noopener noreferrer">
                             <ExternalLink aria-hidden="true" className="size-4" />
                             Abrir
                           </a>
                         </Button>
                         {canDelete && (
+                          // One quiet way to delete (audit W46): the red button lives in
+                          // the confirmation, not on every row.
                           <Button
                             type="button"
-                            variant="destructive"
-                            size="sm"
+                            variant="dim"
+                            size="md"
+                            shape="pill"
+                            aria-label={`Excluir ${file.client_name}`}
+                            className="hover:text-destructive"
                             onClick={() => setFileToDelete(file)}
                           >
                             <Trash2 aria-hidden="true" className="size-4" />
-                            Excluir
+                            <span className="sr-only sm:not-sr-only">Excluir</span>
                           </Button>
                         )}
                       </div>
@@ -185,20 +201,20 @@ export default function FilesPage({ files }: FilesPageProps) {
             )}
 
             {files.meta.lastPage > 1 && (
-              <div className="flex items-center justify-between border-t border-border px-5 py-4">
+              <div className="flex items-center justify-between border-t border-border-subtle px-5 py-4">
                 <p className="text-sm text-muted-foreground">
                   Página {files.meta.currentPage} de {files.meta.lastPage}
                 </p>
                 <div className="flex gap-2">
                   {files.meta.currentPage > files.meta.firstPage && (
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="md" shape="pill">
                       <Link href={`/files?page=${files.meta.currentPage - 1}`} preserveScroll>
                         Anterior
                       </Link>
                     </Button>
                   )}
                   {files.meta.currentPage < files.meta.lastPage && (
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="md" shape="pill">
                       <Link href={`/files?page=${files.meta.currentPage + 1}`} preserveScroll>
                         Próxima
                       </Link>
