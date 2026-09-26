@@ -7,7 +7,10 @@ import { PageHeader } from '~/components/page_header'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
-import { MODERATION_ISSUE_FIELD_GROUPS } from '~/lib/establishment_editor'
+import {
+  localizeCompletenessIssue,
+  MODERATION_ISSUE_FIELD_GROUPS,
+} from '~/lib/establishment_editor'
 import { firstError } from '~/lib/form_errors'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
@@ -291,7 +294,14 @@ export default function ModerationRevisionPage({
                       key={`${text(issue, 'code')}-${text(issue, 'field')}`}
                       className="rounded-xl bg-muted p-3"
                     >
-                      <p className="text-sm font-semibold">{text(issue, 'message')}</p>
+                      <p className="text-sm font-semibold">
+                        {localizeCompletenessIssue({
+                          code: text(issue, 'code'),
+                          field: text(issue, 'field'),
+                          message: text(issue, 'message'),
+                          severity: text(issue, 'severity', 'blocking'),
+                        })}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {moderationFieldLabel(text(issue, 'field'))} ·{' '}
                         {reviewIssueSeverityLabel(text(issue, 'severity', 'blocking'))}

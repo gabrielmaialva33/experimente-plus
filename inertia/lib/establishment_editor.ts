@@ -119,6 +119,7 @@ const ISSUE_MESSAGES: Record<string, string> = {
   media_missing: 'Adicione ao menos uma imagem para representar a unidade.',
   cover_image_missing: 'Escolha exatamente uma imagem elegível como capa da unidade.',
   media_quarantined: 'Remova as imagens em quarentena antes de enviar a ficha.',
+  review_issues_open: 'Resolva as pendências de moderação que bloqueiam a publicação.',
   establishment_not_active: 'A unidade precisa estar ativa antes do envio.',
   establishment_permanently_closed: 'Uma unidade permanentemente fechada não pode ser enviada.',
   slug_already_published:

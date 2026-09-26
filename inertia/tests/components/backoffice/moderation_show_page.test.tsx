@@ -38,7 +38,10 @@ const published = {
   'hours.1': '08:00–23:00',
 }
 
-function renderPage(comparison: ComponentProps<typeof ModerationRevisionPage>['comparison']) {
+function renderPage(
+  comparison: ComponentProps<typeof ModerationRevisionPage>['comparison'],
+  gate: Record<string, unknown> = { blocking_issues: [], warnings: [] }
+) {
   return render(
     <ModerationRevisionPage
       revision={{
@@ -49,7 +52,7 @@ function renderPage(comparison: ComponentProps<typeof ModerationRevisionPage>['c
         media: [],
       }}
       comparison={comparison}
-      publication_gate={{ blocking_issues: [], warnings: [] }}
+      publication_gate={gate}
       review_issues={[]}
       events={[]}
     />
@@ -96,5 +99,24 @@ describe('ModerationRevisionPage', () => {
       screen.queryByRole('checkbox', { name: 'Mostrar só o que mudou' })
     ).not.toBeInTheDocument()
     expect(screen.queryByText(/Antes:/)).not.toBeInTheDocument()
+  })
+
+  it('says in Portuguese what blocks the publication', () => {
+    renderPage(undefined, {
+      blocking_issues: [
+        {
+          code: 'review_issues_open',
+          field: 'review_issues',
+          message: 'Blocking review issues must be resolved before publication',
+          severity: 'blocking',
+        },
+      ],
+      warnings: [],
+    })
+
+    expect(
+      screen.getByText('Resolva as pendências de moderação que bloqueiam a publicação.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Blocking review issues/)).not.toBeInTheDocument()
   })
 })
