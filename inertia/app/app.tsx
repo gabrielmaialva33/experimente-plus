@@ -15,7 +15,9 @@ const appName = import.meta.env.VITE_APP_NAME || 'Experimente+'
 bindInertiaFailureNotice(router)
 
 createInertiaApp({
-  progress: { color: '#cf4217' },
+  // Page loading is navigation feedback, so it takes the navigation role (and follows the
+  // theme); orange stays reserved for conversion.
+  progress: { color: 'var(--primary)' },
 
   title: (title) => formatDocumentTitle(title, appName),
 

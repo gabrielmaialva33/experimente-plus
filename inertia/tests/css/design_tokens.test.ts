@@ -444,6 +444,8 @@ describe('flat foundation token contract', () => {
     expect(inertiaLayout).toContain('<meta name="theme-color" content="#13467c" />')
     expect(inertiaLayout).toContain('instrument-sans:400,500,600,700')
     expect(appCss).toContain('font-family: var(--font-sans)')
+    // The page-loading bar is navigation feedback: the navy role, never the conversion orange.
+    expect(projectFile('inertia/app/app.tsx')).toContain("progress: { color: 'var(--primary)' }")
   })
 
   it('loads the direction A display face and exposes it apart from the text face', () => {
