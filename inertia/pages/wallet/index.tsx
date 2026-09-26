@@ -6,7 +6,6 @@ import {
   History,
   MapPin,
   PauseCircle,
-  Store,
   TicketCheck,
 } from 'lucide-react'
 
@@ -64,10 +63,14 @@ function benefitLabel(benefit: WalletBenefit): string {
 
 function SummaryItem({ label, value }: { label: string; value: number }) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+    <Card className="border border-border-subtle bg-card">
+      <CardContent className="p-4 sm:p-5">
+        <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-2 font-display text-[2.5rem] font-extrabold leading-none tabular-nums">
+          {value}
+        </p>
       </CardContent>
     </Card>
   )
@@ -81,7 +84,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
       title="Minha carteira"
       description="Acessos e benefícios disponíveis para sua conta. A disponibilidade é confirmada novamente no momento da utilização."
       actions={
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="xl" shape="pill">
           <Link href="/wallet/history">
             <History aria-hidden="true" />
             Utilizações
@@ -104,14 +107,14 @@ export default function WalletPage({ wallet }: WalletPageProps) {
       </section>
 
       {passes.length === 0 ? (
-        <Card>
+        <Card className="border border-border-subtle bg-card">
           <EmptyState
             headingLevel={2}
             icon={TicketCheck}
             title="Sua carteira ainda está vazia"
             description="Após receber acesso a um pacote ou voucher avulso, os benefícios aparecerão aqui."
           >
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="xl" shape="pill">
               <Link href="/cidades">Explorar estabelecimentos</Link>
             </Button>
           </EmptyState>
@@ -119,14 +122,14 @@ export default function WalletPage({ wallet }: WalletPageProps) {
       ) : (
         <div className="space-y-6">
           {passes.map(({ edition, access, benefits }) => (
-            <Card key={access.id}>
+            <Card key={access.id} className="border border-border-subtle bg-card">
               <CardHeader className="flex-col sm:flex-row sm:items-start">
                 <div className="min-w-0">
-                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                  <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                     <MapPin className="size-3.5" aria-hidden="true" />
                     {edition.city.name} · {edition.city.state_code}
                   </p>
-                  <h2 className="mt-2 text-xl font-semibold tracking-tight">
+                  <h2 className="mt-1.5 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]">
                     {access.offer_id
                       ? 'Voucher avulso · ' + (benefits[0]?.title ?? edition.name)
                       : edition.name}
@@ -138,8 +141,10 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                   ) : null}
                 </div>
                 <dl className="shrink-0 text-sm sm:text-end">
-                  <dt className="text-xs text-muted-foreground">Período de utilização</dt>
-                  <dd className="mt-1 font-medium">
+                  <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                    Período de utilização
+                  </dt>
+                  <dd className="mt-1 font-semibold">
                     {formatDate(access.usage_starts_at ?? edition.usage_starts_at)} —{' '}
                     {formatDate(access.usage_ends_at ?? edition.usage_ends_at)}
                   </dd>
@@ -167,24 +172,42 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                         state === 'available' && benefit.offer_id > 0 && benefit.access_id > 0
 
                       return (
-                        <Card key={benefit.key} className="h-full bg-card">
-                          <CardContent className="flex h-full flex-col p-5">
-                            <div className="flex items-start justify-between gap-3">
-                              <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-card text-muted-foreground">
-                                <Store className="size-4" aria-hidden="true" />
-                              </span>
-                              <Badge variant={meta.variant} appearance="light">
-                                <Icon aria-hidden="true" />
-                                {meta.label}
-                              </Badge>
-                            </div>
-
-                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.1em] text-cta-accent">
+                        <Card
+                          key={benefit.key}
+                          className="relative h-full overflow-hidden border border-border-subtle bg-card"
+                        >
+                          {/* Direction A's ticket: a navy stub carries the benefit itself. */}
+                          <div className="bg-primary px-5 pb-5 pt-4 text-primary-foreground">
+                            <p className="text-xs font-extrabold uppercase tracking-[0.1em] opacity-85">
+                              Benefício
+                            </p>
+                            <p className="mt-1 font-display text-[1.375rem] font-extrabold leading-tight">
                               {benefitLabel(benefit)}
                             </p>
-                            <h3 className="mt-1 text-lg font-semibold">{benefit.title}</h3>
-                            <p className="mt-1 text-sm font-medium text-muted-foreground">
-                              {benefit.establishment.public_name || 'Estabelecimento participante'}
+                          </div>
+                          <div
+                            aria-hidden="true"
+                            className="relative h-0 border-t-2 border-dashed border-border-subtle"
+                          >
+                            <span className="absolute -left-3 -top-3 size-6 rounded-full border border-border-subtle bg-card" />
+                            <span className="absolute -right-3 -top-3 size-6 rounded-full border border-border-subtle bg-card" />
+                          </div>
+                          <CardContent className="flex flex-1 flex-col p-5">
+                            <Badge
+                              variant={meta.variant}
+                              appearance="light"
+                              shape="pill"
+                              className="self-start"
+                            >
+                              <Icon aria-hidden="true" />
+                              {meta.label}
+                            </Badge>
+
+                            <h3 className="mt-3 font-display text-lg font-extrabold leading-tight">
+                              {benefit.title}
+                            </h3>
+                            <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                              {benefit.establishment.public_name || 'Lugar participante'}
                             </p>
                             {benefit.description ? (
                               <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">
@@ -194,7 +217,13 @@ export default function WalletPage({ wallet }: WalletPageProps) {
 
                             <div className="mt-auto pt-5">
                               {canUse ? (
-                                <Button asChild variant="cta" size="lg" className="w-full">
+                                <Button
+                                  asChild
+                                  variant="cta"
+                                  size="xl"
+                                  shape="pill"
+                                  className="w-full"
+                                >
                                   <Link
                                     href={`/wallet/accesses/${benefit.access_id}/offers/${benefit.offer_id}/use`}
                                   >
@@ -203,13 +232,13 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                                   </Link>
                                 </Button>
                               ) : (
-                                <p className="rounded-md border bg-status-neutral px-3 py-2 text-center text-xs leading-5 text-muted-foreground">
+                                <p className="rounded-2xl bg-status-neutral px-4 py-3 text-center text-xs leading-5 text-status-neutral-foreground">
                                   {state === 'redeemed'
                                     ? 'Todas as utilizações foram concluídas.'
                                     : 'Este benefício não pode ser apresentado agora.'}
                                 </p>
                               )}
-                              <p className="mt-2 text-center text-xs text-muted-foreground">
+                              <p className="mt-2 text-center text-xs font-semibold text-muted-foreground">
                                 {remaining}{' '}
                                 {remaining === 1 ? 'utilização restante' : 'utilizações restantes'}
                               </p>

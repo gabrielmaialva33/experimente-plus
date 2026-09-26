@@ -53,7 +53,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
       title="Usar benefício"
       description="Mostre a apresentação temporária somente quando estiver no estabelecimento."
       actions={
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="xl" shape="pill">
           <Link href="/wallet">
             <ArrowLeft aria-hidden="true" />
             Voltar à carteira
@@ -65,31 +65,45 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
-      <Card className="mx-auto max-w-5xl overflow-hidden">
+      <Card className="mx-auto max-w-5xl overflow-hidden border border-border-subtle bg-card">
         <CardContent className="grid p-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="p-5 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+            <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
               {benefit.establishment_name}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{benefit.offer_title}</h2>
+            <h2 className="mt-1.5 font-display text-[1.625rem] font-extrabold leading-tight tracking-[-0.02em]">
+              {benefit.offer_title}
+            </h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               {benefit.offer_description}
             </p>
 
             <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-md border bg-card p-4">
-                <dt className="text-xs text-muted-foreground">Edição</dt>
-                <dd className="mt-1 font-medium">{benefit.edition_name}</dd>
+              <div className="rounded-2xl border border-border-subtle bg-card p-4">
+                <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                  Edição
+                </dt>
+                <dd className="mt-1 font-semibold">{benefit.edition_name}</dd>
               </div>
-              <div className="rounded-md border bg-card p-4">
-                <dt className="text-xs text-muted-foreground">Utilizações restantes</dt>
-                <dd className="mt-1 font-medium tabular-nums">{benefit.remaining_redemptions}</dd>
+              <div className="rounded-2xl border border-border-subtle bg-card p-4">
+                <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                  Utilizações restantes
+                </dt>
+                <dd className="mt-1 font-display text-2xl font-extrabold leading-tight tabular-nums">
+                  {benefit.remaining_redemptions}
+                </dd>
               </div>
             </dl>
 
             {benefit.terms ? (
-              <section aria-labelledby="benefit-terms-title" className="mt-5 rounded-md border p-4">
-                <h3 id="benefit-terms-title" className="text-sm font-semibold">
+              <section
+                aria-labelledby="benefit-terms-title"
+                className="mt-5 rounded-2xl border border-border-subtle p-4"
+              >
+                <h3
+                  id="benefit-terms-title"
+                  className="font-display text-[0.9375rem] font-extrabold"
+                >
                   Regras do benefício
                 </h3>
                 <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
@@ -98,15 +112,16 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
               </section>
             ) : null}
 
-            <div className="mt-5 flex items-start gap-3 rounded-md border border-primary/25 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
+            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
               <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />A apresentação
               não conclui o uso sozinha. A confirmação final é feita no servidor por uma pessoa
               autorizada da organização.
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center border-t bg-card p-5 sm:p-7 lg:border-l lg:border-t-0">
-            <div className="w-full max-w-[18rem] rounded-md border bg-white p-3">
+          <div className="flex flex-col items-center justify-center border-t border-border-subtle bg-background p-5 sm:p-7 lg:border-l lg:border-t-0">
+            {/* The code stays on white in both themes: readers need the contrast. */}
+            <div className="w-full max-w-[18rem] rounded-2xl border border-border-subtle bg-white p-3">
               <img
                 src={presentation.qr_data_url}
                 alt="QR Code temporário para validar o benefício"
@@ -114,8 +129,11 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
               />
             </div>
 
-            <p className="mt-4 flex items-center gap-2 text-sm font-medium" aria-hidden="true">
-              <Clock3 className="size-4 text-primary" />
+            <p
+              className="mt-4 flex items-center gap-2 font-display text-lg font-extrabold tabular-nums"
+              aria-hidden="true"
+            >
+              <Clock3 className="size-5 text-primary-accent" />
               {expired ? 'Código expirado' : `Expira em ${formatRemaining(remaining)}`}
             </p>
             <p className="sr-only" role="status">
@@ -126,6 +144,8 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
               <Button
                 type="button"
                 variant="outline"
+                size="xl"
+                shape="pill"
                 className="mt-4 w-full max-w-[18rem]"
                 onClick={copyValidationLink}
               >
@@ -146,6 +166,8 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
               <Button
                 type="button"
                 variant="primary"
+                size="xl"
+                shape="pill"
                 className="mt-4 w-full max-w-[18rem]"
                 onClick={() => window.location.reload()}
               >
