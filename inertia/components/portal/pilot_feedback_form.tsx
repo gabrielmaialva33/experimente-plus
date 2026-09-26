@@ -116,17 +116,17 @@ export default function PilotFeedbackForm({
       onSubmit={submit}
       className={cn(
         compact
-          ? 'space-y-4 rounded-md border border-border bg-card p-5'
-          : 'space-y-5 rounded-md border border-border bg-card p-6'
+          ? 'space-y-4 rounded-card border border-border-subtle bg-card p-5'
+          : 'space-y-5 rounded-card border border-border-subtle bg-card p-5 sm:p-6'
       )}
       aria-busy={busy}
     >
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <MessageSquareText aria-hidden="true" className="size-4" />
         </span>
         <div>
-          <p className="text-sm font-semibold">Feedback do piloto</p>
+          <p className="font-display text-base font-bold">Feedback do piloto</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Conte o que funcionou e o que ainda atrapalha sua operação.
           </p>
@@ -219,15 +219,15 @@ export default function PilotFeedbackForm({
 
       {establishmentId ? (
         <div className="rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm">
-          <p className="font-medium">Unidade relacionada</p>
+          <p className="font-medium">Lugar relacionado</p>
           <p className="mt-1 text-muted-foreground">
-            {selectedEstablishment?.label ?? `Unidade ${establishmentId}`}
+            {selectedEstablishment?.label ?? `Lugar ${establishmentId}`}
           </p>
         </div>
       ) : visibleEstablishments.length > 0 ? (
         <EditorField
           htmlFor={`${idPrefix}-establishment`}
-          label="Unidade relacionada"
+          label="Lugar relacionado"
           error={fieldError('establishment_id')}
         >
           <select
@@ -243,7 +243,7 @@ export default function PilotFeedbackForm({
             }
             className={editorSelectClassName}
           >
-            <option value="">Nenhuma unidade específica</option>
+            <option value="">Nenhum lugar específico</option>
             {visibleEstablishments.map((establishment) => (
               <option key={establishment.id} value={establishment.id}>
                 {establishment.label}
@@ -275,7 +275,14 @@ export default function PilotFeedbackForm({
         />
       </EditorField>
 
-      <Button type="submit" disabled={busy} aria-disabled={busy}>
+      <Button
+        type="submit"
+        variant="outline"
+        size="lg"
+        shape="pill"
+        disabled={busy}
+        aria-disabled={busy}
+      >
         {busy ? (
           <>
             <Loader2 aria-hidden="true" className="size-4 animate-spin" />

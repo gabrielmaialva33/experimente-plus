@@ -70,6 +70,20 @@ describe('new Portal forms', () => {
     expect(screen.getByLabelText(/Telefone/)).toHaveAttribute('type', 'tel')
   })
 
+  it('shows CNPJ and phone in the usual Brazilian format once typed', () => {
+    render(<NewOrganizationPage />)
+
+    const taxId = screen.getByLabelText(/CNPJ/)
+    fireEvent.change(taxId, { target: { value: '12345678000190' } })
+    fireEvent.blur(taxId)
+    expect(taxId).toHaveValue('12.345.678/0001-90')
+
+    const phone = screen.getByLabelText(/Telefone/)
+    fireEvent.change(phone, { target: { value: '43999824100' } })
+    fireEvent.blur(phone)
+    expect(phone).toHaveValue('(43) 99982-4100')
+  })
+
   it('blocks establishment creation when the tenant has no enabled city', () => {
     render(
       <NewEstablishmentPage

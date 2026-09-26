@@ -163,7 +163,7 @@ export default function EffectiveAttributesForm({
       id="attributes"
       icon={SlidersHorizontal}
       title="Características da categoria"
-      description="Os campos são resolvidos pelo servidor a partir da categoria principal, incluindo herança, tipo, opções e obrigatoriedade."
+      description="As características dependem da categoria principal do lugar. As obrigatórias aparecem marcadas."
       issues={issues}
       toolbar={
         attributes.length > 0 ? (
@@ -178,7 +178,7 @@ export default function EffectiveAttributesForm({
           {categoriesDirty ? (
             <EditorDependencyNotice
               title="Salve as categorias para recalcular as características"
-              description="Os campos abaixo ainda representam a categoria principal salva no servidor. Salve a seleção atual antes de continuar."
+              description="Estas características ainda são da categoria salva antes. Salve a nova categoria para ver as características dela."
               actionLabel="Ir para categorias"
               onAction={() => onReviewCategories?.()}
             />

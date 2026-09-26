@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BarChart3,
   Building2,
+  ChevronDown,
   Loader2,
   MapPin,
   Plus,
@@ -18,12 +19,16 @@ import { PageHeader } from '~/components/page_header'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { EditorField } from '~/components/portal/establishment_editor/editor_field'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { firstError } from '~/lib/form_errors'
-import { organizationRoleLabel, organizationStatusLabel, revisionStatusLabel } from '~/lib/labels'
+import { formatCnpj, formatPhoneBR } from '~/lib/br_format'
+import { getRevisionStatusMeta } from '~/lib/establishment_editor'
+import { organizationRoleLabel, organizationStatusLabel } from '~/lib/labels'
+import { cn } from '~/lib/utils'
 import type { OrganizationAllowedActions } from '~/types'
 
 interface EstablishmentSummary {
@@ -92,14 +97,24 @@ const submittableStatuses = new Set(['draft', 'changes_requested'])
 const editableStatuses = new Set(['draft', 'changes_requested', 'active'])
 const openRevisionStatuses = new Set(['draft', 'pending_review', 'changes_requested'])
 
-function establishmentRevisionStatus(establishment: EstablishmentSummary): string {
+/** An open workflow outranks the publication it will replace. */
+function establishmentStatusMeta(establishment: EstablishmentSummary) {
   const status = establishment.revision?.status
   if (typeof status === 'string' && openRevisionStatuses.has(status)) {
-    return revisionStatusLabel(status)
+    return getRevisionStatusMeta(status)
   }
-  if (establishment.published_revision) return 'Publicada'
+  if (establishment.published_revision) return getRevisionStatusMeta('published')
+  if (typeof status === 'string') return getRevisionStatusMeta(status)
 
-  return typeof status === 'string' ? revisionStatusLabel(status) : 'Ainda não publicada'
+  return { ...getRevisionStatusMeta('draft'), label: 'Ainda não publicado' }
+}
+
+function organizationStatusVariant(status: string) {
+  if (status === 'active') return 'success' as const
+  if (status === 'pending_review') return 'info' as const
+  if (status === 'changes_requested') return 'warning' as const
+  if (status === 'rejected' || status === 'suspended') return 'destructive' as const
+  return 'neutral' as const
 }
 
 function hasOpenRevisionAlongsidePublication(establishment: EstablishmentSummary): boolean {
@@ -123,13 +138,20 @@ export default function PortalOrganizationPage({
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [localStatus, setLocalStatus] = useState<string | null>(null)
+  // Legal data sits behind a disclosure once the organization is approved (web audit
+  // W18); while it still has to be completed and sent, it starts open.
+  const [dataOpen, setDataOpen] = useState(
+    () =>
+      submittableStatuses.has(organization.status) ||
+      Object.keys(pageErrors).some((key) => key !== 'submission')
+  )
   const form = useForm<OrganizationFormData>({
     legal_name: organization.legal_name,
     trade_name: organization.trade_name,
     slug: organization.slug,
-    tax_id: organization.tax_id,
+    tax_id: formatCnpj(organization.tax_id),
     email: organization.email,
-    phone: organization.phone,
+    phone: formatPhoneBR(organization.phone),
     website: organization.website ?? '',
   })
   const editable = editableStatuses.has(organization.status) && allowedActions.organizations.update
@@ -245,38 +267,150 @@ export default function PortalOrganizationPage({
     )
   }
 
+  const dataVisible = dataOpen || form.isDirty || Object.keys(formErrors).length > 0
+
+  const places = (
+    <section className="space-y-4" aria-labelledby="organization-establishments-title">
+      <div>
+        <h2
+          id="organization-establishments-title"
+          className="font-display text-xl font-bold tracking-[-0.02em]"
+        >
+          Lugares
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cada lugar tem dados, fotos e publicação próprios no app e no site.
+        </p>
+      </div>
+
+      {organization.establishments.length === 0 ? (
+        <div className="rounded-card border border-dashed border-border bg-card">
+          <EmptyState
+            icon={Building2}
+            headingLevel={3}
+            title="Nenhum lugar cadastrado"
+            description="Cadastre um lugar para cada endereço onde a organização recebe o público."
+          >
+            {canCreateEstablishment ? (
+              <Button asChild variant="outline" size="lg" shape="pill">
+                <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
+                  Cadastrar o primeiro lugar
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              </Button>
+            ) : null}
+          </EmptyState>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {organization.establishments.map((establishment) => {
+            const score = Math.min(100, Math.max(0, establishment.completeness.score))
+            const statusMeta = establishmentStatusMeta(establishment)
+
+            return (
+              <Link
+                key={establishment.id}
+                href={`/portal/establishments/${establishment.id}`}
+                className="group flex flex-col rounded-card border border-border-subtle bg-card p-5 outline-none transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 font-display text-lg font-bold tracking-[-0.01em]">
+                      <MapPin aria-hidden="true" className="size-4 shrink-0 text-primary" />
+                      <span className="truncate">{establishment.public_name}</span>
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          'inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-bold',
+                          statusMeta.className
+                        )}
+                      >
+                        {statusMeta.label}
+                      </span>
+                      {hasOpenRevisionAlongsidePublication(establishment) ? (
+                        <span className="text-xs text-muted-foreground">
+                          Versão publicada continua no ar
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-display text-lg font-bold tabular-nums">
+                    {score}%
+                  </span>
+                </div>
+                <div
+                  className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-label={`Dados preenchidos de ${establishment.public_name}`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={score}
+                >
+                  <div
+                    className={cn(
+                      'h-full rounded-full',
+                      establishment.completeness.eligible ? 'bg-success' : 'bg-primary'
+                    )}
+                    style={{ width: `${score}%` }}
+                  />
+                </div>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
+                  Ver dados do lugar
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                  />
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+
   return (
     <MainLayout>
       <Head title={organization.trade_name} />
 
-      <div className="space-y-8">
-        <Button asChild variant="ghost" size="sm" className="-ms-3">
+      <div className="space-y-7">
+        <Button asChild variant="ghost" size="md" shape="pill" className="-ms-3">
           <Link href="/portal">
             <ArrowLeft aria-hidden="true" className="size-4" />
-            Voltar ao portal
+            Voltar à visão geral
           </Link>
         </Button>
 
         <PageHeader
           eyebrow={`Organização · ${organizationRoleLabel(organization.role)}`}
-          icon={Building2}
           title={organization.trade_name}
-          description={`${organization.legal_name} · ${organizationStatusLabel(organization.status)}`}
+          description={organization.legal_name}
+          meta={
+            <Badge
+              variant={organizationStatusVariant(organization.status)}
+              appearance="light"
+              shape="pill"
+              size="lg"
+            >
+              {organizationStatusLabel(organization.status)}
+            </Badge>
+          }
           actions={
             <>
               {canReadAnalytics ? (
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" size="lg" shape="pill">
                   <Link href={`/organizations/${organization.id}/analytics`}>
                     <BarChart3 aria-hidden="true" className="size-4" />
-                    Ver analytics
+                    Desempenho
                   </Link>
                 </Button>
               ) : null}
               {canCreateEstablishment ? (
-                <Button asChild>
+                <Button asChild size="xl" shape="pill">
                   <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
                     <Plus aria-hidden="true" className="size-4" />
-                    Nova unidade
+                    Novo lugar
                   </Link>
                 </Button>
               ) : null}
@@ -286,39 +420,93 @@ export default function PortalOrganizationPage({
 
         <section
           aria-label="Indicadores da organização"
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          className="grid grid-cols-2 gap-3 xl:grid-cols-4"
         >
           {[
-            ['Unidades', organization.totals.establishments],
-            ['Completas', organization.totals.complete],
+            ['Lugares', organization.totals.establishments],
+            ['Completos', organization.totals.complete],
             ['Em análise', organization.totals.pending_review],
-            ['Publicadas', organization.totals.published],
+            ['Publicados', organization.totals.published],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-lg border border-border bg-card p-5">
+            <article
+              key={label}
+              className="rounded-card border border-border-subtle bg-card p-4 sm:p-5"
+            >
               <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="mt-2 text-3xl font-bold">{value}</p>
+              <p className="mt-2 font-display text-3xl font-extrabold tabular-nums">{value}</p>
             </article>
           ))}
         </section>
 
+        {places}
+
         <section
-          className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
+          className="rounded-card border border-border-subtle bg-card"
           aria-labelledby="organization-data-title"
         >
-          <form
-            onSubmit={update}
-            className="space-y-5 rounded-md border border-border bg-card p-6"
-            aria-busy={busy}
-          >
-            <div>
-              <h2 id="organization-data-title" className="text-xl font-semibold">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+            <div className="min-w-0">
+              <h2
+                id="organization-data-title"
+                className="font-display text-xl font-bold tracking-[-0.02em]"
+              >
                 Dados da organização
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Dados legais ficam privados e são revisados pela equipe da plataforma.
+                Razão social, CNPJ e contatos. Ficam privados e são conferidos pela equipe do
+                Experimente+.
               </p>
+              {!dataVisible ? (
+                <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                  <div className="flex gap-1.5">
+                    <dt className="text-muted-foreground">CNPJ</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {formatCnpj(organization.tax_id)}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <dt className="text-muted-foreground">Telefone</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {formatPhoneBR(organization.phone)}
+                    </dd>
+                  </div>
+                  <div className="flex min-w-0 gap-1.5">
+                    <dt className="text-muted-foreground">E-mail</dt>
+                    <dd className="truncate font-semibold">{organization.email}</dd>
+                  </div>
+                </dl>
+              ) : null}
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              shape="pill"
+              className="shrink-0 self-start"
+              aria-expanded={dataVisible}
+              aria-controls="organization-data-panel"
+              disabled={form.isDirty}
+              onClick={() => setDataOpen(!dataVisible)}
+            >
+              {dataVisible ? 'Ocultar dados' : editable ? 'Ver e editar dados' : 'Ver dados'}
+              <ChevronDown
+                aria-hidden="true"
+                className={cn(
+                  'size-4 transition-transform motion-reduce:transition-none',
+                  dataVisible && 'rotate-180'
+                )}
+              />
+            </Button>
+          </div>
 
+          <form
+            id="organization-data-panel"
+            hidden={!dataVisible}
+            onSubmit={update}
+            className="space-y-5 border-t border-border-subtle p-5 sm:p-6"
+            aria-busy={busy}
+            aria-labelledby="organization-data-title"
+          >
             {generalFormError ? (
               <Alert variant="destructive" role="alert">
                 <AlertTitle>Não foi possível salvar os dados</AlertTitle>
@@ -352,7 +540,8 @@ export default function PortalOrganizationPage({
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="md"
+                    shape="pill"
                     onClick={() => saveButtonRef.current?.focus()}
                   >
                     Ir para salvar
@@ -419,7 +608,7 @@ export default function PortalOrganizationPage({
               <EditorField
                 htmlFor="organization-tax-id"
                 label="CNPJ"
-                hint="A validação e a normalização finais permanecem no servidor."
+                hint="Só números ou no formato 00.000.000/0000-00."
                 required
                 error={fieldError('tax_id')}
               >
@@ -433,6 +622,7 @@ export default function PortalOrganizationPage({
                   disabled={!legalIdentityEditable || busy}
                   value={form.data.tax_id}
                   onChange={(event) => form.setData('tax_id', event.target.value)}
+                  onBlur={(event) => form.setData('tax_id', formatCnpj(event.target.value))}
                 />
               </EditorField>
 
@@ -473,6 +663,7 @@ export default function PortalOrganizationPage({
                   disabled={!editable || busy}
                   value={form.data.phone}
                   onChange={(event) => form.setData('phone', event.target.value)}
+                  onBlur={(event) => form.setData('phone', formatPhoneBR(event.target.value))}
                 />
               </EditorField>
             </div>
@@ -501,6 +692,8 @@ export default function PortalOrganizationPage({
                 <Button
                   type="button"
                   variant="ghost"
+                  size="lg"
+                  shape="pill"
                   disabled={busy || !form.isDirty}
                   onClick={discardChanges}
                 >
@@ -510,6 +703,8 @@ export default function PortalOrganizationPage({
                   ref={saveButtonRef}
                   type="submit"
                   variant="outline"
+                  size="lg"
+                  shape="pill"
                   disabled={busy || !form.isDirty}
                 >
                   {operation === 'save' || form.processing ? (
@@ -527,6 +722,8 @@ export default function PortalOrganizationPage({
                 {canSubmit ? (
                   <Button
                     type="button"
+                    size="lg"
+                    shape="pill"
                     disabled={busy || form.isDirty}
                     onClick={openSubmissionDialog}
                   >
@@ -537,94 +734,15 @@ export default function PortalOrganizationPage({
               </div>
             ) : null}
           </form>
-
-          {canCreateFeedback ? (
-            <PilotFeedbackForm
-              targets={feedback_targets}
-              context="organization"
-              organizationId={organization.id}
-            />
-          ) : null}
         </section>
 
-        <section className="space-y-4" aria-labelledby="organization-establishments-title">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h2 id="organization-establishments-title" className="text-xl font-semibold">
-                Unidades
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Cada endereço público possui ficha, mídia e publicação próprias.
-              </p>
-            </div>
-          </div>
-
-          {organization.establishments.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border bg-card">
-              <EmptyState
-                icon={Building2}
-                title="Nenhuma unidade cadastrada"
-                description="Crie uma unidade quando houver um endereço público vinculado a esta organização."
-              >
-                {canCreateEstablishment ? (
-                  <Button asChild variant="outline">
-                    <Link href={`/portal/organizations/${organization.id}/establishments/new`}>
-                      Criar primeira unidade
-                      <ArrowRight aria-hidden="true" className="size-4" />
-                    </Link>
-                  </Button>
-                ) : null}
-              </EmptyState>
-            </div>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {organization.establishments.map((establishment) => {
-                const score = Math.min(100, Math.max(0, establishment.completeness.score))
-
-                return (
-                  <Link
-                    key={establishment.id}
-                    href={`/portal/establishments/${establishment.id}`}
-                    className="rounded-lg border border-border bg-card p-5 outline-none transition hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="flex items-center gap-2 font-semibold">
-                          <MapPin aria-hidden="true" className="size-4 text-primary" />
-                          {establishment.public_name}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {establishmentRevisionStatus(establishment)}
-                        </p>
-                        {hasOpenRevisionAlongsidePublication(establishment) ? (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Publicação vigente no catálogo
-                          </p>
-                        ) : null}
-                      </div>
-                      <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                        {score}%
-                      </span>
-                    </div>
-                    <div
-                      className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
-                      role="progressbar"
-                      aria-label={`Completude da ficha de ${establishment.public_name}`}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={score}
-                    >
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </section>
+        {canCreateFeedback ? (
+          <PilotFeedbackForm
+            targets={feedback_targets}
+            context="organization"
+            organizationId={organization.id}
+          />
+        ) : null}
       </div>
 
       <ConfirmDialog
@@ -633,7 +751,7 @@ export default function PortalOrganizationPage({
           if (!busy) setSubmitDialogOpen(open)
         }}
         title="Enviar organização para análise?"
-        description="Os dados atualmente salvos serão encaminhados para a equipe da plataforma. Durante a análise, a edição poderá ficar temporariamente indisponível."
+        description="Os dados salvos vão para a equipe do Experimente+. Durante a análise, a edição pode ficar indisponível por um tempo."
         confirmLabel="Enviar para análise"
         processing={operation === 'submit'}
         disabled={busy && operation !== 'submit'}

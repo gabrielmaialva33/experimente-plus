@@ -21,8 +21,8 @@ const baseProps = {
   busy: false,
   unsavedSectionCount: 0,
   onSubmit: vi.fn(),
-  submitLabel: 'Enviar para moderação',
-  statusLabel: 'A ficha está aberta para edição.',
+  submitLabel: 'Enviar para análise',
+  statusLabel: 'Os dados do lugar estão abertos para edição.',
   lockedLabel: 'Em moderação',
 }
 
@@ -98,7 +98,7 @@ describe('EstablishmentEditorNavigation', () => {
 
     expect(screen.getByRole('button', { name: 'Identidade: 1 pendência' })).toBeInTheDocument()
     expect(screen.getByText('1 ajuste necessário')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Enviar para moderação' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Enviar para análise' })).toBeDisabled()
   })
 
   it('does not render a submission action when the server does not allow it', () => {
@@ -130,5 +130,21 @@ describe('EstablishmentEditorNavigation', () => {
 
     expect(screen.getByRole('button', { name: /enviando/i })).toBeDisabled()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows pending moderation corrections instead of claiming the data is ready', () => {
+    render(
+      <EstablishmentEditorNavigation
+        {...baseProps}
+        variant="desktop"
+        activeSection="identity"
+        onNavigate={() => undefined}
+        correctionCount={2}
+      />
+    )
+
+    expect(screen.getByText('2 correções pedidas')).toBeVisible()
+    expect(screen.queryByText('Pronto para enviar')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Pronta para moderação/)).not.toBeInTheDocument()
   })
 })

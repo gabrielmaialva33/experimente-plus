@@ -11,7 +11,15 @@ import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { firstError } from '~/lib/form_errors'
 import { stringValue, type JsonRecord } from '~/lib/establishment_editor'
+import { formatPhoneBR } from '~/lib/br_format'
 import { EditorField, editorSelectClassName } from './editor_field'
+
+/** The moderation's request for one field, when there is one. */
+export function moderationNote(issues: readonly EditorDisplayIssue[], field: string) {
+  return (
+    issues.find((issue) => issue.source === 'moderation' && issue.field === field)?.message ?? null
+  )
+}
 import type { IdentityForm } from './types'
 
 interface IdentitySectionProps {
@@ -40,7 +48,7 @@ export function IdentitySection({
       id="identity"
       icon={Store}
       title="Identidade, atendimento e contatos"
-      description="Defina como a unidade aparece no catálogo e quais canais o visitante pode usar para entrar em contato."
+      description="Defina como o lugar aparece no app e no site e por quais canais o visitante fala com você."
       issues={issues}
       toolbar={
         <Badge variant="outline" size="sm">
@@ -54,6 +62,7 @@ export function IdentitySection({
             <EditorField
               htmlFor="public-name"
               label="Nome público"
+              note={moderationNote(issues, 'public_name')}
               required
               error={firstError(form.errors.public_name)}
               className="md:col-span-2"
@@ -74,6 +83,7 @@ export function IdentitySection({
             <EditorField
               htmlFor="city"
               label="Cidade"
+              note={moderationNote(issues, 'city_id')}
               required
               error={firstError(form.errors.city_id)}
             >
@@ -100,6 +110,7 @@ export function IdentitySection({
             <EditorField
               htmlFor="availability-type"
               label="Forma de atendimento"
+              note={moderationNote(issues, 'availability_type')}
               required
               error={firstError(form.errors.availability_type)}
             >
@@ -121,6 +132,7 @@ export function IdentitySection({
           <EditorField
             htmlFor="short-description"
             label="Descrição curta"
+            note={moderationNote(issues, 'short_description')}
             hint={`${form.data.short_description.length}/280`}
             error={firstError(form.errors.short_description)}
           >
@@ -134,13 +146,14 @@ export function IdentitySection({
               value={form.data.short_description}
               onChange={(event) => form.setData('short_description', event.target.value)}
               className="resize-y"
-              placeholder="Uma frase objetiva para apresentar a unidade nos resultados."
+              placeholder="Uma frase curta que apresenta o lugar nos resultados."
             />
           </EditorField>
 
           <EditorField
             htmlFor="description"
             label="Descrição completa"
+            note={moderationNote(issues, 'description')}
             hint={`${form.data.description.length}/4000`}
             error={firstError(form.errors.description)}
           >
@@ -154,7 +167,7 @@ export function IdentitySection({
               value={form.data.description}
               onChange={(event) => form.setData('description', event.target.value)}
               className="resize-y"
-              placeholder="Conte o que torna esta unidade relevante, para quem ela é e o que o visitante encontra."
+              placeholder="Conte o que torna este lugar especial, para quem ele é e o que o visitante encontra."
             />
           </EditorField>
 
@@ -182,6 +195,7 @@ export function IdentitySection({
                   htmlFor={name}
                   label={label}
                   error={firstError(form.errors[name])}
+                  note={moderationNote(issues, name)}
                 >
                   <Input
                     id={name}
@@ -200,6 +214,11 @@ export function IdentitySection({
                     disabled={controlsDisabled}
                     value={form.data[name]}
                     onChange={(event) => form.setData(name, event.target.value)}
+                    onBlur={
+                      type === 'tel'
+                        ? (event) => form.setData(name, formatPhoneBR(event.target.value))
+                        : undefined
+                    }
                     placeholder={placeholder}
                     aria-invalid={Boolean(form.errors[name])}
                   />

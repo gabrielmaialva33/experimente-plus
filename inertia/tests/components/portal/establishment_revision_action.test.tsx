@@ -9,7 +9,7 @@ describe('EstablishmentRevisionAction', () => {
     const onCreate = vi.fn()
     render(<EstablishmentRevisionAction allowed source="published" onCreate={onCreate} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Criar nova revisão' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Editar dados do lugar' }))
     expect(onCreate).toHaveBeenCalledOnce()
     expect(onCreate).toHaveBeenCalledWith('published')
   })
@@ -18,7 +18,7 @@ describe('EstablishmentRevisionAction', () => {
     const onCreate = vi.fn()
     render(<EstablishmentRevisionAction allowed source="latest_terminal" onCreate={onCreate} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Criar nova revisão' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Editar dados do lugar' }))
     expect(onCreate).toHaveBeenCalledWith('latest_terminal')
   })
 
@@ -26,9 +26,9 @@ describe('EstablishmentRevisionAction', () => {
     const { rerender } = render(
       <EstablishmentRevisionAction allowed={false} source="published" onCreate={vi.fn()} />
     )
-    expect(screen.queryByRole('button', { name: 'Criar nova revisão' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar dados do lugar' })).not.toBeInTheDocument()
 
     rerender(<EstablishmentRevisionAction allowed source={null} onCreate={vi.fn()} />)
-    expect(screen.queryByRole('button', { name: 'Criar nova revisão' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar dados do lugar' })).not.toBeInTheDocument()
   })
 })

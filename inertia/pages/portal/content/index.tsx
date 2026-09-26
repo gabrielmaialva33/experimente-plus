@@ -24,6 +24,7 @@ import {
   editorSelectClassName,
 } from '~/components/portal/establishment_editor/editor_field'
 import { PartnerContentMediaManager } from '~/components/portal/partner_content_media_manager'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
@@ -98,6 +99,22 @@ interface FormState {
   startsAt: string
   endsAt: string
   priceReais: string
+}
+
+/** Partner-facing copy per kind; the shared labels also serve the backoffice. */
+const KIND_COPY: Record<PartnerContentPath, { description: string; empty: string }> = {
+  'experiences': {
+    description: 'Atividades e vivências que o lugar oferece.',
+    empty: 'Nenhuma experiência ainda',
+  },
+  'events': {
+    description: 'Programação com data e horário de início e fim.',
+    empty: 'Nenhum evento ainda',
+  },
+  'showcase-items': {
+    description: 'Itens em destaque, com preço opcional só para exibição.',
+    empty: 'Nenhum item de vitrine ainda',
+  },
 }
 
 const emptyForm: FormState = {
@@ -215,11 +232,11 @@ export default function PartnerContentPage({
 
     const establishment = establishmentById.get(Number(form.establishmentId))
     if (!establishment || !establishment.allowed_actions.update) {
-      setLocalError('Selecione uma unidade que você possa gerenciar.')
+      setLocalError('Selecione um lugar que você possa gerenciar.')
       return
     }
     if (!form.title.trim()) {
-      setLocalError('Informe um título para o conteúdo.')
+      setLocalError('Informe um título.')
       return
     }
 
@@ -231,7 +248,7 @@ export default function PartnerContentPage({
 
     if (kind === 'events') {
       if (!establishment.city?.timezone) {
-        setLocalError('Defina a cidade da unidade antes de cadastrar um evento.')
+        setLocalError('Defina a cidade do lugar antes de cadastrar um evento.')
         return
       }
       if (!form.startsAt || !form.endsAt) {
@@ -242,7 +259,7 @@ export default function PartnerContentPage({
       const startsAt = zonedLocalToIso(form.startsAt, establishment.city.timezone)
       const endsAt = zonedLocalToIso(form.endsAt, establishment.city.timezone)
       if (!startsAt || !endsAt) {
-        setLocalError('Os horários informados não são válidos no fuso da cidade.')
+        setLocalError('Os horários informados não são válidos na cidade do lugar.')
         return
       }
       if (new Date(endsAt) <= new Date(startsAt)) {
@@ -283,18 +300,16 @@ export default function PartnerContentPage({
 
   return (
     <MainLayout>
-      <Head title="Conteúdo do parceiro" />
+      <Head title="Experiências e eventos" />
 
-      <div className="space-y-7">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Portal do parceiro"
-          icon={Megaphone}
-          title="Conteúdo do parceiro"
-          description="Publique experiências, eventos e itens de vitrine sem misturar esse conteúdo com a revisão da ficha da unidade."
+          title="Experiências e eventos"
+          description="Divulgue experiências, eventos e itens de vitrine dos seus lugares. Eles aparecem no app e no site, separados dos dados do lugar."
         />
 
         <div
-          className="grid gap-2 rounded-lg border border-border bg-card p-2 sm:grid-cols-3"
+          className="flex gap-1 rounded-full bg-muted p-1 sm:inline-flex sm:self-start"
           role="tablist"
           aria-label="Tipos de conteúdo"
         >
@@ -309,54 +324,72 @@ export default function PartnerContentPage({
                 aria-selected={selected}
                 onClick={() => changeKind(item.path)}
                 className={cn(
-                  'rounded-md border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'inline-flex h-10 flex-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-sm transition-colors sm:flex-none sm:gap-2 sm:px-4 sm:text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none',
                   selected
-                    ? 'border-primary/25 bg-primary-soft text-primary-accent'
-                    : 'border-transparent hover:bg-accent'
+                    ? 'bg-primary font-bold text-primary-foreground'
+                    : 'font-semibold text-foreground hover:bg-background'
                 )}
               >
-                <span className="block text-sm font-bold">{item.label}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {count} {count === 1 ? 'item' : 'itens'}
+                {item.label}
+                <span
+                  className={cn(
+                    'rounded-full px-2 text-xs font-bold tabular-nums',
+                    selected ? 'bg-primary-foreground/20' : 'bg-background'
+                  )}
+                >
+                  {count}
                 </span>
               </button>
             )
           })}
         </div>
 
-        <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumo do conteúdo selecionado">
-          {[
-            ['Rascunhos', draftCount, 'bg-muted text-muted-foreground'],
-            ['Em análise', pendingCount, 'bg-warning/15 text-warning-foreground'],
-            ['Publicados', publishedCount, 'bg-success/10 text-success'],
-          ].map(([label, count, className]) => (
-            <div key={String(label)} className="rounded-lg border border-border bg-card p-4">
-              <span
-                className={cn('inline-flex rounded-md px-2 py-1 text-xs font-semibold', className)}
+        <section className="grid grid-cols-3 gap-3" aria-label="Resumo do conteúdo selecionado">
+          {(
+            [
+              ['Rascunhos', draftCount, 'neutral'],
+              ['Em análise', pendingCount, 'info'],
+              ['Publicados', publishedCount, 'success'],
+            ] as const
+          ).map(([label, count, variant]) => (
+            <div
+              key={label}
+              className="min-w-0 rounded-card border border-border-subtle bg-card p-3 sm:p-5"
+            >
+              <Badge
+                variant={variant}
+                appearance="light"
+                shape="pill"
+                size="sm"
+                className="whitespace-nowrap"
               >
                 {label}
-              </span>
-              <p className="mt-3 text-2xl font-bold tabular-nums">{Number(count)}</p>
+              </Badge>
+              <p className="mt-3 font-display text-3xl font-extrabold tabular-nums">{count}</p>
             </div>
           ))}
         </section>
 
         {manageableEstablishments.length > 0 ? (
-          <section className="rounded-lg border border-border bg-card p-5 sm:p-6">
-            <div className="flex flex-col gap-2 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <section className="rounded-card border border-border-subtle bg-card p-5 sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-border-subtle pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                  {editingId === null ? 'Novo conteúdo' : 'Editar conteúdo'}
-                </p>
-                <h2 className="mt-1 text-xl font-bold tracking-[-0.02em]">
+                <h2 className="font-display text-xl font-bold tracking-[-0.02em]">
                   {editingId === null
                     ? 'Adicionar ' + currentKind.singular
                     : 'Atualizar ' + currentKind.singular}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{currentKind.description}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{KIND_COPY[kind].description}</p>
               </div>
               {editingId !== null ? (
-                <Button type="button" variant="outline" onClick={resetForm} disabled={processing}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  shape="pill"
+                  onClick={resetForm}
+                  disabled={processing}
+                >
                   <X aria-hidden="true" className="size-4" />
                   Cancelar edição
                 </Button>
@@ -364,7 +397,7 @@ export default function PartnerContentPage({
             </div>
 
             <form onSubmit={submit} aria-busy={processing} className="mt-5 grid gap-4">
-              <EditorField htmlFor="content-establishment" label="Unidade">
+              <EditorField htmlFor="content-establishment" label="Lugar" required>
                 <select
                   id="content-establishment"
                   required
@@ -373,7 +406,7 @@ export default function PartnerContentPage({
                   className={editorSelectClassName}
                   disabled={processing || editingId !== null}
                 >
-                  <option value="">Selecione uma unidade</option>
+                  <option value="">Selecione um lugar</option>
                   {manageableEstablishments.map((establishment) => (
                     <option key={establishment.id} value={establishment.id}>
                       {establishment.public_name} · {establishment.organization_name}
@@ -382,7 +415,7 @@ export default function PartnerContentPage({
                 </select>
               </EditorField>
 
-              <EditorField htmlFor="content-title" label="Título">
+              <EditorField htmlFor="content-title" label="Título" required>
                 <Input
                   id="content-title"
                   required
@@ -396,7 +429,7 @@ export default function PartnerContentPage({
               <EditorField
                 htmlFor="content-description"
                 label="Descrição"
-                hint="Opcional · até 4.000 caracteres"
+                hint="opcional · até 4.000 caracteres"
               >
                 <Textarea
                   id="content-description"
@@ -413,10 +446,11 @@ export default function PartnerContentPage({
                   <EditorField
                     htmlFor="content-start"
                     label="Início"
+                    required
                     hint={
                       selectedEstablishment?.city
-                        ? 'Fuso: ' + selectedEstablishment.city.timezone
-                        : 'Selecione uma unidade com cidade definida'
+                        ? 'Horário de ' + selectedEstablishment.city.name
+                        : 'Selecione um lugar com cidade definida'
                     }
                   >
                     <Input
@@ -428,7 +462,7 @@ export default function PartnerContentPage({
                       disabled={processing || !selectedEstablishment?.city}
                     />
                   </EditorField>
-                  <EditorField htmlFor="content-end" label="Fim">
+                  <EditorField htmlFor="content-end" label="Fim" required>
                     <Input
                       id="content-end"
                       type="datetime-local"
@@ -445,7 +479,7 @@ export default function PartnerContentPage({
                 <EditorField
                   htmlFor="content-price"
                   label="Preço informativo"
-                  hint="Opcional · apenas exibição; não cria produto nem checkout"
+                  hint="opcional · só para exibição, sem venda"
                 >
                   <div className="relative">
                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
@@ -467,7 +501,7 @@ export default function PartnerContentPage({
               {localError ? (
                 <p
                   role="alert"
-                  className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  className="rounded-xl border border-destructive/25 bg-destructive-soft px-3 py-2 text-sm text-destructive-accent"
                 >
                   {localError}
                 </p>
@@ -475,14 +509,14 @@ export default function PartnerContentPage({
               {Object.keys(errors).length > 0 ? (
                 <p
                   role="alert"
-                  className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  className="rounded-xl border border-destructive/25 bg-destructive-soft px-3 py-2 text-sm text-destructive-accent"
                 >
                   Revise os campos informados e tente novamente.
                 </p>
               ) : null}
 
               <div className="flex justify-end">
-                <Button type="submit" size="lg" disabled={processing}>
+                <Button type="submit" size="xl" shape="pill" disabled={processing}>
                   {processing ? (
                     <Loader2 aria-hidden="true" className="size-4 animate-spin" />
                   ) : editingId === null ? (
@@ -506,13 +540,13 @@ export default function PartnerContentPage({
             <EmptyState
               icon={PackageOpen}
               headingLevel={2}
-              title={'Nenhuma ' + currentKind.singular + ' cadastrada'}
+              title={KIND_COPY[kind].empty}
               description={
                 manageableEstablishments.length > 0
-                  ? 'Use o formulário acima para criar o primeiro item.'
-                  : 'Ainda não há conteúdo deste tipo nas unidades disponíveis para sua conta.'
+                  ? 'Use o formulário acima para criar o primeiro.'
+                  : 'Ainda não há conteúdo deste tipo nos lugares da sua conta.'
               }
-              className="rounded-lg border border-dashed border-border bg-card"
+              className="rounded-card border border-dashed border-border bg-card"
             />
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
@@ -533,18 +567,21 @@ export default function PartnerContentPage({
                     : null
 
                 return (
-                  <article key={row.id} className="rounded-lg border border-border bg-card p-5">
+                  <article
+                    key={row.id}
+                    className="rounded-card border border-border-subtle bg-card p-5"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           {row.rejectionReason && row.status === 'draft' ? (
-                            <span className="inline-flex rounded-full border border-destructive/30 bg-destructive-soft px-2.5 py-0.5 text-[0.68rem] font-semibold text-destructive-accent">
+                            <span className="inline-flex h-6 items-center rounded-full border border-destructive/30 bg-destructive-soft px-2.5 text-xs font-bold text-destructive-accent">
                               Recusado
                             </span>
                           ) : (
                             <span
                               className={cn(
-                                'inline-flex rounded-full border px-2.5 py-0.5 text-[0.68rem] font-semibold',
+                                'inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-bold',
                                 meta.className
                               )}
                             >
@@ -558,9 +595,11 @@ export default function PartnerContentPage({
                             </span>
                           ) : null}
                         </div>
-                        <h2 className="mt-3 text-lg font-bold tracking-[-0.02em]">{row.title}</h2>
+                        <h2 className="mt-3 font-display text-lg font-bold tracking-[-0.02em]">
+                          {row.title}
+                        </h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          {establishment?.public_name || 'Unidade ' + row.establishmentId}
+                          {establishment?.public_name || 'Lugar ' + row.establishmentId}
                           {establishment?.organization_name
                             ? ' · ' + establishment.organization_name
                             : ''}
@@ -578,7 +617,7 @@ export default function PartnerContentPage({
                     {row.rejectionReason ? (
                       <section
                         aria-label="Recusa da moderação"
-                        className="mt-4 rounded-md border border-destructive/30 bg-destructive-soft p-4 text-destructive-accent"
+                        className="mt-4 rounded-2xl border border-destructive/30 bg-destructive-soft p-4 text-destructive-accent"
                       >
                         <p className="flex items-center gap-2 text-sm font-bold">
                           <MessageSquareWarning aria-hidden="true" className="size-4 shrink-0" />
@@ -611,7 +650,8 @@ export default function PartnerContentPage({
                     ) : null}
 
                     {startsAt && endsAt ? (
-                      <p className="mt-4 text-sm font-medium">
+                      <p className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
+                        <CalendarDays aria-hidden="true" className="size-4 text-primary" />
                         {startsAt} → {endsAt}
                       </p>
                     ) : null}
@@ -633,11 +673,11 @@ export default function PartnerContentPage({
                       editable={canUpdate && row.status !== 'archived'}
                     />
 
-                    <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
-                      <Button asChild variant="outline" size="sm">
+                    <div className="mt-5 flex flex-wrap gap-2 border-t border-border-subtle pt-4">
+                      <Button asChild variant="ghost" size="md" shape="pill">
                         <Link href={'/portal/establishments/' + row.establishmentId}>
-                          <Store aria-hidden="true" className="size-3.5" />
-                          Unidade
+                          <Store aria-hidden="true" className="size-4" />
+                          Ver lugar
                         </Link>
                       </Button>
 
@@ -645,11 +685,12 @@ export default function PartnerContentPage({
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
+                          size="md"
+                          shape="pill"
                           onClick={() => beginEdit(row)}
                           disabled={busy}
                         >
-                          <Edit3 aria-hidden="true" className="size-3.5" />
+                          <Edit3 aria-hidden="true" className="size-4" />
                           Editar
                         </Button>
                       ) : null}
@@ -657,18 +698,19 @@ export default function PartnerContentPage({
                       {canSubmit && row.status === 'draft' ? (
                         <Button
                           type="button"
-                          size="sm"
+                          size="md"
+                          shape="pill"
                           onClick={() =>
                             runAction('/portal/content/' + kind + '/' + row.id + '/submit', row.id)
                           }
                           disabled={busy}
                         >
                           {busy ? (
-                            <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
                           ) : needsReview ? (
-                            <Send aria-hidden="true" className="size-3.5" />
+                            <Send aria-hidden="true" className="size-4" />
                           ) : (
-                            <Rocket aria-hidden="true" className="size-3.5" />
+                            <Rocket aria-hidden="true" className="size-4" />
                           )}
                           {needsReview ? 'Enviar para análise' : 'Publicar'}
                         </Button>
@@ -677,7 +719,7 @@ export default function PartnerContentPage({
                       {canArchive && row.status !== 'archived' ? (
                         <ConfirmDialog
                           title="Arquivar este conteúdo?"
-                          description="Ele sairá da descoberta pública imediatamente, mas o histórico será preservado."
+                          description="Ele sai do app e do site na hora, mas o histórico fica guardado."
                           confirmLabel="Arquivar"
                           destructive
                           processing={busy}
@@ -685,8 +727,15 @@ export default function PartnerContentPage({
                             runAction('/portal/content/' + kind + '/' + row.id + '/archive', row.id)
                           }
                           trigger={
-                            <Button type="button" variant="ghost" size="sm" disabled={busy}>
-                              <Archive aria-hidden="true" className="size-3.5" />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="md"
+                              shape="pill"
+                              className="ms-auto"
+                              disabled={busy}
+                            >
+                              <Archive aria-hidden="true" className="size-4" />
                               Arquivar
                             </Button>
                           }
@@ -701,8 +750,8 @@ export default function PartnerContentPage({
         </section>
 
         <p className="text-xs leading-5 text-muted-foreground">
-          A tela mostra até 100 itens de cada tipo neste corte do piloto. Conteúdo arquivado
-          continua no histórico e não volta à descoberta automaticamente.
+          Esta tela mostra até 100 itens de cada tipo. O que for arquivado continua no histórico e
+          não volta ao app e ao site sozinho.
         </p>
       </div>
     </MainLayout>

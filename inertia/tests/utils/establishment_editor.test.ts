@@ -35,7 +35,7 @@ describe('establishment editor utilities', () => {
     expect(editorIssueFieldLabel('slug')).toBe('URL pública')
     expect(editorIssueFieldLabel('address.coordinates')).toBe('Coordenadas no mapa')
     expect(editorIssueFieldLabel('attributes.wifi')).toBe('Características')
-    expect(editorIssueFieldLabel('unknown_backend_field')).toBe('Ficha')
+    expect(editorIssueFieldLabel('unknown_backend_field')).toBe('Dados do lugar')
   })
 
   it('groups issues without losing their original payload', () => {
@@ -55,10 +55,10 @@ describe('establishment editor utilities', () => {
 
   it('localizes known and dynamic completeness messages', () => {
     expect(localizeCompletenessIssue(issue('media_missing', 'media'))).toBe(
-      'Adicione ao menos uma imagem para representar a unidade.'
+      'Adicione ao menos uma imagem do lugar.'
     )
     expect(localizeCompletenessIssue(issue('slug_already_published', 'slug'))).toBe(
-      'A URL pública já está em uso por outra unidade desta cidade. Altere o nome público para gerar um endereço diferente.'
+      'O endereço público já é usado por outro lugar desta cidade. Altere o nome público para gerar outro endereço.'
     )
     expect(
       localizeCompletenessIssue(
@@ -72,7 +72,7 @@ describe('establishment editor utilities', () => {
 
   it('describes the revision workflow in Portuguese', () => {
     expect(getRevisionStatusMeta('draft').label).toBe('Rascunho')
-    expect(getRevisionStatusMeta('changes_requested').label).toBe('Correções solicitadas')
+    expect(getRevisionStatusMeta('changes_requested').label).toBe('Correções pedidas')
     expect(getRevisionStatusMeta('pending_review').label).toBe('Em moderação')
   })
 
@@ -83,7 +83,7 @@ describe('establishment editor utilities', () => {
     expect(technicalStatus).toBe('approved')
     expect(getRevisionStatusMeta(presentationStatus)).toMatchObject({
       label: 'Publicada',
-      description: 'Esta revisão está disponível no catálogo público.',
+      description: 'Estes dados estão publicados no app e no site.',
     })
     expect(revisionPresentationStatus(technicalStatus, 31, 18)).toBe('approved')
   })

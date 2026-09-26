@@ -3,9 +3,10 @@ import { Check, ImagePlus, Loader2, Star, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
+import { EditorField } from '~/components/portal/establishment_editor/editor_field'
+import { ImageDropZone } from '~/components/portal/image_drop_zone'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { Textarea } from '~/components/ui/textarea'
 import {
   partnerContentMediaStatusMeta,
   type PartnerContentMediaItem,
@@ -39,6 +40,7 @@ export function PartnerContentMediaManager({
   const [uploading, setUploading] = useState(false)
   const [actionId, setActionId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const fieldPrefix = `content-${kind}-${contentId}`
 
   function reloadContent(): Promise<void> {
     return new Promise((resolve) => {
@@ -157,17 +159,17 @@ export function PartnerContentMediaManager({
   }
 
   return (
-    <div className="mt-5 border-t border-border pt-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold">Imagens</p>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-            JPEG, PNG ou WebP de até 10 MB. Só imagens aprovadas aparecem para o público.
-          </p>
-        </div>
-        <span className="text-xs font-medium text-muted-foreground">
-          {media.length} {media.length === 1 ? 'imagem' : 'imagens'}
-        </span>
+    <div className="mt-5 border-t border-border-subtle pt-5">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <p className="text-sm font-bold">Imagens</p>
+        {media.length > 0 ? (
+          <span className="text-xs font-medium text-muted-foreground">
+            {media.length} {media.length === 1 ? 'imagem' : 'imagens'}
+          </span>
+        ) : null}
+        <p className="basis-full text-xs leading-5 text-muted-foreground">
+          Só imagens aprovadas pela moderação aparecem no app e no site.
+        </p>
       </div>
 
       {media.length > 0 ? (
@@ -178,7 +180,7 @@ export function PartnerContentMediaManager({
             return (
               <article
                 key={item.id}
-                className="overflow-hidden rounded-md border border-border bg-background"
+                className="overflow-hidden rounded-2xl border border-border-subtle bg-background"
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-muted">
                   <img
@@ -269,37 +271,31 @@ export function PartnerContentMediaManager({
         <form
           onSubmit={(event) => void upload(event)}
           aria-busy={uploading}
-          className="mt-4 grid gap-3 rounded-md border border-dashed border-border p-4"
+          className="mt-4 grid gap-4 rounded-2xl border border-border-subtle bg-muted/20 p-4"
         >
-          <label className="grid gap-1.5 text-sm font-medium">
-            Imagem
-            <Input
-              name="file"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              disabled={uploading}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-medium">
-            Texto alternativo
-            <Input
-              name="alt_text"
-              maxLength={180}
-              placeholder="Ex.: Mesa posta para degustação de cafés"
-              disabled={uploading}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-medium">
-            Legenda
-            <Textarea
-              name="caption"
-              rows={2}
-              maxLength={500}
-              placeholder="Opcional"
-              disabled={uploading}
-            />
-          </label>
-          <label className="flex items-center gap-2 text-sm">
+          <EditorField htmlFor={`${fieldPrefix}-file`} label="Imagem" required>
+            <ImageDropZone id={`${fieldPrefix}-file`} disabled={uploading} />
+          </EditorField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <EditorField htmlFor={`${fieldPrefix}-alt`} label="Texto alternativo" required>
+              <Input
+                id={`${fieldPrefix}-alt`}
+                name="alt_text"
+                maxLength={180}
+                placeholder="Ex.: Mesa posta para degustação de cafés"
+                disabled={uploading}
+              />
+            </EditorField>
+            <EditorField htmlFor={`${fieldPrefix}-caption`} label="Legenda" hint="opcional">
+              <Input
+                id={`${fieldPrefix}-caption`}
+                name="caption"
+                maxLength={500}
+                disabled={uploading}
+              />
+            </EditorField>
+          </div>
+          <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
             <input
               name="is_cover"
               type="checkbox"
@@ -307,7 +303,7 @@ export function PartnerContentMediaManager({
               className="size-4 accent-primary"
               disabled={uploading}
             />
-            Usar como capa deste conteúdo
+            Usar como capa
           </label>
 
           {error ? (
@@ -317,11 +313,11 @@ export function PartnerContentMediaManager({
           ) : null}
 
           <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={uploading}>
+            <Button type="submit" variant="outline" shape="pill" disabled={uploading}>
               {uploading ? (
-                <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
               ) : (
-                <ImagePlus aria-hidden="true" className="size-3.5" />
+                <ImagePlus aria-hidden="true" className="size-4" />
               )}
               {uploading ? 'Enviando…' : 'Enviar imagem'}
             </Button>

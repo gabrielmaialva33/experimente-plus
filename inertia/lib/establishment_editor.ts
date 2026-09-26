@@ -70,66 +70,65 @@ export interface RevisionStatusMeta {
 const STATUS_META: Record<string, RevisionStatusMeta> = {
   draft: {
     label: 'Rascunho',
-    description: 'A ficha está aberta para edição.',
+    description: 'Os dados do lugar estão abertos para edição.',
     className: 'border-border bg-muted text-muted-foreground',
   },
   changes_requested: {
-    label: 'Correções solicitadas',
-    description: 'A moderação devolveu a ficha para ajustes.',
+    label: 'Correções pedidas',
+    description: 'A moderação pediu correções antes de publicar.',
     className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   pending_review: {
     label: 'Em moderação',
-    description: 'A ficha está bloqueada enquanto a equipe faz a análise.',
+    description: 'Os dados estão em análise pela moderação; a edição volta quando ela responder.',
     className: 'border-info/30 bg-info-soft text-info-accent',
   },
   approved: {
     label: 'Aprovada',
-    description: 'A revisão foi aprovada e aguarda a publicação.',
+    description: 'Os dados foram aprovados e serão publicados em seguida.',
     className: 'border-success/30 bg-success-soft text-success-accent',
   },
   rejected: {
-    label: 'Rejeitada',
-    description: 'A revisão foi encerrada sem publicação.',
+    label: 'Recusada',
+    description: 'Esta versão foi recusada e não será publicada.',
     className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
   published: {
     label: 'Publicada',
-    description: 'Esta revisão está disponível no catálogo público.',
+    description: 'Estes dados estão publicados no app e no site.',
     className: 'border-success/30 bg-success-soft text-success-accent',
   },
 }
 
 const ISSUE_MESSAGES: Record<string, string> = {
   organization_not_active: 'A organização precisa estar ativa antes do envio para moderação.',
-  public_identity_missing: 'Informe o nome público e ao menos uma descrição da unidade.',
-  city_inactive: 'Selecione uma cidade ativa para a unidade.',
+  public_identity_missing: 'Informe o nome público e ao menos uma descrição do lugar.',
+  city_inactive: 'Selecione uma cidade ativa para o lugar.',
   address_missing: 'Informe logradouro, bairro e número — ou marque que o endereço não tem número.',
-  coordinates_missing: 'Informe latitude e longitude válidas para localizar a unidade no mapa.',
+  coordinates_missing: 'Informe latitude e longitude válidas para localizar o lugar no mapa.',
   category_inactive: 'A categoria principal está inativa. Escolha outra categoria disponível.',
-  primary_category_missing:
-    'Selecione uma categoria principal para definir a classificação da unidade.',
+  primary_category_missing: 'Selecione uma categoria principal para o lugar.',
   availability_missing:
-    'Escolha como a unidade atende: por horário, sempre aberta ou por agendamento.',
+    'Escolha como o lugar atende: por horário, sempre aberto ou com agendamento.',
   weekly_hours_missing: 'Cadastre ao menos um intervalo semanal para o atendimento regular.',
   appointment_contact_missing:
     'Informe telefone, WhatsApp ou link de agendamento para o atendimento com hora marcada.',
   always_open_not_allowed: 'A categoria principal não permite a opção “Sempre aberto”.',
   contact_channel_missing: 'Informe ao menos um canal público de contato.',
-  media_missing: 'Adicione ao menos uma imagem para representar a unidade.',
-  cover_image_missing: 'Escolha exatamente uma imagem elegível como capa da unidade.',
-  media_quarantined: 'Remova as imagens em quarentena antes de enviar a ficha.',
-  establishment_not_active: 'A unidade precisa estar ativa antes do envio.',
-  establishment_permanently_closed: 'Uma unidade permanentemente fechada não pode ser enviada.',
+  media_missing: 'Adicione ao menos uma imagem do lugar.',
+  cover_image_missing: 'Escolha uma imagem como capa do lugar.',
+  media_quarantined: 'Remova as imagens bloqueadas antes de enviar os dados.',
+  establishment_not_active: 'O lugar precisa estar ativo antes do envio.',
+  establishment_permanently_closed: 'Um lugar fechado definitivamente não pode ser enviado.',
   slug_already_published:
-    'A URL pública já está em uso por outra unidade desta cidade. Altere o nome público para gerar um endereço diferente.',
+    'O endereço público já é usado por outro lugar desta cidade. Altere o nome público para gerar outro endereço.',
 }
 
 export function getRevisionStatusMeta(status: string): RevisionStatusMeta {
   return (
     STATUS_META[status] ?? {
       label: status.replaceAll('_', ' '),
-      description: 'Status atual da revisão.',
+      description: 'Situação atual dos dados do lugar.',
       className: 'border-border bg-muted text-muted-foreground',
     }
   )
@@ -201,8 +200,8 @@ export interface ModerationIssueFieldGroup {
 export const MODERATION_ISSUE_FIELD_GROUPS: ModerationIssueFieldGroup[] = [
   {
     section: 'readiness',
-    label: 'Ficha',
-    options: [{ value: 'revision', label: 'Ficha como um todo' }],
+    label: 'Dados do lugar',
+    options: [{ value: 'revision', label: 'Dados do lugar como um todo' }],
   },
   {
     section: 'identity',
@@ -234,7 +233,7 @@ export const MODERATION_ISSUE_FIELD_GROUPS: ModerationIssueFieldGroup[] = [
   {
     section: 'categories',
     label: 'Categorias',
-    options: [{ value: 'categories', label: 'Categorias da unidade' }],
+    options: [{ value: 'categories', label: 'Categorias do lugar' }],
   },
   {
     section: 'attributes',
@@ -250,7 +249,7 @@ export const MODERATION_ISSUE_FIELD_GROUPS: ModerationIssueFieldGroup[] = [
     section: 'media',
     label: 'Mídia',
     options: [
-      { value: 'media', label: 'Imagens da unidade' },
+      { value: 'media', label: 'Imagens do lugar' },
       { value: 'media.cover', label: 'Imagem de capa' },
     ],
   },
@@ -268,7 +267,10 @@ export function editorIssueFieldLabel(field: string): string {
   if (exactLabel) return exactLabel
 
   const section = editorSectionForField(normalizedField)
-  return MODERATION_ISSUE_FIELD_GROUPS.find((group) => group.section === section)?.label ?? 'Ficha'
+  return (
+    MODERATION_ISSUE_FIELD_GROUPS.find((group) => group.section === section)?.label ??
+    'Dados do lugar'
+  )
 }
 
 export function editorSectionForIssue(issue: Pick<EditorIssue, 'field'>): EditorIssueGroupId {

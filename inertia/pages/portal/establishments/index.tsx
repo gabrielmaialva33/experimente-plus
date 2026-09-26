@@ -29,8 +29,6 @@ export default function PartnerPlacesPage({ organizations }: PartnerPlacesPagePr
 
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Portal do parceiro"
-          icon={MapPin}
           title="Dados do lugar"
           description="Escolha o lugar para editar horários, fotos, contato e endereço."
         />
@@ -42,11 +40,14 @@ export default function PartnerPlacesPage({ organizations }: PartnerPlacesPagePr
             className="space-y-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id={`organization-${organization.id}`} className="text-lg font-bold">
+              <h2
+                id={`organization-${organization.id}`}
+                className="font-display text-lg font-bold tracking-[-0.01em]"
+              >
                 {organization.name}
               </h2>
               {organization.can_read_analytics ? (
-                <Button asChild variant="outline" size="sm">
+                <Button asChild variant="ghost" size="md" shape="pill">
                   <Link href={`/organizations/${organization.id}/analytics`}>
                     <BarChart3 aria-hidden="true" className="size-4" />
                     Desempenho
@@ -55,29 +56,45 @@ export default function PartnerPlacesPage({ organizations }: PartnerPlacesPagePr
               ) : null}
             </div>
 
-            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+            <ul className="divide-y divide-border-subtle overflow-hidden rounded-card border border-border-subtle bg-card">
               {organization.places.map((place) => (
-                <li key={place.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{place.name}</p>
+                <li
+                  key={place.id}
+                  className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <MapPin aria-hidden="true" className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-display font-bold">{place.name}</p>
+                      <Badge
+                        variant={PLACE_STATE[place.state].variant}
+                        appearance="light"
+                        shape="pill"
+                        size="sm"
+                        className="mt-1"
+                      >
+                        {PLACE_STATE[place.state].label}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={PLACE_STATE[place.state].variant} appearance="light">
-                    {PLACE_STATE[place.state].label}
-                  </Badge>
-                  {place.can_list_benefits ? (
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/portal/establishments/${place.id}/benefits`}>
-                        <TicketPercent aria-hidden="true" className="size-4" />
-                        Benefícios
+                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                    {place.can_list_benefits ? (
+                      <Button asChild variant="ghost" size="md" shape="pill">
+                        <Link href={`/portal/establishments/${place.id}/benefits`}>
+                          <TicketPercent aria-hidden="true" className="size-4" />
+                          Benefícios
+                        </Link>
+                      </Button>
+                    ) : null}
+                    <Button asChild variant="outline" size="md" shape="pill">
+                      <Link href={`/portal/establishments/${place.id}`}>
+                        Editar dados
+                        <ArrowRight aria-hidden="true" className="size-4" />
                       </Link>
                     </Button>
-                  ) : null}
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/portal/establishments/${place.id}`}>
-                      Editar dados
-                      <ArrowRight aria-hidden="true" className="size-4" />
-                    </Link>
-                  </Button>
+                  </div>
                 </li>
               ))}
             </ul>

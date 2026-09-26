@@ -3,10 +3,18 @@ import { cloneElement, type ReactElement } from 'react'
 import { cn } from '~/lib/utils'
 
 interface EditorControlProps {
+  'className'?: string
   'aria-describedby'?: string
   'aria-invalid'?: boolean | 'false' | 'true'
   'aria-required'?: boolean | 'false' | 'true'
 }
+
+/**
+ * Read-only data (a published place, an analyst's access) must stay legible: the
+ * primitives fade disabled controls to half opacity, which fails contrast (web audit W71).
+ */
+const READABLE_WHEN_DISABLED =
+  'disabled:opacity-100 disabled:bg-muted/60 disabled:text-foreground disabled:border-border-subtle'
 
 interface EditorFieldProps {
   htmlFor: string
@@ -14,6 +22,8 @@ interface EditorFieldProps {
   children: ReactElement<EditorControlProps>
   hint?: string
   error?: string | null
+  /** What the moderation asked to change in this field, shown where the edit happens. */
+  note?: string | null
   required?: boolean
   className?: string
 }
@@ -27,15 +37,18 @@ export function EditorField({
   children,
   hint,
   error,
+  note,
   required = false,
   className,
 }: EditorFieldProps) {
   const hintId = hint ? `${htmlFor}-hint` : undefined
+  const noteId = note ? `${htmlFor}-note` : undefined
   const errorId = error ? `${htmlFor}-error` : undefined
-  const describedBy = [children.props['aria-describedby'], hintId, errorId]
+  const describedBy = [children.props['aria-describedby'], hintId, noteId, errorId]
     .filter(Boolean)
     .join(' ')
   const control = cloneElement(children, {
+    'className': cn(children.props.className, READABLE_WHEN_DISABLED),
     'aria-describedby': describedBy || undefined,
     'aria-invalid': error ? true : children.props['aria-invalid'],
     'aria-required': required || children.props['aria-required'] || undefined,
@@ -62,6 +75,15 @@ export function EditorField({
         ) : null}
       </div>
       {control}
+      {note ? (
+        <p
+          id={noteId}
+          className="rounded-xl border border-warning/30 bg-warning-soft px-3 py-2 text-[0.8125rem] leading-5 text-foreground"
+        >
+          <span className="font-bold text-warning-accent">Correção pedida pela moderação:</span>{' '}
+          {note}
+        </p>
+      ) : null}
       {error ? (
         <p id={errorId} role="alert" className="text-xs text-destructive">
           {error}

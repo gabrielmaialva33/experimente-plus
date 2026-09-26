@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react'
-import { ArrowLeft, Loader2, MapPinOff, Store } from 'lucide-react'
+import { ArrowLeft, Loader2, MapPinOff } from 'lucide-react'
 import { useRef, type FormEvent } from 'react'
 
 import { PageHeader } from '~/components/page_header'
@@ -12,6 +12,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { MainLayout } from '~/layouts/main_layout'
+import { formatPhoneBR } from '~/lib/br_format'
 import { firstError } from '~/lib/form_errors'
 import { availabilityTypeLabel } from '~/lib/labels'
 
@@ -77,16 +78,15 @@ export default function NewEstablishmentPage({
 
   return (
     <MainLayout>
-      <Head title="Nova unidade" />
+      <Head title="Novo lugar" />
 
       <div className="mx-auto max-w-3xl space-y-6">
         <PageHeader
-          eyebrow="Portal do parceiro"
-          icon={Store}
-          title="Nova unidade"
-          description="Comece pela identidade da unidade. Endereço, categorias, horários e mídia serão preenchidos no editor."
+          eyebrow={organization.trade_name}
+          title="Novo lugar"
+          description="Comece pelo nome, cidade e contato. Endereço, categorias, horários e fotos você completa em seguida, nos dados do lugar."
           actions={
-            <Button asChild variant="outline">
+            <Button asChild variant="ghost" size="lg" shape="pill">
               <Link href={`/portal/organizations/${organization.id}`}>
                 <ArrowLeft aria-hidden="true" className="size-4" />
                 Voltar para {organization.trade_name}
@@ -100,20 +100,20 @@ export default function NewEstablishmentPage({
             <MapPinOff aria-hidden="true" className="size-4" />
             <AlertTitle>Nenhuma cidade está disponível</AlertTitle>
             <AlertDescription>
-              O cadastro da unidade está bloqueado até que a operação habilite ao menos uma cidade.
-              Procure a equipe da plataforma antes de continuar.
+              Ainda não é possível cadastrar lugares: nenhuma cidade foi liberada para esta
+              operação. Fale com a equipe do Experimente+ antes de continuar.
             </AlertDescription>
           </Alert>
         ) : null}
 
         <form
           onSubmit={submit}
-          className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-6"
+          className="space-y-5 rounded-card border border-border-subtle bg-card p-5 sm:p-6"
           aria-busy={form.processing}
         >
           {generalError ? (
             <Alert variant="destructive" role="alert">
-              <AlertTitle>Não foi possível criar a unidade</AlertTitle>
+              <AlertTitle>Não foi possível criar o lugar</AlertTitle>
               <AlertDescription>{generalError}</AlertDescription>
             </Alert>
           ) : null}
@@ -140,7 +140,7 @@ export default function NewEstablishmentPage({
           <EditorField
             htmlFor="establishment-city"
             label="Cidade"
-            hint="A cidade organiza a descoberta pública da unidade."
+            hint="Onde o lugar aparece na busca do app e do site."
             required
             error={fieldError('city_id')}
           >
@@ -206,6 +206,7 @@ export default function NewEstablishmentPage({
                 disabled={form.processing || !hasCities}
                 value={form.data.public_phone}
                 onChange={(event) => form.setData('public_phone', event.target.value)}
+                onBlur={(event) => form.setData('public_phone', formatPhoneBR(event.target.value))}
               />
             </EditorField>
 
@@ -225,13 +226,14 @@ export default function NewEstablishmentPage({
                 disabled={form.processing || !hasCities}
                 value={form.data.whatsapp}
                 onChange={(event) => form.setData('whatsapp', event.target.value)}
+                onBlur={(event) => form.setData('whatsapp', formatPhoneBR(event.target.value))}
               />
             </EditorField>
           </div>
 
           <EditorField
             htmlFor="establishment-availability"
-            label="Disponibilidade"
+            label="Forma de atendimento"
             error={fieldError('availability_type')}
           >
             <select
@@ -255,17 +257,19 @@ export default function NewEstablishmentPage({
             </select>
           </EditorField>
 
-          <Alert>
-            <AlertTitle>Próxima etapa</AlertTitle>
-            <AlertDescription>
-              Existem {categories.length.toLocaleString('pt-BR')} categorias ativas disponíveis. A
-              categoria principal e os atributos serão definidos no editor após a criação.
-            </AlertDescription>
-          </Alert>
+          <div className="rounded-2xl border border-info/25 bg-info-soft px-4 py-3">
+            <p className="text-sm font-bold">Depois de criar</p>
+            <p className="mt-1 text-sm leading-6 text-foreground">
+              Você escolhe a categoria principal entre {categories.length.toLocaleString('pt-BR')}{' '}
+              opções e completa as características nos dados do lugar.
+            </p>
+          </div>
 
           <div className="flex justify-end">
             <Button
               type="submit"
+              size="xl"
+              shape="pill"
               disabled={form.processing || !hasCities}
               aria-busy={form.processing}
             >
