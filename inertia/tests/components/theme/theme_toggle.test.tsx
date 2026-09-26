@@ -33,7 +33,8 @@ describe('ThemeToggle', () => {
 
     expect(await screen.findByText('Claro')).toBeInTheDocument()
     expect(screen.getByText('Escuro')).toBeInTheDocument()
-    expect(screen.getByText('Sistema')).toBeInTheDocument()
+    // Same words as the Aparência settings, so the two places name one choice alike.
+    expect(screen.getByText('Do dispositivo')).toBeInTheDocument()
 
     await user.click(screen.getByText('Escuro'))
     expect(themeMock.setTheme).toHaveBeenCalledWith('dark')
