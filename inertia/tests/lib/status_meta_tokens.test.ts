@@ -28,4 +28,9 @@ describe('status chips read in both themes', () => {
       }
     })
   }
+
+  it('reads "em análise" in blue, the same as the counters and the place states', () => {
+    expect(partnerContentStatusMeta.pending_review.className).toContain('bg-info-soft')
+    expect(partnerContentMediaStatusMeta.pending.className).toContain('bg-info-soft')
+  })
 })

@@ -58,7 +58,7 @@ export const partnerContentMediaStatusMeta: Record<
 > = {
   pending: {
     label: 'Imagem em análise',
-    className: 'border-warning/30 bg-warning-soft text-warning-accent',
+    className: 'border-info/30 bg-info-soft text-info-accent',
   },
   approved: {
     label: 'Imagem aprovada',
