@@ -15,6 +15,10 @@ import EstablishmentAuditService from '#modules/establishments/services/establis
 import EstablishmentPublicationGateService from '#modules/establishments/services/establishment_publication_gate_service'
 import EstablishmentReviewIssueService from '#modules/establishments/services/establishment_review_issue_service'
 import EstablishmentRevisionEventService from '#modules/establishments/services/establishment_revision_event_service'
+import {
+  attributeLabels,
+  moderationSnapshot,
+} from '#modules/establishments/services/revision_moderation_snapshot'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type User from '#modules/users/models/user'
 
@@ -82,6 +86,17 @@ export default class EstablishmentModerationService {
       revision.id,
       actor
     )
+    // The page the public sees today, when there is one and it is not this revision:
+    // the moderator compares against it instead of approving what they cannot see.
+    const establishment = await this.establishmentRepository.findByIdForTenant(
+      tenantId,
+      revision.establishment_id
+    )
+    const publishedId = establishment?.published_revision_id ?? null
+    const published =
+      publishedId !== null && publishedId !== revision.id
+        ? await this.revisionRepository.findAggregate(tenantId, publishedId)
+        : null
 
     return {
       // Extends the workflow projection with content the moderator needs to
@@ -99,6 +114,15 @@ export default class EstablishmentModerationService {
           moderation_status: item.moderation_status,
           url: item.asset?.file?.url ?? null,
         })),
+      },
+      comparison: {
+        published_version: published?.version ?? null,
+        submitted: moderationSnapshot(revision),
+        published: published ? moderationSnapshot(published) : null,
+        labels: {
+          ...(published ? attributeLabels(published) : {}),
+          ...attributeLabels(revision),
+        },
       },
       publication_gate: gate,
       review_issues: issues.map((issue) => ({

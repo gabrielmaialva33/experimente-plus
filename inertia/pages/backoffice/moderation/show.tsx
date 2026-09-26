@@ -1,16 +1,16 @@
 import { Head, Link, usePage } from '@inertiajs/react'
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, XCircle } from 'lucide-react'
+import { useState } from 'react'
 
 import { ModerationActions } from '~/components/backoffice/moderation_actions'
-import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
 import { MODERATION_ISSUE_FIELD_GROUPS } from '~/lib/establishment_editor'
 import { firstError } from '~/lib/form_errors'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
-  availabilityTypeLabel,
   formatDateTime,
   getRevisionStatusMeta,
   mediaModerationStatusLabel,
@@ -18,10 +18,17 @@ import {
   revisionEventTypeLabel,
   revisionStatusLabel,
 } from '~/lib/labels'
+import {
+  changedCount,
+  compareRevision,
+  type ComparedSection,
+  type ComparisonProps,
+} from '~/lib/moderation_comparison'
 import { cn } from '~/lib/utils'
 
-interface ModerationShowProps {
+type ModerationShowProps = {
   revision: JsonRecord
+  comparison?: ComparisonProps | null
   publication_gate: unknown
   review_issues: unknown
   events: unknown
@@ -38,11 +45,108 @@ const moderationFieldLabels = new Map(
 )
 
 function moderationFieldLabel(field: string): string {
-  return moderationFieldLabels.get(field) ?? 'Conteúdo da ficha'
+  return moderationFieldLabels.get(field) ?? 'Dados do lugar como um todo'
+}
+
+function SectionCard({
+  section,
+  onlyChanged,
+  media,
+  publicName,
+}: {
+  section: ComparedSection
+  onlyChanged: boolean
+  media: JsonRecord[]
+  publicName: string
+}) {
+  const fields = onlyChanged ? section.fields.filter((field) => field.changed) : section.fields
+  if (onlyChanged && fields.length === 0) return null
+
+  return (
+    <section
+      aria-labelledby={`secao-${section.id}`}
+      className="rounded-card border border-border-subtle bg-card p-5 sm:p-6"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={`secao-${section.id}`} className="font-display text-lg font-bold">
+          {section.title}
+        </h3>
+        {section.changed > 0 ? (
+          <Badge variant="warning" appearance="light" shape="pill" size="lg">
+            {section.changed === 1 ? '1 alterado' : `${section.changed} alterados`}
+          </Badge>
+        ) : null}
+      </div>
+      <dl className="mt-4 divide-y divide-border-subtle">
+        {fields.map((field) => (
+          <div
+            key={field.key}
+            data-changed={field.changed ? 'true' : undefined}
+            className={cn(
+              'grid gap-1 py-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4',
+              field.changed && '-mx-3 rounded-xl bg-warning-soft px-3'
+            )}
+          >
+            <dt className="text-sm font-semibold text-muted-foreground">
+              {field.label}
+              {field.changed ? <span className="sr-only"> (alterado)</span> : null}
+            </dt>
+            <dd className="min-w-0 space-y-1 text-[0.9375rem]">
+              <p className="whitespace-pre-line break-words font-medium">
+                {field.value ?? <span className="text-muted-foreground">Não informado</span>}
+              </p>
+              {field.changed ? (
+                <p className="text-sm text-warning-accent">
+                  Antes: {field.before ?? 'não informado'}
+                </p>
+              ) : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {section.id === 'media' && media.length > 0 ? (
+        <ul aria-label="Imagens enviadas" className="mt-4 grid gap-3 sm:grid-cols-2">
+          {media.map((item) => {
+            const url = text(item, 'url')
+            const altText =
+              text(item, 'alt_text') || text(item, 'caption') || `Imagem enviada para ${publicName}`
+            return (
+              <li
+                key={numeric(item, 'id')}
+                className="overflow-hidden rounded-2xl border border-border-subtle"
+              >
+                {url ? (
+                  <img
+                    src={url}
+                    alt={altText}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-video w-full bg-muted object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-video w-full items-center justify-center bg-muted text-xs text-muted-foreground">
+                    Pré-visualização indisponível
+                  </div>
+                )}
+                <div className="flex justify-between gap-2 p-3 text-xs font-semibold">
+                  <span>{mediaModerationStatusLabel(text(item, 'moderation_status'))}</span>
+                  <span className="text-muted-foreground">
+                    {item.is_cover === true ? 'Capa' : 'Galeria'}
+                  </span>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+    </section>
+  )
 }
 
 export default function ModerationRevisionPage({
   revision,
+  comparison,
   publication_gate,
   review_issues,
   events,
@@ -55,232 +159,212 @@ export default function ModerationRevisionPage({
   const existingIssues = collection(review_issues)
   const revisionEvents = collection(events)
   const revisionId = numeric(revision, 'id')
-  const publicName = text(revision, 'public_name', 'Unidade sem nome')
+  const publicName = text(revision, 'public_name', 'Lugar sem nome')
   const statusMeta = getRevisionStatusMeta(text(revision, 'status'))
   const submittedAt = formatDateTime(text(revision, 'submitted_at') || null)
-  const availabilityType = text(revision, 'availability_type')
-  const slug = text(revision, 'slug')
+
+  const sections = comparison ? compareRevision(comparison) : []
+  const changes = changedCount(sections)
+  const firstPublication = comparison ? comparison.published === null : false
+  const [onlyChanged, setOnlyChanged] = useState(false)
 
   return (
     <MainLayout>
-      <Head title="Revisão de conteúdo" />
+      <Head title={`Revisar ${publicName}`} />
 
-      <div className="space-y-8">
+      <div className="space-y-7">
         <PageHeader
-          eyebrow="Moderação"
-          title="Revisão de conteúdo"
+          eyebrow="Caixa de moderação · dados do lugar"
+          title={publicName}
           description={
             submittedAt
-              ? `${publicName} · submetida em ${submittedAt}`
-              : `${publicName} · data de submissão indisponível`
+              ? `Versão ${numeric(revision, 'version')} enviada em ${submittedAt}`
+              : `Versão ${numeric(revision, 'version')}`
           }
           meta={
             <>
-              <span className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                versão {numeric(revision, 'version')}
-              </span>
-              <span
-                className={cn(
-                  'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold',
-                  statusMeta.className
-                )}
+              <Badge
+                variant="neutral"
+                appearance="light"
+                shape="pill"
+                size="lg"
+                className={statusMeta.className}
               >
                 {statusMeta.label}
-              </span>
+              </Badge>
+              {comparison ? (
+                firstPublication ? (
+                  <Badge variant="info" appearance="light" shape="pill" size="lg">
+                    Primeira publicação
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant={changes > 0 ? 'warning' : 'success'}
+                    appearance="light"
+                    shape="pill"
+                    size="lg"
+                  >
+                    {changes === 0
+                      ? 'Sem alterações desde a versão publicada'
+                      : changes === 1
+                        ? '1 campo alterado'
+                        : `${changes} campos alterados`}
+                  </Badge>
+                )
+              ) : null}
             </>
           }
           actions={
-            <Button asChild variant="outline">
-              <Link href="/backoffice/moderation">
-                <ArrowLeft aria-hidden="true" className="size-4" />
-                Voltar à fila
-              </Link>
-            </Button>
+            <>
+              <Button asChild variant="cta" size="xl" shape="pill" className="sm:order-last">
+                <a href="#decisao">Decidir</a>
+              </Button>
+              <Button asChild variant="outline" size="lg" shape="pill">
+                <Link href="/backoffice/moderation">
+                  <ArrowLeft aria-hidden="true" className="size-4" />
+                  Voltar à caixa
+                </Link>
+              </Button>
+            </>
           }
         />
 
-        <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-6">
-            <div>
-              <h2 className="text-xl font-semibold">Conteúdo submetido</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                O conteúdo só ficará público depois que todos os critérios forem atendidos.
-              </p>
-            </div>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              {[
-                ['Endereço da página', slug ? `/${slug}` : '—'],
-                ['Cidade', text(record(revision.city), 'name', '—')],
-                ['Descrição curta', text(revision, 'short_description', '—')],
-                [
-                  'Disponibilidade',
-                  availabilityType ? availabilityTypeLabel(availabilityType) : '—',
-                ],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-md border border-border bg-muted/40 p-4">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {label}
-                  </dt>
-                  <dd className="mt-1 text-sm font-medium">{value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            {media.length > 0 ? (
-              <div>
-                <h3 className="text-sm font-semibold">Mídia</h3>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {media.map((item) => {
-                    const url = text(item, 'url')
-                    const altText =
-                      text(item, 'alt_text') ||
-                      text(item, 'caption') ||
-                      `Imagem enviada para ${publicName}`
-                    return (
-                      <article
-                        key={numeric(item, 'id')}
-                        className="overflow-hidden rounded-md border border-border"
-                      >
-                        {url ? (
-                          <img
-                            src={url}
-                            alt={altText}
-                            loading="lazy"
-                            decoding="async"
-                            className="aspect-video w-full bg-muted object-cover"
-                          />
-                        ) : (
-                          <div className="flex aspect-video w-full items-center justify-center bg-muted text-xs text-muted-foreground">
-                            Pré-visualização indisponível
-                          </div>
-                        )}
-                        <div className="flex justify-between gap-2 p-3 text-xs">
-                          <span>{mediaModerationStatusLabel(text(item, 'moderation_status'))}</span>
-                          <span>{item.is_cover === true ? 'Capa' : 'Galeria'}</span>
-                        </div>
-                      </article>
-                    )
-                  })}
-                </div>
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="min-w-0 space-y-5">
+            {comparison ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-display text-xl font-extrabold">
+                  {firstPublication
+                    ? 'Tudo o que aparecerá na página'
+                    : `Comparado à versão publicada ${comparison.published_version ?? ''}`.trim()}
+                </h2>
+                {!firstPublication && changes > 0 ? (
+                  <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={onlyChanged}
+                      onChange={(event) => setOnlyChanged(event.target.checked)}
+                      className="size-5 accent-primary"
+                    />
+                    Mostrar só o que mudou
+                  </label>
+                ) : null}
               </div>
             ) : null}
-          </article>
+            {sections.map((section) => (
+              <SectionCard
+                key={section.id}
+                section={section}
+                onlyChanged={onlyChanged}
+                media={media}
+                publicName={publicName}
+              />
+            ))}
+          </div>
 
-          <article className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-6">
-            <div className="flex items-start gap-3">
-              {blockingIssues.length === 0 ? (
-                <CheckCircle2 aria-hidden="true" className="mt-0.5 size-6 text-primary" />
-              ) : (
-                <XCircle aria-hidden="true" className="mt-0.5 size-6 text-destructive" />
-              )}
-              <div>
-                <h2 className="text-xl font-semibold">Pendências para publicação</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {blockingIssues.length === 0
-                    ? 'A revisão pode ser publicada.'
-                    : blockingIssues.length === 1
-                      ? '1 pendência impede a aprovação.'
-                      : `${blockingIssues.length} pendências impedem a aprovação.`}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {[...blockingIssues, ...warnings].map((issue) => (
-                <div
-                  key={`${text(issue, 'code')}-${text(issue, 'field')}`}
-                  className="rounded-md border border-border bg-muted/40 p-3"
-                >
-                  <p className="text-sm font-medium">{text(issue, 'message')}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {moderationFieldLabel(text(issue, 'field'))} ·{' '}
-                    {reviewIssueSeverityLabel(text(issue, 'severity', 'blocking'))}
+          <aside className="space-y-5 xl:sticky xl:top-24" aria-label="Situação da revisão">
+            <section className="rounded-card border border-border-subtle bg-card p-5">
+              <div className="flex items-start gap-3">
+                {blockingIssues.length === 0 ? (
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="mt-0.5 size-6 shrink-0 text-success"
+                  />
+                ) : (
+                  <XCircle aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-destructive" />
+                )}
+                <div>
+                  <h2 className="font-display text-lg font-bold">Pendências para publicação</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {blockingIssues.length === 0
+                      ? 'A revisão pode ser publicada.'
+                      : blockingIssues.length === 1
+                        ? '1 pendência impede a aprovação.'
+                        : `${blockingIssues.length} pendências impedem a aprovação.`}
                   </p>
                 </div>
-              ))}
-              {blockingIssues.length === 0 && warnings.length === 0 ? (
-                <EmptyState
-                  icon={CheckCircle2}
-                  headingLevel={3}
-                  title="Nenhuma pendência encontrada"
-                  description="O conteúdo atende aos critérios automáticos de publicação."
-                  className="py-6"
-                />
-              ) : null}
-            </div>
-          </article>
-        </section>
-
-        <ModerationActions
-          revisionId={revisionId}
-          blockingIssueCount={blockingIssues.length}
-          moderationError={firstError(pageErrors?.moderation)}
-        />
-
-        {existingIssues.length > 0 || revisionEvents.length > 0 ? (
-          <section className="grid gap-6 lg:grid-cols-2">
-            <article className="rounded-lg border border-border bg-card p-5 sm:p-6">
-              <h2 className="text-lg font-semibold">Pendências anteriores</h2>
-              <div className="mt-4 space-y-3">
-                {existingIssues.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma pendência registrada para esta revisão.
-                  </p>
-                ) : null}
-                {existingIssues.map((issue) => {
-                  const resolvedAt = formatDateTime(text(issue, 'resolved_at') || null)
-                  const createdAt = formatDateTime(text(issue, 'created_at') || null)
-                  return (
-                    <div
-                      key={numeric(issue, 'id')}
-                      className="rounded-md border border-border bg-muted/40 p-3 text-sm"
+              </div>
+              {blockingIssues.length + warnings.length > 0 ? (
+                <ul className="mt-4 space-y-2">
+                  {[...blockingIssues, ...warnings].map((issue) => (
+                    <li
+                      key={`${text(issue, 'code')}-${text(issue, 'field')}`}
+                      className="rounded-xl bg-muted p-3"
                     >
-                      <p className="font-medium">{text(issue, 'message')}</p>
+                      <p className="text-sm font-semibold">{text(issue, 'message')}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {moderationFieldLabel(text(issue, 'field'))} ·{' '}
-                        {reviewIssueSeverityLabel(text(issue, 'severity'))}
-                        {createdAt ? ` · registrada em ${createdAt}` : ''}
-                        {resolvedAt ? ` · resolvida em ${resolvedAt}` : ' · em aberto'}
+                        {reviewIssueSeverityLabel(text(issue, 'severity', 'blocking'))}
                       </p>
-                    </div>
-                  )
-                })}
-              </div>
-            </article>
-            <article className="rounded-lg border border-border bg-card p-5 sm:p-6">
-              <h2 className="text-lg font-semibold">Histórico</h2>
-              <div className="mt-4 space-y-3">
-                {revisionEvents.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum evento registrado para esta revisão.
-                  </p>
-                ) : null}
-                {revisionEvents.map((event) => {
-                  const createdAt = formatDateTime(text(event, 'created_at') || null)
-                  return (
-                    <div
-                      key={numeric(event, 'id')}
-                      className="border-l-2 border-primary pl-3 text-sm"
-                    >
-                      <p className="font-medium">
-                        {revisionEventTypeLabel(text(event, 'event_type', '—'))}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {statusOrFallback(text(event, 'from_status'))} →{' '}
-                        {statusOrFallback(text(event, 'to_status'))}
-                        {createdAt ? ` · ${createdAt}` : ''}
-                      </p>
-                      {text(event, 'reason') ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {text(event, 'reason')}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Os critérios automáticos de publicação foram atendidos.
+                </p>
+              )}
+            </section>
+
+            {revisionEvents.length > 0 || existingIssues.length > 0 ? (
+              <details className="group rounded-card border border-border-subtle bg-card p-5" open>
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3">
+                  <h2 className="font-display text-lg font-bold">Histórico</h2>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                  />
+                </summary>
+                <ol className="mt-3 space-y-3">
+                  {revisionEvents.map((event) => {
+                    const createdAt = formatDateTime(text(event, 'created_at') || null)
+                    return (
+                      <li key={`evento-${numeric(event, 'id')}`} className="text-sm">
+                        <p className="font-semibold">
+                          {revisionEventTypeLabel(text(event, 'event_type', '—'))}
                         </p>
-                      ) : null}
-                    </div>
-                  )
-                })}
-              </div>
-            </article>
-          </section>
-        ) : null}
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {statusOrFallback(text(event, 'from_status'))} →{' '}
+                          {statusOrFallback(text(event, 'to_status'))}
+                          {createdAt ? ` · ${createdAt}` : ''}
+                        </p>
+                        {text(event, 'reason') ? (
+                          <p className="mt-1 text-xs">{text(event, 'reason')}</p>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                  {existingIssues.map((issue) => {
+                    const resolvedAt = formatDateTime(text(issue, 'resolved_at') || null)
+                    const createdAt = formatDateTime(text(issue, 'created_at') || null)
+                    return (
+                      <li key={`pendencia-${numeric(issue, 'id')}`} className="text-sm">
+                        <p className="font-semibold">Correção pedida: {text(issue, 'message')}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {moderationFieldLabel(text(issue, 'field'))} ·{' '}
+                          {reviewIssueSeverityLabel(text(issue, 'severity'))}
+                          {createdAt ? ` · registrada em ${createdAt}` : ''}
+                          {resolvedAt ? ` · resolvida em ${resolvedAt}` : ' · em aberto'}
+                        </p>
+                      </li>
+                    )
+                  })}
+                </ol>
+              </details>
+            ) : null}
+          </aside>
+        </div>
+
+        <section id="decisao" aria-labelledby="decisao-titulo" className="scroll-mt-24 space-y-4">
+          <h2 id="decisao-titulo" className="font-display text-2xl font-extrabold">
+            Decisão
+          </h2>
+          <ModerationActions
+            revisionId={revisionId}
+            blockingIssueCount={blockingIssues.length}
+            moderationError={firstError(pageErrors?.moderation)}
+          />
+        </section>
       </div>
     </MainLayout>
   )

@@ -2647,6 +2647,25 @@ components:
         revision:
           type: object
           additionalProperties: true
+        comparison:
+          type: object
+          description: Display values of every field of the submitted revision and of the revision on the public page today (null on a first publication), under the same stable keys, so a moderator sees what changed. Labels name attribute keys.
+          required: [published_version, submitted, published, labels]
+          properties:
+            published_version:
+              type: [integer, 'null']
+            submitted:
+              type: object
+              additionalProperties:
+                type: [string, 'null']
+            published:
+              type: [object, 'null']
+              additionalProperties:
+                type: [string, 'null']
+            labels:
+              type: object
+              additionalProperties:
+                type: string
         publication_gate:
           $ref: '#/components/schemas/EstablishmentCompleteness'
         review_issues:
