@@ -11,6 +11,7 @@ import {
   EditorField,
   editorSelectClassName,
 } from '~/components/portal/establishment_editor/editor_field'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
@@ -65,33 +66,24 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
     <MainLayout>
       <Head title="Feedback do piloto" />
 
-      <div className="space-y-7">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Backoffice"
+          eyebrow="Operação"
           icon={MessageSquareText}
           title="Feedback do piloto"
-          description="Transforme relatos dos primeiros passos, do editor, do catálogo e da moderação em decisões de produto rastreáveis."
-        />
-
-        <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-5">
-          <span className="flex size-10 items-center justify-center rounded-md border border-info/20 bg-info/10 text-info">
-            <MessageSquareText aria-hidden="true" className="size-4.5" />
-          </span>
-          <div>
-            <p className="font-bold tracking-[-0.015em]">
+          description="Transforme relatos dos primeiros passos, do editor, do catálogo e da moderação em decisões de produto rastreáveis. Esta fila é separada da moderação de conteúdo."
+          meta={
+            <Badge variant="info" appearance="light" shape="pill">
               {total.toLocaleString('pt-BR')}{' '}
               {total === 1 ? 'relato encontrado' : 'relatos encontrados'}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              A fila comercial é separada da moderação de conteúdo.
-            </p>
-          </div>
-        </section>
+            </Badge>
+          }
+        />
 
         <form
           onSubmit={applyFilters}
           aria-label="Filtros da fila de feedback"
-          className="grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="grid gap-4 rounded-card border border-border-subtle bg-card p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
           <EditorField htmlFor="filter-status" label="Status">
             <select
@@ -124,11 +116,11 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
             </select>
           </EditorField>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" size="lg" shape="pill">
               Filtrar
             </Button>
             {hasActiveFilters ? (
-              <Button asChild variant="outline">
+              <Button asChild variant="ghost" size="lg" shape="pill">
                 <Link href={buildPageHref(FEEDBACK_PATH, preservedParams)}>Limpar filtros</Link>
               </Button>
             ) : null}
@@ -145,7 +137,7 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
                 ? 'Nenhum relato corresponde aos filtros aplicados.'
                 : 'Novos relatos enviados pelos participantes do piloto aparecerão aqui.'
             }
-            className="rounded-lg border border-dashed border-border bg-card"
+            className="rounded-card border border-dashed border-border bg-card"
           />
         ) : (
           <section aria-label="Relatos do piloto" className="space-y-4">
