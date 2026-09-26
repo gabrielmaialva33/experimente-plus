@@ -37,7 +37,7 @@ export interface GroundingQuery {
 /**
  * How the single prompt budget is divided between the three species.
  *
- * There is one ceiling (`CONCIERGE_MAX_CATALOG_ITEMS`) because what costs money
+ * There is one ceiling (the operation's `max_catalog_items`) because what costs money
  * and latency is the size of the prompt, not the number of tables behind it. The
  * division is a pure function of that ceiling, so the composition of a prompt can
  * be reasoned about before any query runs: a quarter of the budget is reserved

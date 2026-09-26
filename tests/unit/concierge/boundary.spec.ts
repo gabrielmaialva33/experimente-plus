@@ -1,9 +1,10 @@
 import { test } from '@japa/runner'
 
+import ConciergeProviderFactory from '#modules/concierge/services/concierge_provider_factory'
 import ConciergeService from '#modules/concierge/services/concierge_service'
 import GroundingService from '#modules/concierge/services/grounding_service'
 
-const service = () => new ConciergeService(new GroundingService())
+const service = () => new ConciergeService(new GroundingService(), new ConciergeProviderFactory())
 
 /**
  * The contracted scope states this module is not a professional, legal,

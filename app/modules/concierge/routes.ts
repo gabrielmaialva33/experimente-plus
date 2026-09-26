@@ -5,6 +5,8 @@ import { apiThrottle, throttle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const ConciergeController = () => import('#modules/concierge/controllers/concierge_controller')
+const ConciergePolicyController = () =>
+  import('#modules/concierge/controllers/concierge_policy_controller')
 
 /**
  * Discovery is public (ADR-0003), and the Concierge is part of it. Only a read
@@ -24,6 +26,24 @@ router
 router
   .post('/api/v1/me/concierge', [ConciergeController, 'askPersonal'])
   .as('me.concierge.ask')
+  .use([
+    middleware.auth(),
+    privateResponseHeadersMiddleware,
+    apiThrottle,
+    middleware.tenant({ required: true }),
+  ])
+
+/**
+ * The operation's Concierge parameters — ADR-0029, revision of 26/09/2026.
+ * The same middleware as the review policy under `/api/v1/admin`; the service
+ * additionally requires a platform administrator.
+ */
+router
+  .group(() => {
+    router.get('/concierge-policy', [ConciergePolicyController, 'show'])
+    router.put('/concierge-policy', [ConciergePolicyController, 'update'])
+  })
+  .prefix('/api/v1/admin')
   .use([
     middleware.auth(),
     privateResponseHeadersMiddleware,

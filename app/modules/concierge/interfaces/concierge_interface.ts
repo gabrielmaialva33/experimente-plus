@@ -104,6 +104,57 @@ namespace IConcierge {
     readonly name: string
     complete(request: ProviderRequest): Promise<ProviderResult>
   }
+
+  /**
+   * What an operation decides about its assistant — ADR-0029, revision of
+   * 26/09/2026. Provider, models and key are infrastructure and stay in the
+   * environment; these are the operation's own choices.
+   */
+  export type PolicyValues = {
+    /** Off answers like the infrastructure-off path: the catalogue, no model. */
+    enabled: boolean
+    /** The single prompt budget `splitGroundingBudget` divides. */
+    max_catalog_items: number
+    /** Model calls one signed-in person may cause per day (see `ConciergeQuotaService`). */
+    daily_questions_per_person: number
+  }
+
+  export type UpdatePolicyPayload = Partial<PolicyValues>
+
+  /**
+   * The table and the validator hold the same ranges. Eight is the smallest
+   * budget that still gives events and experiences two slots each and
+   * establishments four — the most steps an answer may have. Forty is twice
+   * the measured default: past it the prompt grows while an answer of at most
+   * four steps uses none of the extra, and latency and cost grow with it.
+   * One question a day is the least that is still an assistant (switching it
+   * off is `enabled`), and two hundred caps what a single account can spend.
+   */
+  export const POLICY_RANGES = {
+    max_catalog_items: { min: 8, max: 40 },
+    daily_questions_per_person: { min: 1, max: 200 },
+  } as const
+
+  /** The values ADR-0029 proposed; provisional until Anexo I item 15 is decided. */
+  export const DEFAULT_POLICY: PolicyValues = {
+    enabled: true,
+    max_catalog_items: 20,
+    daily_questions_per_person: 20,
+  }
+
+  /**
+   * What the screen shows about the infrastructure. Never a key. A type alias,
+   * not an interface: Inertia props must be assignable to a JSON record, and an
+   * interface has no implicit index signature.
+   */
+  export type InfrastructureStatus = {
+    /** `CONCIERGE_ENABLED`: the deployment's own switch. */
+    globally_enabled: boolean
+    /** Base URL and key both present — a boolean, the key is never read out. */
+    provider_configured: boolean
+    primary_model: string | null
+    fallback_model: string | null
+  }
 }
 
 export default IConcierge

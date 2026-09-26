@@ -5475,6 +5475,66 @@ components:
             minLength: 2
             maxLength: 80
 
+    ConciergePolicy:
+      description: >-
+        Concierge parameters of one operation (ADR-0029, revision of
+        26/09/2026; Anexo I items 12 and 15). All values are provisional until
+        the contracting party defines them.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenant_id
+        - enabled
+        - max_catalog_items
+        - daily_questions_per_person
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        enabled:
+          description: >-
+            False answers like an unconfigured deployment: the catalogue, no
+            model call.
+          type: boolean
+        max_catalog_items:
+          description: Catalogue items a question may hand to the model.
+          type: integer
+          minimum: 8
+          maximum: 40
+        daily_questions_per_person:
+          description: >-
+            Model calls one signed-in person may cause per civil day in
+            America/Sao_Paulo. The public route is bounded by its throttle
+            instead.
+          type: integer
+          minimum: 1
+          maximum: 200
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpdateConciergePolicyRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        max_catalog_items:
+          type: integer
+          minimum: 8
+          maximum: 40
+        daily_questions_per_person:
+          type: integer
+          minimum: 1
+          maximum: 200
+
     ReviewPolicy:
       type: object
       additionalProperties: false
@@ -8279,7 +8339,11 @@ paths:
         exist. Subjects outside discovery receive a fixed refusal without
         consulting any model, and the module has no write path: it never
         reserves, purchases or confirms anything. This route never reads
-        credentials; the personal variant is `/api/v1/me/concierge`.
+        credentials; the personal variant is `/api/v1/me/concierge`. How much
+        of the catalogue a question sees, and whether a model is consulted at
+        all, follow the operation's Concierge policy; this route has no person
+        to count and is bounded by its per-address throttle instead of the
+        daily quota.
       tags: [Catalog]
       security: []
       requestBody:
@@ -14853,6 +14917,61 @@ paths:
         '422':
           description: Validation failed
 
+  /api/v1/admin/concierge-policy:
+    get:
+      operationId: getConciergePolicy
+      summary: Get the operation's Concierge parameters
+      description: >-
+        Requires admin or root role. Created with provisional defaults on first
+        read (ADR-0029, revision of 26/09/2026). Provider, models and key are
+        deployment configuration and are not part of this resource.
+      tags: [Catalog]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Concierge parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConciergePolicy'
+        '401':
+          description: Authentication required
+        '403':
+          description: Admin or root role required
+    put:
+      operationId: updateConciergePolicy
+      summary: Update the operation's Concierge parameters
+      description: >-
+        Requires admin or root role. Every field is optional; the ranges are
+        enforced by the validator and by the table.
+      tags: [Catalog]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConciergePolicyRequest'
+      responses:
+        '200':
+          description: Concierge parameters updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConciergePolicy'
+        '401':
+          description: Authentication required
+        '403':
+          description: Admin or root role required
+        '422':
+          description: Validation failed
+
   /api/v1/me/favorites:
     get:
       operationId: listMyFavorites
@@ -15413,6 +15532,11 @@ paths:
         active interests decide which discoverable places enter a prompt that
         cannot hold them all; they add no place, remove none that would have
         fit, never reorder search, and are not sent to the model provider.
+        Each model call counts against the operation's daily questions per
+        person (civil day in America/Sao_Paulo); past it, and whenever the
+        operation switched the assistant off, the reply is the degraded one —
+        the catalogue, no model. Refusals and replies without a model call do
+        not count.
       tags: [Explorer]
       security:
         - bearerAuth: []

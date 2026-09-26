@@ -2,9 +2,9 @@ import { BaseCommand, flags } from '@adonisjs/core/ace'
 
 import type IConcierge from '#modules/concierge/interfaces/concierge_interface'
 import CatalogGroundingRepository from '#modules/concierge/repositories/catalog_grounding_repository'
+import ConciergePolicyService from '#modules/concierge/services/concierge_policy_service'
 import ConciergeService from '#modules/concierge/services/concierge_service'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
-import env from '#start/env'
 
 /**
  * Operational probe for the Concierge — ADR-0029.
@@ -41,28 +41,34 @@ export default class ConciergeProbe extends BaseCommand {
     const resolver = await this.app.container.make(PublicOperationResolver)
     const grounding = await this.app.container.make(CatalogGroundingRepository)
     const service = await this.app.container.make(ConciergeService)
+    const policies = await this.app.container.make(ConciergePolicyService)
 
     // The operation comes from the trusted hostname, exactly as it does for a
     // visitor (ADR-0003), falling back to the configured public slug.
     const tenant = await resolver.resolve(this.host ?? null)
 
+    // The operation's own policy, as the route reads it. No quota: the probe is
+    // an operator's check, not a person's question.
+    const policy = await policies.effective(tenant.id)
     const { offered, withheld } = await grounding.forQuestion(
       tenant.id,
       this.city ?? null,
-      env.get('CONCIERGE_MAX_CATALOG_ITEMS', 20)
+      policy.max_catalog_items
     )
 
     const counted = (kind: IConcierge.GroundingKind) =>
       offered.filter((item) => item.kind === kind).length
 
     this.logger.info(
-      `operation=${tenant.slug} offered=${offered.length} ` +
+      `operation=${tenant.slug} enabled=${policy.enabled} offered=${offered.length} ` +
         `(lugares ${counted('establishment')}, experiências ${counted('experience')}, ` +
         `eventos ${counted('event')}) withheld=${withheld.length}`
     )
 
     const started = Date.now()
-    const reply = await service.answer(this.question, offered, withheld)
+    const reply = await service.answer(this.question, offered, withheld, {
+      enabled: policy.enabled,
+    })
     const elapsed = Date.now() - started
 
     this.logger.info(`outcome=${reply.outcome} model=${reply.model ?? 'none'} in ${elapsed}ms`)

@@ -97,8 +97,6 @@ const env = await Env.create(new URL('../', import.meta.url), {
   CONCIERGE_FALLBACK_MODEL: Env.schema.string.optional(),
   CONCIERGE_TIMEOUT_MS: Env.schema.number.optional(),
   CONCIERGE_MAX_OUTPUT_TOKENS: Env.schema.number.optional(),
-  CONCIERGE_MAX_CATALOG_ITEMS: Env.schema.number.optional(),
-  CONCIERGE_DAILY_LIMIT_PER_USER: Env.schema.number.optional(),
   NVIDIA_API_KEY: Env.schema.string.optional(),
 
   DEV_ADMIN_NAME: Env.schema.string.optional(),

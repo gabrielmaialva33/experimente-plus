@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { fireEvent, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import BackofficeConcierge from '~/pages/backoffice/concierge'
 import BackofficeGeography from '~/pages/backoffice/geography'
 import BackofficeReviewPolicy from '~/pages/backoffice/review_policy'
 import BackofficeTaxonomy from '~/pages/backoffice/taxonomy'
@@ -240,5 +241,75 @@ describe('backoffice administration screens', () => {
       '/backoffice/moderation-rules',
       expect.objectContaining({ preserveScroll: true })
     )
+  })
+  it('edits the Concierge parameters and says they are provisional', () => {
+    mocks.permissions = ['settings.update']
+    render(
+      <BackofficeConcierge
+        policy={{ enabled: true, max_catalog_items: 20, daily_questions_per_person: 20 }}
+        infrastructure={{
+          globally_enabled: true,
+          provider_configured: true,
+          primary_model: 'nvidia/nemotron-3-super-120b-a12b',
+          fallback_model: null,
+        }}
+      />
+    )
+
+    expect(screen.getByRole('note')).toHaveTextContent('Valores provisórios')
+    expect(screen.getByRole('note')).toHaveTextContent('Anexo I, item 15')
+    expect(
+      (screen.getByLabelText('Concierge ativo nesta operação') as HTMLInputElement).checked
+    ).toBe(true)
+
+    fireEvent.click(screen.getByLabelText('Concierge ativo nesta operação'))
+    fireEvent.change(screen.getByLabelText('Perguntas por pessoa por dia'), {
+      target: { value: '5' },
+    })
+    fireEvent.submit(screen.getByRole('form', { name: 'Salvar configuração' }))
+
+    expect(mocks.transform).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false, daily_questions_per_person: 5 })
+    )
+    expect(mocks.formPut).toHaveBeenCalledWith(
+      '/backoffice/concierge',
+      expect.objectContaining({ preserveScroll: true })
+    )
+  })
+
+  it('shows the infrastructure read-only, and never a key', () => {
+    mocks.permissions = ['settings.update']
+    render(
+      <BackofficeConcierge
+        policy={{ enabled: true, max_catalog_items: 20, daily_questions_per_person: 20 }}
+        infrastructure={{
+          globally_enabled: false,
+          provider_configured: false,
+          primary_model: 'nvidia/nemotron-3-super-120b-a12b',
+          fallback_model: null,
+        }}
+      />
+    )
+
+    const infrastructure = screen
+      .getByRole('heading', { name: 'Infraestrutura' })
+      .closest('section')!
+    expect(infrastructure).toHaveTextContent('Desligado')
+    expect(infrastructure).toHaveTextContent('Não configurado')
+    expect(infrastructure).toHaveTextContent('nvidia/nemotron-3-super-120b-a12b')
+    expect(infrastructure).toHaveTextContent('Não definido')
+    expect(infrastructure.querySelector('input, select, textarea')).toBeNull()
+  })
+
+  it('shows the Concierge parameters read-only to someone who cannot change them', () => {
+    render(
+      <BackofficeConcierge
+        policy={{ enabled: true, max_catalog_items: 20, daily_questions_per_person: 20 }}
+        infrastructure={{ globally_enabled: true, provider_configured: true }}
+      />
+    )
+
+    expect(screen.queryByRole('form')).not.toBeInTheDocument()
+    expect(screen.getByText(/pode consultar, mas não alterar/)).toBeInTheDocument()
   })
 })

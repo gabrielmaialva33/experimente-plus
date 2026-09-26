@@ -1,9 +1,8 @@
 import { inject } from '@adonisjs/core'
 
-import NvidiaProvider, {
-  ConciergeUnavailableException,
-} from '#modules/concierge/adapters/nvidia_provider'
+import { ConciergeUnavailableException } from '#modules/concierge/adapters/nvidia_provider'
 import type IConcierge from '#modules/concierge/interfaces/concierge_interface'
+import ConciergeProviderFactory from '#modules/concierge/services/concierge_provider_factory'
 import GroundingService from '#modules/concierge/services/grounding_service'
 import env from '#start/env'
 
@@ -38,9 +37,25 @@ const KIND_LABEL: Record<IConcierge.GroundingKind, string> = {
   event: 'evento',
 }
 
+/**
+ * What the operation adds to a question — ADR-0029, revision of 26/09/2026.
+ *
+ * `enabled: false` answers exactly like an unconfigured deployment. `admit` is
+ * asked for leave only when a model is about to be called, which is what a
+ * quota must count: a refusal, an empty catalogue or a switched-off assistant
+ * never reaches it.
+ */
+export interface AnswerOptions {
+  enabled?: boolean
+  admit?: () => Promise<boolean>
+}
+
 @inject()
 export default class ConciergeService {
-  constructor(private grounding: GroundingService) {}
+  constructor(
+    private grounding: GroundingService,
+    private providers: ConciergeProviderFactory
+  ) {}
 
   /** Off-topic never reaches the provider: no call, no cost, no uncertainty. */
   isOutOfScope(question: string): boolean {
@@ -50,15 +65,19 @@ export default class ConciergeService {
   async answer(
     question: string,
     offered: IConcierge.GroundingItem[],
-    withheld: readonly string[] = []
+    withheld: readonly string[] = [],
+    options: AnswerOptions = {}
   ): Promise<IConcierge.Reply> {
     if (this.isOutOfScope(question))
       return { outcome: 'refused', text: REFUSAL, items: [], model: null }
 
-    if (!env.get('CONCIERGE_ENABLED', false) || offered.length === 0) return this.degrade(offered)
+    if (options.enabled === false || offered.length === 0) return this.degrade(offered)
 
-    const provider = this.provider()
-    if (!provider) return this.degrade(offered)
+    const provider = this.providers.make()
+    const models = this.providers.models()
+    if (!provider || models.length === 0) return this.degrade(offered)
+
+    if (options.admit && !(await options.admit())) return this.degrade(offered)
 
     const user = [
       'Itens disponíveis:',
@@ -76,7 +95,7 @@ export default class ConciergeService {
 
     // Primary first, then the reserve. Measured behaviour, not caution: the
     // provider returned 529 under load and answers 404 for some listed models.
-    for (const model of this.models()) {
+    for (const model of models) {
       let result: IConcierge.ProviderResult
       try {
         result = await provider.complete({ ...request, model })
@@ -105,19 +124,6 @@ export default class ConciergeService {
   /** No model, no answer: the catalogue itself, never an error or an empty screen. */
   private degrade(items: IConcierge.GroundingItem[]): IConcierge.Reply {
     return { outcome: 'degraded', text: null, items, model: null }
-  }
-
-  private models(): string[] {
-    return [env.get('CONCIERGE_PRIMARY_MODEL', ''), env.get('CONCIERGE_FALLBACK_MODEL', '')].filter(
-      (model): model is string => model.length > 0
-    )
-  }
-
-  private provider(): IConcierge.Provider | null {
-    const baseUrl = env.get('CONCIERGE_BASE_URL', '')
-    const apiKey = env.get('NVIDIA_API_KEY', '')
-    if (!baseUrl || !apiKey) return null
-    return new NvidiaProvider(baseUrl, apiKey)
   }
 
   /**
