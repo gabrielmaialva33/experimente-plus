@@ -1,3 +1,5 @@
+import type ICatalog from '#modules/catalog/interfaces/catalog_interface'
+
 /**
  * The Explorer's own layer — ADR-0030, Anexo I item 10.
  *
@@ -84,6 +86,22 @@ namespace IExplorer {
   export interface SavedContentList {
     data: SavedContent[]
     unavailable: number
+  }
+
+  /** How many places the "Para você" row carries at most. */
+  export const FOR_YOU_LIMIT = 10
+
+  /**
+   * The "Para você" row — ADR-0030, revision of 26/09/2026.
+   *
+   * `data` has the shape of an organic search result, so the app draws it with
+   * the card it already uses there. `has_interests` separates the row that is
+   * empty because nothing was chosen, which is worth an invitation, from the one
+   * where nothing chosen is published in this city, which is not.
+   */
+  export interface ForYou {
+    data: ICatalog.SearchItemProjection[]
+    has_interests: boolean
   }
 
   export interface InterestProjection {

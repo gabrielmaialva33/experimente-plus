@@ -2,7 +2,8 @@ import { inject } from '@adonisjs/core'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import type IExplorer from '#modules/explorer/interfaces/explorer_interface'
+import CatalogService from '#modules/catalog/services/catalog_service'
+import IExplorer from '#modules/explorer/interfaces/explorer_interface'
 import ExplorerItinerary from '#modules/explorer/models/explorer_itinerary'
 import ExplorerItineraryItem from '#modules/explorer/models/explorer_itinerary_item'
 import ExplorerCatalogRepository from '#modules/explorer/repositories/explorer_catalog_repository'
@@ -27,7 +28,8 @@ export default class ExplorerService {
     private interests: ExplorerInterestRepository,
     private itineraries: ExplorerItineraryRepository,
     private catalog: ExplorerCatalogRepository,
-    private contentFavorites: ExplorerContentFavoriteRepository
+    private contentFavorites: ExplorerContentFavoriteRepository,
+    private catalogService: CatalogService
   ) {}
 
   async listSavedContent(tenantId: number, userId: number): Promise<IExplorer.SavedContentList> {
@@ -89,6 +91,25 @@ export default class ExplorerService {
 
   async savedStatus(tenantId: number, userId: number, establishmentId: number) {
     return this.saved.statusFor(tenantId, userId, establishmentId)
+  }
+
+  /**
+   * The "Para você" row — ADR-0030, revision of 26/09/2026.
+   *
+   * Only interests in active categories count, as for the Concierge. The city is
+   * checked even when there are none, so a bad slug gets the same answer whether
+   * or not the person has chosen anything.
+   */
+  async forYou(tenantId: number, userId: number, citySlug: string): Promise<IExplorer.ForYou> {
+    const categoryIds = await this.interests.activeCategoryIdsFor(tenantId, userId)
+    const data = await this.catalogService.forCategories(
+      tenantId,
+      citySlug,
+      categoryIds,
+      IExplorer.FOR_YOU_LIMIT
+    )
+
+    return { data, has_interests: categoryIds.length > 0 }
   }
 
   async listInterests(tenantId: number, userId: number) {

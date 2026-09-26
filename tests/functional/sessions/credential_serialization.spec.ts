@@ -25,6 +25,7 @@ import RolesRepository from '#modules/roles/repositories/roles_repository'
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
+import type CatalogService from '#modules/catalog/services/catalog_service'
 import ExplorerCatalogRepository from '#modules/explorer/repositories/explorer_catalog_repository'
 import ExplorerContentFavoriteRepository from '#modules/explorer/repositories/explorer_content_favorite_repository'
 import ExplorerInterestRepository from '#modules/explorer/repositories/explorer_interest_repository'
@@ -93,7 +94,9 @@ function createServices() {
         new ExplorerInterestRepository(),
         new ExplorerItineraryRepository(),
         new ExplorerCatalogRepository(),
-        new ExplorerContentFavoriteRepository()
+        new ExplorerContentFavoriteRepository(),
+        // Account deletion only purges the personal layer; it never reads the catalogue.
+        {} as unknown as CatalogService
       )
     ),
     deleteUser: new DeleteUserService(

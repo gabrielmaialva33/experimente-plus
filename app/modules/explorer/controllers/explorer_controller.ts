@@ -7,6 +7,7 @@ import type { SavedKind } from '#modules/explorer/repositories/explorer_saved_re
 import {
   contentParamsValidator,
   establishmentParamsValidator,
+  forYouQueryValidator,
   interestsPayloadValidator,
   itineraryParamsValidator,
   itineraryPayloadValidator,
@@ -78,6 +79,12 @@ export default class ExplorerController {
   async savedStatus({ auth, params, tenant }: HttpContext) {
     const { establishmentId } = await establishmentParamsValidator.validate(params)
     return this.explorer.savedStatus(tenant!.id, auth.getUserOrFail().id, establishmentId)
+  }
+
+  /** Places of the chosen interests in one city — ADR-0030, revision of 26/09/2026. */
+  async forYou({ auth, request, tenant }: HttpContext) {
+    const { city } = await request.validateUsing(forYouQueryValidator)
+    return this.explorer.forYou(tenant!.id, auth.getUserOrFail().id, city)
   }
 
   async listInterests({ auth, tenant }: HttpContext) {

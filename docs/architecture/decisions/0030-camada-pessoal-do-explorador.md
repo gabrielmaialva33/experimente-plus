@@ -122,3 +122,19 @@ O Anexo I item 10 diz "favoritar estabelecimentos **e conteúdos** previstos no 
 A exclusão de conta apaga também estas linhas, pela mesma purga explícita.
 
 Cenários acrescentados: favoritar duas vezes é um favorito; rascunho, arquivado, evento encerrado e item de vitrine respondem como inexistentes; evento que termina depois de favoritado vira indisponível e pode ser removido; conteúdo de unidade retirada é contado e não listado; um Explorador não lê os favoritos de outro; excluir a conta apaga os favoritos de conteúdo.
+
+## Revisão de 26/09/2026 — a faixa "Para você"
+
+O Anexo I item 10 diz "escolher interesses para personalização de descoberta e recomendações". A primeira entrega registrava os interesses e só o Concierge os lia (ADR-0029, revisão de 23/09/2026); a tela de descoberta não mudava com eles, e o item ficava parcial na rastreabilidade.
+
+**Uma faixa própria, não a busca reordenada.** `GET /api/v1/me/for-you?city=<slug>` devolve os estabelecimentos descobríveis da cidade classificados em qualquer interesse ativo da pessoa ou em categoria descendente ativa dele, com a mesma leitura de árvore do filtro de categoria do catálogo. A busca orgânica continua igual para todo mundo: a decisão "sem ranking" deste ADR e o cenário 12 seguem de pé, e a pendência sobre interesses alterarem a ordenação da descoberta continua do contratante.
+
+**A ordem é a que a busca já usa sem termo** — nome normalizado, depois id —, **sem pontuação e sem vaga de patrocínio.** Patrocinado aparece na posição alfabética que teria de qualquer forma. Assim a faixa estreita o que se mostra sem decidir quem vem primeiro, e não cria a prominência sem contrato que motivou a decisão original.
+
+**Mesmas regras públicas, lidas do mesmo lugar.** A consulta parte da definição única de descobribilidade (`catalog_discoverability`), não da cópia que a busca embute, e cada linha passa pela mesma projeção dos resultados orgânicos: o aplicativo desenha a faixa com o mesmo cartão e ela nunca mostra mais do que a busca mostraria. Cidade desconhecida, de outra operação, inativa ou malformada é recusada como o catálogo público recusa.
+
+**Limite de dez lugares.** É uma faixa de entrada, não uma segunda listagem paginada.
+
+**Só interesses em categoria ativa contam**, como no Concierge. A resposta traz `has_interests`, que separa a faixa vazia porque nada foi escolhido — onde cabe um convite para escolher — da faixa vazia porque nada escolhido está publicado na cidade, onde não cabe. A rota é privada, como o resto de `/api/v1/me`.
+
+Cenários acrescentados: sem sessão, recusa; sem interesse, faixa vazia com `has_interests` falso, e com interesse, os lugares escolhidos; o cartão é idêntico ao do resultado orgânico; unidade suspensa, retirada, sem capa ou de organização suspensa fica fora, inclusive quando a projeção ainda a lista; categoria pai traz as filhas; lugar fora das categorias escolhidas fica fora; interesse em categoria desativada não conta; interesses de uma pessoa não moldam a faixa de outra; a faixa respeita a cidade pedida e nunca alcança outra operação; ordem alfabética com patrocinado na sua posição; no máximo dez; a busca pública fica idêntica antes e depois.
