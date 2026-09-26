@@ -1,7 +1,6 @@
 import { Head, Link } from '@inertiajs/react'
-import { ArrowLeft, CheckCircle2, ReceiptText, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ShieldCheck, UserRound } from 'lucide-react'
 
-import { PageHeader } from '~/components/page_header'
 import { Button } from '~/components/ui/button'
 import { MainLayout } from '~/layouts/main_layout'
 import type { RedemptionReceipt } from '~/types/benefit_redemption'
@@ -23,60 +22,73 @@ export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps)
     <MainLayout>
       <Head title="Comprovante de utilização" />
 
-      <div className="space-y-7">
-        <PageHeader
-          eyebrow="Portal do parceiro"
-          icon={ReceiptText}
-          title="Comprovante de utilização"
-          description={`${receipt.offer.title} · ${receipt.establishment.name} · ${receipt.edition.name}`}
-          actions={
-            <Button asChild variant="outline" size="lg">
-              <Link href="/portal/redemptions">
-                <ArrowLeft />
-                Voltar às utilizações
-              </Link>
-            </Button>
-          }
-        />
+      <div className="space-y-6">
+        <Button asChild variant="ghost" size="md" shape="pill" className="-ms-3">
+          <Link href="/portal/redemptions">
+            <ArrowLeft />
+            Voltar às utilizações
+          </Link>
+        </Button>
 
-        <section className="mx-auto max-w-3xl rounded-lg border border-success/25 bg-card p-6 sm:p-8">
-          <div className="flex items-center gap-3 text-success">
-            <CheckCircle2 className="size-7" />
-            <p className="font-bold">Utilização confirmada</p>
+        <section
+          aria-labelledby="receipt-title"
+          className="mx-auto max-w-2xl overflow-hidden rounded-card border border-border-subtle bg-card"
+        >
+          <div className="bg-success-soft px-6 py-5 sm:px-8">
+            <p className="flex items-center gap-2 font-bold text-success-accent">
+              <CheckCircle2 aria-hidden="true" className="size-6" />
+              Utilização confirmada
+            </p>
+            <h1
+              id="receipt-title"
+              className="mt-3 font-display text-2xl font-extrabold tracking-[-0.02em] sm:text-3xl"
+            >
+              {receipt.offer.title}
+            </h1>
+            <p className="mt-1 text-sm text-foreground">
+              {receipt.establishment.name} · {receipt.edition.name}
+            </p>
           </div>
 
-          <p className="mt-6 font-mono text-2xl font-black tracking-[0.08em]">
-            {receipt.receipt_code}
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">{formatDate(receipt.redeemed_at)}</p>
-
-          <dl className="mt-7 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-md border border-border bg-muted/40 p-4">
-              <dt className="flex items-center gap-2 text-xs text-muted-foreground">
-                <UserRound className="size-4" /> Titular
-              </dt>
-              <dd className="mt-2 font-semibold">{receipt.holder.full_name}</dd>
-              <dd className="mt-1 text-sm text-muted-foreground">{receipt.holder.email}</dd>
-            </div>
-            <div className="rounded-md border border-border bg-muted/40 p-4">
-              <dt className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="size-4" /> Uso registrado
-              </dt>
-              <dd className="mt-2 font-semibold">Utilização nº {receipt.redemption_number}</dd>
-              <dd className="mt-1 text-sm text-muted-foreground">
-                Registrada pela equipe da unidade
-              </dd>
-            </div>
-          </dl>
-
-          {receipt.offer.terms ? (
-            <div className="mt-6 rounded-md border border-border p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                Regras vigentes no momento da utilização
+          <div className="space-y-6 px-6 py-6 sm:px-8">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                Comprovante
               </p>
-              <p className="mt-2 whitespace-pre-line text-sm leading-6">{receipt.offer.terms}</p>
+              <p className="mt-1 font-mono text-2xl font-black tracking-[0.06em] break-all">
+                {receipt.receipt_code}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatDate(receipt.redeemed_at)}
+              </p>
             </div>
-          ) : null}
+
+            <dl className="grid gap-4 border-t border-dashed border-border-subtle pt-5 sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                  <UserRound aria-hidden="true" className="size-3.5" /> Titular
+                </dt>
+                <dd className="mt-1 font-semibold">{receipt.holder.full_name}</dd>
+                <dd className="truncate text-sm text-muted-foreground">{receipt.holder.email}</dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                  <ShieldCheck aria-hidden="true" className="size-3.5" /> Uso registrado
+                </dt>
+                <dd className="mt-1 font-semibold">Utilização nº {receipt.redemption_number}</dd>
+                <dd className="text-sm text-muted-foreground">Registrada pela equipe do lugar</dd>
+              </div>
+            </dl>
+
+            {receipt.offer.terms ? (
+              <div className="rounded-2xl bg-muted/50 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                  Regras no momento do uso
+                </p>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6">{receipt.offer.terms}</p>
+              </div>
+            ) : null}
+          </div>
         </section>
       </div>
     </MainLayout>

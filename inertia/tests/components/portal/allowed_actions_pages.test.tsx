@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import type { ComponentProps, ReactNode } from 'react'
 
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import EstablishmentBenefitsPage from '~/pages/portal/establishments/benefits'
@@ -355,6 +355,76 @@ describe('Portal server-projected allowed actions', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Peça ao cliente para gerar')
     expect(screen.getByLabelText('Link da apresentação')).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Conferir' })).toBeDisabled()
+  })
+
+  it('presents a valid benefit as a ticket with one conversion action to confirm it', () => {
+    const actions: OrganizationAllowedActions = {
+      ...readOnlyActions,
+      redemptions: { read: true, validate: true },
+    }
+    const preview = {
+      token: 'token-1',
+      expires_at: '2026-09-26T21:00:00.000Z',
+      holder: { id: 5, full_name: 'Ana Souza', email: 'ana@example.test' },
+      benefit: {
+        access_id: 1,
+        offer_id: 2,
+        edition_id: 3,
+        edition_name: 'Experimente Londrina',
+        organization_id: 4,
+        establishment_id: 8,
+        establishment_name: 'Café Central',
+        offer_title: 'Sobremesa cortesia',
+        offer_description: 'Na compra de um prato principal.',
+        terms: null,
+        benefit_type: 'courtesy',
+        reservation_required: false,
+        on_premise_only: true,
+        minimum_party_size: 1,
+        max_redemptions_per_access: 2,
+        redeemed_count: 1,
+        remaining_redemptions: 1,
+      },
+    }
+
+    render(<PartnerValidationPage token="token-1" preview={preview} allowed_actions={actions} />)
+
+    const ticket = screen.getByRole('region', { name: 'Benefício apresentado' })
+    expect(within(ticket).getByRole('heading', { name: 'Sobremesa cortesia' })).toBeVisible()
+    expect(within(ticket).getByText('Lugar')).toBeVisible()
+    expect(within(ticket).queryByText('Estabelecimento')).not.toBeInTheDocument()
+    expect(within(ticket).getByText('utilização restante')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Confirmar utilização' })).toHaveClass('bg-cta')
+    expect(document.querySelectorAll('.bg-cta')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Conferir outro' })).toBeVisible()
+  })
+
+  it('lists each confirmed use with a link to its receipt', () => {
+    const redemption = {
+      id: 9,
+      receipt_code: 'EXP-ABC123',
+      redemption_number: 1,
+      redeemed_at: '2026-09-04T20:04:00.000Z',
+      edition: { id: 3, name: 'Experimente Londrina' },
+      offer: { id: 2, title: 'Sobremesa cortesia', benefit_type: 'courtesy', terms: null },
+      establishment: { id: 8, name: 'Café Central' },
+      holder: { id: 5, full_name: 'Ana Souza', email: 'ana@example.test' },
+      redeemed_by: 6,
+    }
+
+    render(
+      <PartnerRedemptionsPage
+        history={{ redemptions: [redemption], total: 1 }}
+        allowed_actions={readOnlyActions}
+      />
+    )
+
+    const list = screen.getByRole('region', { name: 'Utilizações confirmadas' })
+    expect(within(list).getByRole('link', { name: /Sobremesa cortesia/ })).toHaveAttribute(
+      'href',
+      '/portal/redemptions/EXP-ABC123'
+    )
+    expect(screen.getByText('1 utilização')).toBeVisible()
   })
 
   it('wires the establishment editor directly to scoped actions instead of global capabilities', () => {
