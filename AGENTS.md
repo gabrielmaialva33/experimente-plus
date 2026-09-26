@@ -70,6 +70,8 @@ Em um checkout novo, instale com `pnpm install --frozen-lockfile`. Crie `.env` a
 
 Preserve a configuração de TypeScript duplo do `package.json`: `typescript` aponta para TS 6 e `typescript-native` para TS 7, compatibilizando lint e compilação. Não simplifique os aliases ou as permissões `allowBuilds` de pnpm sem verificar a compatibilidade das ferramentas.
 
+Mantenha `pg` na major 8 até Lucid e Knex serializarem consultas na mesma conexão. O Lucid 22 executa em paralelo os preloads de relações irmãs; dentro de `db.transaction`, eles disputam um único cliente, o que o `pg` 8 enfileira com aviso de descontinuação e o `pg` 9 deixará de aceitar. Em código novo dentro de transação, não use `Promise.all` com o cliente transacional.
+
 ## Estilo e interface
 
 TypeScript strict, indentação de dois espaços, LF, classes/componentes em PascalCase e funções/variáveis em camelCase. Backend e páginas seguem predominantemente snake_case; componentes de `inertia/components/ui/` usam kebab-case. Siga os arquivos vizinhos, `.editorconfig`, ESLint e Prettier.
