@@ -444,6 +444,29 @@ describe('flat foundation token contract', () => {
     expect(appCss).toContain('font-family: var(--font-sans)')
   })
 
+  it('loads the direction A display face and exposes it apart from the text face', () => {
+    expect(inertiaLayout).toContain('plus-jakarta-sans:600,700,800')
+    const display = tailwindCss.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
+    expect(display.trim().startsWith("'Plus Jakarta Sans'")).toBe(true)
+    expect(display).toContain('ui-sans-serif')
+    expect(tailwindCss).toContain('--radius-card: 1.25rem')
+    expect(tailwindCss).toContain('--color-border-subtle: var(--border-subtle)')
+  })
+
+  it.each([':root', '.dark'])(
+    '%s keeps the card outline decorative: visible, lighter than an interactive boundary',
+    (selector) => {
+      const block = blockFor(selector)
+      for (const surface of ['background', 'card']) {
+        const subtle = contrastRatio(colorToken(block, 'border-subtle'), colorToken(block, surface))
+        expect(subtle, `border-subtle/${surface}`).toBeGreaterThanOrEqual(1.1)
+        expect(subtle).toBeLessThan(
+          contrastRatio(colorToken(block, 'border'), colorToken(block, surface))
+        )
+      }
+    }
+  )
+
   it.each([
     'icon-gradient-primary',
     'tech-gradient-primary',

@@ -59,6 +59,8 @@
     --destructive-accent: oklch(0.44 0.15 28);
 
     --border: oklch(0.84 0.008 255);
+    /* Decorative outline of content cards; never the only boundary of a control. */
+    --border-subtle: oklch(0.908 0.008 255);
     /* Interactive boundaries meet 3:1 without making decorative separators heavy. */
     --input: oklch(0.57 0.012 255);
     --ring: oklch(0.45 0.12 253.364477316);
@@ -174,6 +176,7 @@
     --destructive-accent: oklch(0.812146 0.095733 19.3507);
 
     --border: oklch(0.410811 0.063788 274.616);
+    --border-subtle: oklch(0.33 0.05 274.6);
     --input: oklch(0.681873 0.045602 276.24);
     --ring: oklch(0.743392 0.110862 251.054);
 

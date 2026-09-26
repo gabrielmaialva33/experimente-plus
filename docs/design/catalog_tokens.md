@@ -85,6 +85,7 @@ Cada célula traz **CSS OKLCH exato / HEX sRGB de 8 bits**. O app deve usar o HE
 | `--destructive-soft`             | `oklch(0.96 0.018 28)` / `#feeeeb`                         | `oklch(0.315933 0.059434 20.9791)` / `#4c2424` | P5, P6                                |
 | `--destructive-accent`           | `oklch(0.44 0.15 28)` / `#94221d`                          | `oklch(0.812146 0.095733 19.3507)` / `#f9a9a9` | P5, P6                                |
 | `--border`                       | `oklch(0.84 0.008 255)` / `#c7cbd0`                        | `oklch(0.410811 0.063788 274.616)` / `#40486d` | P2, P3                                |
+| `--border-subtle`                | `oklch(0.908 0.008 255)` / `#dde1e6`                       | `oklch(0.33 0.05 274.6)` / `#2e334f`           | P2 (card outline only)                |
 | `--input`                        | `oklch(0.57 0.012 255)` / `#73787f`                        | `oklch(0.681873 0.045602 276.24)` / `#9197b6`  | P6                                    |
 | `--ring`                         | `oklch(0.45 0.12 253.364477316)` / `#1a5695`               | `oklch(0.743392 0.110862 251.054)` / `#75b0f0` | P6                                    |
 | `--scrim`                        | `oklch(0.133386 0.015892 273.521)` / `#06070e`             | `oklch(0.133386 0.015892 273.521)` / `#06070e` | P7                                    |

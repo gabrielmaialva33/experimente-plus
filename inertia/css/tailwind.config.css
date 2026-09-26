@@ -14,6 +14,10 @@
     'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
   --font-sans--font-feature-settings: 'rlig' 1, 'calt' 1;
+  /* Direction A: a display face for titles, names and headline numbers; text stays in Instrument Sans. */
+  --font-display:
+    'Plus Jakarta Sans', 'Instrument Sans', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   --container-app: 80rem;
 
@@ -40,6 +44,7 @@
   --color-action-secondary-border: var(--action-secondary-border);
   --color-scrim: var(--scrim);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-surface-base: var(--surface-base);
@@ -88,6 +93,8 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 8px);
+  /* Content cards and task cards of direction A; controls keep the shorter scale or go pill. */
+  --radius-card: 1.25rem;
 
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
