@@ -28,18 +28,20 @@ export function PublicHeader() {
         <nav aria-label="Navegação principal" className="hidden items-center gap-1 md:flex">
           {navigation.map((item) => {
             const active = isNavigationHrefActive(url, item.href)
+            const Icon = item.icon
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                  'inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   active
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 )}
               >
+                <Icon aria-hidden="true" className="size-4" />
                 {item.label}
               </Link>
             )
