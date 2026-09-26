@@ -128,9 +128,7 @@ describe('PartnerContentHistory', () => {
       }),
     })
 
-    render(
-      <PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />
-    )
+    render(<PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />)
     expect(fetchMock).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: /Histórico/ }))
@@ -152,9 +150,7 @@ describe('PartnerContentHistory', () => {
   it('says so when the history cannot be loaded', async () => {
     fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) })
 
-    render(
-      <PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />
-    )
+    render(<PartnerContentHistory tenantId={4} kind="experiences" contentId={7} timeZone={null} />)
     fireEvent.click(screen.getByRole('button', { name: /Histórico/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/Não foi possível/)
