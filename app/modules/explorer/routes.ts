@@ -54,6 +54,10 @@ router
     router.get('/interests', [ExplorerController, 'listInterests'])
     router.put('/interests', [ExplorerController, 'replaceInterests'])
 
+    // Places of the chosen interests, apart from search: search stays the same
+    // for everyone, and this row only narrows, never ranks (revision of 26/09/2026).
+    router.get('/for-you', [ExplorerController, 'forYou'])
+
     router.get('/itineraries', [ExplorerController, 'listItineraries'])
     router.post('/itineraries', [ExplorerController, 'createItinerary'])
     router

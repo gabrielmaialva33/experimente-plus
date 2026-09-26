@@ -1,5 +1,6 @@
 import db from '@adonisjs/lucid/services/db'
 
+import { discoverableEstablishmentsForCitySql } from '#modules/catalog/repositories/catalog_discoverability'
 import type ICatalog from '#modules/catalog/interfaces/catalog_interface'
 
 interface VersionRow {
@@ -399,6 +400,85 @@ export default class CatalogSearchRepository {
     return result.rows
   }
 
+  /**
+   * Discoverable establishments of one city filed under any of the given
+   * categories or their active descendants — the "Para você" row of ADR-0030
+   * (revision of 26/09/2026).
+   *
+   * It stands on the shared definition of discoverability, not on the copy the
+   * search query inlines, and it reads the category tree exactly as the catalog
+   * filter does: an active category of an active family, plus its active
+   * descendants. The order is the one organic search uses when no term is typed
+   * — normalised name, then id — with no score and no sponsorship slot, so
+   * interests narrow what is shown without deciding who comes first.
+   */
+  async listForCategories(
+    tenantId: number,
+    cityId: number,
+    categoryIds: readonly number[],
+    limit: number
+  ): Promise<ICatalog.CatalogRow[]> {
+    if (categoryIds.length === 0) return []
+
+    const result = await db.rawQuery<{ rows: CatalogDatabaseRow[] }>(
+      `
+        WITH RECURSIVE
+        chosen AS (
+          SELECT category.id
+          FROM categories category
+          JOIN category_families family
+            ON family.id = category.family_id
+           AND family.tenant_id = category.tenant_id
+           AND family.is_active = true
+          WHERE category.tenant_id = ?
+            AND category.id = ANY(?::bigint[])
+            AND category.is_active = true
+        ),
+        category_scope AS (
+          SELECT id
+          FROM chosen
+
+          UNION
+
+          SELECT child.id
+          FROM category_scope scope
+          JOIN categories child
+            ON child.parent_id = scope.id
+           AND child.tenant_id = ?
+           AND child.is_active = true
+        ),
+        discoverable AS (
+          ${discoverableEstablishmentsForCitySql}
+        )
+        SELECT
+          discoverable.*,
+          catalog_is_open_now(
+            discoverable.availability_type,
+            discoverable.business_status,
+            discoverable.city_timezone,
+            discoverable.weekly_hours,
+            discoverable.special_days
+          ) AS is_open_now,
+          0::double precision AS relevance_score
+        FROM discoverable
+        WHERE discoverable.cover_media IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM catalog_establishment_categories projection_category
+            JOIN category_scope scope
+              ON scope.id = projection_category.category_id
+            WHERE projection_category.tenant_id = discoverable.tenant_id
+              AND projection_category.establishment_id = discoverable.establishment_id
+          )
+        ORDER BY ${this.orderBy('name', 'discoverable')}
+        LIMIT ?
+      `,
+      [tenantId, [...categoryIds], tenantId, tenantId, cityId, limit]
+    )
+
+    return result.rows.map((row) => this.normalizeRow(row))
+  }
+
   async refresh(tenantId: number, establishmentId: number): Promise<void> {
     await db.rawQuery('SELECT catalog_refresh_establishment(?, ?)', [tenantId, establishmentId])
   }
@@ -659,7 +739,7 @@ export default class CatalogSearchRepository {
     throw new TypeError(`Catalog projection ${field} must be a valid timestamp`)
   }
 
-  private orderBy(sort: ICatalog.Sort, relation: 'ranked' | 'paged'): string {
+  private orderBy(sort: ICatalog.Sort, relation: 'ranked' | 'paged' | 'discoverable'): string {
     if (sort === 'name') {
       return `${relation}.normalized_name ASC, ${relation}.establishment_id ASC`
     }

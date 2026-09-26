@@ -6384,6 +6384,23 @@ components:
           items:
             $ref: '#/components/schemas/ExplorerInterest'
 
+    ExplorerForYou:
+      description: >-
+        The "Para você" row (ADR-0030, revision of 26/09/2026). `data` carries
+        organic search results, in the order organic search uses without a term;
+        `has_interests` says whether any active interest was chosen at all.
+      type: object
+      additionalProperties: false
+      required: [data, has_interests]
+      properties:
+        data:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/CatalogSearchItem'
+        has_interests:
+          type: boolean
+
     ReplaceExplorerInterestsRequest:
       description: The whole set. Choosing interests replaces it rather than toggling one at a time.
       type: object
@@ -15127,8 +15144,9 @@ paths:
       operationId: listMyInterests
       summary: List the caller's discovery interests
       description: >-
-        Interests are recorded and returned. They do not change the order of any
-        search in this milestone: personalised ranking is its own domain.
+        Interests are recorded and returned. They narrow the "Para você" row of
+        `/api/v1/me/for-you` and never change the order of any search:
+        personalised ranking is its own domain.
       tags: [Explorer]
       security:
         - bearerAuth: []
@@ -15168,6 +15186,43 @@ paths:
           description: Authentication required
         '404':
           description: A category is not part of this operation
+        '422':
+          description: Validation failed
+
+  /api/v1/me/for-you:
+    get:
+      operationId: listMyForYou
+      summary: Places of the caller's interests in one city
+      description: >-
+        Discoverable establishments of the city filed under any active interest
+        of the caller or under its active descendant categories, in the order
+        organic search uses without a term (name, then id), at most ten. It
+        never reorders search and gives sponsorship no slot. An unknown,
+        foreign, inactive or malformed city is refused as the public catalogue
+        refuses it.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        '200':
+          description: The row, possibly empty
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerForYou'
+        '401':
+          description: Authentication required
+        '404':
+          description: City not found in this operation
         '422':
           description: Validation failed
 

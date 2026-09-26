@@ -355,16 +355,48 @@ export default class CatalogService {
     })
   }
 
+  /**
+   * The "Para você" row of ADR-0030 (revision of 26/09/2026), for an operation
+   * already resolved from the session instead of the hostname.
+   *
+   * The city is refused exactly as the public catalogue refuses it, and every row
+   * goes through the same projection as the search results, so the app draws both
+   * with one card and this row can never show more than search would.
+   */
+  async forCategories(
+    tenantId: number,
+    citySlug: string,
+    categoryIds: readonly number[],
+    limit: number
+  ): Promise<ICatalog.SearchItemProjection[]> {
+    const city = await this.requireCity(tenantId, citySlug)
+    const rows = await this.catalogRepository.listForCategories(
+      tenantId,
+      city.id,
+      categoryIds,
+      limit
+    )
+
+    return rows.flatMap((row) => {
+      const item = this.searchItem(row)
+      return item ? [item] : []
+    })
+  }
+
   private async resolveCity(hostname: string | null, citySlug: string) {
     const tenant = await this.operationResolver.resolve(hostname)
+    return { tenantId: tenant.id, city: await this.requireCity(tenant.id, citySlug) }
+  }
+
+  private async requireCity(tenantId: number, citySlug: string) {
     const normalizedSlug = this.requireSlug(citySlug)
-    const city = await this.cityRepository.findBySlugForTenant(tenant.id, normalizedSlug)
+    const city = await this.cityRepository.findBySlugForTenant(tenantId, normalizedSlug)
 
     if (!city || !city.is_active || !city.region?.is_active) {
       throw new NotFoundException('City not found')
     }
 
-    return { tenantId: tenant.id, city }
+    return city
   }
 
   private searchItem(row: ICatalog.CatalogRow): ICatalog.SearchItemProjection | null {

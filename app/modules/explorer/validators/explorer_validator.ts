@@ -62,3 +62,14 @@ export const contentParamsValidator = vine.compile(
     contentId: vine.number().min(1),
   })
 )
+
+/**
+ * The city of the "Para você" row travels as the catalogue addresses it, by
+ * slug. Its format and existence are checked by the catalogue itself, so an
+ * unknown city is refused here exactly as the public search refuses it.
+ */
+export const forYouQueryValidator = vine.compile(
+  vine.object({
+    city: vine.string().trim().minLength(1).maxLength(120),
+  })
+)
