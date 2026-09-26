@@ -37,11 +37,11 @@ export const partnerContentStatusMeta: Record<
   },
   pending_review: {
     label: 'Em análise',
-    className: 'border-warning/25 bg-warning/15 text-warning-foreground',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   published: {
     label: 'Publicado',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   archived: {
     label: 'Arquivado',

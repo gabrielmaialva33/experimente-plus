@@ -20,9 +20,9 @@ import { cn } from '~/lib/utils'
 
 function statusClassName(status: string): string {
   const styles: Record<string, string> = {
-    new: 'bg-info/10 text-info ring-info/15',
-    in_review: 'bg-warning/15 text-warning-foreground ring-warning/15',
-    resolved: 'bg-success/10 text-success ring-success/15',
+    new: 'bg-info-soft text-info-accent ring-info/15',
+    in_review: 'bg-warning-soft text-warning-accent ring-warning/20',
+    resolved: 'bg-success-soft text-success-accent ring-success/15',
     dismissed: 'bg-muted text-muted-foreground ring-border/70',
   }
 
@@ -83,7 +83,7 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
               {reportedAt ? `Relatado em ${reportedAt}` : 'Data do relato indisponível'}
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-full bg-warning/15 px-3 py-1.5 text-sm font-bold text-warning-foreground ring-1 ring-warning/15">
+          <div className="flex items-center gap-1 rounded-full bg-warning-soft px-3 py-1.5 text-sm font-bold text-warning-accent ring-1 ring-warning/20">
             <Star aria-hidden="true" className="size-4 fill-current" />
             {numeric(item, 'rating')}/5
           </div>

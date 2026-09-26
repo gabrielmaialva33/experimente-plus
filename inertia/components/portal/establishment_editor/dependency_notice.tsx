@@ -21,7 +21,7 @@ export function EditorDependencyNotice({
       className="flex flex-col gap-4 rounded-xl border border-warning/25 bg-warning/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex min-w-0 items-start gap-3">
-        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning-foreground" />
+        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning-accent" />
         <div className="min-w-0">
           <p className="font-semibold">{title}</p>
           <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>

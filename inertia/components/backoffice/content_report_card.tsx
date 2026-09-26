@@ -167,7 +167,7 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
               <p className="text-muted-foreground">Encontrado: {evidence}</p>
             ) : null}
             {holdsContent && !settled ? (
-              <p className="font-semibold text-warning-foreground">
+              <p className="font-semibold text-warning-accent">
                 Conteúdo retido fora das áreas públicas até a decisão. Descartar ou resolver sem
                 ocultar libera o conteúdo.
               </p>

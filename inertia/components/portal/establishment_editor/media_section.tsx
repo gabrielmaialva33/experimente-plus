@@ -30,19 +30,19 @@ import type { EstablishmentMediaEditor } from './use_media_editor'
 const mediaStatusMeta: Record<string, { label: string; className: string }> = {
   pending: {
     label: 'Pendente',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   approved: {
     label: 'Aprovada',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   rejected: {
     label: 'Rejeitada',
-    className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
   quarantined: {
     label: 'Em quarentena',
-    className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
 }
 
