@@ -1,6 +1,6 @@
 import type { AnchorHTMLAttributes } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
 import { LoginForm } from '~/components/auth/login_form'
 import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
 import { render } from '~/tests/test_utils'
@@ -27,6 +27,13 @@ vi.mock('@inertiajs/react', async () => {
       return {
         data,
         setData: (key: keyof T, value: unknown) => setData((prev) => ({ ...prev, [key]: value })),
+        // Inertia's reset: the named fields go back to their initial values.
+        reset: (...fields: (keyof T)[]) =>
+          setData((prev) =>
+            fields.length === 0
+              ? initial
+              : { ...prev, ...Object.fromEntries(fields.map((field) => [field, initial[field]])) }
+          ),
         post: mocks.mockPost,
         processing: mocks.processing,
         errors: {} as Record<string, string>,
@@ -101,7 +108,24 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Senha'), 'password123')
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
-    expect(mocks.mockPost).toHaveBeenCalledWith('/login')
+    expect(mocks.mockPost).toHaveBeenCalledWith(
+      '/login',
+      expect.objectContaining({ onError: expect.any(Function) })
+    )
+  })
+
+  it('clears the password, and only the password, after a failed attempt (W44)', async () => {
+    const { user } = render(<LoginForm />)
+
+    await user.type(screen.getByLabelText('E-mail ou usuário'), 'ana@example.com')
+    await user.type(screen.getByLabelText('Senha'), 'senha-errada')
+    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    const [, options] = mocks.mockPost.mock.calls[0] as [string, { onError: () => void }]
+    act(() => options.onError())
+
+    expect(screen.getByLabelText('Senha')).toHaveValue('')
+    expect(screen.getByLabelText('E-mail ou usuário')).toHaveValue('ana@example.com')
   })
 
   it('announces the general server error in an accessible alert', () => {

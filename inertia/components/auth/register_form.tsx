@@ -179,7 +179,8 @@ export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
         variant="primary"
         disabled={processing || !data.terms_accepted}
         className="w-full"
-        size="lg"
+        size="xl"
+        shape="pill"
       >
         {processing ? <Loader2 className="size-4 animate-spin" /> : null}
         <span aria-live="polite">{processing ? 'Criando conta...' : 'Criar conta'}</span>

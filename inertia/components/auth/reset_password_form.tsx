@@ -79,7 +79,14 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
       <PasswordRequirements password={data.password} confirmation={data.password_confirmation} />
 
-      <Button type="submit" variant="primary" disabled={processing} className="w-full" size="lg">
+      <Button
+        type="submit"
+        variant="primary"
+        size="xl"
+        shape="pill"
+        disabled={processing}
+        className="w-full"
+      >
         {processing ? <Loader2 className="size-4 animate-spin" /> : null}
         <span aria-live="polite">{processing ? 'Redefinindo...' : 'Redefinir senha'}</span>
       </Button>
