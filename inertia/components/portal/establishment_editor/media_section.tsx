@@ -2,6 +2,7 @@ import { ImagePlus, Images, Star, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { EditorSection, type EditorDisplayIssue } from '~/components/portal/editor_section'
+import { ImageDropZone } from '~/components/portal/image_drop_zone'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,7 +108,7 @@ export function MediaSection({
             ref={uploadFormRef}
             onSubmit={editor.uploadMedia}
             onChange={editor.markUploadDraftDirty}
-            className="space-y-4 rounded-xl border border-dashed border-border bg-muted/20 p-4 sm:p-5"
+            className="space-y-4 rounded-2xl border border-border-subtle bg-muted/20 p-4 sm:p-5"
           >
             <div className="flex items-start gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -116,22 +117,14 @@ export function MediaSection({
               <div>
                 <p className="text-sm font-semibold">Adicionar imagem</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  JPEG, PNG ou WebP de até 10 MB. Toda nova imagem começa pendente de moderação.
+                  Toda nova imagem passa pela moderação antes de aparecer no app e no site.
                 </p>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <EditorField htmlFor="media-file" label="Arquivo" required>
-                <Input
-                  id="media-file"
-                  type="file"
-                  name="file"
-                  required
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={controlsDisabled}
-                  className="h-auto py-2 file:me-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary"
-                />
+              <EditorField htmlFor="media-file" label="Imagem" required className="md:col-span-2">
+                <ImageDropZone id="media-file" required disabled={controlsDisabled} />
               </EditorField>
               <EditorField htmlFor="media-purpose" label="Uso da imagem">
                 <select

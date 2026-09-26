@@ -54,10 +54,11 @@ describe('PartnerContentMediaManager', () => {
       <PartnerContentMediaManager tenantId={7} kind="events" contentId={22} media={[]} editable />
     )
 
+    expect(screen.queryByText(/0 imagens/)).not.toBeInTheDocument()
     const file = new File(['image-bytes'], 'jazz.jpg', { type: 'image/jpeg' })
-    await user.upload(screen.getByLabelText('Imagem'), file)
+    await user.upload(screen.getByLabelText(/^Imagem/), file)
     await user.type(
-      screen.getByLabelText('Texto alternativo'),
+      screen.getByLabelText(/^Texto alternativo/),
       'Músicos tocando no salão principal'
     )
     await user.type(screen.getByLabelText('Legenda'), 'Noite de jazz')

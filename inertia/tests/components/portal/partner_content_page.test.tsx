@@ -63,14 +63,16 @@ describe('PartnerContentPage', () => {
     )
 
     await user.click(screen.getByRole('tab', { name: /Eventos/ }))
-    await user.selectOptions(screen.getByLabelText('Unidade'), String(establishment.id))
-    await user.type(screen.getByLabelText('Título'), 'Noite de jazz')
-    fireEvent.change(screen.getByLabelText('Início'), {
+    await user.selectOptions(screen.getByLabelText(/^Lugar/), String(establishment.id))
+    await user.type(screen.getByLabelText(/^Título/), 'Noite de jazz')
+    fireEvent.change(screen.getByLabelText(/^Início/), {
       target: { value: '2026-09-20T19:00' },
     })
-    fireEvent.change(screen.getByLabelText('Fim'), {
+    fireEvent.change(screen.getByLabelText(/^Fim/), {
       target: { value: '2026-09-20T22:00' },
     })
+    expect(screen.getByLabelText(/^Título/)).toHaveAttribute('aria-required', 'true')
+    expect(screen.getByLabelText(/^Início/)).toHaveAccessibleDescription('Horário de Londrina')
     await user.click(screen.getByRole('button', { name: 'Criar rascunho' }))
 
     expect(mocks.post).toHaveBeenCalledOnce()
@@ -177,7 +179,7 @@ describe('PartnerContentPage', () => {
     expect(screen.queryByRole('button', { name: 'Criar rascunho' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Arquivar' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Unidade' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Ver lugar' })).toHaveAttribute(
       'href',
       '/portal/establishments/7'
     )
