@@ -454,6 +454,28 @@ describe('flat foundation token contract', () => {
   })
 
   it.each([':root', '.dark'])(
+    '%s reads every state badge and the conversion action: strong text on its own fill',
+    (selector) => {
+      const block = blockFor(selector)
+      for (const [fill, text] of [
+        ['success-soft', 'success-accent'],
+        ['warning-soft', 'warning-accent'],
+        ['info-soft', 'info-accent'],
+        ['cta-soft', 'cta-accent'],
+        ['primary-soft', 'primary-accent'],
+        ['muted', 'muted-foreground'],
+        ['cta', 'cta-foreground'],
+        ['primary', 'primary-foreground'],
+      ]) {
+        expect(
+          contrastRatio(colorToken(block, fill), colorToken(block, text)),
+          `${text}/${fill}`
+        ).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  )
+
+  it.each([':root', '.dark'])(
     '%s keeps the card outline decorative: visible, lighter than an interactive boundary',
     (selector) => {
       const block = blockFor(selector)

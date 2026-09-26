@@ -44,10 +44,13 @@ const buttonVariants = cva(
         dashed: 'underline decoration-1 decoration-dashed underline-offset-4',
       },
       size: {
-        lg: 'h-11 px-5',
-        md: 'h-10 px-4',
-        sm: 'h-9 px-3 text-xs',
-        icon: 'size-10 p-0',
+        // Direction A touch sizes: 52 for a screen's single primary action, 48 for form submits.
+        '2xl': 'h-13 px-7 text-base font-bold',
+        'xl': 'h-12 px-6 text-[0.9375rem] font-bold',
+        'lg': 'h-11 px-5',
+        'md': 'h-10 px-4',
+        'sm': 'h-9 px-3 text-xs',
+        'icon': 'size-10 p-0',
       },
       autoHeight: {
         true: '',
@@ -56,6 +59,7 @@ const buttonVariants = cva(
       shape: {
         default: '',
         circle: 'rounded-full',
+        pill: 'rounded-full',
       },
       mode: {
         default: '',
@@ -90,10 +94,14 @@ const buttonVariants = cva(
       { size: 'sm', autoHeight: true, className: 'h-auto min-h-9' },
       { size: 'md', autoHeight: true, className: 'h-auto min-h-10' },
       { size: 'lg', autoHeight: true, className: 'h-auto min-h-11' },
+      { size: 'xl', autoHeight: true, className: 'h-auto min-h-12' },
+      { size: '2xl', autoHeight: true, className: 'h-auto min-h-13' },
       { size: 'sm', mode: 'icon', className: 'size-9' },
       { size: 'md', mode: 'icon', className: 'size-10' },
       { size: 'icon', mode: 'icon', className: 'size-10' },
       { size: 'lg', mode: 'icon', className: 'size-11' },
+      { size: 'xl', mode: 'icon', className: 'size-12' },
+      { size: '2xl', mode: 'icon', className: 'size-13' },
     ],
     defaultVariants: {
       variant: 'primary',

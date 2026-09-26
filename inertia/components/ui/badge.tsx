@@ -16,6 +16,7 @@ const badgeVariants = cva(
         warning: 'border-transparent bg-warning text-warning-foreground',
         info: 'border-transparent bg-info text-info-foreground',
         outline: 'border-border bg-transparent text-secondary-foreground',
+        neutral: 'border-transparent bg-muted text-muted-foreground',
         destructive: 'border-transparent bg-destructive text-destructive-foreground',
       },
       appearance: {
@@ -37,6 +38,8 @@ const badgeVariants = cva(
       shape: {
         default: '',
         circle: 'rounded-full',
+        // Direction A state badges: soft fill, strong text, full round.
+        pill: 'rounded-full px-3',
       },
     },
     compoundVariants: [
