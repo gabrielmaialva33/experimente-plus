@@ -5857,7 +5857,16 @@ components:
             - 'null'
         reason:
           type: string
-          enum: [spam, offensive, inappropriate, false_information, conflict_of_interest, harassment, other]
+          enum:
+            [
+              spam,
+              offensive,
+              inappropriate,
+              false_information,
+              conflict_of_interest,
+              harassment,
+              other,
+            ]
         details:
           type:
             - string
@@ -5995,7 +6004,16 @@ components:
           minimum: 1
         reason:
           type: string
-          enum: [spam, offensive, inappropriate, false_information, conflict_of_interest, harassment, other]
+          enum:
+            [
+              spam,
+              offensive,
+              inappropriate,
+              false_information,
+              conflict_of_interest,
+              harassment,
+              other,
+            ]
         details:
           type:
             - string
@@ -6023,7 +6041,16 @@ components:
           minimum: 1
         reason:
           type: string
-          enum: [spam, offensive, inappropriate, false_information, conflict_of_interest, harassment, other]
+          enum:
+            [
+              spam,
+              offensive,
+              inappropriate,
+              false_information,
+              conflict_of_interest,
+              harassment,
+              other,
+            ]
         details:
           type:
             - string
@@ -14590,7 +14617,6 @@ paths:
           description: Not the author of this review
         '404':
           description: Review not found
-
 
   /api/v1/me/reviews/{id}/photos:
     post:
