@@ -49,13 +49,23 @@ import HomologationDemoContent, {
 } from '#modules/tenants/services/homologation_demo_content'
 
 const ACTION = 'homologation.provision.v1'
+// Each venue has its own point: two at the same coordinate stack on the map,
+// and a tap on one opened the other.
 const VENUES = [
   {
     slug: 'casa-de-petiscos-demo',
     name: 'Casa de Petiscos — demonstração',
     scene: 'petiscos' as const,
+    latitude: -23.3103,
+    longitude: -51.1628,
   },
-  { slug: 'atelier-do-cafe-demo', name: 'Ateliê do Café — demonstração', scene: 'coffee' as const },
+  {
+    slug: 'atelier-do-cafe-demo',
+    name: 'Ateliê do Café — demonstração',
+    scene: 'coffee' as const,
+    latitude: -23.3079,
+    longitude: -51.1601,
+  },
 ]
 
 export interface ProvisioningReceipt {
@@ -236,8 +246,8 @@ export default class HomologationProvisioningService {
               number: '1',
               without_number: false,
               district: 'Centro',
-              latitude: -23.3103,
-              longitude: -51.1628,
+              latitude: image.venue.latitude,
+              longitude: image.venue.longitude,
               coordinate_source: 'manual',
             },
             { client }
