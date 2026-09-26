@@ -146,7 +146,7 @@ export function ResourceForm({
       <div className="grid gap-4 md:grid-cols-2">{basicFields.map(renderField)}</div>
 
       {advancedFields.length > 0 ? (
-        <details open={advancedHasError || undefined} className="group rounded-xl bg-muted/50">
+        <details open={advancedHasError || undefined} className="group rounded-xl bg-background">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
             <span>
               Avançado

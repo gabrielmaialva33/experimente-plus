@@ -272,7 +272,7 @@ export function ModerationActions({
                   return (
                     <div
                       key={issue.key}
-                      className="grid gap-3 rounded-xl bg-muted/50 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
+                      className="grid gap-3 rounded-xl bg-background p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
                     >
                       <EditorField
                         htmlFor={`${issue.key}-field`}
@@ -340,6 +340,7 @@ export function ModerationActions({
                         </select>
                       </EditorField>
                       <Button
+                        shape="pill"
                         type="button"
                         variant="ghost"
                         size="sm"

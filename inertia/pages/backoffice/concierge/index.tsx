@@ -105,7 +105,7 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
               submitLabel="Salvar configuração"
             />
           ) : (
-            <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+            <p className="rounded-xl bg-background px-4 py-3 text-sm text-muted-foreground">
               Você pode consultar, mas não alterar, a configuração do Concierge desta operação.
             </p>
           )}
@@ -116,7 +116,7 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
           className="rounded-card border border-border-subtle bg-card p-5 sm:p-7"
         >
           <div className="mb-5 flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-background text-muted-foreground">
               <Server aria-hidden="true" className="size-4.5" />
             </span>
             <div>

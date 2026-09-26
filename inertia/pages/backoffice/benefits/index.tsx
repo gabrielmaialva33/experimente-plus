@@ -320,7 +320,13 @@ export default function BenefitsBackofficePage({
                   </p>
                 </div>
                 {editingId ? (
-                  <Button type="button" variant="ghost" size="icon" onClick={resetForm}>
+                  <Button
+                    shape="circle"
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={resetForm}
+                  >
                     <X />
                     <span className="sr-only">Cancelar edição</span>
                   </Button>
@@ -584,7 +590,7 @@ export default function BenefitsBackofficePage({
                         </p>
                       ) : null}
 
-                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-4 text-sm">
+                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-background p-4 text-sm">
                         <div>
                           <dt className="text-xs text-muted-foreground">Utilização</dt>
                           <dd className="mt-1 font-semibold">

@@ -56,7 +56,7 @@ export function FeedbackCard({ item }: { item: JsonRecord }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-muted px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
+              <span className="rounded-full border border-border-subtle bg-muted px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
                 {pilotFeedbackContextLabel(text(item, 'context'))}
               </span>
               <span

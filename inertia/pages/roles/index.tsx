@@ -95,7 +95,7 @@ function RoleCard({ role }: { role: RoleRow }) {
         ) : (
           // The matrix is reference material, not what a person scans for;
           // it opens on request (audit W57).
-          <details className="group rounded-xl bg-muted/50">
+          <details className="group rounded-xl bg-background">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
               <span>
                 {role.permissions.length}{' '}

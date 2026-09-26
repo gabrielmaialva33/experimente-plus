@@ -292,7 +292,7 @@ export default function ModerationRevisionPage({
                   {[...blockingIssues, ...warnings].map((issue) => (
                     <li
                       key={`${text(issue, 'code')}-${text(issue, 'field')}`}
-                      className="rounded-xl bg-muted p-3"
+                      className="rounded-xl bg-background p-3"
                     >
                       <p className="text-sm font-semibold">
                         {localizeCompletenessIssue({
