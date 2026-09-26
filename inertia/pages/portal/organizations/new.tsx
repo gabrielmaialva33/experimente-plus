@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react'
-import { ArrowLeft, Building2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useRef, type FormEvent } from 'react'
 
 import { PageHeader } from '~/components/page_header'
@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { MainLayout } from '~/layouts/main_layout'
+import { formatCnpj, formatPhoneBR } from '~/lib/br_format'
 import { firstError } from '~/lib/form_errors'
 
 interface OrganizationFormData {
@@ -56,15 +57,13 @@ export default function NewOrganizationPage() {
 
       <div className="mx-auto max-w-3xl space-y-6">
         <PageHeader
-          eyebrow="Portal do parceiro"
-          icon={Building2}
           title="Nova organização"
-          description="A organização representa a empresa ou identidade legal. Cada endereço público será uma unidade separada."
+          description="A organização é a empresa por trás dos seus lugares. Depois de criada, cada endereço vira um lugar com dados próprios."
           actions={
-            <Button asChild variant="outline">
+            <Button asChild variant="ghost" size="lg" shape="pill">
               <Link href="/portal">
                 <ArrowLeft aria-hidden="true" className="size-4" />
-                Voltar ao portal
+                Voltar à visão geral
               </Link>
             </Button>
           }
@@ -72,7 +71,7 @@ export default function NewOrganizationPage() {
 
         <form
           onSubmit={submit}
-          className="space-y-6 rounded-lg border border-border bg-card p-5 sm:p-6"
+          className="space-y-6 rounded-card border border-border-subtle bg-card p-5 sm:p-6"
           aria-busy={form.processing}
         >
           {generalError ? (
@@ -122,7 +121,7 @@ export default function NewOrganizationPage() {
             <EditorField
               htmlFor="organization-slug"
               label="Endereço da página"
-              hint="Opcional. Quando vazio, a plataforma cria o endereço a partir do nome fantasia."
+              hint="Opcional. Se ficar vazio, usamos o nome fantasia."
               error={fieldError('slug')}
             >
               <Input
@@ -141,7 +140,7 @@ export default function NewOrganizationPage() {
             <EditorField
               htmlFor="organization-tax-id"
               label="CNPJ"
-              hint="Digite somente os 14 números ou use a formatação habitual. A validação final é feita pelo servidor."
+              hint="Só números ou no formato 00.000.000/0000-00."
               required
               error={fieldError('tax_id')}
             >
@@ -155,6 +154,7 @@ export default function NewOrganizationPage() {
                 disabled={form.processing}
                 value={form.data.tax_id}
                 onChange={(event) => form.setData('tax_id', event.target.value)}
+                onBlur={(event) => form.setData('tax_id', formatCnpj(event.target.value))}
               />
             </EditorField>
 
@@ -195,6 +195,7 @@ export default function NewOrganizationPage() {
                 disabled={form.processing}
                 value={form.data.phone}
                 onChange={(event) => form.setData('phone', event.target.value)}
+                onBlur={(event) => form.setData('phone', formatPhoneBR(event.target.value))}
               />
             </EditorField>
           </div>
@@ -218,16 +219,22 @@ export default function NewOrganizationPage() {
             />
           </EditorField>
 
-          <Alert>
-            <AlertTitle>Como esses dados serão usados</AlertTitle>
-            <AlertDescription>
-              O CNPJ será normalizado e validado com segurança. Os dados legais permanecem privados
-              e a organização precisa ser aprovada antes da publicação das unidades.
-            </AlertDescription>
-          </Alert>
+          <div className="rounded-2xl border border-info/25 bg-info-soft px-4 py-3">
+            <p className="text-sm font-bold">Como esses dados são usados</p>
+            <p className="mt-1 text-sm leading-6 text-foreground">
+              Razão social e CNPJ ficam privados. A equipe do Experimente+ confere a organização
+              antes de os lugares aparecerem no app e no site.
+            </p>
+          </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={form.processing} aria-busy={form.processing}>
+            <Button
+              type="submit"
+              size="xl"
+              shape="pill"
+              disabled={form.processing}
+              aria-busy={form.processing}
+            >
               {form.processing ? (
                 <>
                   <Loader2 aria-hidden="true" className="size-4 animate-spin" />

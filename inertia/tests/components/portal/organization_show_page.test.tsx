@@ -190,7 +190,7 @@ describe('PortalOrganizationPage', () => {
     expect(screen.getByRole('button', { name: 'Enviar para análise' })).toBeDisabled()
     expect(screen.getByText(/Propriet/)).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '72')
-    expect(screen.getByRole('link', { name: 'Ver analytics' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Desempenho' })).toHaveAttribute(
       'href',
       '/organizations/4/analytics'
     )
@@ -260,8 +260,8 @@ describe('PortalOrganizationPage', () => {
 
     expect(screen.getByLabelText(/Razão social/)).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Enviar para análise' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Nova unidade' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Ver analytics' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Novo lugar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Desempenho' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('pilot-feedback-form')).not.toBeInTheDocument()
   })
 
@@ -284,7 +284,7 @@ describe('PortalOrganizationPage', () => {
     )
 
     expect(screen.getByText('Em análise')).toBeVisible()
-    expect(screen.getByText('Publicação vigente no catálogo')).toBeVisible()
+    expect(screen.getByText('Versão publicada continua no ar')).toBeVisible()
     expect(screen.queryByText('Publicada')).not.toBeInTheDocument()
   })
 
@@ -325,6 +325,55 @@ describe('PortalOrganizationPage', () => {
       phone: organization.phone,
       website: organization.website,
     })
+  })
+
+  it('puts the places first and keeps approved legal data folded with readable values', async () => {
+    const { user } = render(
+      <PortalOrganizationPage
+        organization={{
+          ...organization,
+          status: 'active',
+          tax_id: '12345678000190',
+          phone: '4333334444',
+        }}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
+    )
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent)
+    expect(headings.indexOf('Lugares')).toBeGreaterThanOrEqual(0)
+    expect(headings.indexOf('Lugares')).toBeLessThan(headings.indexOf('Dados da organização'))
+
+    expect(screen.getByText('12.345.678/0001-90')).toBeVisible()
+    expect(screen.getByText('(43) 3333-4444')).toBeVisible()
+    expect(screen.getByLabelText(/Razão social/)).not.toBeVisible()
+
+    const toggle = screen.getByRole('button', { name: 'Ver e editar dados' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(toggle)
+    expect(screen.getByRole('button', { name: 'Ocultar dados' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    expect(screen.getByLabelText(/Razão social/)).toBeVisible()
+    expect(screen.getByLabelText(/CNPJ/)).toHaveValue('12.345.678/0001-90')
+  })
+
+  it('opens the legal data while the organization still has to be sent for review', () => {
+    render(
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
+    )
+
+    expect(screen.getByLabelText(/Razão social/)).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Novo lugar' })).toHaveAttribute(
+      'href',
+      '/portal/organizations/4/establishments/new'
+    )
   })
 })
 
