@@ -138,6 +138,15 @@ test.group('Homologation provisioning', (group) => {
       .get('/api/v1/catalog/cities/londrina/establishments')
       .header('host', input.tenantSlug + '.experimente.test')
     catalog.assertStatus(200)
+    const points = catalog
+      .body()
+      .organic_results.map(
+        (item: { address: { latitude: number; longitude: number } }) =>
+          `${item.address.latitude},${item.address.longitude}`
+      )
+    assert.lengthOf(points, 2)
+    // Two venues at one point stack on the map, and a tap on one opened the other.
+    assert.lengthOf(new Set(points), 2)
     const response = await client
       .get('/api/v1/catalog/benefit-editions')
       .header('host', input.tenantSlug + '.experimente.test')
