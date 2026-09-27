@@ -52,7 +52,8 @@ describe('ConsumerShell', () => {
     expect(container.querySelector('a[href="/"]')).not.toBeInTheDocument()
     expect(container.querySelector('a[href="/carteira"]')).not.toBeInTheDocument()
     expect(container.querySelector('a[href="/dashboard"]')).not.toBeInTheDocument()
-    expect(container.querySelector('a[href="/settings"]')).not.toBeInTheDocument()
+    // Conta is the account, as the app's third tab (web audit): not an operational page.
+    expect(screen.getAllByRole('link', { name: 'Conta' })[0]).toHaveAttribute('href', '/settings')
     expect(container.querySelectorAll('a[aria-current="page"]')).toHaveLength(2)
     container.querySelectorAll('a[aria-current="page"]').forEach((activeLink) => {
       expect(activeLink).toHaveAttribute('href', '/wallet')

@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => ({
   permissions: [] as string[],
   tenants: [] as Array<{ id: number; name: string; role: string }>,
   url: '/settings',
+  // A partner by default: the backoffice layout and its operations.
+  hasActiveOrganizationMembership: true,
+  platformAccess: null as string | null,
 }))
 
 vi.mock('@inertiajs/react', async () => {
@@ -29,6 +32,8 @@ vi.mock('@inertiajs/react', async () => {
           activeTenantId: null,
           permissions: mocks.permissions,
           tenants: mocks.tenants,
+          hasActiveOrganizationMembership: mocks.hasActiveOrganizationMembership,
+          platformAccess: mocks.platformAccess,
         },
       },
     }),
@@ -56,7 +61,13 @@ vi.mock('next-themes', () => ({
 }))
 
 vi.mock('~/layouts', () => ({
-  MainLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+  MainLayout: ({ children }: { children: ReactNode }) => <main data-shell="main">{children}</main>,
+}))
+
+vi.mock('~/components/consumer/consumer_shell', () => ({
+  ConsumerShell: ({ children }: { children: ReactNode }) => (
+    <main data-shell="consumer">{children}</main>
+  ),
 }))
 
 vi.mock('~/components/confirm_dialog', () => ({
@@ -93,6 +104,8 @@ describe('SettingsPage', () => {
     mocks.permissions = []
     mocks.tenants = []
     mocks.url = '/settings'
+    mocks.hasActiveOrganizationMembership = true
+    mocks.platformAccess = null
   })
 
   it('renders the theme cards the same on the server and before hydration', () => {
@@ -110,14 +123,11 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('heading', { name: 'Conta e preferências' })).toBeVisible()
     expect(screen.getByLabelText('E-mail de acesso')).toHaveAttribute('readonly')
     expect(screen.queryByRole('tab', { name: 'Operações' })).not.toBeInTheDocument()
-    // Sections are pills in a 2×2 grid on a phone rather than boxes that overflow sideways.
+    // Three sections are pills in one wrapping row, never boxes that overflow sideways.
     const sections = screen.getByRole('tablist', { name: 'Seções da conta' })
-    expect(sections).toHaveClass(
-      'grid',
-      'grid-cols-2',
-      'sm:flex-wrap',
-      '[&_[role=tab]]:rounded-full'
-    )
+    expect(sections).toHaveClass('flex', 'flex-wrap', '[&_[role=tab]]:rounded-full')
+    expect(sections).not.toHaveClass('grid')
+    expect(screen.getByRole('tab', { name: 'Perfil' })).toBeInTheDocument()
     // The optional hint fits beside its label, so both name fields keep one baseline.
     expect(screen.getByLabelText('Nome de usuário')).toHaveAccessibleDescription('Opcional')
 
@@ -170,5 +180,25 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Norte do Paraná')).toBeVisible()
     expect(screen.getByText('Responsável pela operação')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Criar operação' })).not.toBeInTheDocument()
+  })
+
+  // Web audit: a consumer's account opened in the backoffice layout, with an
+  // "Operações" tab about isolating private data.
+  it('opens a consumer account in the consumer shell, with operations only when there is a choice', async () => {
+    mocks.hasActiveOrganizationMembership = false
+    mocks.tenants = [{ id: 9, name: 'Norte do Paraná', role: 'member' }]
+
+    const view = render(<SettingsPage profile={profile} />)
+    expect(view.container.querySelector('[data-shell="consumer"]')).toBeInTheDocument()
+    expect(view.container.querySelector('[data-shell="main"]')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Operações' })).not.toBeInTheDocument()
+    view.unmount()
+
+    mocks.tenants = [
+      { id: 9, name: 'Norte do Paraná', role: 'member' },
+      { id: 10, name: 'Oeste do Paraná', role: 'member' },
+    ]
+    render(<SettingsPage profile={profile} />)
+    expect(screen.getByRole('tab', { name: 'Operações' })).toBeInTheDocument()
   })
 })

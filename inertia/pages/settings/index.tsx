@@ -25,6 +25,7 @@ import { Input } from '~/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { useAuth } from '~/hooks/use_auth'
+import { ConsumerShell } from '~/components/consumer/consumer_shell'
 import { MainLayout } from '~/layouts'
 import { firstError } from '~/lib/form_errors'
 import { operationRoleLabel } from '~/lib/labels'
@@ -75,7 +76,7 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
         <CardHeading>
           <CardTitle className="font-display text-lg font-extrabold">Dados pessoais</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Atualize como seu nome aparece nas áreas autenticadas.
+            Atualize como seu nome aparece na sua conta.
           </p>
         </CardHeading>
       </CardHeader>
@@ -457,9 +458,15 @@ function OperationsTab() {
 
 export default function SettingsPage({ profile }: SettingsPageProps) {
   const { url } = usePage()
-  const { tenants, can } = useAuth()
+  const { tenants, can, isPlatformStaff, hasActiveOrganizationMembership } = useAuth()
   const requestedTab = new URL(url, 'http://localhost').searchParams.get('tab')
-  const showOperations = tenants.length > 0 || can('tenants.create')
+  // A consumer's account lives in the consumer shell (Explorar · Carteira · Conta),
+  // not in the backoffice layout, and only sees operations when there is a choice.
+  const consumerOnly = !isPlatformStaff && !hasActiveOrganizationMembership
+  const Shell = consumerOnly ? ConsumerShell : MainLayout
+  const showOperations = consumerOnly
+    ? tenants.length > 1
+    : tenants.length > 0 || can('tenants.create')
   const allowedTabs = new Set(['profile', 'appearance', 'security'])
   if (showOperations) allowedTabs.add('operations')
   const normalizedRequestedTab = requestedTab === 'workspaces' ? 'operations' : requestedTab
@@ -469,7 +476,7 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
       : 'profile'
 
   return (
-    <MainLayout>
+    <Shell>
       <Head title="Conta e preferências" />
 
       <div className="space-y-6">
@@ -477,18 +484,22 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
           icon={Settings}
           eyebrow="Minha conta"
           title="Conta e preferências"
-          description="Gerencie seus dados pessoais, a aparência da interface e as opções de segurança realmente disponíveis."
+          description="Seu perfil, a aparência da interface e a segurança da sua conta."
         />
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
-          {/* Pills in a 2×2 grid on a phone, one row from sm: four tabs never scroll the page. */}
+          {/* Four tabs: a 2×2 grid on a phone, one row from sm. Three fit one row anywhere.
+              Either way the page never scrolls sideways. */}
           <TabsList
             variant="button"
             shape="pill"
             aria-label="Seções da conta"
-            className="grid grid-cols-2 sm:flex sm:flex-wrap [&_[role=tab]]:px-4"
+            className={cn(
+              showOperations ? 'grid grid-cols-2 sm:flex sm:flex-wrap' : 'flex flex-wrap',
+              '[&_[role=tab]]:px-4'
+            )}
           >
-            <TabsTrigger value="profile">Dados pessoais</TabsTrigger>
+            <TabsTrigger value="profile">Perfil</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             {showOperations ? <TabsTrigger value="operations">Operações</TabsTrigger> : null}
             <TabsTrigger value="security">Segurança</TabsTrigger>
@@ -510,6 +521,6 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
+    </Shell>
   )
 }

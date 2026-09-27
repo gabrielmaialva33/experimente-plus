@@ -201,7 +201,6 @@ describe('consumer wallet pages', () => {
     expect(screen.getByText('Nenhuma utilização ainda')).toBeVisible()
     expect(container.querySelector('[data-slot="empty-state"]')).toBeInTheDocument()
     expect(container.querySelector('a[href="/dashboard"]')).not.toBeInTheDocument()
-    expect(container.querySelector('a[href="/settings"]')).not.toBeInTheDocument()
   })
 
   it('keeps a single receipt destination per history item', () => {

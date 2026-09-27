@@ -182,7 +182,11 @@ describe('public discovery experience', () => {
     render(<PublicMobileNavigation />)
     const navigation = screen.getByRole('navigation', { name: 'Navegação móvel' })
 
-    expect(within(navigation).getAllByRole('link')).toHaveLength(3)
+    expect(within(navigation).getAllByRole('link')).toHaveLength(4)
+    expect(within(navigation).getByRole('link', { name: 'Conta' })).toHaveAttribute(
+      'href',
+      '/settings'
+    )
     expect(within(navigation).getByRole('link', { name: 'Explorar' })).toHaveAttribute(
       'href',
       '/cidades'
@@ -233,7 +237,9 @@ describe('public discovery experience', () => {
     expect(within(header).queryByRole('link', { name: 'Negócios' })).not.toBeInTheDocument()
     expect(within(mobile).queryByRole('link', { name: 'Carteira' })).not.toBeInTheDocument()
     expect(within(mobile).queryByRole('link', { name: 'Negócios' })).not.toBeInTheDocument()
-    expect(within(mobile).getAllByRole('link')).toHaveLength(1)
+    // The account needs no operation, so it stays in both bars.
+    expect(within(header).getByRole('link', { name: 'Conta' })).toHaveAttribute('href', '/settings')
+    expect(within(mobile).getAllByRole('link')).toHaveLength(2)
 
     await user.click(within(mobile).getByRole('button', { name: 'Sair' }))
     expect(inertia.post).toHaveBeenCalledWith('/logout')

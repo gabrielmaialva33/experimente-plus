@@ -64,11 +64,10 @@ describe('navigation configuration', () => {
   it('filters navigation by surface without mixing operational items into consumer navigation', () => {
     const consumerItems = navigationItemsForSurface('consumer', 'consumer-shell')
 
-    expect(consumerItems.map((item) => item.href)).toEqual(['/cidades', '/wallet'])
+    // Explorar · Carteira · Conta, as the app's tabs; never an operational destination.
+    expect(consumerItems.map((item) => item.href)).toEqual(['/cidades', '/wallet', '/settings'])
     expect(consumerItems.every((item) => item.surface === 'consumer')).toBe(true)
-    expect(consumerItems.some((item) => ['/', '/dashboard', '/settings'].includes(item.href))).toBe(
-      false
-    )
+    expect(consumerItems.some((item) => ['/', '/dashboard'].includes(item.href))).toBe(false)
   })
 
   it('keeps Portal and Backoffice as separate navigation contexts', () => {
@@ -120,7 +119,11 @@ describe('navigation configuration', () => {
       surface: 'consumer',
       title: 'Conta e preferências',
     })
-    expect(NAVIGATION_ITEMS.some((item) => item.href === '/settings')).toBe(false)
+    // Only the consumer shell links it; the backoffice and portal sidebars never do.
+    const settingsItems = NAVIGATION_ITEMS.filter((item) => item.href === '/settings')
+    expect(settingsItems.map((item) => [item.surface, item.placements])).toEqual([
+      ['consumer', ['consumer-shell']],
+    ])
   })
 
   it('draws the wallet with one icon in the public bars and in the wallet shell', () => {
@@ -138,11 +141,13 @@ describe('navigation configuration', () => {
     expect(PUBLIC_NAVIGATION.header.authenticated.map((item) => item.href)).toEqual([
       '/cidades',
       '/wallet',
+      '/settings',
     ])
     expect(PUBLIC_NAVIGATION.header.guest.map((item) => item.href)).toEqual(['/cidades'])
     expect(PUBLIC_NAVIGATION.mobile.authenticated.map((item) => item.href)).toEqual([
       '/cidades',
       '/wallet',
+      '/settings',
       '/portal',
       '/logout',
     ])
@@ -177,11 +182,14 @@ describe('navigation configuration', () => {
   it('removes tenant-required destinations when the authenticated account has no operation', () => {
     const availability = { authenticated: true, activeTenantId: null }
 
+    // The account needs no operation: it stays reachable.
     expect(publicNavigationItemsFor('header', availability).map((item) => item.href)).toEqual([
       '/cidades',
+      '/settings',
     ])
     expect(publicNavigationItemsFor('mobile', availability).map((item) => item.href)).toEqual([
       '/cidades',
+      '/settings',
       '/logout',
     ])
     expect(publicNavigationItemsFor('utility', availability).map((item) => item.href)).toEqual([
@@ -191,7 +199,7 @@ describe('navigation configuration', () => {
       navigationItemsForSurface('consumer', 'consumer-shell', { activeTenantId: null }).map(
         (item) => item.href
       )
-    ).toEqual(['/cidades'])
+    ).toEqual(['/cidades', '/settings'])
   })
 
   it('does not send a platform moderator without organization access to an empty Portal', () => {
@@ -204,6 +212,7 @@ describe('navigation configuration', () => {
     expect(publicNavigationItemsFor('mobile', availability).map((item) => item.href)).toEqual([
       '/cidades',
       '/wallet',
+      '/settings',
       '/logout',
     ])
     expect(publicNavigationItemsFor('utility', availability).map((item) => item.href)).toEqual([
