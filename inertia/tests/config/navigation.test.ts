@@ -121,6 +121,27 @@ describe('navigation configuration', () => {
     expect(backofficeItems.some((item) => item.href === '/settings')).toBe(false)
   })
 
+  it('puts Organizações in the moderation inbox, before the other queues', () => {
+    const labels = (platformAccess: 'platform_admin' | 'platform_moderator') =>
+      navigationItemsForSurface('backoffice', 'sidebar', { activeTenantId: 12, platformAccess })
+        .filter((item) => ['Caixa de moderação', 'Operação'].includes(item.section))
+        .map((item) => `${item.section}: ${item.label}`)
+
+    expect(labels('platform_moderator')).toContain('Caixa de moderação: Organizações')
+    expect(
+      labels('platform_admin').filter((label) => label.startsWith('Caixa de moderação'))
+    ).toEqual([
+      'Caixa de moderação: Organizações',
+      'Caixa de moderação: Dados de lugares',
+      'Caixa de moderação: Conteúdo de parceiros',
+      'Caixa de moderação: Denúncias',
+    ])
+    expect(resolveRouteMetadata('/backoffice/organizations/13', 'backoffice')?.id).toBe(
+      'backoffice-organization-review'
+    )
+    expect(matchNavigationItem('/backoffice/organizations/13')?.id).toBe('backoffice-organizations')
+  })
+
   it('fails closed for Backoffice when platform access is absent', () => {
     expect(
       navigationItemsForSurface('backoffice', 'sidebar', {

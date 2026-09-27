@@ -67,7 +67,7 @@ export default class OrganizationWorkflowService {
       await organization.save()
     })
 
-    return this.finishTransition(tenantId, id, actor, IPermission.Actions.APPROVE)
+    return this.finishTransition(tenantId, id, actor, IPermission.Actions.APPROVE, reviewReason)
   }
 
   async requestChanges(
@@ -90,7 +90,13 @@ export default class OrganizationWorkflowService {
       await organization.save()
     })
 
-    return this.finishTransition(tenantId, id, actor, IPermission.Actions.REQUEST_CHANGES)
+    return this.finishTransition(
+      tenantId,
+      id,
+      actor,
+      IPermission.Actions.REQUEST_CHANGES,
+      reviewReason
+    )
   }
 
   async reject(tenantId: number, id: number, actor: User, reason: string): Promise<Organization> {
@@ -108,7 +114,7 @@ export default class OrganizationWorkflowService {
       await organization.save()
     })
 
-    return this.finishTransition(tenantId, id, actor, IPermission.Actions.REJECT)
+    return this.finishTransition(tenantId, id, actor, IPermission.Actions.REJECT, reviewReason)
   }
 
   async suspend(tenantId: number, id: number, actor: User, reason: string): Promise<Organization> {
@@ -127,7 +133,7 @@ export default class OrganizationWorkflowService {
       await organization.save()
     })
 
-    return this.finishTransition(tenantId, id, actor, IPermission.Actions.SUSPEND)
+    return this.finishTransition(tenantId, id, actor, IPermission.Actions.SUSPEND, reviewReason)
   }
 
   async restore(tenantId: number, id: number, actor: User, reason: string): Promise<Organization> {
@@ -146,7 +152,7 @@ export default class OrganizationWorkflowService {
       await organization.save()
     })
 
-    return this.finishTransition(tenantId, id, actor, IPermission.Actions.RESTORE)
+    return this.finishTransition(tenantId, id, actor, IPermission.Actions.RESTORE, reviewReason)
   }
 
   async archive(tenantId: number, id: number, actor: User, reason: string): Promise<Organization> {
@@ -173,7 +179,7 @@ export default class OrganizationWorkflowService {
       await organization.save()
     })
 
-    return this.finishTransition(tenantId, id, actor, IPermission.Actions.ARCHIVE)
+    return this.finishTransition(tenantId, id, actor, IPermission.Actions.ARCHIVE, reviewReason)
   }
 
   private async getLockedOrFail(
@@ -209,11 +215,17 @@ export default class OrganizationWorkflowService {
     return normalized
   }
 
+  /**
+   * Records the transition once it is committed. A decision keeps its reason
+   * in the audit entry, so the history of the organization shows why each
+   * one was taken, not only the latest reason the row still holds.
+   */
   private async finishTransition(
     tenantId: number,
     id: number,
     actor: User,
-    action: IPermission.Actions
+    action: IPermission.Actions,
+    reason?: string
   ): Promise<Organization> {
     const organization = await this.organizationRepository.findByIdForTenant(tenantId, id)
     if (!organization) {
@@ -225,7 +237,7 @@ export default class OrganizationWorkflowService {
       resource: IPermission.Resources.ORGANIZATIONS,
       action,
       resourceId: organization.id,
-      metadata: { status: organization.status },
+      metadata: reason ? { status: organization.status, reason } : { status: organization.status },
     })
 
     return organization

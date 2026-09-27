@@ -13,6 +13,7 @@ import {
 
 import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
+import { OrganizationReviewNotice } from '~/components/portal/organization_review_notice'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -52,6 +53,7 @@ interface OrganizationSummary {
   legal_name: string
   trade_name: string
   status: string
+  review_notes?: string | null
   role: string | null
   allowed_actions: OrganizationAllowedActions
   establishments: EstablishmentSummary[]
@@ -353,6 +355,13 @@ export default function PartnerPortalIndex({
                           </Button>
                         ) : null}
                       </div>
+
+                      <OrganizationReviewNotice
+                        compact
+                        status={organization.status}
+                        reviewNotes={organization.review_notes}
+                        className="mt-4"
+                      />
 
                       <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
                         {[

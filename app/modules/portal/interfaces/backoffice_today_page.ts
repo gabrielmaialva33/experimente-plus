@@ -5,8 +5,8 @@ import type IReview from '#modules/reviews/interfaces/review_interface'
 /**
  * The backoffice "Hoje" page: what the operation has to resolve today.
  *
- * Every number and row comes from the queue that owns it — establishment
- * revisions, partner content, content reports and pilot feedback — through the
+ * Every number and row comes from the queue that owns it — organizations,
+ * establishment revisions, partner content, content reports and pilot feedback — through the
  * same services those queues use. This page adds no rule of its own.
  *
  * Type aliases, not interfaces: Inertia types `render` props against
@@ -17,6 +17,10 @@ import type IReview from '#modules/reviews/interfaces/review_interface'
 export type BackofficeTodayCounts = {
   /** Establishment revisions waiting in `/backoffice/moderation`. */
   revisions: number
+  /** Organizations sent for review, waiting in `/backoffice/organizations`. */
+  organizations: number
+  /** Pending claims of organizations without an owner, in the same queue. */
+  organization_claims: number
   /** Partner content in review, per kind, as `/backoffice/content` counts it. */
   content: Record<IPartnerContent.ContentPath, number>
   /** Pending reports, the default filter of `/backoffice/reports`. */
@@ -48,6 +52,15 @@ export type BackofficeInboxItem =
       kind: IPartnerContent.ContentPath
       title: string
       establishment_name: string | null
+      received_at: string | null
+      due_at: null
+      overdue: false
+    }
+  | {
+      source: 'organization'
+      id: number
+      trade_name: string
+      legal_name: string
       received_at: string | null
       due_at: null
       overdue: false

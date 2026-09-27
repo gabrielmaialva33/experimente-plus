@@ -25,6 +25,8 @@ const busy: Props = {
   platform_access: 'platform_admin',
   counts: {
     revisions: 1,
+    organizations: 1,
+    organization_claims: 2,
     content: { 'experiences': 2, 'events': 1, 'showcase-items': 0 },
     reports: 2,
     overdue_reports: 1,
@@ -76,6 +78,15 @@ const busy: Props = {
       due_at: null,
       overdue: false,
     },
+    {
+      source: 'organization',
+      id: 31,
+      trade_name: 'Casa Norte',
+      legal_name: 'Casa Norte Alimentos Ltda.',
+      received_at: '2026-09-26T14:10:00-03:00',
+      due_at: null,
+      overdue: false,
+    },
   ],
 }
 
@@ -86,6 +97,11 @@ describe('Backoffice today', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'O que resolver hoje' })).toBeVisible()
 
     const tasks = screen.getByRole('region', { name: 'Pendências de hoje' })
+    expect(within(tasks).getByRole('link', { name: 'Analisar organizações' })).toHaveAttribute(
+      'href',
+      '/backoffice/organizations'
+    )
+    expect(within(tasks).getByText('2 reivindicações')).toBeVisible()
     expect(within(tasks).getByRole('link', { name: 'Revisar dados' })).toHaveAttribute(
       'href',
       '/backoffice/moderation'
@@ -139,7 +155,7 @@ describe('Backoffice today', () => {
     ).toEqual(['Tipo', 'Item', 'Origem', 'Recebido', 'Prazo', 'Ação'])
 
     const rows = within(table).getAllByRole('row').slice(1)
-    expect(rows).toHaveLength(4)
+    expect(rows).toHaveLength(5)
 
     const late = rows[0]
     expect(within(late).getAllByText('Denúncia')).not.toHaveLength(0)
@@ -170,6 +186,13 @@ describe('Backoffice today', () => {
       within(rows[3]).getByRole('link', { name: 'Revisar: Casa de Petiscos' })
     ).toHaveAttribute('href', '/backoffice/moderation/12')
     expect(within(rows[3]).getByText('Sem prazo')).toBeInTheDocument()
+
+    expect(within(rows[4]).getAllByText('Organização')).not.toHaveLength(0)
+    expect(within(rows[4]).getByText('Casa Norte Alimentos Ltda.')).toBeVisible()
+    expect(within(rows[4]).getByRole('link', { name: 'Revisar: Casa Norte' })).toHaveAttribute(
+      'href',
+      '/backoffice/organizations/31'
+    )
   })
 
   it('says so when nothing is waiting', () => {
@@ -178,6 +201,8 @@ describe('Backoffice today', () => {
         platform_access="platform_moderator"
         counts={{
           revisions: 0,
+          organizations: 0,
+          organization_claims: 0,
           content: { 'experiences': 0, 'events': 0, 'showcase-items': 0 },
           reports: 0,
           overdue_reports: 0,
@@ -190,6 +215,7 @@ describe('Backoffice today', () => {
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Nada para resolver agora' })).toBeVisible()
     expect(screen.getByText('Nenhuma revisão esperando.')).toBeVisible()
+    expect(screen.getByText('Nenhum negócio esperando.')).toBeVisible()
     expect(screen.getByText('Nada em análise.')).toBeVisible()
   })
 })

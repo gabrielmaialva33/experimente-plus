@@ -31,6 +31,13 @@ import PartnerReviewService from '#modules/reviews/services/partner_review_servi
 import Category from '#modules/taxonomy/models/category'
 import type User from '#modules/users/models/user'
 
+/** States in which the Portal shows the business the reason the operation wrote. */
+const PARTNER_VISIBLE_REVIEW_STATUSES = new Set<IOrganization.Status>([
+  'changes_requested',
+  'rejected',
+  'suspended',
+])
+
 @inject()
 export default class PartnerPortalService {
   constructor(
@@ -446,6 +453,12 @@ export default class PartnerPortalService {
           ? null
           : String(organization.website),
       status,
+      submitted_at: this.stringValue(organization, 'submitted_at'),
+      reviewed_at: this.stringValue(organization, 'reviewed_at'),
+      // The reason the business must act on. An approval note stays with the operation.
+      review_notes: PARTNER_VISIBLE_REVIEW_STATUSES.has(status)
+        ? this.stringValue(organization, 'review_notes')?.trim() || null
+        : null,
       role,
       allowed_actions: stateAwareActions,
       establishments,

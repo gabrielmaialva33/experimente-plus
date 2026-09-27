@@ -42,6 +42,15 @@ type InboxItem =
       overdue: false
     }
   | {
+      source: 'organization'
+      id: number
+      trade_name: string
+      legal_name: string
+      received_at: string | null
+      due_at: null
+      overdue: false
+    }
+  | {
       source: 'revision'
       id: number
       public_name: string | null
@@ -55,6 +64,8 @@ type BackofficeTodayProps = {
   platform_access: PlatformAccess
   counts: {
     revisions: number
+    organizations: number
+    organization_claims: number
     content: Record<PartnerContentPath, number>
     reports: number
     overdue_reports: number
@@ -108,6 +119,15 @@ function describe(item: InboxItem) {
         origin: item.establishment_name ?? 'Parceiro',
         href: `/backoffice/content?kind=${item.kind}`,
       }
+    case 'organization':
+      return {
+        type: 'Organização',
+        tone: 'primary' as const,
+        title: item.trade_name,
+        detail: item.legal_name,
+        origin: 'Novo negócio',
+        href: `/backoffice/organizations/${item.id}`,
+      }
     case 'revision':
       return {
         type: 'Dados do lugar',
@@ -139,9 +159,28 @@ export default function BackofficeTodayPage({ counts, inbox }: BackofficeTodayPr
           aria-label="Pendências de hoje"
           className={cn(
             'grid gap-4.5 sm:grid-cols-2',
-            counts.feedback === null ? 'xl:grid-cols-3' : 'xl:grid-cols-4'
+            counts.feedback === null ? 'xl:grid-cols-4' : 'xl:grid-cols-3 2xl:grid-cols-5'
           )}
         >
+          <TaskCard
+            title="Organizações para aprovar"
+            value={counts.organizations}
+            tone={counts.organizations > 0 ? 'primary' : 'muted'}
+            description={
+              counts.organizations > 0
+                ? 'Negócios novos esperando a conferência dos dados.'
+                : 'Nenhum negócio esperando.'
+            }
+            href="/backoffice/organizations"
+            actionLabel="Analisar organizações"
+            className="min-h-40"
+          >
+            {counts.organization_claims > 0 ? (
+              <p className="text-sm font-bold text-primary-accent">
+                {plural(counts.organization_claims, 'reivindicação', 'reivindicações')}
+              </p>
+            ) : null}
+          </TaskCard>
           <TaskCard
             title="Dados de lugares para revisar"
             value={counts.revisions}
@@ -219,7 +258,7 @@ export default function BackofficeTodayPage({ counts, inbox }: BackofficeTodayPr
               headingLevel={3}
               icon={Inbox}
               title="Nada para resolver agora"
-              description="Dados de lugares, conteúdo de parceiros e denúncias aparecem aqui assim que chegam."
+              description="Organizações, dados de lugares, conteúdo de parceiros e denúncias aparecem aqui assim que chegam."
             />
           ) : (
             <table className="mt-3 w-full border-collapse text-[0.9375rem]">

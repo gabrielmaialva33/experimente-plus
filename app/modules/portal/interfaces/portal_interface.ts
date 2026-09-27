@@ -29,6 +29,10 @@ export namespace IPortal {
     phone: string
     website: string | null
     status: string
+    submitted_at: string | null
+    reviewed_at: string | null
+    /** The operation's reason, only while the business has to act on it. */
+    review_notes: string | null
     role: string | null
     allowed_actions: IOrganization.AllowedActions
     establishments: EstablishmentSummary[]

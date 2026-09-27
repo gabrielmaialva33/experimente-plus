@@ -186,6 +186,8 @@ test.group('Backoffice today', (group) => {
     assert.equal(page.props.platform_access, 'platform_moderator')
     assert.deepEqual(page.props.counts, {
       revisions: 1,
+      organizations: 0,
+      organization_claims: 0,
       // The draft is the partner's, not the operation's.
       content: { 'experiences': 1, 'events': 1, 'showcase-items': 0 },
       reports: 2,
@@ -249,6 +251,8 @@ test.group('Backoffice today', (group) => {
     const page = parseInertiaPage(response)
     assert.deepEqual(page.props.counts, {
       revisions: 0,
+      organizations: 0,
+      organization_claims: 0,
       content: { 'experiences': 0, 'events': 0, 'showcase-items': 0 },
       reports: 0,
       overdue_reports: 0,
