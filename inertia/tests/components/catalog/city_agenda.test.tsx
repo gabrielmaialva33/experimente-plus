@@ -64,7 +64,7 @@ function agenda(overrides: Record<string, unknown> = {}) {
 }
 
 describe('city agenda', () => {
-  it('renders the three bands with links keyed by slug, never by identifier', () => {
+  it('renders the three bands with links keyed by slug, opened on the item they name', () => {
     render(
       <CityAgendaSection
         agenda={agenda({
@@ -82,13 +82,19 @@ describe('city agenda', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Em breve' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Novidades' })).toBeInTheDocument()
 
+    // The place is addressed by slug; the fragment names the item on that page, so
+    // the visit lands on the event or experience instead of at the top of the place.
     expect(screen.getByRole('link', { name: 'Sarau no quintal' })).toHaveAttribute(
       'href',
-      '/cidades/londrina/estabelecimentos/bar-estacao-43'
+      '/cidades/londrina/estabelecimentos/bar-estacao-43#evento-1'
+    )
+    expect(screen.getByRole('link', { name: 'Feira de vinis' })).toHaveAttribute(
+      'href',
+      '/cidades/londrina/estabelecimentos/bar-estacao-43#evento-2'
     )
     expect(screen.getByRole('link', { name: 'Degustação de cafés especiais' })).toHaveAttribute(
       'href',
-      '/cidades/londrina/estabelecimentos/cafe-do-centro'
+      '/cidades/londrina/estabelecimentos/cafe-do-centro#experiencia-51'
     )
   })
 

@@ -7,7 +7,10 @@ import {
   CatalogImageFallback,
 } from '~/components/catalog/catalog_image_fallback'
 import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
-import { formatEventWindow } from '~/components/catalog/establishment_partner_content'
+import {
+  formatEventWindow,
+  partnerContentAnchor,
+} from '~/components/catalog/establishment_partner_content'
 import { EmptyState } from '~/components/empty_state'
 
 /**
@@ -170,8 +173,12 @@ function experiences(value: unknown): CityAgendaExperience[] {
   })
 }
 
-function establishmentHref(citySlug: string, establishmentSlug: string): string {
-  return `/cidades/${encodeURIComponent(citySlug)}/estabelecimentos/${encodeURIComponent(establishmentSlug)}`
+/**
+ * The item's place, opened on the item: an experience or an event has no page of
+ * its own, and landing at the top of the place would leave it screens away.
+ */
+function itemHref(item: CityAgendaItemBase, kind: 'events' | 'experiences'): string {
+  return `/cidades/${encodeURIComponent(item.citySlug)}/estabelecimentos/${encodeURIComponent(item.establishmentSlug)}#${partnerContentAnchor(kind, item.id)}`
 }
 
 /**
@@ -228,12 +235,14 @@ function DateTile({ startsAt, timeZone }: { startsAt: string; timeZone: string |
 
 function AgendaCard({
   item,
+  kind,
   meta,
   bandKey,
   startsAt = null,
   timeZone = null,
 }: {
   item: CityAgendaItemBase
+  kind: 'events' | 'experiences'
   meta: string | null
   bandKey: string
   startsAt?: string | null
@@ -245,7 +254,7 @@ function AgendaCard({
   return (
     <li className="min-w-0">
       <Link
-        href={establishmentHref(item.citySlug, item.establishmentSlug)}
+        href={itemHref(item, kind)}
         aria-labelledby={titleId}
         aria-describedby={placeId}
         className="group block h-full min-w-0 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -348,6 +357,7 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
   const bands = [
     {
       key: 'happening-today',
+      kind: 'events' as const,
       icon: CalendarClock,
       eyebrow: 'Hoje na cidade',
       title: 'Acontecendo hoje',
@@ -360,6 +370,7 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
     },
     {
       key: 'upcoming',
+      kind: 'events' as const,
       icon: CalendarDays,
       eyebrow: 'Programe-se',
       title: 'Em breve',
@@ -372,6 +383,7 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
     },
     {
       key: 'new-experiences',
+      kind: 'experiences' as const,
       icon: Sparkles,
       eyebrow: 'Publicado recentemente',
       title: 'Novidades',
@@ -415,6 +427,7 @@ export function CityAgendaSection({ agenda }: { agenda: unknown }) {
                 <AgendaCard
                   key={item.id}
                   item={item}
+                  kind={band.kind}
                   meta={meta}
                   bandKey={band.key}
                   startsAt={startsAt}

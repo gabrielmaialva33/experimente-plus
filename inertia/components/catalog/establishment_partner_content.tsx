@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
+
 import { CatalogCoverImage } from '~/components/catalog/catalog_image_fallback'
+import { cn } from '~/lib/utils'
 
 interface JsonRecord {
   [key: string]: unknown
@@ -11,6 +14,53 @@ export interface PartnerContentPayload {
 }
 
 type PartnerContentKind = 'experiences' | 'events' | 'showcase-items'
+
+const ANCHOR_PREFIX: Record<PartnerContentKind, string> = {
+  'experiences': 'experiencia',
+  'events': 'evento',
+  'showcase-items': 'vitrine',
+}
+
+/**
+ * The fragment that names one item on its place's page.
+ *
+ * Experiences and events have no page of their own, so a link from the city
+ * agenda names the item and the place page opens on it instead of at the top,
+ * where the item the person chose is nowhere in sight (the app's audit A14).
+ * Built from the public id the agenda and this list share; an id that is gone
+ * by the time the page loads simply matches nothing and the page opens at the top.
+ */
+export function partnerContentAnchor(kind: PartnerContentKind, id: number): string {
+  return `${ANCHOR_PREFIX[kind]}-${id}`
+}
+
+/**
+ * The fragment of the current address, read after hydration.
+ *
+ * The server never sees a fragment, so reading it during render would make the
+ * client disagree with the server's markup; an effect keeps them equal and marks
+ * the item one frame later.
+ */
+function useLocationFragment(): string | null {
+  const [fragment, setFragment] = useState<string | null>(null)
+
+  useEffect(() => {
+    const read = () => {
+      const raw = window.location.hash.slice(1)
+      try {
+        setFragment(raw ? decodeURIComponent(raw) : null)
+      } catch {
+        setFragment(raw || null)
+      }
+    }
+
+    read()
+    window.addEventListener('hashchange', read)
+    return () => window.removeEventListener('hashchange', read)
+  }, [])
+
+  return fragment
+}
 
 interface PublicMedia {
   id: number
@@ -169,21 +219,22 @@ export function EstablishmentPartnerContent({
   content: PartnerContentPayload | null | undefined
   timeZone: string | null
 }) {
+  const fragment = useLocationFragment()
   const sections = [
     {
-      key: 'experiences',
+      key: 'experiences' as const,
       eyebrow: 'Para viver aqui',
       title: 'Experiências',
       items: publishedPartnerContent(content?.experiences, 'experiences'),
     },
     {
-      key: 'events',
+      key: 'events' as const,
       eyebrow: 'Na agenda',
       title: 'Eventos',
       items: publishedPartnerContent(content?.events, 'events'),
     },
     {
-      key: 'showcase-items',
+      key: 'showcase-items' as const,
       eyebrow: 'Em destaque',
       title: 'Vitrine',
       items: publishedPartnerContent(content?.showcase_items, 'showcase-items'),
@@ -234,11 +285,19 @@ export function EstablishmentPartnerContent({
                     ? formatPrice(item.informationalPriceCents)
                     : null
                 const cover = item.media.find((media) => media.isCover) ?? item.media[0] ?? null
+                const anchor = partnerContentAnchor(section.key, item.id)
+                const arrived = fragment === anchor
 
                 return (
                   <article
                     key={item.id}
-                    className="overflow-hidden rounded-2xl border border-border-subtle bg-card"
+                    id={anchor}
+                    data-arrived={arrived || undefined}
+                    // Lands below the sticky public header (64px) with room to breathe.
+                    className={cn(
+                      'scroll-mt-24 overflow-hidden rounded-2xl border border-border-subtle bg-card',
+                      arrived && 'border-primary ring-1 ring-primary'
+                    )}
                   >
                     {cover ? (
                       <figure>

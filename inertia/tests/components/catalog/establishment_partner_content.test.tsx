@@ -1,8 +1,9 @@
 import { screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   EstablishmentPartnerContent,
+  partnerContentAnchor,
   publishedPartnerContent,
 } from '~/components/catalog/establishment_partner_content'
 import { render } from '~/tests/test_utils'
@@ -122,6 +123,44 @@ describe('establishment partner content', () => {
       'https://example.com/experience.jpg'
     )
     expect(screen.getByText('Degustação da casa')).toBeInTheDocument()
+  })
+
+  describe('arriving from the city agenda', () => {
+    const content = {
+      experiences: [{ id: 12, title: 'Oficina de cerâmica', media: [] }],
+      events: [
+        {
+          id: 12,
+          title: 'Queima aberta',
+          starts_at: '2026-09-20T22:00:00.000Z',
+          ends_at: '2026-09-21T01:00:00.000Z',
+          media: [],
+        },
+      ],
+    }
+
+    afterEach(() => window.history.replaceState(null, '', '/'))
+
+    it('gives every item an address below the sticky header', () => {
+      render(<EstablishmentPartnerContent timeZone="America/Sao_Paulo" content={content} />)
+
+      // Same public id, different kinds: the fragment keeps them apart.
+      const workshop = document.getElementById(partnerContentAnchor('experiences', 12))
+      const firing = document.getElementById(partnerContentAnchor('events', 12))
+      expect(workshop).toHaveTextContent('Oficina de cerâmica')
+      expect(firing).toHaveTextContent('Queima aberta')
+      expect(workshop).toHaveClass('scroll-mt-24')
+      expect(workshop).not.toHaveAttribute('data-arrived')
+    })
+
+    it('marks only the item the fragment names', () => {
+      window.history.replaceState(null, '', '/cidades/londrina/estabelecimentos/atelie#evento-12')
+      render(<EstablishmentPartnerContent timeZone="America/Sao_Paulo" content={content} />)
+
+      expect(document.getElementById('evento-12')).toHaveAttribute('data-arrived', 'true')
+      expect(document.getElementById('evento-12')).toHaveClass('border-primary')
+      expect(document.getElementById('experiencia-12')).not.toHaveAttribute('data-arrived')
+    })
   })
 
   it('renders nothing when the server sent no publishable item', () => {
