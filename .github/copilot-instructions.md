@@ -8,9 +8,11 @@ Tour Londrina is a product-experience reference, not an implementation contract.
 
 `Sobral` is the name of a person involved with the project. It is not a city, tenant, product name, repository name, or codename. Do not model it as geographic data.
 
-City and category are core discovery dimensions. A city is not a tenant: tenant represents an isolated platform operation, while organizations may own multiple public establishments across multiple cities. Public discovery must not require tenant membership. Monetization, benefits, review policies, and AI behavior remain staged decisions documented under `docs/product/`.
+City and category are core discovery dimensions. A city is not a tenant: tenant represents an isolated platform operation, while organizations may own multiple public establishments across multiple cities. Public discovery must not require tenant membership.
 
-Accepted architecture contracts live under `docs/architecture/decisions/`. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content is versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role. EP-01 through EP-12 are implemented. The next milestone is operational pilot validation and evidence-driven backlog prioritization, not an automatic expansion of scope.
+The product documents, ADRs, and runbooks were removed from the repository on 2026-09-26; `docs/` keeps only `openapi.yaml`, `redoc.html`, and `api.http`. The rules they carried are summarized in `AGENTS.md`, which is the canonical guide. Product-domain code must follow them: public catalog routes use a public operation resolver instead of tenant membership; organization access uses domain policies; public establishment content is versioned; search begins in PostgreSQL; Partner is an organization membership, not a global role; access bought through `purchases` is granted only by authenticated reconciliation with the payment provider; review policies and AI limits are per-operation parameters, and the Concierge model is never a source of facts.
+
+Discovery, portals, benefits and wallet, the mobile API, purchases (Pix and card), reviews and content reports, automatic moderation, partner content, the Concierge, and the Explorer's personal layer are implemented. The current focus is operational pilot validation and evidence-driven backlog prioritization, not an automatic expansion of scope.
 
 ## Architecture
 
@@ -45,13 +47,13 @@ Adonis generators use the framework's default directory layout. After using `mak
 
 Tenant-scoped tables must have a non-null `tenant_id`. Protect their routes with tenant middleware and scope every read and write by `ctx.tenant.id`. Roles, permissions, and audit logs are global in the current foundation.
 
-For Experimente+, tenant represents an isolated platform operation. Never map one tenant per city or one tenant per establishment. Organization membership and tenant membership are separate authorization layers. Public catalog routes must not reuse the authenticated tenant middleware; follow ADR-0001 and ADR-0003.
+For Experimente+, tenant represents an isolated platform operation. Never map one tenant per city or one tenant per establishment. Organization membership and tenant membership are separate authorization layers. Public catalog routes must not reuse the authenticated tenant middleware, and never accept a visitor-supplied `tenant_id` as the public operation.
 
 ## Migrations before 1.0
 
 Only migrations that have never reached a persistent deployment may be consolidated into their original `create_*` file. Once deployed anywhere persistent, including the pre-1.0 pilot, migrations are append-only: use a new forward migration to change existing tables, constraints, indexes, functions, or triggers. Editing an applied migration does not upgrade a database.
 
-Forward repairs must support older deployed schemas, fresh installations, and any documented manual hotfix without losing data. Keep their SQL self-contained and versioned; document rollout, rollback, and projection rebuilds. Recreate only disposable development/test databases. See `docs/runbooks/catalog_schema_reconciliation.md`.
+Forward repairs must support older deployed schemas, fresh installations, and any documented manual hotfix without losing data. Keep their SQL self-contained and versioned; document rollout, rollback, and projection rebuilds in the pull request, since a code rollback never reverts a migration. Recreate only disposable development/test databases.
 
 ## Validation
 

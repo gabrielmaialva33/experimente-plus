@@ -217,12 +217,18 @@ export function reviewIssueSeverityLabel(severity: string): string {
   return REVIEW_ISSUE_SEVERITY_LABELS[severity] ?? severity
 }
 
+// Brasília time on the server and in the browser alike: without a zone the SSR pass
+// formats in UTC and a late-evening timestamp hydrates as the next day.
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short',
   timeStyle: 'short',
+  timeZone: 'America/Sao_Paulo',
 })
 
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
+const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'short',
+  timeZone: 'America/Sao_Paulo',
+})
 
 function toValidDate(value: string | number | Date | null | undefined): Date | null {
   if (value === null || value === undefined || value === '') return null

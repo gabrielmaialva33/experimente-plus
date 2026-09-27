@@ -11,7 +11,7 @@ export function PublicFooter() {
           <div className="max-w-lg">
             <AppBrand href="/" />
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Encontre estabelecimentos e serviços publicados nas cidades atendidas pela
+              Encontre lugares e serviços publicados nas cidades atendidas pela
               plataforma. A descoberta pública não exige cadastro.
             </p>
           </div>

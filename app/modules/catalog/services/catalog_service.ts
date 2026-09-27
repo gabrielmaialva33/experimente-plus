@@ -263,7 +263,7 @@ export default class CatalogService {
           },
           business_status: 'permanently_closed',
           historical: true,
-          message: 'Este estabelecimento encerrou permanentemente as atividades.',
+          message: 'Este lugar encerrou permanentemente as atividades.',
           published_at: row.published_at,
           updated_at: row.public_updated_at,
         }

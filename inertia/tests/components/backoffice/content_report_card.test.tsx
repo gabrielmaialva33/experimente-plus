@@ -231,7 +231,7 @@ describe('ContentReportCard', () => {
     const confirm = screen.getByRole('button', { name: 'Confirmar banimento' })
     expect(confirm).toBeDisabled()
 
-    fireEvent.change(screen.getByLabelText('Motivo do banimento'), {
+    fireEvent.change(screen.getByLabelText(/^Motivo do banimento/), {
       target: { value: 'Ofensas repetidas' },
     })
     expect(confirm).toBeEnabled()

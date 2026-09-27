@@ -82,6 +82,8 @@ function formatDate(iso: string) {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    // The same day on the server render and in the browser (hydration).
+    timeZone: 'America/Sao_Paulo',
   })
 }
 
@@ -158,7 +160,8 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
           ),
           enableSorting: true,
           // Fixed table layout: the name and e-mail need the room the action column does not.
-          size: 300,
+          // 260 + the 64 px actions fit a 360 px phone; wider screens share out the rest.
+          size: 260,
         }),
         columnHelper.accessor('roles', {
           id: 'roles',
@@ -185,7 +188,10 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
             )
           },
           enableSorting: false,
-          size: 180,
+          size: 170,
+          // The columns below give way from the least needed up, so the actions column
+          // stays on screen on a phone, a tablet and a 1024 px laptop with the sidebar.
+          meta: { headerClassName: 'hidden md:table-cell', cellClassName: 'hidden md:table-cell' },
         }),
         columnHelper.accessor('email_verified_at', {
           id: 'email_verified_at',
@@ -202,6 +208,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
             ),
           enableSorting: false,
           size: 150,
+          meta: { headerClassName: 'hidden sm:table-cell', cellClassName: 'hidden sm:table-cell' },
         }),
         columnHelper.accessor('created_at', {
           id: 'created_at',
@@ -213,6 +220,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
           ),
           enableSorting: true,
           size: 160,
+          meta: { headerClassName: 'hidden xl:table-cell', cellClassName: 'hidden xl:table-cell' },
         }),
         columnHelper.display({
           id: 'actions',

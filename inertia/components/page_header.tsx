@@ -27,12 +27,15 @@ export function PageHeader({
   meta,
   className,
 }: PageHeaderProps) {
+  // The heading keeps at least 24rem before the actions share its row; wider actions
+  // (filters, three buttons) move to their own row instead of squeezing the title into
+  // one word per line on a tablet or a small laptop.
   return (
     <header
       data-slot="page-header"
-      className={cn('flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between', className)}
+      className={cn('flex flex-wrap items-start justify-between gap-x-6 gap-y-4', className)}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 flex-[1_1_24rem] items-start gap-3">
         {Icon && (
           <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
             <Icon className="size-5" aria-hidden="true" />
@@ -54,7 +57,10 @@ export function PageHeader({
         </div>
       </div>
       {actions && (
-        <div data-slot="page-header-actions" className="flex shrink-0 flex-wrap items-center gap-2">
+        <div
+          data-slot="page-header-actions"
+          className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:max-w-full"
+        >
           {actions}
         </div>
       )}

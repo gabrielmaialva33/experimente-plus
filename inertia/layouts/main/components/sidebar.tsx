@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react'
 import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 
 import { AppBrand } from '~/components/app_brand'
 import { Button } from '~/components/ui/button'
@@ -47,6 +48,21 @@ export function SidebarNav({
   const url = useCurrentUrl()
   const application = useApp()
   const { activeTenantId, platformAccess, can } = useAuth()
+  const navRef = useRef<HTMLElement>(null)
+
+  // Every page mounts its own layout, so the list starts at the top on each visit. On a
+  // 768 px-tall screen the backoffice's lower items (Pessoas e acesso, Administração)
+  // would then open with their own entry out of sight: bring the current one into view.
+  useEffect(() => {
+    const nav = navRef.current
+    const current = nav?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!nav || !current) return
+    const top = current.offsetTop - nav.offsetTop
+    const bottom = top + current.offsetHeight
+    if (top < nav.scrollTop || bottom > nav.scrollTop + nav.clientHeight) {
+      nav.scrollTop = Math.max(0, top - (nav.clientHeight - current.offsetHeight) / 2)
+    }
+  }, [url])
 
   const visibleItems = navigationItemsForSurface(surface, 'sidebar', {
     activeTenantId,
@@ -64,6 +80,7 @@ export function SidebarNav({
 
   return (
     <nav
+      ref={navRef}
       aria-label={`Navegação — ${SURFACE_LABELS[surface]}`}
       className="flex-1 overflow-y-auto px-3 py-4"
     >

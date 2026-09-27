@@ -275,6 +275,7 @@ export function ModerationActions({
                       className="grid gap-3 rounded-xl bg-background p-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_auto] md:items-start"
                     >
                       <EditorField
+                        required
                         htmlFor={`${issue.key}-field`}
                         label="Onde corrigir"
                         error={fieldError ?? null}

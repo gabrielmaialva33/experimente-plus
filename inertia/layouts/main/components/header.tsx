@@ -261,11 +261,13 @@ export function Header({ surface }: { surface: NavigationSurface }) {
           <span className="relative flex size-2.5">
             <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
           </span>
+          {/* `pe-1` leaves room for the last glyph's overhang, which `truncate` would clip
+              on a 1x screen when the title fits to the pixel. */}
           <div className="min-w-0">
-            <p className="truncate text-[0.66rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            <p className="truncate pe-1 text-[0.66rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               {context.area}
             </p>
-            <p className="truncate text-sm font-semibold tracking-[-0.01em]">{context.page}</p>
+            <p className="truncate pe-1 text-sm font-semibold tracking-[-0.01em]">{context.page}</p>
           </div>
         </div>
 

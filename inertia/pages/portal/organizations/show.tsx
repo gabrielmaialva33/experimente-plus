@@ -375,13 +375,6 @@ export default function PortalOrganizationPage({
       <Head title={organization.trade_name} />
 
       <div className="space-y-7">
-        <Button asChild variant="ghost" size="md" shape="pill" className="-ms-3">
-          <Link href="/portal">
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Voltar à visão geral
-          </Link>
-        </Button>
-
         <PageHeader
           eyebrow={`Organização · ${organizationRoleLabel(organization.role)}`}
           title={organization.trade_name}
@@ -398,6 +391,14 @@ export default function PortalOrganizationPage({
           }
           actions={
             <>
+              {/* The portal's back link lives with the header actions, as on the analytics,
+                  new-place and benefits pages. */}
+              <Button asChild variant="ghost" size="lg" shape="pill">
+                <Link href="/portal">
+                  <ArrowLeft aria-hidden="true" className="size-4" />
+                  Voltar à visão geral
+                </Link>
+              </Button>
               {canReadAnalytics ? (
                 <Button asChild variant="outline" size="lg" shape="pill">
                   <Link href={`/organizations/${organization.id}/analytics`}>

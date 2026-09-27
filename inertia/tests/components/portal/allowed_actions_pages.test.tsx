@@ -26,6 +26,8 @@ vi.mock('@inertiajs/react', () => ({
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
+    // The offer form's unsaved-changes guard listens to visits.
+    on: () => () => undefined,
   },
   usePage: () => ({ props: mocks.pageProps }),
 }))
@@ -377,7 +379,7 @@ describe('Portal server-projected allowed actions', () => {
       />
     )
 
-    expect(screen.getByText('0 ativas')).toBeVisible()
+    expect(screen.getByText('Nenhuma ativa')).toBeVisible()
     expect(screen.getAllByText('Indisponível')).toHaveLength(2)
     expect(screen.getByText(/pause a oferta antes de arquivar/i)).toBeVisible()
     expect(screen.getByText(/só pode ser arquivada/i)).toBeVisible()

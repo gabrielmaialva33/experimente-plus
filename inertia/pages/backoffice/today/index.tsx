@@ -133,7 +133,7 @@ export default function BackofficeTodayPage({ counts, inbox }: BackofficeTodayPr
       <Head title="Hoje" />
 
       <div className="space-y-7">
-        <PageHeader eyebrow={todayOverline(now)} title="O que resolver hoje" />
+        <PageHeader eyebrow={todayOverline(now)} icon={Inbox} title="O que resolver hoje" />
 
         <section
           aria-label="Pendências de hoje"

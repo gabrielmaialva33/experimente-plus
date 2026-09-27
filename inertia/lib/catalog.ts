@@ -434,7 +434,7 @@ function parseMedia(value: unknown): CatalogMedia | null {
 
   return {
     url,
-    altText: stringValue(media, 'alt_text') ?? 'Imagem do estabelecimento',
+    altText: stringValue(media, 'alt_text') ?? 'Imagem do lugar',
     caption: stringValue(media, 'caption'),
     width: numberValue(asset, 'width') ?? numberValue(media, 'width'),
     height: numberValue(asset, 'height') ?? numberValue(media, 'height'),
@@ -632,8 +632,7 @@ export function catalogDetail(value: unknown): CatalogDetail | CatalogHistorical
       city,
       businessStatus: 'permanently_closed',
       message:
-        stringValue(detail, 'message') ??
-        'Este estabelecimento encerrou permanentemente as atividades.',
+        stringValue(detail, 'message') ?? 'Este lugar encerrou permanentemente as atividades.',
       publishedAt: dateTimeStringValue(detail, 'published_at'),
       updatedAt: dateTimeStringValue(detail, 'updated_at'),
     }

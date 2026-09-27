@@ -190,7 +190,7 @@ describe('labels', () => {
   })
 
   it('formats dates in pt-BR and degrades to an empty string', () => {
-    const date = new Date(2026, 7, 26, 14, 5)
+    const date = new Date('2026-08-26T17:05:00Z')
 
     expect(formatDate(date)).toBe('26/08/2026')
     expect(formatDateTime(date)).toMatch(/^26\/08\/2026,? 14:05$/)
@@ -199,5 +199,15 @@ describe('labels', () => {
     expect(formatDateTime(undefined)).toBe('')
     expect(formatDateTime('')).toBe('')
     expect(formatDateTime('not-a-date')).toBe('')
+  })
+
+  it('reads timestamps on Brasília time, whatever zone renders the page', () => {
+    // 22:15 on the 26th in Brasília is already the 27th in UTC, the zone the server
+    // renders in. Formatting in the process's zone made the SSR pass say 27 and the
+    // browser say 26, and React threw the server markup away on hydration.
+    const lateEvening = '2026-09-27T01:15:00Z'
+
+    expect(formatDate(lateEvening)).toBe('26/09/2026')
+    expect(formatDateTime(lateEvening)).toMatch(/^26\/09\/2026,? 22:15$/)
   })
 })

@@ -48,7 +48,9 @@ export default function PartnerRedemptionsPage({
           }
           meta={
             <Badge variant="neutral" appearance="light" shape="pill" size="lg">
-              {history.total} {history.total === 1 ? 'utilização' : 'utilizações'}
+              {history.total === 0
+                ? 'Nenhuma utilização'
+                : `${history.total.toLocaleString('pt-BR')} ${history.total === 1 ? 'utilização' : 'utilizações'}`}
             </Badge>
           }
         />

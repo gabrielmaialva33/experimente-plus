@@ -25,6 +25,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { useAuth } from '~/hooks/use_auth'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -153,8 +154,13 @@ export default function BenefitsBackofficePage({
   const canArchive = can('benefit_editions.archive')
   const canListAccesses = can('benefit_accesses.list')
   const [form, setForm] = useState<EditionFormState>(emptyForm)
+  // The form as last emptied or loaded: any difference is typing a visit would lose.
+  const [savedForm, setSavedForm] = useState<EditionFormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [processing, setProcessing] = useState(false)
+  const { allowNextVisit, confirmDiscard } = useUnsavedChangesGuard({
+    enabled: !processing && JSON.stringify(form) !== JSON.stringify(savedForm),
+  })
   const [actionId, setActionId] = useState<number | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<BenefitEdition | null>(null)
   const archiveOperationRef = useRef(false)
@@ -171,16 +177,27 @@ export default function BenefitsBackofficePage({
   }
 
   function resetForm() {
+    const editedId = editingId
     setForm(emptyForm)
+    setSavedForm(emptyForm)
     setEditingId(null)
     setLocalError(null)
+    // Back to the edition's own "Editar", where the keyboard left the list.
+    if (editedId !== null) {
+      requestAnimationFrame(() => document.getElementById(`edition-${editedId}-edit`)?.focus())
+    }
+  }
+
+  function cancelEdit() {
+    if (!confirmDiscard()) return
+    resetForm()
   }
 
   function beginEdit(edition: BenefitEdition) {
-    if (!canUpdate) return
+    if (!canUpdate || !confirmDiscard()) return
     setEditingId(edition.id)
     setLocalError(null)
-    setForm({
+    const loaded: EditionFormState = {
       city_id: String(edition.city_id),
       name: edition.name,
       description: edition.description ?? '',
@@ -189,8 +206,14 @@ export default function BenefitsBackofficePage({
       sales_ends_on: dateOnly(edition.sales_ends_at),
       usage_starts_on: dateOnly(edition.usage_starts_at),
       usage_ends_on: dateOnly(edition.usage_ends_at),
-    })
+    }
+    setForm(loaded)
+    setSavedForm(loaded)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    // The form fills at the top of the page; take the keyboard there too, not only the eye.
+    requestAnimationFrame(() =>
+      document.getElementById('edition-name')?.focus({ preventScroll: true })
+    )
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -231,6 +254,7 @@ export default function BenefitsBackofficePage({
       onFinish: () => setProcessing(false),
     }
 
+    allowNextVisit()
     if (editingId) {
       router.put(`/backoffice/benefits/${editingId}`, payload, options)
     } else {
@@ -280,10 +304,10 @@ export default function BenefitsBackofficePage({
           description="Organize cada edição por cidade, validade e preço. A publicação só é liberada quando existe ao menos uma oferta ativa."
           meta={
             <>
-              <Badge variant="secondary" appearance="light" shape="pill">
+              <Badge variant="secondary" appearance="light" shape="pill" size="lg">
                 {editions.length} {editions.length === 1 ? 'edição' : 'edições'}
               </Badge>
-              <Badge variant="success" appearance="light" shape="pill">
+              <Badge variant="success" appearance="light" shape="pill" size="lg">
                 {activeEditionCount} {activeEditionCount === 1 ? 'publicada' : 'publicadas'}
               </Badge>
             </>
@@ -325,7 +349,7 @@ export default function BenefitsBackofficePage({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={resetForm}
+                    onClick={cancelEdit}
                   >
                     <X />
                     <span className="sr-only">Cancelar edição</span>
@@ -340,6 +364,7 @@ export default function BenefitsBackofficePage({
                   className="mt-6 grid grid-cols-1 gap-4"
                 >
                   <EditorField
+                    required
                     htmlFor="edition-city"
                     label="Cidade"
                     hint="Praça atendida pela edição"
@@ -361,7 +386,7 @@ export default function BenefitsBackofficePage({
                     </select>
                   </EditorField>
 
-                  <EditorField htmlFor="edition-name" label="Nome da edição">
+                  <EditorField required htmlFor="edition-name" label="Nome da edição">
                     <Input
                       id="edition-name"
                       required
@@ -377,7 +402,7 @@ export default function BenefitsBackofficePage({
                   <EditorField
                     htmlFor="edition-description"
                     label="Apresentação"
-                    hint="Texto interno por enquanto; a vitrine pública virá no corte de acesso."
+                    hint="Uso interno: este texto ainda não aparece para o público."
                   >
                     <Textarea
                       id="edition-description"
@@ -407,7 +432,7 @@ export default function BenefitsBackofficePage({
                   </EditorField>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <EditorField htmlFor="edition-usage-start" label="Início de uso">
+                    <EditorField required htmlFor="edition-usage-start" label="Início de uso">
                       <Input
                         id="edition-usage-start"
                         type="date"
@@ -417,7 +442,7 @@ export default function BenefitsBackofficePage({
                         disabled={processing}
                       />
                     </EditorField>
-                    <EditorField htmlFor="edition-usage-end" label="Fim de uso">
+                    <EditorField required htmlFor="edition-usage-end" label="Fim de uso">
                       <Input
                         id="edition-usage-end"
                         type="date"
@@ -478,7 +503,7 @@ export default function BenefitsBackofficePage({
                         variant="ghost"
                         size="xl"
                         shape="pill"
-                        onClick={resetForm}
+                        onClick={cancelEdit}
                         disabled={processing}
                       >
                         Cancelar
@@ -640,6 +665,7 @@ export default function BenefitsBackofficePage({
                         ) : null}
                         {editable && canUpdate ? (
                           <Button
+                            id={`edition-${edition.id}-edit`}
                             type="button"
                             variant="outline"
                             size="lg"

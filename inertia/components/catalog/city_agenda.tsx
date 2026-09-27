@@ -2,7 +2,10 @@ import { Link } from '@inertiajs/react'
 import { CalendarClock, CalendarDays, Sparkles, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import {
+  CatalogCoverImage,
+  CatalogImageFallback,
+} from '~/components/catalog/catalog_image_fallback'
 import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import { formatEventWindow } from '~/components/catalog/establishment_partner_content'
 import { EmptyState } from '~/components/empty_state'
@@ -250,13 +253,13 @@ function AgendaCard({
         <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
           <div className="relative">
             {item.cover ? (
-              <img
+              <CatalogCoverImage
                 src={item.cover.url}
                 alt={item.cover.altText}
-                width={item.cover.width ?? undefined}
-                height={item.cover.height ?? undefined}
-                loading="lazy"
-                decoding="async"
+                name={item.title}
+                categoryName={item.establishmentName}
+                width={item.cover.width}
+                height={item.cover.height}
                 className="aspect-[16/9] w-full object-cover"
               />
             ) : (

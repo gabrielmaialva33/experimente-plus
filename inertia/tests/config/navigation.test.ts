@@ -53,6 +53,20 @@ describe('navigation configuration', () => {
     })
   })
 
+  it('keeps a sidebar entry current on the pages reached from it outside its path', () => {
+    // These pages left the partner sidebar with nothing marked as current.
+    expect(matchNavigationItem('/portal/organizations/7')?.id).toBe('portal-home')
+    expect(matchNavigationItem('/portal/organizations/new')?.id).toBe('portal-home')
+    expect(matchNavigationItem('/portal/organizations/7/establishments/new')?.id).toBe(
+      'portal-establishments'
+    )
+    expect(matchNavigationItem('/organizations/7/analytics?period=30d')?.id).toBe(
+      'portal-performance'
+    )
+    // The overview itself still matches only its own path.
+    expect(matchNavigationItem('/portal/reviews')?.id).toBe('portal-reviews')
+  })
+
   it('normalizes query strings and trailing slashes when matching navigation', () => {
     expect(isNavigationHrefActive('/wallet/?tab=active#offer', '/wallet')).toBe(true)
     expect(matchNavigationItem('/wallet/accesses/7/offers/11/use')?.id).toBe('consumer-wallet')

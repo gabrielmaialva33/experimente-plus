@@ -73,9 +73,11 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
-          <DialogClose className="cursor-pointer outline-0 absolute end-5 top-5 rounded-sm opacity-60 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="size-4" />
-            <span className="sr-only">Close</span>
+          // A 40 px round target with a visible keyboard ring and a Portuguese name; the
+          // 16 px glyph had no focus style and was announced as "Close".
+          <DialogClose className="absolute end-3 top-3 flex size-10 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none motion-reduce:transition-none">
+            <X aria-hidden="true" className="size-4" />
+            <span className="sr-only">Fechar</span>
           </DialogClose>
         )}
       </DialogPrimitive.Content>

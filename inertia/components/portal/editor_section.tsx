@@ -47,11 +47,12 @@ export function EditorSection({
       data-editor-section
       aria-labelledby={titleId}
       aria-describedby={[descriptionId, issuesId].filter(Boolean).join(' ')}
-      className={cn('scroll-mt-36 lg:scroll-mt-24', className)}
+      className={cn('scroll-mt-36 xl:scroll-mt-24', className)}
     >
       <Card className="overflow-hidden rounded-card border-border-subtle">
-        <CardHeader className="min-h-0 items-start px-5 py-5 sm:flex-nowrap sm:px-6">
-          <div className="flex min-w-0 items-start gap-3.5">
+        {/* The status badges wrap below a title that would otherwise be squeezed. */}
+        <CardHeader className="min-h-0 items-start px-5 py-5 sm:px-6">
+          <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-3.5">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Icon aria-hidden="true" className="size-5" />
             </span>

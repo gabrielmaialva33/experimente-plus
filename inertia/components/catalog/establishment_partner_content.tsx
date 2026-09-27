@@ -1,3 +1,5 @@
+import { CatalogCoverImage } from '~/components/catalog/catalog_image_fallback'
+
 interface JsonRecord {
   [key: string]: unknown
 }
@@ -207,7 +209,7 @@ export function EstablishmentPartnerContent({
           Descubra mais neste lugar
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Experiências, eventos e itens informativos publicados pelo estabelecimento.
+          Experiências, eventos e itens informativos publicados pelo lugar.
         </p>
       </div>
 
@@ -241,10 +243,11 @@ export function EstablishmentPartnerContent({
                     {cover ? (
                       <figure>
                         <div className="aspect-[16/9] overflow-hidden bg-muted">
-                          <img
+                          <CatalogCoverImage
                             src={cover.url}
                             alt={cover.altText}
-                            loading="lazy"
+                            name={item.title}
+                            categoryName={section.title}
                             className="size-full object-cover"
                           />
                         </div>

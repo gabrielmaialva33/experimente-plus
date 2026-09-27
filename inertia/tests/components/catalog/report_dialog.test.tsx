@@ -107,7 +107,9 @@ describe('public report dialog (W10)', () => {
     fetchMock.mockResolvedValue(jsonResponse(201, { protocol_number: 'DEN-1' }))
     const { user, submit } = await openAndPickReason()
     await user.click(submit)
-    await user.click(await screen.findByRole('button', { name: 'Fechar' }))
+    // The footer's "Fechar" and the corner X (also "Fechar") both close it.
+    const [close] = await screen.findAllByRole('button', { name: 'Fechar' })
+    await user.click(close!)
 
     await waitFor(() => expect(screen.queryByText('Denúncia registrada')).not.toBeInTheDocument())
     await user.click(

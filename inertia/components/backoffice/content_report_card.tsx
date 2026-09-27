@@ -450,6 +450,7 @@ function BanAuthorControl({
         médias. Nada é apagado, e retirar o banimento devolve exatamente o que estava publicado.
       </p>
       <EditorField
+        required
         htmlFor={`ban-${authorId}-reason`}
         label="Motivo do banimento"
         error={ban.errors.reason ?? null}

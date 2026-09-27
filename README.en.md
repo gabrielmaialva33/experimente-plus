@@ -10,7 +10,7 @@
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&labelColor=101214" alt="PostgreSQL 16"/></a>
   <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-cache%20%2B%20queue-DC382D?style=flat-square&labelColor=101214" alt="Redis"/></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-v4-38BDF8?style=flat-square&labelColor=101214" alt="TailwindCSS v4"/></a>
-  <a href="./docs/product/README.md"><img src="https://img.shields.io/badge/domain-regional%20discovery-CE4A09?style=flat-square&labelColor=101214" alt="Regional discovery"/></a>
+  <a href="#what-it-does"><img src="https://img.shields.io/badge/domain-regional%20discovery-CE4A09?style=flat-square&labelColor=101214" alt="Regional discovery"/></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-A1A5B7?style=flat-square&labelColor=101214" alt="MIT"/></a>
 </p>
 
@@ -140,8 +140,6 @@ database/               migrations, factories, and seeders
 inertia/                pages, layouts, components, and hooks
 resources/              translations, Edge templates, and emails
 tests/                  unit, functional, and browser tests
-docs/product/           vision, MVP, roadmap, and product decisions
-docs/architecture/      ADRs and accepted technical contracts
 docs/                   OpenAPI, Redoc, and HTTP requests
 ```
 
@@ -228,7 +226,35 @@ production; invalid values abort startup. `NODE_ENV` remains the runtime mode: t
 VPS uses `NODE_ENV=production` with **`DEPLOYMENT_ENV=homologation`**. Homologation accepts
 Stripe test payments while retaining public-host protections. Business production rejects fake
 and test payments. Local/test configurations explicitly use `DEPLOYMENT_ENV=development`.
-See the [purchase runbook](docs/runbooks/purchases.md) for deployment requirements and webhook errors.
+
+`PAYMENT_PROVIDER` accepts `disabled` (default), `fake` (refused in production), `stripe`, and
+`mercado_pago`, with no fallback between them; `PAYMENT_METHODS` declares `pix`, `card`, or both.
+Homologation uses `PAYMENT_ENVIRONMENT=test` and `STRIPE_ENVIRONMENT=test`, with a key and
+`STRIPE_WEBHOOK_SECRET` of the same mode, in both the HTTP server and the worker. Access is granted
+only by authenticated reconciliation with the PSP, never by a webhook body. The webhook answers 400
+to a missing or invalid signature, 500 to an invalid server configuration, 503 to a transient
+failure while querying the PSP, and 202 to a verified signal; never answer 2xx to an unverified
+event to silence redeliveries.
+
+To exercise a purchase locally without network access, use `PAYMENT_PROVIDER=fake` for the seed,
+the server, and the commands: create the purchase from the app or the API, run
+`pnpm ace purchases:process`, then confirm it with `pnpm ace purchases:simulate <purchase-id>`,
+which goes through the same reconciliation as a real payment.
+
+### Scheduled commands
+
+The repository schedules nothing; each environment installs its own scheduler (on homologation,
+systemd timers running `node ace.js <command>` in the `app` container).
+
+| Command                  | Frequency     | Purpose                                                         |
+| ------------------------ | ------------- | --------------------------------------------------------------- |
+| `purchases:process`      | every minute  | reconciles PSP notifications and runs confirmations and refunds |
+| `reports:notify-overdue` | hourly        | tells the team, once, about overdue content reports             |
+| `analytics:prune`        | daily (03:30) | deletes analytics events past their retention                   |
+
+Without the first one, a payment or a cancellation stays pending forever. Report notices need SMTP,
+a public `APP_URL`, and the team's membership in the operation. Run each command once by hand
+before scheduling it, and stop the timers during maintenance windows.
 
 QR origins use `BENEFIT_PRESENTATION_BASE_URL`, followed by `APP_URL` in homologation/production;
 only development may derive an origin from the trusted request. Both hosted environments require
@@ -296,7 +322,7 @@ lives in the common Git directory, stores revision/image/smoke SHA256, and advan
 validation. The smoke script is retained there by hash; `HEAD` is never an implicit
 fallback. The first run requires `DEPLOY_INITIAL_GOOD_REVISION` identifying the revision actually
 being served and, if it has no smoke script, `DEPLOY_INITIAL_GOOD_SMOKE_REVISION` identifying a
-reviewed compatible contract, as described in the [runbook](docs/runbooks/catalog_schema_reconciliation.md).
+reviewed compatible contract.
 `/usr/bin/rsync`, `/usr/bin/sync`, and `/usr/bin/jq` are prerequisites: the first two materialize
 snapshots and make LKG publication durable; the third validates the effective build model. The CI
 job has a 75-minute limit and its SSH step a 70-minute limit, in addition to keepalives; host
@@ -324,7 +350,8 @@ The CI key carries a forced command in the host's `authorized_keys`. Install the
 outside the checkout so rollback cannot downgrade it. It only accepts `SSH_ORIGINAL_COMMAND` in
 the form `deploy <full lowercase SHA>`, without shell evaluation. Manual deployments also require
 that SHA as their sole argument. `.dockerignore` excludes credentials, `.env.*.local`, logs,
-`storage/uploads/**`, and `storage/seed-media/**`; the runbook documents the operational allowlist.
+`storage/uploads/**`, and `storage/seed-media/**`; `deploy.sh` holds the allowlist of untracked
+operational files.
 
 ---
 
@@ -335,28 +362,32 @@ reached a persistent environment. From the first pilot or production deployment,
 is append-only, even before 1.0. Changes to deployed tables, constraints, indexes, functions, and
 triggers require a new forward migration; editing an applied file does not upgrade the database.
 
-The forward migration `1788556800100_reconcile_benefit_receipt_codes.ts` reconciles
-`benefit_redemptions.receipt_code`: it validates existing values before applying `varchar(20) NOT NULL`
-and the `^EXP-[0-9A-F]{16}$` check. Invalid data aborts without truncation or normalization; existing
-databases do not need to be recreated for this repair. Scenarios and rollout coordination are in the
-[persistent contracts runbook](docs/runbooks/persistent_schema_reconciliation.md).
+**Explicit exception of 2026-09-08:** the owner authorized consolidating the homologation history
+for the standalone voucher extension. That baseline reduced **59 migrations to 51**; the five merged
+repairs (among them `1788556800100_reconcile_benefit_receipt_codes.ts`) are archived under
+`tests/fixtures/legacy_migrations/`, outside the migrator's path. A database older than that
+baseline cannot be upgraded: recreation uses a new, empty database, `migration:run --force` once
+from the prepared release and `homologation:provision` afterwards, never `migration:fresh`, a
+rollback, or the development seed on the old database. Going back means restoring code, database,
+and configuration together.
 
 Forward repairs must support the old schema, clean installations, and documented operational
-hotfixes while preserving data. The `catalog_establishments.attribute_slugs` repair and validation
-window are described in the [catalog runbook](docs/runbooks/catalog_schema_reconciliation.md).
+hotfixes while preserving data. The `catalog_establishments.attribute_slugs` repair is part of the
+migration that creates the catalog projection; the projection can be rebuilt from the published
+revisions, which remain the authoritative source.
 Code rollback does not revert migrations; each repair must document that compatibility.
 
 ---
 
 ## Product planning
 
-The canonical plan lives under [`docs/product/`](docs/product/README.md) and the accepted technical
-contracts under [`docs/architecture/decisions/`](docs/architecture/decisions/README.md): business
-vision and model, actors and journeys, MVP, metrics and roadmap, the city/organization/establishment
-model, domain boundaries, accepted decisions, open questions, and market references.
+The product documents, ADRs, runbooks, and design specification left the repository on 2026-09-26.
+`docs/` keeps only the HTTP contract (`openapi.yaml`, `redoc.html`, and `api.http`). The domain
+rules the code must respect are summarized in [AGENTS.md](AGENTS.md) (Portuguese); the original
+texts remain available in the Git history but are no longer the source of truth.
 
-No product-domain migration should be introduced before its decision is recorded in the plan and,
-when structural, in an accepted ADR.
+No product-domain migration should be introduced before its decision has the owner's explicit
+approval, with its domain, test scenarios, and schema impact defined.
 
 ---
 

@@ -132,7 +132,7 @@ export function EstablishmentEditorNavigation({
 
   if (variant === 'mobile') {
     return (
-      <div className="sticky top-[72px] z-30 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:hidden">
+      <div className="sticky top-[72px] z-30 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:hidden">
         <nav
           ref={mobileNavigationRef}
           aria-label="Etapas do editor"
@@ -167,7 +167,7 @@ export function EstablishmentEditorNavigation({
       : null
 
   return (
-    <aside className="hidden lg:block">
+    <aside className="hidden xl:block">
       <div className="sticky top-24 space-y-4">
         <Card className="overflow-hidden border-border">
           <CardContent className="space-y-5 p-5">

@@ -23,7 +23,9 @@ export function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
       <div className="app-container flex min-h-16 items-center justify-between gap-4 py-2">
-        <AppBrand href="/" />
+        {/* Signed in, the bar carries up to five destinations: between 768 and 1024 px the
+            name was truncated to "Exp…", so there the mark stands alone (it keeps its label). */}
+        <AppBrand href="/" wordmarkClassName={authenticated ? 'md:max-lg:hidden' : undefined} />
 
         <nav aria-label="Navegação principal" className="hidden items-center gap-1 md:flex">
           {navigation.map((item) => {

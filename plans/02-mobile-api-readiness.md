@@ -1,5 +1,11 @@
 # Plano 02 — EP-12 Mobile API Readiness
 
+> [!NOTE]
+> Plano histórico, já executado. Os ADRs, documentos de produto e artefatos de design citados abaixo
+> (`docs/architecture/`, `docs/product/`, `DESIGN-IS-*`) saíram do repositório em 26/09/2026; os
+> caminhos e as linhas indicam onde estavam, e o histórico Git ainda os guarda. As regras vigentes
+> estão resumidas em [AGENTS.md](../AGENTS.md).
+
 ## Objetivo
 
 Preparar a API canônica do Experimente+ para um aplicativo móvel consumer-first, sem duplicar

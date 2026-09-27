@@ -10,6 +10,8 @@ interface AppBrandProps {
   onNavigate?: () => void
   /** `inverse` sits on the authenticated chrome: a light plate for the mark, light text. */
   tone?: 'default' | 'inverse'
+  /** Classes for the name beside the mark, e.g. to hide it where a header runs out of room. */
+  wordmarkClassName?: string
 }
 
 /**
@@ -56,6 +58,7 @@ export function AppBrand({
   className,
   onNavigate,
   tone = 'default',
+  wordmarkClassName,
 }: AppBrandProps) {
   const application = useApp()
 
@@ -68,7 +71,7 @@ export function AppBrand({
     >
       <BrandMark tone={tone} />
       {!collapsed && (
-        <span className="min-w-0">
+        <span className={cn('min-w-0', wordmarkClassName)}>
           <span className="block truncate font-display text-[1.125rem] font-extrabold tracking-[-0.02em]">
             {application.name}
           </span>

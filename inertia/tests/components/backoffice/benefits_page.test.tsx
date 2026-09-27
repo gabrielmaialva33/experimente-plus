@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import BenefitsBackofficePage from '~/pages/backoffice/benefits'
-import { render, screen } from '~/tests/test_utils'
+import { render, screen, waitFor } from '~/tests/test_utils'
 
 const mocks = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -28,6 +28,8 @@ vi.mock('@inertiajs/react', () => {
       delete: vi.fn(),
       post: vi.fn(),
       put: vi.fn(),
+      // The edition form's unsaved-changes guard listens to visits.
+      on: () => () => undefined,
     },
   }
 })
@@ -69,8 +71,31 @@ describe('BenefitsBackofficePage', () => {
     await user.click(screen.getByRole('button', { name: 'Editar' }))
 
     expect(screen.getByRole('heading', { name: 'Ajuste o período e a apresentação' })).toBeVisible()
-    expect(screen.getByLabelText('Nome da edição')).toHaveValue(edition.name)
+    expect(screen.getByLabelText(/^Nome da edição/)).toHaveValue(edition.name)
+    // A required control announces it in its label, like the portal forms do.
+    expect(screen.getByLabelText(/^Nome da edição\s*\*\s*\(obrigatório\)/)).toHaveAttribute(
+      'aria-required',
+      'true'
+    )
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled()
+    // The keyboard follows the eye to the form at the top, and comes back on cancel.
+    await waitFor(() => expect(screen.getByLabelText(/^Nome da edição/)).toHaveFocus())
+    await user.click(screen.getByRole('button', { name: 'Cancelar edição' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Editar' })).toHaveFocus())
+  })
+
+  it('asks before cancelling an edition edit that changed something', async () => {
+    mocks.permissions = ['benefit_editions.update']
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const { user } = render(<BenefitsBackofficePage editions={[edition]} cities={[edition.city]} />)
+
+    await user.click(screen.getByRole('button', { name: 'Editar' }))
+    await user.type(screen.getByLabelText(/^Nome da edição/), ' 2027')
+    await user.click(screen.getByRole('button', { name: 'Cancelar edição' }))
+
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(screen.getByLabelText(/^Nome da edição/)).toHaveValue(`${edition.name} 2027`)
+    confirm.mockRestore()
   })
 
   it('renders editions read-only for moderators without exposing mutations', () => {

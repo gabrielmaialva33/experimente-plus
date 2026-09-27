@@ -130,7 +130,7 @@ describe('public establishment availability', () => {
     )
 
     expect(
-      screen.getByRole('heading', { name: 'Este estabelecimento encerrou as atividades' })
+      screen.getByRole('heading', { name: 'Este lugar encerrou as atividades' })
     ).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Entre em contato' })).not.toBeInTheDocument()
     // The closure message is the page header's; the card below does not repeat it.

@@ -8,7 +8,8 @@ import ContentReportDeadlineService from '#modules/reviews/services/content_repo
  *
  * Meant to be run periodically by the environment's scheduler, like
  * `purchases:process` and `analytics:prune`; the repository does not schedule
- * it. See docs/runbooks/content_report_deadlines.md.
+ * it (hourly on homologation). It needs SMTP, a public `APP_URL` for the queue
+ * link, and a membership in the operation for each team member to be told.
  *
  * Output is counts only. A notice that could not be sent exits 1, so a
  * scheduler that watches exit codes sees it, and the next run retries it.

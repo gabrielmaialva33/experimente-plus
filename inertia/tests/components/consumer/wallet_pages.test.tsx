@@ -171,7 +171,7 @@ describe('consumer wallet pages', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Minha carteira' })).toBeVisible()
     expect(screen.getByText('Sua carteira ainda está vazia')).toBeVisible()
     expect(container.querySelector('[data-slot="empty-state"]')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Explorar estabelecimentos' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Explorar lugares' })).toHaveAttribute(
       'href',
       '/cidades'
     )

@@ -197,10 +197,13 @@ export default function BackofficePartnerContentPage({
               variant={status === 'pending_review' && totalAll > 0 ? 'warning' : 'neutral'}
               appearance="light"
               shape="pill"
+              size="lg"
             >
-              {totalAll === 1
-                ? '1 item ' + statusOne
-                : totalAll.toLocaleString('pt-BR') + ' itens ' + statusMany}
+              {totalAll === 0
+                ? 'Nenhum item ' + statusOne
+                : totalAll === 1
+                  ? '1 item ' + statusOne
+                  : totalAll.toLocaleString('pt-BR') + ' itens ' + statusMany}
             </Badge>
           }
           actions={

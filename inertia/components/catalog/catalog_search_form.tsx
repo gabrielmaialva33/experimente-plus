@@ -120,14 +120,18 @@ export function CatalogSearchForm({
         aria-busy={isNavigating}
         aria-describedby="catalog-results-summary"
         onSubmit={submitSearch}
+        // One row only from 1280 px: at 1024 the four controls beside it left the search
+        // field ~170 px, clipping its placeholder. Below that the search takes its own row
+        // and the rest share the next rows, with Buscar closing the last one instead of
+        // sitting alone or stretching across the card.
         className={cn(
           'grid items-end gap-4',
           showCategoryFilter
-            ? 'md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(11rem,14rem)_11rem_auto_auto]'
-            : 'md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_auto_auto]'
+            ? 'md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(11rem,14rem)_11rem_auto_auto]'
+            : 'md:grid-cols-[minmax(0,1fr)_auto_auto] xl:grid-cols-[minmax(0,1fr)_11rem_auto_auto]'
         )}
       >
-        <label className="grid gap-1.5">
+        <label className="grid gap-1.5 md:col-span-full xl:col-span-1">
           <span className="text-sm font-medium">O que você procura?</span>
           <span className="relative block">
             <Search
@@ -208,7 +212,7 @@ export function CatalogSearchForm({
           variant="primary"
           size="2xl"
           shape="pill"
-          className="w-full lg:w-auto"
+          className="w-full md:w-auto md:justify-self-end xl:justify-self-auto"
           disabled={isNavigating}
           aria-busy={isNavigating}
         >

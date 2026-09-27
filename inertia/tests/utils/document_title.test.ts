@@ -5,7 +5,7 @@ import { formatDocumentTitle } from '~/app/document_title'
 describe('formatDocumentTitle', () => {
   it('formats a page title with the application brand', () => {
     expect(formatDocumentTitle('Página não encontrada', 'Experimente+')).toBe(
-      'Página não encontrada - Experimente+'
+      'Página não encontrada — Experimente+'
     )
   })
 

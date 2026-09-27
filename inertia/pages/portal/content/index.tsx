@@ -28,6 +28,7 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { collection, numeric, record, text, type JsonRecord } from '~/lib/json'
 import {
@@ -181,8 +182,14 @@ export default function PartnerContentPage({
   )
   const [kind, setKind] = useState<PartnerContentPath>('experiences')
   const [form, setForm] = useState<FormState>(emptyForm)
+  // What the form held when it was last emptied or loaded for editing: anything else
+  // is typing that a visit, a tab change or another "Editar" would throw away.
+  const [savedForm, setSavedForm] = useState<FormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [processing, setProcessing] = useState(false)
+  const { allowNextVisit, confirmDiscard } = useUnsavedChangesGuard({
+    enabled: !processing && JSON.stringify(form) !== JSON.stringify(savedForm),
+  })
   const [actionId, setActionId] = useState<number | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -203,28 +210,38 @@ export default function PartnerContentPage({
 
   function resetForm() {
     setForm(emptyForm)
+    setSavedForm(emptyForm)
     setEditingId(null)
     setLocalError(null)
   }
 
+  function cancelEdit() {
+    if (!confirmDiscard()) return
+    resetForm()
+  }
+
   function changeKind(nextKind: PartnerContentPath) {
+    if (nextKind === kind || !confirmDiscard()) return
     setKind(nextKind)
     resetForm()
   }
 
   function beginEdit(row: ContentRow) {
+    if (!confirmDiscard()) return
     const establishment = establishmentById.get(row.establishmentId)
     const timeZone = establishment?.city?.timezone
-    setEditingId(row.id)
-    setLocalError(null)
-    setForm({
+    const loaded: FormState = {
       establishmentId: String(row.establishmentId),
       title: row.title,
       description: row.description,
       startsAt: timeZone ? isoToZonedLocal(row.startsAt, timeZone) : '',
       endsAt: timeZone ? isoToZonedLocal(row.endsAt, timeZone) : '',
       priceReais: centsToReais(row.informationalPriceCents),
-    })
+    }
+    setEditingId(row.id)
+    setLocalError(null)
+    setForm(loaded)
+    setSavedForm(loaded)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -292,6 +309,7 @@ export default function PartnerContentPage({
       onFinish: () => setProcessing(false),
     }
 
+    allowNextVisit()
     if (editingId === null) {
       router.post('/portal/content/' + kind, payload, options)
     } else {
@@ -393,7 +411,7 @@ export default function PartnerContentPage({
                   variant="outline"
                   size="lg"
                   shape="pill"
-                  onClick={resetForm}
+                  onClick={cancelEdit}
                   disabled={processing}
                 >
                   <X aria-hidden="true" className="size-4" />

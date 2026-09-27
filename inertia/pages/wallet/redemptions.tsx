@@ -26,8 +26,10 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
       title="Utilizações"
       description="Histórico de benefícios utilizados e seus comprovantes permanentes."
       meta={
-        <Badge variant="secondary" appearance="outline" shape="pill">
-          {history.total} {history.total === 1 ? 'utilização' : 'utilizações'}
+        <Badge variant="secondary" appearance="outline" shape="pill" size="lg">
+          {history.total === 0
+            ? 'Nenhuma utilização'
+            : `${history.total.toLocaleString('pt-BR')} ${history.total === 1 ? 'utilização' : 'utilizações'}`}
         </Badge>
       }
       actions={
@@ -49,7 +51,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
             headingLevel={2}
             icon={ReceiptText}
             title="Nenhuma utilização ainda"
-            description="Quando uma utilização for confirmada pelo estabelecimento, o comprovante aparecerá aqui."
+            description="Quando uma utilização for confirmada no lugar, o comprovante aparecerá aqui."
           >
             <Button asChild variant="outline" size="xl" shape="pill">
               <Link href="/wallet">Ver minha carteira</Link>

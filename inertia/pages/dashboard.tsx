@@ -89,6 +89,8 @@ function formatDate(iso: string | null) {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    // The same day on the server render and in the browser (hydration).
+    timeZone: 'America/Sao_Paulo',
   })
 }
 
@@ -146,7 +148,15 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
                 </p>
               </div>
             </div>
-            <Button asChild variant="cta" size="xl" shape="pill" className="shrink-0">
+            {/* Navigation, not conversion: the band speaks the sidebar's active-item colours,
+                and orange stays for buying. */}
+            <Button
+              asChild
+              variant="inverse"
+              size="xl"
+              shape="pill"
+              className="shrink-0 bg-chrome-active text-chrome-active-foreground hover:bg-chrome-active/90 focus-visible:ring-offset-chrome"
+            >
               <Link href="/backoffice/today">
                 Abrir Hoje
                 <ArrowRight aria-hidden="true" className="size-4" />

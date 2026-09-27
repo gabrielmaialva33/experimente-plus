@@ -64,7 +64,7 @@ describe('Report queue page', () => {
       />
     )
 
-    expect(screen.getByText('0 denúncias · pendentes')).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma denúncia pendente')).toBeInTheDocument()
   })
 
   it('says nothing about deadlines when none is missed', () => {

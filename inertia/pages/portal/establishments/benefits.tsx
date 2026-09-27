@@ -24,6 +24,7 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 import type { OrganizationAllowedActions } from '~/types'
@@ -210,8 +211,13 @@ export default function EstablishmentBenefitsPage({
   const canValidateRedemptions = allowedActions.redemptions.validate
   const canManageOffers = canCreate || canUpdate
   const [form, setForm] = useState<OfferFormState>(emptyForm)
+  // The form as last emptied or loaded: any difference is typing a visit would lose.
+  const [savedForm, setSavedForm] = useState<OfferFormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [processing, setProcessing] = useState(false)
+  const { allowNextVisit, confirmDiscard } = useUnsavedChangesGuard({
+    enabled: !processing && JSON.stringify(form) !== JSON.stringify(savedForm),
+  })
   const [actionId, setActionId] = useState<number | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -241,11 +247,18 @@ export default function EstablishmentBenefitsPage({
 
   function resetForm() {
     setForm(emptyForm)
+    setSavedForm(emptyForm)
     setEditingId(null)
     setLocalError(null)
   }
 
+  function cancelEdit() {
+    if (!confirmDiscard()) return
+    resetForm()
+  }
+
   function beginEdit(offer: BenefitOffer) {
+    if (!confirmDiscard()) return
     const discountValue =
       offer.benefit_type === 'percentage'
         ? String(offer.discount_percentage ?? '')
@@ -255,7 +268,7 @@ export default function EstablishmentBenefitsPage({
 
     setEditingId(offer.id)
     setLocalError(null)
-    setForm({
+    const loaded: OfferFormState = {
       edition_id: String(offer.edition_id),
       title: offer.title,
       description: offer.description,
@@ -269,7 +282,9 @@ export default function EstablishmentBenefitsPage({
       on_premise_only: offer.on_premise_only,
       minimum_party_size: String(offer.minimum_party_size),
       max_redemptions_per_access: String(offer.max_redemptions_per_access),
-    })
+    }
+    setForm(loaded)
+    setSavedForm(loaded)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -339,6 +354,7 @@ export default function EstablishmentBenefitsPage({
       onFinish: () => setProcessing(false),
     }
 
+    allowNextVisit()
     if (editingId) {
       router.put(`/portal/benefit-offers/${editingId}`, payload, options)
     } else {
@@ -396,11 +412,24 @@ export default function EstablishmentBenefitsPage({
           meta={
             <>
               <Badge variant="neutral" appearance="light" shape="pill" size="lg">
-                {offers.length} {offers.length === 1 ? 'oferta' : 'ofertas'}
+                {offers.length === 0
+                  ? 'Nenhuma oferta'
+                  : `${offers.length} ${offers.length === 1 ? 'oferta' : 'ofertas'}`}
               </Badge>
-              <Badge variant="success" appearance="light" shape="pill" size="lg">
-                {activeOfferCount} {activeOfferCount === 1 ? 'ativa' : 'ativas'}
-              </Badge>
+              {/* Without offers there is nothing to count as active; with offers, none active is
+                  neutral, not green. */}
+              {offers.length > 0 ? (
+                <Badge
+                  variant={activeOfferCount > 0 ? 'success' : 'neutral'}
+                  appearance="light"
+                  shape="pill"
+                  size="lg"
+                >
+                  {activeOfferCount === 0
+                    ? 'Nenhuma ativa'
+                    : `${activeOfferCount} ${activeOfferCount === 1 ? 'ativa' : 'ativas'}`}
+                </Badge>
+              ) : null}
             </>
           }
         />
@@ -449,7 +478,7 @@ export default function EstablishmentBenefitsPage({
                     variant="ghost"
                     size="icon"
                     shape="circle"
-                    onClick={resetForm}
+                    onClick={cancelEdit}
                   >
                     <X />
                     <span className="sr-only">Cancelar edição</span>
@@ -458,7 +487,7 @@ export default function EstablishmentBenefitsPage({
               </div>
 
               <form onSubmit={submit} className="mt-6 grid gap-4" aria-busy={processing}>
-                <EditorField htmlFor="offer-edition" label="Edição">
+                <EditorField required htmlFor="offer-edition" label="Edição">
                   <select
                     id="offer-edition"
                     required
@@ -535,7 +564,7 @@ export default function EstablishmentBenefitsPage({
                   </EditorField>
                 ) : null}
 
-                <EditorField htmlFor="offer-title" label="Título">
+                <EditorField required htmlFor="offer-title" label="Título">
                   <Input
                     id="offer-title"
                     required
@@ -549,6 +578,7 @@ export default function EstablishmentBenefitsPage({
                 </EditorField>
 
                 <EditorField
+                  required
                   htmlFor="offer-description"
                   label="Como funciona"
                   hint="Explique o benefício em linguagem direta para o consumidor."
@@ -701,7 +731,7 @@ export default function EstablishmentBenefitsPage({
                       variant="outline"
                       size="lg"
                       shape="pill"
-                      onClick={resetForm}
+                      onClick={cancelEdit}
                       disabled={processing}
                     >
                       Cancelar

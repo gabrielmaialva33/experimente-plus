@@ -84,15 +84,19 @@ export default function BackofficeReports({
           description="Avaliações, respostas do parceiro e unidades reportadas por quem usa o catálogo. Cada caso mostra o conteúdo denunciado, não apenas o protocolo."
           meta={
             <>
-              <Badge variant="secondary" appearance="light" shape="pill">
-                {total.toLocaleString('pt-BR')} {total === 1 ? 'denúncia' : 'denúncias'} ·{' '}
-                {STATUS_COUNT_LABEL[status][total === 1 ? 0 : 1]}
+              <Badge variant="secondary" appearance="light" shape="pill" size="lg">
+                {total === 0
+                  ? `Nenhuma denúncia ${STATUS_COUNT_LABEL[status][0]}`
+                  : `${total.toLocaleString('pt-BR')} ${total === 1 ? 'denúncia' : 'denúncias'} ${
+                      STATUS_COUNT_LABEL[status][total === 1 ? 0 : 1]
+                    }`}
               </Badge>
               {overdueTotal > 0 ? (
                 <Badge
                   variant="destructive"
                   appearance="light"
                   shape="pill"
+                  size="lg"
                   data-testid="overdue-total"
                 >
                   <AlertTriangle aria-hidden="true" />

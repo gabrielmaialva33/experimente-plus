@@ -18,9 +18,11 @@ vi.mock('@inertiajs/react', () => ({
       {children}
     </a>
   ),
+  // The form's unsaved-changes guard listens to visits.
   router: {
     post: mocks.post,
     put: mocks.put,
+    on: () => () => undefined,
   },
 }))
 
@@ -84,6 +86,29 @@ describe('PartnerContentPage', () => {
       starts_at: '2026-09-20T22:00:00.000Z',
       ends_at: '2026-09-21T01:00:00.000Z',
     })
+  })
+
+  it('asks before a tab change throws away a half-written item', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const { user } = render(
+      <PartnerContentPage
+        tenant_id={7}
+        establishments={[establishment]}
+        content={{ experiences: [], events: [], showcase_items: [] }}
+      />
+    )
+
+    await user.type(screen.getByLabelText(/^Título/), 'Degustação de cafés')
+    await user.click(screen.getByRole('tab', { name: /Eventos/ }))
+
+    // Declined: the typed title and the Experiências tab both stay.
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(screen.getByRole('tab', { name: /Experiências/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByLabelText(/^Título/)).toHaveValue('Degustação de cafés')
+    confirm.mockRestore()
   })
 
   it('agrees the empty-state invitation with each kind', async () => {

@@ -8,6 +8,7 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -113,13 +114,22 @@ export default function PartnerReviewsPage({
           aria-current={filter === item ? 'true' : undefined}
           className={cn(
             // The three filters share a phone's width instead of scrolling the selected one away.
-            'inline-flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:flex-none sm:px-4.5 sm:text-[0.9375rem]',
+            'inline-flex h-10 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 sm:gap-1.5 text-[0.8125rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:flex-none sm:px-4.5 sm:text-[0.9375rem]',
             filter === item
               ? 'bg-primary font-bold text-primary-foreground'
               : 'font-semibold text-foreground hover:bg-background'
           )}
         >
-          {FILTER_LABELS[item]} ({counts[item]})
+          {FILTER_LABELS[item]}{' '}
+          {/* The count bubble of the content tabs, not a number in parentheses. */}
+          <span
+            className={cn(
+              'rounded-full px-1.5 text-[0.6875rem] font-bold tabular-nums sm:px-2 sm:text-xs',
+              filter === item ? 'bg-primary-foreground/20' : 'bg-background'
+            )}
+          >
+            {counts[item]}
+          </span>
         </Link>
       ))}
     </nav>
@@ -378,6 +388,9 @@ function ReplyForm({
   onDone: () => void
 }) {
   const form = useForm({ comment: initial })
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.isDirty && !form.processing,
+  })
   const fieldId = `reply-${reviewId}`
   const hintId = `${fieldId}-hint`
   const errorId = `${fieldId}-error`
@@ -386,6 +399,7 @@ function ReplyForm({
     event.preventDefault()
     const url = `/portal/reviews/${reviewId}/reply`
     const options = { preserveScroll: true, onSuccess: onDone }
+    allowNextVisit()
     if (mode === 'create') form.post(url, options)
     else form.put(url, options)
   }

@@ -8,7 +8,8 @@ import { render } from '~/tests/test_utils'
 
 vi.mock('@inertiajs/react', () => ({
   Head: () => null,
-  router: { post: vi.fn() },
+  // The grant form's unsaved-changes guard listens to visits.
+  router: { post: vi.fn(), on: () => () => undefined },
 }))
 
 vi.mock('~/hooks/use_auth', () => ({

@@ -26,6 +26,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { useAuth } from '~/hooks/use_auth'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -105,6 +106,10 @@ export default function BenefitAccessesPage({
   const [source, setSource] = useState<'manual' | 'courtesy'>('manual')
   const [notes, setNotes] = useState('')
   const [processing, setProcessing] = useState(false)
+  // A typed holder e-mail or note is what a visit would lose; the selects keep defaults.
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: !processing && (email.trim() !== '' || notes.trim() !== ''),
+  })
   const [localError, setLocalError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'revoked'>('all')
@@ -144,6 +149,7 @@ export default function BenefitAccessesPage({
     }
 
     setProcessing(true)
+    allowNextVisit()
     router.post(
       '/backoffice/accesses',
       {
@@ -199,10 +205,10 @@ export default function BenefitAccessesPage({
           description="Conceda uma edição a usuários já cadastrados na operação. A carteira é liberada imediatamente e seus benefícios são derivados das ofertas ativas."
           meta={
             <>
-              <Badge variant="success" appearance="light" shape="pill">
+              <Badge variant="success" appearance="light" shape="pill" size="lg">
                 {activeCount} {activeCount === 1 ? 'acesso ativo' : 'acessos ativos'}
               </Badge>
-              <Badge variant="secondary" appearance="light" shape="pill">
+              <Badge variant="secondary" appearance="light" shape="pill" size="lg">
                 {courtesyCount} {courtesyCount === 1 ? 'cortesia' : 'cortesias'}
               </Badge>
             </>
@@ -236,7 +242,7 @@ export default function BenefitAccessesPage({
               </div>
 
               <form onSubmit={submit} aria-busy={processing} className="mt-6 grid gap-4">
-                <EditorField htmlFor="access-edition" label="Edição">
+                <EditorField required htmlFor="access-edition" label="Edição">
                   <select
                     id="access-edition"
                     required
@@ -255,6 +261,7 @@ export default function BenefitAccessesPage({
                 </EditorField>
 
                 <EditorField
+                  required
                   htmlFor="access-email"
                   label="E-mail do titular"
                   hint="Use o mesmo e-mail empregado no cadastro."
@@ -347,8 +354,10 @@ export default function BenefitAccessesPage({
 
           <section className="space-y-4" aria-label="Histórico de acessos">
             <div className="rounded-card border border-border-subtle bg-card p-4">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem_13rem]">
-                <label className="relative block">
+              {/* The search keeps its own row: beside two fixed selects, in the list column
+                  of a laptop, it was left ~130–230 px and clipped its placeholder. */}
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="relative block md:col-span-2">
                   <span className="sr-only">Buscar acessos</span>
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input

@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+
 import { cn } from '~/lib/utils'
 
 interface CatalogImageFallbackProps {
@@ -26,9 +28,73 @@ export function CatalogImageFallback({ name, categoryName, className }: CatalogI
           {initial}
         </span>
         <span className="max-w-full truncate text-xs font-medium text-content-absent-foreground">
-          {categoryName ?? 'Estabelecimento local'}
+          {categoryName ?? 'Lugar da região'}
         </span>
       </div>
     </div>
+  )
+}
+
+interface CatalogCoverImageProps {
+  src: string
+  alt: string
+  /** Names the placeholder that replaces an image the server cannot deliver. */
+  name: string
+  categoryName?: string | null
+  width?: number | null
+  height?: number | null
+  loading?: 'lazy' | 'eager'
+  className?: string
+  /** Size classes for the placeholder when they differ from the image's. */
+  fallbackClassName?: string
+}
+
+/**
+ * A catalogue image that turns into the illustrated placeholder when it fails to
+ * load, instead of leaving an empty box with the browser's broken-image alt text.
+ */
+export function CatalogCoverImage({
+  src,
+  alt,
+  name,
+  categoryName,
+  width,
+  height,
+  loading = 'lazy',
+  className,
+  fallbackClassName,
+}: CatalogCoverImageProps) {
+  const imageRef = useRef<HTMLImageElement>(null)
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    // An image that failed while the server-rendered page was hydrating never reported
+    // its error to React; a finished load with no pixels is that failure.
+    const image = imageRef.current
+    if (image?.complete && image.naturalWidth === 0) setFailedSrc(src)
+  }, [src])
+
+  if (failedSrc === src) {
+    return (
+      <CatalogImageFallback
+        name={name}
+        categoryName={categoryName}
+        className={fallbackClassName ?? className}
+      />
+    )
+  }
+
+  return (
+    <img
+      ref={imageRef}
+      src={src}
+      alt={alt}
+      width={width ?? undefined}
+      height={height ?? undefined}
+      loading={loading}
+      decoding="async"
+      onError={() => setFailedSrc(src)}
+      className={className}
+    />
   )
 }

@@ -18,6 +18,8 @@ vi.mock('@inertiajs/react', async () => {
   const React = await import('react')
 
   return {
+    // The form's unsaved-changes guard listens to visits.
+    router: { on: () => () => undefined },
     useForm: <T extends Record<string, unknown>>(initial: T) => {
       const [data, setDataState] = React.useState(initial)
 
