@@ -112,7 +112,7 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       # The host must have the reviewed deploy entrypoint pre-installed outside the
-      # checkout (see docs/runbooks/catalog_schema_reconciliation.md). It strictly
+      # checkout. It strictly
       # parses SSH_ORIGINAL_COMMAND as "deploy <full SHA>";
       # no eval, branch lookup, or fallback to a newer master tip is allowed.
       - name: Deploy

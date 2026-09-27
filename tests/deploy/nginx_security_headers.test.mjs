@@ -8,7 +8,6 @@ const installerUrl = new URL(
   '../../infra/nginx/install_experimente_plus_config.sh',
   import.meta.url
 )
-const runbookUrl = new URL('../../docs/runbooks/nginx_security_headers.md', import.meta.url)
 
 const HEADER_CONTRACTS = [
   ['X-Frame-Options', '$experimente_plus_x_frame_options'],
@@ -47,24 +46,13 @@ test('Nginx canonicalizes upstream security headers without weakening private re
 })
 
 test('Nginx installer validates before reload and retains an automatic rollback path', async () => {
-  const [installer, runbook] = await Promise.all([
-    readFile(installerUrl, 'utf8'),
-    readFile(runbookUrl, 'utf8'),
-  ])
+  const installer = await readFile(installerUrl, 'utf8')
 
   assert.match(installer, /^#!\/usr\/bin\/env bash\nset -Eeuo pipefail/)
   assert.match(installer, /PATH=\/usr\/sbin:\/usr\/bin:\/sbin:\/bin\nexport PATH/)
   assert.match(installer, /stat -c '%U:%G:%a' "\$SCRIPT_SOURCE"\) == root:root:500/)
   assert.match(installer, /flock -n 9/)
   assert.match(installer, /\[\[ -d "\$BACKUP_DIRECTORY" && ! -L "\$BACKUP_DIRECTORY" \]\]/)
-  assert.match(runbook, /stage_dir=\$\(mktemp -d \/run\/experimente-plus-nginx\.XXXXXX\)/)
-  assert.match(runbook, /trap cleanup EXIT/)
-  assert.match(
-    runbook,
-    /install -o root -g root -m 0500 infra\/nginx\/install_experimente_plus_config\.sh/
-  )
-  assert.match(runbook, /\/usr\/bin\/bash -n "\$staged_installer"/)
-  assert.match(runbook, /\/usr\/bin\/bash "\$staged_installer" "\$staged_maps" "\$staged_site"/)
   assert.match(installer, /site_backup=.*\$site_sha\.conf/)
   assert.match(installer, /map_backup=.*\$map_sha\.conf/)
   assert.match(installer, /replacement_started=1/)

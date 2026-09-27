@@ -173,37 +173,15 @@ describe('flat foundation token contract', () => {
     expect(tailwindCss).toContain('--radius-sm: calc(var(--radius) - 8px)')
   })
 
-  it('keeps overlays flat and the app handoff values synchronized', () => {
+  it('keeps overlays flat', () => {
     for (const component of ['dialog', 'sheet', 'popover', 'dropdown-menu', 'select', 'tooltip']) {
       const source = projectFile(`inertia/components/ui/${component}.tsx`)
       expect(source).not.toMatch(/backdrop-filter|backdrop-blur|shadow-(?:md|lg|xl|2xl)|gradient/)
       expect(source).toContain('shadow-overlay')
     }
-    const doc = projectFile('docs/design/catalog_tokens.md')
-    expect(doc).toContain('hover `--cta-hover`')
-    expect(doc).not.toContain('hover `--cta-accent`')
-    for (const selector of [':root', '.dark']) {
-      const block = blockFor(selector)
-      for (const token of [
-        'surface-base',
-        'surface-raised',
-        'surface-overlay',
-        'foreground',
-        'muted-foreground',
-        'primary',
-        'cta',
-        'success-soft',
-        'warning-soft',
-        'info-soft',
-      ]) {
-        const [l, c, h] = colorToken(block, token)
-        expect(doc).toContain(`oklch(${l} ${c} ${h})`)
-      }
-    }
   })
 
-  it('keeps every canonical color in sRGB and documents both exact and mobile values', () => {
-    const doc = projectFile('docs/design/catalog_tokens.md')
+  it('keeps every canonical color in sRGB', () => {
     for (const selector of [':root', '.dark']) {
       const block = blockFor(selector)
       for (const match of block.matchAll(/--([\w-]+):\s*(oklch\([^;]+\));/g)) {
@@ -213,9 +191,6 @@ describe('flat foundation token contract', () => {
           expect(channel, `${selector}/${token}`).toBeGreaterThanOrEqual(-0.00001)
           expect(channel, `${selector}/${token}`).toBeLessThanOrEqual(1.00001)
         }
-        const row = doc.split('\n').find((line) => line.startsWith(`| \`--${token}\``))
-        expect(row, `${selector}/${token}`).toContain(match[2])
-        expect(row).toContain(hexColor(color))
       }
       expect(
         contrastRatio(colorToken(block, 'surface-context'), colorToken(block, 'context-foreground'))

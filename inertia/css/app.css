@@ -87,7 +87,7 @@
     );
     --public-mobile-focus-clearance: calc(var(--public-mobile-navigation-space) + 1rem);
 
-    /* Catalog state mapping (shared with mobile): docs/design/catalog_tokens.md.
+    /* Catalog state mapping, shared with the mobile app's tokens.
      * success = open now; muted = closed/unknown/historical; warning = temporary
      * closure; info = appointment-only. primary and cta keep their action roles.
      */
