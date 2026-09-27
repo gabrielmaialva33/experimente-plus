@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import BenefitsBackofficePage from '~/pages/backoffice/benefits'
-import { render, screen } from '~/tests/test_utils'
+import { render, screen, waitFor } from '~/tests/test_utils'
 
 const mocks = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -76,6 +76,10 @@ describe('BenefitsBackofficePage', () => {
       'true'
     )
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled()
+    // The keyboard follows the eye to the form at the top, and comes back on cancel.
+    await waitFor(() => expect(screen.getByLabelText(/^Nome da edição/)).toHaveFocus())
+    await user.click(screen.getByRole('button', { name: 'Cancelar edição' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Editar' })).toHaveFocus())
   })
 
   it('renders editions read-only for moderators without exposing mutations', () => {

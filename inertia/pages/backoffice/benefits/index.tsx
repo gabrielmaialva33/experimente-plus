@@ -171,9 +171,14 @@ export default function BenefitsBackofficePage({
   }
 
   function resetForm() {
+    const editedId = editingId
     setForm(emptyForm)
     setEditingId(null)
     setLocalError(null)
+    // Back to the edition's own "Editar", where the keyboard left the list.
+    if (editedId !== null) {
+      requestAnimationFrame(() => document.getElementById(`edition-${editedId}-edit`)?.focus())
+    }
   }
 
   function beginEdit(edition: BenefitEdition) {
@@ -191,6 +196,10 @@ export default function BenefitsBackofficePage({
       usage_ends_on: dateOnly(edition.usage_ends_at),
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    // The form fills at the top of the page; take the keyboard there too, not only the eye.
+    requestAnimationFrame(() =>
+      document.getElementById('edition-name')?.focus({ preventScroll: true })
+    )
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -641,6 +650,7 @@ export default function BenefitsBackofficePage({
                         ) : null}
                         {editable && canUpdate ? (
                           <Button
+                            id={`edition-${edition.id}-edit`}
                             type="button"
                             variant="outline"
                             size="lg"
