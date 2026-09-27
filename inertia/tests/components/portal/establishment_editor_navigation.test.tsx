@@ -65,7 +65,12 @@ describe('EstablishmentEditorNavigation', () => {
 
   it('sticks under the 72 px header, and to the top where a short screen drops the header', () => {
     render(
-      <EstablishmentEditorNavigation {...baseProps} variant="mobile" activeSection="identity" />
+      <EstablishmentEditorNavigation
+        {...baseProps}
+        variant="mobile"
+        activeSection="identity"
+        onNavigate={vi.fn()}
+      />
     )
 
     const bar = screen.getByRole('navigation', { name: 'Etapas do editor' }).parentElement
