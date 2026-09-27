@@ -458,7 +458,7 @@ export default function EstablishmentBenefitsPage({
               </div>
 
               <form onSubmit={submit} className="mt-6 grid gap-4" aria-busy={processing}>
-                <EditorField htmlFor="offer-edition" label="Edição">
+                <EditorField required htmlFor="offer-edition" label="Edição">
                   <select
                     id="offer-edition"
                     required
@@ -535,7 +535,7 @@ export default function EstablishmentBenefitsPage({
                   </EditorField>
                 ) : null}
 
-                <EditorField htmlFor="offer-title" label="Título">
+                <EditorField required htmlFor="offer-title" label="Título">
                   <Input
                     id="offer-title"
                     required
@@ -549,6 +549,7 @@ export default function EstablishmentBenefitsPage({
                 </EditorField>
 
                 <EditorField
+                  required
                   htmlFor="offer-description"
                   label="Como funciona"
                   hint="Explique o benefício em linguagem direta para o consumidor."

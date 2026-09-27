@@ -236,7 +236,7 @@ export default function BenefitAccessesPage({
               </div>
 
               <form onSubmit={submit} aria-busy={processing} className="mt-6 grid gap-4">
-                <EditorField htmlFor="access-edition" label="Edição">
+                <EditorField required htmlFor="access-edition" label="Edição">
                   <select
                     id="access-edition"
                     required
@@ -255,6 +255,7 @@ export default function BenefitAccessesPage({
                 </EditorField>
 
                 <EditorField
+                  required
                   htmlFor="access-email"
                   label="E-mail do titular"
                   hint="Use o mesmo e-mail empregado no cadastro."

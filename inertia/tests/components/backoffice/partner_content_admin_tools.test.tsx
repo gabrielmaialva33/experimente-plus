@@ -59,7 +59,7 @@ describe('PartnerContentAdminEditor', () => {
     render(<PartnerContentAdminEditor {...base} status="published" />)
 
     fireEvent.click(screen.getByRole('button', { name: /Corrigir/ }))
-    fireEvent.change(screen.getByLabelText('Título'), {
+    fireEvent.change(screen.getByLabelText(/^Título/), {
       target: { value: '  Degustação de cafés  ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }))

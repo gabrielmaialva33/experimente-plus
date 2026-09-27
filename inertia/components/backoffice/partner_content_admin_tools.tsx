@@ -113,7 +113,7 @@ export function PartnerContentAdminEditor({
           : 'Este conteúdo não está publicado: a correção fica salva e o item continua onde o parceiro o deixou.'}
       </p>
 
-      <EditorField htmlFor={prefix + '-title'} label="Título">
+      <EditorField required htmlFor={prefix + '-title'} label="Título">
         <Input
           id={prefix + '-title'}
           required

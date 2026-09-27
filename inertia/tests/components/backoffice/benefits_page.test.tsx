@@ -69,7 +69,12 @@ describe('BenefitsBackofficePage', () => {
     await user.click(screen.getByRole('button', { name: 'Editar' }))
 
     expect(screen.getByRole('heading', { name: 'Ajuste o período e a apresentação' })).toBeVisible()
-    expect(screen.getByLabelText('Nome da edição')).toHaveValue(edition.name)
+    expect(screen.getByLabelText(/^Nome da edição/)).toHaveValue(edition.name)
+    // A required control announces it in its label, like the portal forms do.
+    expect(screen.getByLabelText(/^Nome da edição\s*\*\s*\(obrigatório\)/)).toHaveAttribute(
+      'aria-required',
+      'true'
+    )
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled()
   })
 

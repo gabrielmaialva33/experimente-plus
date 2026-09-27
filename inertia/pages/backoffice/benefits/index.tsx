@@ -340,6 +340,7 @@ export default function BenefitsBackofficePage({
                   className="mt-6 grid grid-cols-1 gap-4"
                 >
                   <EditorField
+                    required
                     htmlFor="edition-city"
                     label="Cidade"
                     hint="Praça atendida pela edição"
@@ -361,7 +362,7 @@ export default function BenefitsBackofficePage({
                     </select>
                   </EditorField>
 
-                  <EditorField htmlFor="edition-name" label="Nome da edição">
+                  <EditorField required htmlFor="edition-name" label="Nome da edição">
                     <Input
                       id="edition-name"
                       required
@@ -377,7 +378,7 @@ export default function BenefitsBackofficePage({
                   <EditorField
                     htmlFor="edition-description"
                     label="Apresentação"
-                    hint="Texto interno por enquanto; a vitrine pública virá no corte de acesso."
+                    hint="Uso interno: este texto ainda não aparece para o público."
                   >
                     <Textarea
                       id="edition-description"
@@ -407,7 +408,7 @@ export default function BenefitsBackofficePage({
                   </EditorField>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <EditorField htmlFor="edition-usage-start" label="Início de uso">
+                    <EditorField required htmlFor="edition-usage-start" label="Início de uso">
                       <Input
                         id="edition-usage-start"
                         type="date"
@@ -417,7 +418,7 @@ export default function BenefitsBackofficePage({
                         disabled={processing}
                       />
                     </EditorField>
-                    <EditorField htmlFor="edition-usage-end" label="Fim de uso">
+                    <EditorField required htmlFor="edition-usage-end" label="Fim de uso">
                       <Input
                         id="edition-usage-end"
                         type="date"
