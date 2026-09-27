@@ -353,7 +353,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
                   type="search"
                   placeholder="Buscar por nome ou e-mail"
                   aria-label="Buscar usuários"
-                  className="w-full ps-9 sm:w-64"
+                  className="w-full ps-9 sm:w-72"
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
                 />
