@@ -11,14 +11,14 @@ const appDistribution = {
   android: {
     /** A beta for testers: homologation data, simulated payments, not a store build. */
     channel: 'beta' as const,
-    version: '1.0.0 beta 2',
+    version: '1.0.0 beta 3',
     releasedAt: '2026-09-27',
     sizeMegabytes: 110,
     minimumAndroid: '7.0',
     downloadUrl:
       'https://github.com/gabrielmaialva33/experimente-plus-app/releases/latest/download/experimente-plus.apk',
     releaseUrl: 'https://github.com/gabrielmaialva33/experimente-plus-app/releases/latest',
-    sha256: '3438dd6f8f79e08e93846cc70ebea55fa4606d2337c0e7a63a36aadb47e7ce1f',
+    sha256: 'abe23ddc97bb87143ce3b1fffa6edd71f20e2aa36f450b04065c079e31c163b9',
   },
 }
 
