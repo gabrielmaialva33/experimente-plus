@@ -77,7 +77,6 @@ export default class PartnerReviewService {
       query.page ?? 1,
       PAGE_SIZE
     )
-    const meta = page.getMeta()
 
     return {
       places,
@@ -90,10 +89,13 @@ export default class PartnerReviewService {
       },
       average: summary?.average ?? null,
       reviews: page.all().map((review) => this.item(review)),
+      // The paginator's getters, not getMeta(): its keys follow the naming strategy
+      // (current_page…), so the camelCase reads were null and a place with more than
+      // one page of reviews showed no pagination.
       meta: {
-        current_page: Number(meta.currentPage),
-        last_page: Number(meta.lastPage),
-        total: Number(meta.total),
+        current_page: page.currentPage,
+        last_page: page.lastPage,
+        total: page.total,
       },
     }
   }

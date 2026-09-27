@@ -115,6 +115,8 @@ test.group('Partner portal — reviews', (group) => {
       [waiting.id]
     )
     assert.isNull(props.reviews[0].reply)
+    // The page draws its pagination from these; they must be numbers, not null.
+    assert.deepEqual(props.meta, { current_page: 1, last_page: 1, total: 1 })
 
     const answeredPage = parsePage<PartnerReviewsPageProps>(
       await client
