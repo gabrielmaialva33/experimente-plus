@@ -89,6 +89,8 @@ function formatDate(iso: string | null) {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    // The same day on the server render and in the browser (hydration).
+    timeZone: 'America/Sao_Paulo',
   })
 }
 
