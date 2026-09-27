@@ -120,14 +120,60 @@ describe('manual content', () => {
       'resgate-recusas',
     ])
     const refusals = chapter.sections.at(-1)!.blocks.find((block) => block.kind === 'table')
-    expect(refusals?.kind === 'table' && refusals.rows.map((row) => row[0])).toEqual([
-      'O QR expirou (mais de 5 minutos)',
-      'O QR já foi usado',
-      'O benefício acabou, ou está fora do dia ou do horário',
-      'A oferta ou a edição está pausada',
-      'O benefício é de outro negócio',
-      'Conta sem permissão para validar',
+    // Each refusal by the exact title the "Validar benefício" page shows.
+    expect(refusals?.kind === 'table' && refusals.rows.map((row) => row[1])).toEqual([
+      '**QR code expirado ou inválido**',
+      '**Benefício de outro estabelecimento**',
+      '**Sua conta não pode validar**',
+      '**Benefício já utilizado**',
+      '**Benefício pausado**',
+      '**Benefício bloqueado**',
+      '**Fora do período de uso**',
+      '**Este QR code já tinha sido confirmado**, com o comprovante original',
     ])
+  })
+
+  it('validates with the camera reader on the page, with typing as the alternative', () => {
+    const task = sections.find((section) => section.id === 'parceiro-validar')!
+    const text = [...task.blocks.flatMap(blockTexts), ...(task.troubleshooting ?? [])].join('\n')
+    for (const label of [
+      '**Ler QR code**',
+      '**Confirmar utilização**',
+      '**Utilização registrada**',
+      '**Ler próximo QR code**',
+      '**Digitar código**',
+      '**Câmera bloqueada**',
+      '**Ajustes do Site**',
+      '**Este QR não é um benefício do Experimente+.**',
+      '**Este QR code já tinha sido confirmado**',
+    ]) {
+      expect(text, label).toContain(label)
+    }
+    const all = texts.join('\n')
+    expect(all).not.toMatch(/está ganhando a leitura|Link da apresentação|Confirmar uso\b/)
+    expect(all).not.toMatch(/Benefício validado e comprovante emitido/)
+  })
+
+  it('tells who approves a new business and how the business learns the answer', () => {
+    const anchors = new Set(manualAnchors())
+    expect(anchors.has('administracao-organizacoes')).toBe(true)
+    const approval = sections.find((section) => section.id === 'administracao-organizacoes')!
+    expect(approval.title).toBe('Como aprovar um novo negócio')
+    const signUp = sections.find((section) => section.id === 'parceiro-cadastrar')!
+    expect(signUp.result).toContain('**A equipe pediu correções**')
+    expect(signUp.blocks.flatMap(blockTexts).join(' ')).toContain('](#administracao-organizacoes)')
+    expect(texts.join('\n')).not.toMatch(/aprovad[ao]s? (só )?pela API|pela API/)
+  })
+
+  it('says who confirms a simulated payment, where, and only in the test environment', () => {
+    const task = sections.find((section) => section.id === 'administracao-pagamento-simulado')!
+    expect(task.title).toBe('Como confirmar um pagamento simulado')
+    const text = [...(task.needs ?? []), ...task.blocks.flatMap(blockTexts)].join('\n')
+    expect(text).toContain('**Confirmar pagamento simulado**')
+    expect(text).toContain('**Pagamento simulado — ambiente de testes**')
+    expect(text).toMatch(/em produção, esta opção não existe/i)
+    const all = texts.join('\n')
+    expect(all).not.toMatch(/confirmar no servidor|não há botão para isso na área da equipe/)
   })
 
   it('explains how a business gives, changes and accepts access to its team', () => {
