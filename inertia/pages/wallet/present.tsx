@@ -61,7 +61,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
         </Button>
       }
     >
-      <Head title={`Usar ${benefit.offer_title}`}>
+      <Head title={`Usar benefício: ${benefit.offer_title}`}>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
