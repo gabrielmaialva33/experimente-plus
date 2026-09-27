@@ -113,4 +113,57 @@ describe('PartnerContentMediaManager', () => {
       })
     )
   })
+
+  it('keeps the upload form behind a button once the item has an image', async () => {
+    const { user } = render(
+      <PartnerContentMediaManager
+        tenantId={7}
+        kind="events"
+        contentId={22}
+        media={[approvedMedia]}
+        editable
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'Enviar imagem' })).not.toBeInTheDocument()
+    const add = screen.getByRole('button', { name: 'Adicionar imagem' })
+    expect(add).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(add)
+    expect(screen.getByRole('button', { name: 'Enviar imagem' })).toBeInTheDocument()
+    // The button that opened the form is gone, so focus moves into the form.
+    expect(screen.getByLabelText(/^Imagem/)).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('button', { name: 'Enviar imagem' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Adicionar imagem' })).toHaveFocus()
+  })
+
+  it('draws a moderation note as an error only for a refused or quarantined image', () => {
+    render(
+      <PartnerContentMediaManager
+        tenantId={7}
+        kind="events"
+        contentId={22}
+        media={[
+          { ...approvedMedia, reviewNotes: 'Ilustração do catálogo de demonstração' },
+          {
+            ...approvedMedia,
+            id: 42,
+            altText: 'Foto recusada',
+            moderationStatus: 'rejected',
+            reviewNotes: 'Imagem com dados pessoais',
+          },
+        ]}
+        editable={false}
+      />
+    )
+
+    expect(screen.getByText('Ilustração do catálogo de demonstração').closest('p')).toHaveClass(
+      'text-muted-foreground'
+    )
+    expect(screen.getByText('Imagem com dados pessoais').closest('p')).toHaveClass(
+      'text-destructive'
+    )
+  })
 })

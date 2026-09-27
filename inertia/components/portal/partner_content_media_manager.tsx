@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react'
 import { Check, ImagePlus, Loader2, Star, Trash2 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EditorField } from '~/components/portal/establishment_editor/editor_field'
@@ -40,7 +40,31 @@ export function PartnerContentMediaManager({
   const [uploading, setUploading] = useState(false)
   const [actionId, setActionId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /*
+   * The upload form opens by itself only while the item has no image. Once it has
+   * one, the form waits behind "Adicionar imagem": open on every card, it added
+   * some 330px to each item of the content list, and nine events meant scrolling
+   * past nine empty upload forms.
+   */
+  const [adding, setAdding] = useState(false)
+  const formOpen = media.length === 0 || adding
+  const formRef = useRef<HTMLFormElement>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  // Whichever control had focus is about to unmount; this says where focus goes next.
+  const moveFocus = useRef(false)
   const fieldPrefix = `content-${kind}-${contentId}`
+
+  useEffect(() => {
+    if (!moveFocus.current) return
+    moveFocus.current = false
+    if (formOpen) formRef.current?.querySelector<HTMLElement>('input, button')?.focus()
+    else addButtonRef.current?.focus()
+  }, [formOpen])
+
+  function closeForm() {
+    moveFocus.current = formRef.current?.contains(document.activeElement) ?? false
+    setAdding(false)
+  }
 
   function reloadContent(): Promise<void> {
     return new Promise((resolve) => {
@@ -93,8 +117,12 @@ export function PartnerContentMediaManager({
         throw new Error(await responseError(response, 'Não foi possível enviar a imagem.'))
       }
 
+      // Read before the reload: the new image closes the form, and the button that
+      // submitted it goes with it.
+      moveFocus.current = form.contains(document.activeElement)
       form.reset()
       await reloadContent()
+      setAdding(false)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao enviar a imagem.')
     } finally {
@@ -211,9 +239,19 @@ export function PartnerContentMediaManager({
                     {item.caption ? (
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.caption}</p>
                     ) : null}
+                    {/* A note on an approved image is context, not a fault: only a
+                        refusal or a quarantine is drawn as an error. */}
                     {item.reviewNotes ? (
-                      <p className="mt-2 rounded-md bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-                        {item.reviewNotes}
+                      <p
+                        className={cn(
+                          'mt-2 rounded-md px-2 py-1.5 text-xs leading-5',
+                          item.moderationStatus === 'rejected' ||
+                            item.moderationStatus === 'quarantined'
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        <span className="font-semibold">Nota da moderação:</span> {item.reviewNotes}
                       </p>
                     ) : null}
                   </div>
@@ -269,8 +307,30 @@ export function PartnerContentMediaManager({
         </div>
       ) : null}
 
-      {editable ? (
+      {editable && !formOpen ? (
+        <Button
+          type="button"
+          variant="outline"
+          shape="pill"
+          size="sm"
+          className="mt-4"
+          aria-expanded={false}
+          aria-controls={`${fieldPrefix}-upload`}
+          ref={addButtonRef}
+          onClick={() => {
+            moveFocus.current = true
+            setAdding(true)
+          }}
+        >
+          <ImagePlus aria-hidden="true" className="size-3.5" />
+          Adicionar imagem
+        </Button>
+      ) : null}
+
+      {editable && formOpen ? (
         <form
+          ref={formRef}
+          id={`${fieldPrefix}-upload`}
           onSubmit={(event) => void upload(event)}
           aria-busy={uploading}
           className="mt-4 grid gap-4 rounded-2xl border border-border-subtle bg-muted/20 p-4"
@@ -314,7 +374,21 @@ export function PartnerContentMediaManager({
             </p>
           ) : null}
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            {media.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                shape="pill"
+                disabled={uploading}
+                onClick={() => {
+                  closeForm()
+                  setError(null)
+                }}
+              >
+                Cancelar
+              </Button>
+            ) : null}
             <Button type="submit" variant="outline" shape="pill" disabled={uploading}>
               {uploading ? (
                 <Loader2 aria-hidden="true" className="size-4 animate-spin" />
