@@ -12,5 +12,6 @@ export function formatDocumentTitle(title: string, appName = DEFAULT_APP_NAME): 
     return normalizedTitle
   }
 
-  return normalizedTitle ? `${normalizedTitle} - ${normalizedAppName}` : normalizedAppName
+  // The em dash the home title and the rest of the copy use ("Londrina — PR"), not a hyphen.
+  return normalizedTitle ? `${normalizedTitle} — ${normalizedAppName}` : normalizedAppName
 }
