@@ -88,12 +88,22 @@ function NextButtons({ onScan, onType, scanLabel }: NextActions & { scanLabel: s
 }
 
 /** The benefit as the customer's ticket: the navy stub names it, the body says where and who. */
-export function PresentedBenefit({ preview }: { preview: RedemptionPreviewView }) {
+export function PresentedBenefit({
+  preview,
+  headingRef,
+}: {
+  preview: RedemptionPreviewView
+  headingRef?: Ref<HTMLHeadingElement>
+}) {
   return (
     <article className="overflow-hidden rounded-card border border-border-subtle bg-card sm:flex">
       <div className="bg-chrome p-5 text-chrome-foreground sm:w-60 sm:shrink-0 sm:p-6">
         <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-80">Benefício</p>
-        <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em]">
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          className="mt-2 scroll-mt-28 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em] outline-none"
+        >
           {preview.benefit.offer_title}
         </h2>
         <p className="mt-3 text-sm opacity-85">{preview.benefit.edition_name}</p>
@@ -164,7 +174,7 @@ export function ReceiptPanel({ receipt, replay, headingRef, onScan, onType }: Re
           id="validation-receipt-title"
           ref={headingRef}
           tabIndex={-1}
-          className="mt-3 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em] outline-none sm:text-3xl"
+          className="mt-3 scroll-mt-28 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em] outline-none sm:text-3xl"
         >
           {receipt.offer.title}
         </h2>
@@ -184,7 +194,7 @@ export function ReceiptPanel({ receipt, replay, headingRef, onScan, onType }: Re
             <dt className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
               Comprovante
             </dt>
-            <dd className="mt-1 break-all font-mono text-2xl font-black tracking-[0.06em]">
+            <dd className="mt-1 break-all font-mono text-lg font-black tracking-[0.04em] min-[400px]:text-xl sm:text-2xl sm:tracking-[0.06em]">
               {receipt.receipt_code}
             </dd>
           </div>
@@ -247,7 +257,7 @@ export function RefusalPanel({ refusal, headingRef, onScan, onType }: RefusalPan
             id="validation-refusal-title"
             ref={headingRef}
             tabIndex={-1}
-            className="flex items-center gap-2 font-display text-xl font-extrabold leading-tight outline-none sm:text-2xl"
+            className="flex scroll-mt-28 items-center gap-2 font-display text-xl font-extrabold leading-tight outline-none sm:text-2xl"
           >
             <Icon aria-hidden="true" className="size-6 shrink-0 text-warning-accent sm:hidden" />
             {refusal.title}
@@ -290,7 +300,7 @@ export function RequestProblemPanel({
         id="validation-problem-title"
         ref={headingRef}
         tabIndex={-1}
-        className="flex items-center gap-2 font-display text-xl font-extrabold outline-none"
+        className="flex scroll-mt-28 items-center gap-2 font-display text-xl font-extrabold outline-none"
       >
         <WifiOff aria-hidden="true" className="size-6 shrink-0 text-warning-accent" />
         {copy.title}

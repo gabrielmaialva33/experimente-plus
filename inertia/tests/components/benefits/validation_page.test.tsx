@@ -173,7 +173,8 @@ describe('Validar benefício', () => {
     expect(within(ticket).getByText('Ana Souza')).toBeVisible()
     expect(within(ticket).getByText('Café Central')).toBeVisible()
     expect(within(ticket).getByText('Validade do código')).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Apresentação válida' })).toHaveFocus()
+    // The answer starts at the benefit itself: what it is, where, and whose.
+    expect(within(ticket).getByRole('heading', { name: 'Sobremesa cortesia' })).toHaveFocus()
     expect(screen.getByRole('status')).toHaveTextContent(
       'Apresentação válida: Sobremesa cortesia para Ana Souza.'
     )

@@ -82,6 +82,18 @@ function announcementFor(stage: ValidationStage): string {
 }
 
 /**
+ * Moves the focus to a heading and brings its section to the top of the
+ * screen, under the sticky header: on a phone the answer replaces a tall
+ * viewfinder, and the partner should see it from its first line.
+ */
+function focusAndReveal(heading: HTMLElement | null) {
+  if (!heading) return
+  heading.focus({ preventScroll: true })
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  heading.scrollIntoView?.({ block: 'start', behavior: reduced ? 'auto' : 'smooth' })
+}
+
+/**
  * A link read by the phone's own camera app arrives with the token in the
  * address. Once the page has it in memory, the address and this history entry
  * lose it: a later reload, share or back navigation no longer carries it.
@@ -147,7 +159,7 @@ export default function PartnerValidationPage({
       stage.name === 'refused' ||
       stage.name === 'check_failed'
     ) {
-      outcomeHeadingRef.current?.focus()
+      focusAndReveal(outcomeHeadingRef.current)
     }
   }, [stage.name])
 
@@ -158,7 +170,7 @@ export default function PartnerValidationPage({
     if (!entryFocus.current || stage.name !== 'entry') return
     entryFocus.current = false
     if (mode === 'type') inputRef.current?.focus()
-    else entryHeadingRef.current?.focus()
+    else focusAndReveal(entryHeadingRef.current)
   }, [stage.name, mode])
 
   const openEntry = useCallback((next: EntryMode) => {
@@ -272,7 +284,7 @@ export default function PartnerValidationPage({
                     id="validation-entry-title"
                     ref={entryHeadingRef}
                     tabIndex={-1}
-                    className="font-display text-xl font-bold outline-none"
+                    className="scroll-mt-28 font-display text-xl font-bold outline-none"
                   >
                     Ler QR code
                   </h2>
@@ -375,7 +387,7 @@ export default function PartnerValidationPage({
                       id="validation-entry-title"
                       ref={entryHeadingRef}
                       tabIndex={-1}
-                      className="font-display text-xl font-bold leading-tight outline-none"
+                      className="scroll-mt-28 font-display text-xl font-bold leading-tight outline-none"
                     >
                       Ler o benefício do cliente
                     </h2>
@@ -411,14 +423,10 @@ export default function PartnerValidationPage({
             aria-label="Benefício apresentado"
             className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
           >
-            <PresentedBenefit preview={previewStage.preview} />
+            <PresentedBenefit preview={previewStage.preview} headingRef={outcomeHeadingRef} />
 
             <aside className="rounded-card border border-success/25 bg-success-soft p-5 sm:p-6 lg:sticky lg:top-24">
-              <h2
-                ref={outcomeHeadingRef}
-                tabIndex={-1}
-                className="flex items-center gap-2 font-display text-lg font-bold outline-none"
-              >
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold">
                 <CheckCircle2 aria-hidden="true" className="size-6 text-success" />
                 Apresentação válida
               </h2>
