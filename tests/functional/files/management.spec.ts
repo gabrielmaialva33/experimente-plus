@@ -13,7 +13,7 @@ import User from '#modules/users/models/user'
 test.group('File management', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
 
-  test('should list only the active workspace and allow owners to delete their own files', async ({
+  test('should list only the own files of the active workspace and allow deleting them', async ({
     client,
     assert,
     cleanup,
@@ -94,10 +94,39 @@ test.group('File management', (group) => {
       .header('x-tenant-id', String(workspace.id))
       .loginAs(owner)
 
+    // Every account may list files; a teammate's upload (its name, its link) is not theirs to see.
     list.assertStatus(200)
-    assert.equal(list.body().meta.total, 2)
+    assert.equal(list.body().meta.total, 1)
     assert.sameMembers(
       list.body().data.map((file: { id: number }) => file.id),
+      [ownFile.id]
+    )
+
+    const pageList = await client
+      .get('/files')
+      .header('x-tenant-id', String(workspace.id))
+      .loginAs(owner)
+    pageList.assertStatus(200)
+    assert.include(pageList.text(), 'own-file')
+    assert.notInclude(pageList.text(), 'teammate-file')
+
+    // The platform team reads the whole operation's files.
+    const adminRole = await Role.findByOrFail('slug', IRole.Slugs.ADMIN)
+    const operator = await User.create({
+      full_name: 'File Operator',
+      email: 'file-operator@example.com',
+      username: 'file-operator',
+      password: 'password123',
+    })
+    await operator.related('roles').attach([adminRole.id])
+    await operator.related('tenants').attach({ [workspace.id]: { role: 'member' } })
+    const staffList = await client
+      .get('/api/v1/files')
+      .header('x-tenant-id', String(workspace.id))
+      .loginAs(operator)
+    staffList.assertStatus(200)
+    assert.sameMembers(
+      staffList.body().data.map((file: { id: number }) => file.id),
       [ownFile.id, teammateFile.id]
     )
 

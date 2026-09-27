@@ -8,7 +8,8 @@ namespace IFile {
     paginateForTenant(
       tenantId: number,
       page: number,
-      perPage: number
+      perPage: number,
+      ownerId?: number
     ): Promise<PaginateResult<typeof File>>
     findByIdForTenant(fileId: number, tenantId: number): Promise<File | null>
   }

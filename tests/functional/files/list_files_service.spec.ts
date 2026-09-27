@@ -4,6 +4,8 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import File from '#modules/files/models/file'
 import FileRepository from '#modules/files/repositories/file_repository'
 import ListFilesService from '#modules/files/services/list_files_service'
+import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
+import app from '@adonisjs/core/services/app'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
 
@@ -37,8 +39,11 @@ test.group('List files service', (group) => {
       })
     }
 
-    const service = new ListFilesService(new FileRepository())
-    const result = await service.run({ tenantId: workspace.id, page: 2, perPage: 2 })
+    const service = new ListFilesService(
+      new FileRepository(),
+      await app.container.make(OrganizationPolicyService)
+    )
+    const result = await service.run({ tenantId: workspace.id, viewer: owner, page: 2, perPage: 2 })
 
     assert.lengthOf(result.data, 2)
     assert.deepInclude(result.meta, {

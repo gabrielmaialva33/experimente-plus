@@ -6,10 +6,11 @@ import ListFilesService from '#modules/files/services/list_files_service'
 import UploadFileService from '#modules/files/services/upload_file_service'
 
 export default class FilesController {
-  async list({ request, response, tenant }: HttpContext) {
+  async list({ auth, request, response, tenant }: HttpContext) {
     const service = await app.container.make(ListFilesService)
     const files = await service.run({
       tenantId: tenant!.id,
+      viewer: auth.use('jwt').getUserOrFail(),
       page: Number(request.input('page', 1)),
       perPage: Number(request.input('per_page', 20)),
     })
