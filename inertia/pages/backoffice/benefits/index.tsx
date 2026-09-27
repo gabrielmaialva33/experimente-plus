@@ -280,10 +280,10 @@ export default function BenefitsBackofficePage({
           description="Organize cada edição por cidade, validade e preço. A publicação só é liberada quando existe ao menos uma oferta ativa."
           meta={
             <>
-              <Badge variant="secondary" appearance="light" shape="pill">
+              <Badge variant="secondary" appearance="light" shape="pill" size="lg">
                 {editions.length} {editions.length === 1 ? 'edição' : 'edições'}
               </Badge>
-              <Badge variant="success" appearance="light" shape="pill">
+              <Badge variant="success" appearance="light" shape="pill" size="lg">
                 {activeEditionCount} {activeEditionCount === 1 ? 'publicada' : 'publicadas'}
               </Badge>
             </>

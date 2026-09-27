@@ -199,10 +199,10 @@ export default function BenefitAccessesPage({
           description="Conceda uma edição a usuários já cadastrados na operação. A carteira é liberada imediatamente e seus benefícios são derivados das ofertas ativas."
           meta={
             <>
-              <Badge variant="success" appearance="light" shape="pill">
+              <Badge variant="success" appearance="light" shape="pill" size="lg">
                 {activeCount} {activeCount === 1 ? 'acesso ativo' : 'acessos ativos'}
               </Badge>
-              <Badge variant="secondary" appearance="light" shape="pill">
+              <Badge variant="secondary" appearance="light" shape="pill" size="lg">
                 {courtesyCount} {courtesyCount === 1 ? 'cortesia' : 'cortesias'}
               </Badge>
             </>

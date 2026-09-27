@@ -73,9 +73,10 @@ export default function PilotFeedbackBackofficePage({ feedback, filters }: Feedb
           title="Feedback do piloto"
           description="Transforme relatos dos primeiros passos, do editor, do catálogo e da moderação em decisões de produto rastreáveis. Esta fila é separada da moderação de conteúdo."
           meta={
-            <Badge variant="info" appearance="light" shape="pill">
-              {total.toLocaleString('pt-BR')}{' '}
-              {total === 1 ? 'relato encontrado' : 'relatos encontrados'}
+            <Badge variant="secondary" appearance="light" shape="pill" size="lg">
+              {total === 0
+                ? 'Nenhum relato encontrado'
+                : `${total.toLocaleString('pt-BR')} ${total === 1 ? 'relato encontrado' : 'relatos encontrados'}`}
             </Badge>
           }
         />

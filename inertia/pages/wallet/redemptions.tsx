@@ -26,7 +26,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
       title="Utilizações"
       description="Histórico de benefícios utilizados e seus comprovantes permanentes."
       meta={
-        <Badge variant="secondary" appearance="outline" shape="pill">
+        <Badge variant="secondary" appearance="outline" shape="pill" size="lg">
           {history.total} {history.total === 1 ? 'utilização' : 'utilizações'}
         </Badge>
       }
