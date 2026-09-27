@@ -3,6 +3,8 @@ import app from '@adonisjs/core/services/app'
 import testUtils from '@adonisjs/core/services/test_utils'
 
 import File from '#modules/files/models/file'
+import IRole from '#modules/roles/interfaces/role_interface'
+import Role from '#modules/roles/models/role'
 import Tenant from '#modules/tenants/models/tenant'
 import User from '#modules/users/models/user'
 import GetDashboardStatsService from '#modules/web/services/get_dashboard_stats_service'
@@ -44,6 +46,8 @@ test.group('Dashboard workspace scoping', (group) => {
       [inactive.id]: { role: 'member' },
     })
     await alphaMember.related('tenants').attach({ [alpha.id]: { role: 'member' } })
+    const userRole = await Role.findByOrFail('slug', IRole.Slugs.USER)
+    await alphaMember.related('roles').attach([userRole.id])
     await betaMember.related('tenants').attach({ [beta.id]: { role: 'member' } })
 
     await File.createMany([
@@ -97,6 +101,11 @@ test.group('Dashboard workspace scoping', (group) => {
     assert.notInclude(
       stats.recentUsers.map((user) => user.email),
       'beta-member@example.com'
+    )
+    // Slugs, so the page can say "Explorador" instead of the stored name "User".
+    assert.deepEqual(
+      stats.recentUsers.find((user) => user.email === 'alpha-member@example.com')?.roles,
+      [IRole.Slugs.USER]
     )
   })
 

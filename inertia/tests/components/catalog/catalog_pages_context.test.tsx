@@ -11,6 +11,7 @@ import { render } from '~/tests/test_utils'
 const catalogPaginationSpy = vi.hoisted(() => vi.fn())
 
 vi.mock('~/components/catalog/catalog_pagination', () => ({
+  CATALOG_RESULTS_ANCHOR: 'resultados',
   CatalogPagination: (props: unknown) => {
     catalogPaginationSpy(props)
     return null

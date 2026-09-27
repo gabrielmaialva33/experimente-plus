@@ -73,3 +73,14 @@ export const partnerContentMediaStatusMeta: Record<
     className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
 }
+
+/**
+ * How a moderator's note on an image is drawn. A note on an approved or pending
+ * image is context ("Ilustração original do catálogo"), not a fault: only a
+ * refusal or a quarantine takes the error colour.
+ */
+export function partnerContentMediaNoteClassName(status: PartnerContentMediaStatus): string {
+  return status === 'rejected' || status === 'quarantined'
+    ? 'bg-destructive/10 text-destructive'
+    : 'bg-muted text-muted-foreground'
+}

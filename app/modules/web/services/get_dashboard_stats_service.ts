@@ -108,7 +108,9 @@ export default class GetDashboardStatsService {
       full_name: user.full_name,
       email: user.email,
       created_at: user.created_at ? user.created_at.toISO() : null,
-      roles: user.roles.map((role) => role.name),
+      // Slugs, which the page turns into pt-BR labels ("Explorador"); the stored
+      // names are English ("User") and reached the dashboard as they were.
+      roles: user.roles.map((role) => role.slug),
     }))
   }
 }

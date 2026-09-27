@@ -111,4 +111,32 @@ describe('PartnerContentMediaModeration', () => {
       reason: 'A imagem contém texto promocional ilegível.',
     })
   })
+
+  it('keeps a note on an approved image neutral and a refusal reason in red', () => {
+    render(
+      <PartnerContentMediaModeration
+        tenantId={7}
+        kind="events"
+        contentId={22}
+        media={[
+          { ...pendingMedia, moderationStatus: 'approved', reviewNotes: 'Ilustração do catálogo' },
+          {
+            ...pendingMedia,
+            id: 78,
+            moderationStatus: 'rejected',
+            reviewNotes: 'Mostra o rosto de um cliente',
+          },
+        ]}
+        canApprove
+        canReject
+      />
+    )
+
+    expect(screen.getByText('Ilustração do catálogo').closest('p')).toHaveClass(
+      'text-muted-foreground'
+    )
+    expect(screen.getByText('Mostra o rosto de um cliente').closest('p')).toHaveClass(
+      'text-destructive'
+    )
+  })
 })

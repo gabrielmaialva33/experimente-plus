@@ -274,7 +274,8 @@ export default function PortalOrganizationPage({
       <div>
         <h2
           id="organization-establishments-title"
-          className="font-display text-xl font-bold tracking-[-0.02em]"
+          // The overview's "Ver os N lugares" lands here, clear of the sticky header.
+          className="scroll-mt-24 font-display text-xl font-bold tracking-[-0.02em]"
         >
           Lugares
         </h2>

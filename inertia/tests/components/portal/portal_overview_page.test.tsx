@@ -300,4 +300,36 @@ describe('Partner Portal overview resource actions', () => {
       container.querySelector('a[href="/portal/organizations/4/establishments/new"]')
     ).toBeNull()
   })
+
+  it('points to every place when the card shows only the first three', () => {
+    const overview = overviewFor(baseActions, 'owner')
+    const place = (id: number) => ({
+      id,
+      public_name: `Lugar ${id}`,
+      published_revision_id: id,
+      lifecycle_status: 'published',
+      business_status: 'open',
+      completeness: null,
+    })
+    render(
+      <PartnerPortalIndex
+        overview={{
+          ...overview,
+          organizations: [
+            { ...overview.organizations[0], establishments: [1, 2, 3, 4, 5].map(place) },
+          ],
+        }}
+        tasks={noTasks}
+        allowed_actions={baseActions}
+        feedback_targets={{ organizations: [], establishments: [] }}
+      />
+    )
+
+    expect(screen.getByRole('link', { name: /Lugar 3/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Lugar 4/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver os 5 lugares' })).toHaveAttribute(
+      'href',
+      '/portal/organizations/4#organization-establishments-title'
+    )
+  })
 })

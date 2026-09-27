@@ -10,6 +10,15 @@ interface CatalogPaginationProps {
   meta: CatalogSearchMeta
 }
 
+/**
+ * Where a page change lands: the top of the results, not where the pagination
+ * was. Keeping the scroll position left the visitor at the foot of the new page
+ * (the list above is replaced, and on page 2 the city agenda is gone), looking at
+ * its last card. The fragment makes Inertia — or a plain load — scroll the
+ * results block into view below the sticky header.
+ */
+export const CATALOG_RESULTS_ANCHOR = 'resultados'
+
 function visiblePages(current: number, last: number): number[] {
   const start = Math.max(1, Math.min(current - 2, last - 4))
   const end = Math.min(last, start + 4)
@@ -29,6 +38,8 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
   const lastPage = positiveInteger(meta.lastPage, 1)
   const currentPage = Math.min(positiveInteger(meta.page, 1), lastPage)
   const perPage = positiveInteger(meta.perPage, 20)
+  const hrefFor = (page: number) =>
+    `${pageHref(path, query, page, perPage)}#${CATALOG_RESULTS_ANCHOR}`
 
   if (lastPage <= 1) return null
 
@@ -43,8 +54,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
     >
       {previousAvailable ? (
         <Link
-          href={pageHref(path, query, currentPage - 1, perPage)}
-          preserveScroll
+          href={hrefFor(currentPage - 1)}
           aria-label="Página anterior"
           className={cn(directionClassName, 'hover:border-primary hover:text-primary')}
         >
@@ -83,8 +93,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
           ) : (
             <Link
               key={page}
-              href={pageHref(path, query, page, perPage)}
-              preserveScroll
+              href={hrefFor(page)}
               aria-label={`Ir para a página ${page}`}
               className={cn(pageClassName, 'bg-card hover:border-primary hover:text-primary')}
             >
@@ -102,8 +111,7 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
 
       {nextAvailable ? (
         <Link
-          href={pageHref(path, query, currentPage + 1, perPage)}
-          preserveScroll
+          href={hrefFor(currentPage + 1)}
           aria-label="Próxima página"
           className={cn(directionClassName, 'hover:border-primary hover:text-primary')}
         >

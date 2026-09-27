@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { CatalogPagination } from '~/components/catalog/catalog_pagination'
+import { CATALOG_RESULTS_ANCHOR, CatalogPagination } from '~/components/catalog/catalog_pagination'
 import type { CatalogSearchMeta, CatalogSearchQuery } from '~/lib/catalog'
 import { render } from '~/tests/test_utils'
 
@@ -59,6 +59,8 @@ describe('CatalogPagination', () => {
     expect(url.searchParams.get('sort')).toBe('recent')
     expect(url.searchParams.get('per_page')).toBe('24')
     expect(url.searchParams.get('page')).toBe('2')
+    // A new page opens on its results, not at the foot of the page where the link was.
+    expect(url.hash).toBe(`#${CATALOG_RESULTS_ANCHOR}`)
   })
 
   it('renders the last page and the unavailable next direction as non-interactive text', () => {

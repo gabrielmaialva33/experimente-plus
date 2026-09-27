@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { CityAgendaSection, cityAgenda } from '~/components/catalog/city_agenda'
 import { render } from '~/tests/test_utils'
@@ -64,7 +64,7 @@ function agenda(overrides: Record<string, unknown> = {}) {
 }
 
 describe('city agenda', () => {
-  it('renders the three bands with links keyed by slug, never by identifier', () => {
+  it('renders the three bands with links keyed by slug, opened on the item they name', () => {
     render(
       <CityAgendaSection
         agenda={agenda({
@@ -82,13 +82,19 @@ describe('city agenda', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Em breve' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Novidades' })).toBeInTheDocument()
 
+    // The place is addressed by slug; the fragment names the item on that page, so
+    // the visit lands on the event or experience instead of at the top of the place.
     expect(screen.getByRole('link', { name: 'Sarau no quintal' })).toHaveAttribute(
       'href',
-      '/cidades/londrina/estabelecimentos/bar-estacao-43'
+      '/cidades/londrina/estabelecimentos/bar-estacao-43#evento-1'
+    )
+    expect(screen.getByRole('link', { name: 'Feira de vinis' })).toHaveAttribute(
+      'href',
+      '/cidades/londrina/estabelecimentos/bar-estacao-43#evento-2'
     )
     expect(screen.getByRole('link', { name: 'Degustação de cafés especiais' })).toHaveAttribute(
       'href',
-      '/cidades/londrina/estabelecimentos/cafe-do-centro'
+      '/cidades/londrina/estabelecimentos/cafe-do-centro#experiencia-51'
     )
   })
 
@@ -189,6 +195,58 @@ describe('city agenda', () => {
       .map((id) => document.getElementById(id)?.textContent)
 
     expect(rendered).toEqual(['Terceiro', 'Primeiro', 'Segundo'])
+  })
+
+  describe('a band holding more than one row', () => {
+    const upcoming = Array.from({ length: 8 }, (_, index) =>
+      eventItem({ id: index + 1, title: `Evento ${index + 1}` })
+    )
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+      // jsdom has no scrollBy; the test that needs one installs it.
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollBy')
+    })
+
+    function overflow(scrollWidth: number, clientWidth: number) {
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(scrollWidth)
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(clientWidth)
+    }
+
+    it('keeps every card in one scrolling row instead of stacking them', () => {
+      render(<CityAgendaSection agenda={agenda({ upcoming })} />)
+
+      const list = screen.getByRole('list')
+      expect(within(list).getAllByRole('listitem')).toHaveLength(8)
+      expect(list).toHaveClass('flex', 'overflow-x-auto', 'snap-x')
+      expect(list).not.toHaveClass('grid')
+    })
+
+    it('offers arrows only when the row overflows, and pages by its width', () => {
+      overflow(2400, 800)
+      const scrollBy = vi.fn()
+      Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+        configurable: true,
+        value: scrollBy,
+      })
+      render(<CityAgendaSection agenda={agenda({ upcoming })} />)
+
+      const previous = screen.getByRole('button', { name: 'Em breve: anteriores' })
+      const next = screen.getByRole('button', { name: 'Em breve: próximos' })
+      expect(previous).toBeDisabled()
+      expect(next).toBeEnabled()
+      expect(next).toHaveAttribute('aria-controls', 'city-agenda-upcoming-list')
+
+      fireEvent.click(next)
+      expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: 800 }))
+    })
+
+    it('draws no arrows when everything fits', () => {
+      overflow(800, 800)
+      render(<CityAgendaSection agenda={agenda({ upcoming: upcoming.slice(0, 2) })} />)
+
+      expect(screen.queryByRole('button', { name: /Em breve/ })).not.toBeInTheDocument()
+    })
   })
 
   it('shows an empty state when the city has nothing scheduled', () => {

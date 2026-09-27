@@ -171,6 +171,17 @@ export function EstablishmentReviews({
           })}
         </ul>
       )}
+
+      {/* The page carries only the latest few; without this, "4 avaliações" over three
+          cards reads as one gone missing. */}
+      {latest.length > 0 && summary.count > latest.length ? (
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          {latest.length === 1
+            ? `A avaliação mais recente de ${countLabel}.`
+            : `As ${latest.length} avaliações mais recentes de ${countLabel}.`}{' '}
+          Todas estão no app Experimente+.
+        </p>
+      ) : null}
     </section>
   )
 }
