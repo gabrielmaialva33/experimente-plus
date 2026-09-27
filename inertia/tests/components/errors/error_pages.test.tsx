@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import NoOperation from '~/pages/errors/no_operation'
 import NotFound from '~/pages/errors/not_found'
 import ServerError, { type PublicServerError } from '~/pages/errors/server_error'
 import { render } from '~/tests/test_utils'
@@ -52,6 +53,24 @@ describe('error pages', () => {
     )
     expect(document.body).not.toHaveTextContent('Page not found')
     expect(document.body).not.toHaveTextContent('This page does not exist')
+  })
+
+  it('tells an account with no operation what happened, in Portuguese, and where to go', () => {
+    render(<NoOperation />)
+
+    expect(shell.props).toHaveBeenCalledWith({
+      title: 'Área indisponível para sua conta',
+      description: expect.stringContaining('Explorar os lugares continua livre'),
+    })
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Área indisponível para sua conta' })
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Voltar ao início' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Explorar cidades' })).toHaveAttribute(
+      'href',
+      '/cidades'
+    )
+    expect(document.body).not.toHaveTextContent('tenant')
   })
 
   it('renders only the safe server-error projection and recovery actions', () => {

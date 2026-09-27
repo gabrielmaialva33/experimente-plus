@@ -155,6 +155,7 @@ declare module '@adonisjs/inertia/types' {
 
     // Error pages
     'errors/not_found': Record<string, never>
+    'errors/no_operation': Record<string, never>
     'errors/server_error': {
       error: PublicServerError
     }
