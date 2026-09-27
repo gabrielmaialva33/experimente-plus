@@ -282,4 +282,27 @@ describe('foundation primitives', () => {
     expect(emptyHeading.previousElementSibling).toHaveClass('rounded-full', 'bg-content-absent')
     expect(screen.getByRole('button', { name: 'Criar oferta' })).toBeEnabled()
   })
+
+  it('lets wide header actions take their own row instead of squeezing the title', () => {
+    render(
+      <PageHeader
+        title="Boa noite, Grupo Experimente Norte"
+        actions={
+          <>
+            <Button>Utilizações</Button>
+            <Button>Nova organização</Button>
+            <Button>Validar benefício</Button>
+          </>
+        }
+      />
+    )
+
+    const heading = screen.getByRole('heading', { level: 1 })
+    const header = heading.closest('[data-slot="page-header"]')!
+    // A wrapping row with a 24rem floor for the title: at 1024 px with the sidebar the
+    // three actions used to leave the title one word per line.
+    expect(header).toHaveClass('flex-wrap')
+    expect(header.firstElementChild).toHaveClass('flex-[1_1_24rem]', 'min-w-0')
+    expect(header.querySelector('[data-slot="page-header-actions"]')).not.toHaveClass('shrink-0')
+  })
 })
