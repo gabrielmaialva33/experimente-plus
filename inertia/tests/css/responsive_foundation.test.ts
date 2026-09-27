@@ -50,6 +50,19 @@ describe('responsive foundation', () => {
     }
   })
 
+  it('breaks a long partner word inside its card, lowering the card min-content width', () => {
+    const textBlocks = blockAfter(
+      appCss,
+      '  :where(h1, h2, h3, h4, p, dd, dt, figcaption, blockquote) {'
+    )
+    // `break-word` wraps the line but still sizes a grid or flex card to the whole word.
+    expect(textBlocks).toContain('overflow-wrap: anywhere;')
+
+    // Items and cells hold pills and links: inherited, `anywhere` squeezed them letter by
+    // letter in a tight row, so they keep `break-word`.
+    expect(blockAfter(appCss, '  :where(li, td, th) {')).toContain('overflow-wrap: break-word;')
+  })
+
   it("contains a native select's label, so a long option cannot widen a WebKit page", () => {
     expect(blockAfter(appCss, '  select {')).toContain('contain: paint;')
   })

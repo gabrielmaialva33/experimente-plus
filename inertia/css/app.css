@@ -303,8 +303,16 @@
   }
 
   /* Names come from partners and editors: a long unbroken word (an e-mail, a URL, a
-     compound name) wraps inside its card instead of pushing the page sideways. */
-  :where(h1, h2, h3, h4, p, dd, li) {
+     compound name) wraps inside its card instead of pushing the page sideways. Text blocks
+     take `anywhere`, the only value that lowers the min-content width, so a grid or flex
+     card holding the word keeps its column (a city card reached 612 px on a 320 px phone).
+     List items and cells hold controls too, so they keep `break-word`: inherited, `anywhere`
+     let a flex row squeeze an "Ativo" pill or a "Revisar" link into one letter per line. */
+  :where(h1, h2, h3, h4, p, dd, dt, figcaption, blockquote) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(li, td, th) {
     overflow-wrap: break-word;
   }
 
