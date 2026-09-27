@@ -86,7 +86,8 @@ function describe(item: InboxItem) {
       const target = reportTargetLabels[item.target_type]
       return {
         type: 'Denúncia',
-        tone: 'cta' as const,
+        // Attention with a deadline, not conversion: orange (cta) is for buying.
+        tone: 'warning' as const,
         title: item.title ?? [target, item.establishment_name].filter(Boolean).join(' · '),
         detail: reportReasonLabels[item.reason],
         origin:
