@@ -78,6 +78,14 @@ namespace IBenefitRedemption {
     redeemed_by: number
   }
 
+  /**
+   * What the partner page learns from reading a presentation: either it can
+   * be confirmed, or it was already confirmed and this is its original receipt.
+   */
+  export type InspectionProjection =
+    | { status: 'valid'; preview: PreviewProjection }
+    | { status: 'redeemed'; receipt: ReceiptProjection }
+
   export interface HistoryProjection {
     redemptions: ReceiptProjection[]
     total: number

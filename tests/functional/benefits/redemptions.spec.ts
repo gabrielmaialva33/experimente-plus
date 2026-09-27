@@ -18,10 +18,14 @@ import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
 import type BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import { BENEFIT_REDEMPTION_REFUSALS } from '#modules/benefits/utils/benefit_redemption_refusal'
 import IRole from '#modules/roles/interfaces/role_interface'
-import { UNAVAILABLE_BENEFIT_PRESENTATION_MESSAGE } from '#modules/benefits/utils/benefit_validation_refusal'
 import { createEstablishmentScenario } from '#tests/functional/establishments/helpers'
-import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
+import {
+  addOrganizationMember,
+  createOrganization,
+  createUser,
+} from '#tests/functional/organizations/helpers'
 
 let sequence = 0
 
@@ -253,6 +257,15 @@ async function cleanupCommittedFixture(fixture: Awaited<ReturnType<typeof create
   await db.from('establishments').where('tenant_id', tenantId).delete()
   await db.from('tenants').where('id', tenantId).delete()
   await db.from('users').whereIn('id', userIds).delete()
+}
+
+async function countRedemptions(tenantId: number): Promise<number> {
+  const result = await db
+    .from('benefit_redemptions')
+    .where('tenant_id', tenantId)
+    .count('* as total')
+
+  return Number(result[0].total)
 }
 
 async function countRedemptionAudits(actorId: number): Promise<number> {
@@ -768,17 +781,24 @@ test.group('Benefit redemptions', (group) => {
     const spare = await present()
     await service.redeem(tenantId, used.token, fixture.scenario.owner)
 
-    // The used link opened again, and a second code for a benefit with one use.
-    for (const token of [used.token, spare.token]) {
-      const page = await client
-        .get(`/portal/redemptions/validate?token=${encodeURIComponent(token)}`)
-        .header('x-tenant-id', String(tenantId))
-        .loginAs(fixture.scenario.owner)
-      page.assertStatus(200)
-      assert.include(page.text(), 'portal/redemptions/validate')
-      assert.include(page.text(), UNAVAILABLE_BENEFIT_PRESENTATION_MESSAGE)
-      assert.notInclude(page.text(), 'redemption limit has been reached')
-    }
+    // The used link opened again answers with its receipt, not a refusal; a second code for
+    // a benefit with one use is refused by name, in Portuguese, on the same page.
+    const reopened = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(used.token)}`)
+      .header('x-tenant-id', String(tenantId))
+      .loginAs(fixture.scenario.owner)
+    reopened.assertStatus(200)
+    assert.include(reopened.text(), 'portal/redemptions/validate')
+    assert.notInclude(reopened.text(), 'redemption limit has been reached')
+
+    const page = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(spare.token)}`)
+      .header('x-tenant-id', String(tenantId))
+      .loginAs(fixture.scenario.owner)
+    page.assertStatus(200)
+    assert.include(page.text(), 'portal/redemptions/validate')
+    assert.include(page.text(), BENEFIT_REDEMPTION_REFUSALS.already_used.message)
+    assert.notInclude(page.text(), 'redemption limit has been reached')
 
     const confirmation = await client
       .post('/portal/redemptions')
@@ -788,7 +808,7 @@ test.group('Benefit redemptions', (group) => {
       .json({ token: spare.token })
     confirmation.assertStatus(200)
     assert.include(confirmation.text(), 'portal/redemptions/validate')
-    assert.include(confirmation.text(), UNAVAILABLE_BENEFIT_PRESENTATION_MESSAGE)
+    assert.include(confirmation.text(), BENEFIT_REDEMPTION_REFUSALS.already_used.message)
 
     const redemptions = await BenefitRedemption.query()
       .where('tenant_id', tenantId)
@@ -929,5 +949,250 @@ test.group('Benefit redemption concurrency', () => {
       1
     )
     assert.equal(await countRedemptionAudits(fixture.scenario.owner.id), 1)
+  })
+})
+
+test.group('Benefit validation page reader', (group) => {
+  group.each.setup(() => testUtils.db().withGlobalTransaction())
+
+  async function present(fixture: Awaited<ReturnType<typeof createFixture>>) {
+    const service = await app.container.make(BenefitRedemptionService)
+    return service.present(
+      fixture.scenario.tenant.id,
+      fixture.access.id,
+      fixture.offer.id,
+      fixture.consumer,
+      'http://localhost:3333'
+    )
+  }
+
+  test('previews in the body, confirms explicitly and answers a repeat with the original receipt', async ({
+    assert,
+    client,
+  }) => {
+    const fixture = await createFixture('reader-flow')
+    const presentation = await present(fixture)
+    const tenantId = String(fixture.scenario.tenant.id)
+
+    const preview = await client
+      .post('/portal/redemptions/preview')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantId)
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    preview.assertStatus(200)
+    assert.equal(preview.body().outcome, 'preview')
+    assert.equal(preview.body().preview.holder.id, fixture.consumer.id)
+    assert.equal(preview.body().preview.benefit.offer_id, fixture.offer.id)
+    // The token went in the body; the answer never carries it back.
+    assert.notInclude(preview.text(), presentation.token)
+    assert.equal(preview.header('cache-control'), 'private, no-store')
+    assert.equal(await countRedemptions(fixture.scenario.tenant.id), 0)
+
+    const confirmation = await client
+      .post('/portal/redemptions/confirm')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantId)
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    confirmation.assertStatus(200)
+    assert.equal(confirmation.body().outcome, 'confirmed')
+    const receiptCode = confirmation.body().receipt.receipt_code
+    assert.match(receiptCode, /^EXP-[0-9A-F]{16}$/)
+    assert.notInclude(confirmation.text(), presentation.token)
+
+    const repeatedConfirmation = await client
+      .post('/portal/redemptions/confirm')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantId)
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    repeatedConfirmation.assertStatus(200)
+    assert.equal(repeatedConfirmation.body().receipt.receipt_code, receiptCode)
+
+    const repeatedRead = await client
+      .post('/portal/redemptions/preview')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantId)
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    repeatedRead.assertStatus(200)
+    assert.equal(repeatedRead.body().outcome, 'redeemed')
+    assert.equal(repeatedRead.body().receipt.receipt_code, receiptCode)
+
+    const repeatedLink = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(presentation.token)}`)
+      .header('x-tenant-id', tenantId)
+      .loginAs(fixture.scenario.owner)
+    repeatedLink.assertStatus(200)
+    assert.include(repeatedLink.text(), receiptCode)
+
+    assert.equal(await countRedemptions(fixture.scenario.tenant.id), 1)
+  })
+
+  test('explains in Portuguese that another business cannot validate the benefit', async ({
+    assert,
+    client,
+  }) => {
+    const fixture = await createFixture('reader-foreign')
+    const presentation = await present(fixture)
+    const tenantId = String(fixture.scenario.tenant.id)
+    const otherOrganizationOwner = await createUser({
+      prefix: 'reader-other-organization',
+      tenant: fixture.scenario.tenant,
+    })
+    await createOrganization({
+      tenant: fixture.scenario.tenant,
+      owner: otherOrganizationOwner,
+      status: 'active',
+      prefix: 'reader-other',
+    })
+    const foreign = BENEFIT_REDEMPTION_REFUSALS.foreign
+
+    for (const path of ['/portal/redemptions/preview', '/portal/redemptions/confirm']) {
+      const response = await client
+        .post(path)
+        .withCsrfToken()
+        .header('x-tenant-id', tenantId)
+        .loginAs(otherOrganizationOwner)
+        .json({ token: presentation.token })
+      response.assertStatus(404)
+      response.assertBody({
+        outcome: 'refused',
+        refusal: { reason: 'foreign', title: foreign.title, message: foreign.message },
+      })
+    }
+
+    // The link a phone camera opens used to end on a generic 404 page.
+    const link = await client
+      .get(`/portal/redemptions/validate?token=${encodeURIComponent(presentation.token)}`)
+      .header('x-tenant-id', tenantId)
+      .loginAs(otherOrganizationOwner)
+    link.assertStatus(200)
+    assert.include(link.text(), 'portal/redemptions/validate')
+    assert.include(link.text(), foreign.title)
+    assert.notInclude(link.text(), fixture.consumer.email)
+
+    const analyst = await createUser({ prefix: 'reader-analyst', tenant: fixture.scenario.tenant })
+    await addOrganizationMember({
+      tenant: fixture.scenario.tenant,
+      organization: fixture.scenario.organization,
+      user: analyst,
+      role: 'analyst',
+    })
+    const analystAttempt = await client
+      .post('/portal/redemptions/preview')
+      .withCsrfToken()
+      .header('x-tenant-id', tenantId)
+      .loginAs(analyst)
+      .json({ token: presentation.token })
+    analystAttempt.assertStatus(403)
+    assert.equal(analystAttempt.body().refusal.reason, 'not_allowed')
+    assert.equal(analystAttempt.body().refusal.title, BENEFIT_REDEMPTION_REFUSALS.not_allowed.title)
+
+    assert.equal(await countRedemptions(fixture.scenario.tenant.id), 0)
+  })
+
+  test('names each domain refusal instead of a generic error', async ({ assert, client }) => {
+    const readAs = async (fixture: Awaited<ReturnType<typeof createFixture>>, token: string) =>
+      client
+        .post('/portal/redemptions/preview')
+        .withCsrfToken()
+        .header('x-tenant-id', String(fixture.scenario.tenant.id))
+        .loginAs(fixture.scenario.owner)
+        .json({ token })
+    const service = await app.container.make(BenefitRedemptionService)
+
+    // Used up by another presentation of the same access.
+    const used = await createFixture('reader-used')
+    const unusedCode = await present(used)
+    const winner = await present(used)
+    await service.redeem(used.scenario.tenant.id, winner.token, used.scenario.owner)
+    const usedResponse = await readAs(used, unusedCode.token)
+    usedResponse.assertStatus(400)
+    assert.deepEqual(usedResponse.body().refusal, {
+      reason: 'already_used',
+      ...BENEFIT_REDEMPTION_REFUSALS.already_used,
+    })
+
+    const paused = await createFixture('reader-paused')
+    const pausedCode = await present(paused)
+    paused.offer.status = 'paused'
+    await paused.offer.save()
+    const pausedResponse = await readAs(paused, pausedCode.token)
+    pausedResponse.assertStatus(400)
+    assert.equal(pausedResponse.body().refusal.reason, 'paused')
+    assert.equal(pausedResponse.body().refusal.title, 'Benefício pausado')
+
+    const blocked = await createFixture('reader-blocked')
+    const blockedCode = await present(blocked)
+    blocked.access.merge({
+      status: 'revoked',
+      revoked_by: blocked.admin.id,
+      revoked_at: DateTime.utc(),
+    })
+    await blocked.access.save()
+    const blockedResponse = await readAs(blocked, blockedCode.token)
+    blockedResponse.assertStatus(400)
+    assert.equal(blockedResponse.body().refusal.reason, 'blocked')
+    assert.equal(blockedResponse.body().refusal.title, 'Benefício bloqueado')
+
+    const closed = await createFixture('reader-not-yet')
+    const closedCode = await present(closed)
+    closed.offer.merge({
+      starts_at: DateTime.utc().plus({ days: 2 }),
+      ends_at: DateTime.utc().plus({ days: 10 }),
+    })
+    await closed.offer.save()
+    const closedResponse = await readAs(closed, closedCode.token)
+    closedResponse.assertStatus(400)
+    assert.equal(closedResponse.body().refusal.reason, 'outside_window')
+    assert.equal(closedResponse.body().refusal.title, 'Fora do período de uso')
+
+    const tampered = await readAs(paused, `${pausedCode.token.slice(0, -1)}A`)
+    tampered.assertStatus(400)
+    assert.deepEqual(tampered.body().refusal, {
+      reason: 'invalid',
+      title: BENEFIT_REDEMPTION_REFUSALS.invalid.title,
+      message: INVALID_BENEFIT_PRESENTATION_MESSAGE,
+    })
+
+    const malformed = await readAs(paused, 'not-a-token')
+    malformed.assertStatus(422)
+    assert.equal(malformed.body().refusal.reason, 'invalid')
+
+    // The mobile API keeps its contract: same status and English message.
+    const api = await client
+      .post('/api/v1/benefit-redemptions/preview')
+      .header('x-tenant-id', String(used.scenario.tenant.id))
+      .loginAs(used.scenario.owner)
+      .json({ token: unusedCode.token })
+    api.assertStatus(400)
+    api.assertBody({ status: 400, message: 'Benefit offer redemption limit has been reached' })
+  })
+
+  test('refuses the reader without the XSRF token or a JSON body', async ({ assert, client }) => {
+    const fixture = await createFixture('reader-csrf')
+    const presentation = await present(fixture)
+
+    const withoutCsrf = await client
+      .post('/portal/redemptions/confirm')
+      .header('x-tenant-id', String(fixture.scenario.tenant.id))
+      .loginAs(fixture.scenario.owner)
+      .json({ token: presentation.token })
+    // Shield refuses it before the controller; nothing is confirmed.
+    assert.notEqual(withoutCsrf.body()?.outcome, 'confirmed')
+    assert.notInclude(withoutCsrf.text(), 'receipt_code')
+
+    const formBody = await client
+      .post('/portal/redemptions/confirm')
+      .withCsrfToken()
+      .header('x-tenant-id', String(fixture.scenario.tenant.id))
+      .loginAs(fixture.scenario.owner)
+      .form({ token: presentation.token })
+    formBody.assertStatus(422)
+    assert.equal(formBody.body().refusal.reason, 'invalid')
+
+    assert.equal(await countRedemptions(fixture.scenario.tenant.id), 0)
   })
 })
