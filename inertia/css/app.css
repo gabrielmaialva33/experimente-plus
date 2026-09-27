@@ -244,6 +244,14 @@
     --action-secondary-foreground: var(--foreground);
     --action-secondary-border: var(--input);
   }
+
+  /* A short viewport (a phone on its side, a laptop zoomed to 200 %): the bottom navigation
+     turns compact (the `short` variant), so the reserve that keeps content clear shrinks too. */
+  @media (max-height: 30rem) {
+    :root {
+      --public-mobile-navigation-reserve: 3.75rem;
+    }
+  }
 }
 
 @layer base {
@@ -253,6 +261,16 @@
 
   html {
     scroll-behavior: smooth;
+    /* Tailwind's preflight removes the tap flash, and hover styles only answer a real
+       pointer: on a touch screen a faint brand tint is the feedback that a tap landed. */
+    -webkit-tap-highlight-color: color-mix(in oklab, var(--primary) 16%, transparent);
+  }
+
+  /* WebKit counts a native select's selected label at its full width in the page's
+     scrollable overflow, even when the control is narrower: one long place name let a
+     320 px iPhone pan sideways. Paint containment keeps the label inside the control. */
+  select {
+    contain: paint;
   }
 
   @media (max-width: 47.999rem) {
@@ -285,8 +303,16 @@
   }
 
   /* Names come from partners and editors: a long unbroken word (an e-mail, a URL, a
-     compound name) wraps inside its card instead of pushing the page sideways. */
-  :where(h1, h2, h3, h4, p, dd, li) {
+     compound name) wraps inside its card instead of pushing the page sideways. Text blocks
+     take `anywhere`, the only value that lowers the min-content width, so a grid or flex
+     card holding the word keeps its column (a city card reached 612 px on a 320 px phone).
+     List items and cells hold controls too, so they keep `break-word`: inherited, `anywhere`
+     let a flex row squeeze an "Ativo" pill or a "Revisar" link into one letter per line. */
+  :where(h1, h2, h3, h4, p, dd, dt, figcaption, blockquote) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(li, td, th) {
     overflow-wrap: break-word;
   }
 
@@ -345,6 +371,76 @@ html,
 body {
   min-height: 100%;
   width: 100%;
+}
+
+/*
+ * iOS Safari zooms the page into a focused field whose text is under 16px and leaves it
+ * zoomed after the keyboard closes. On phone widths and touch screens every text field
+ * reads at 16px or more, whatever density its component picked for a desktop. Unlayered,
+ * so it outranks the size utilities; an important utility (`text-2xl!`) still wins where a
+ * field needs a larger size.
+ */
+@media (max-width: 47.999rem), (pointer: coarse) {
+  input:not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='range'],
+    [type='color'],
+    [type='file'],
+    [type='hidden'],
+    [type='button'],
+    [type='submit'],
+    [type='reset'],
+    [type='image']
+  ),
+  select,
+  textarea {
+    font-size: max(1rem, 16px);
+  }
+}
+
+/*
+ * With the on-screen keyboard up, a fixed bottom bar floats over the page as it scrolls
+ * (iOS keeps it on the layout viewport, behind or above the keyboard) and eats the little
+ * height left for the field. The phone tab bars step aside while a text field has focus.
+ */
+@media (max-width: 47.999rem) {
+  html:has(
+      :is(
+        input:not(
+          [type='checkbox'],
+          [type='radio'],
+          [type='range'],
+          [type='color'],
+          [type='file'],
+          [type='button'],
+          [type='submit'],
+          [type='reset'],
+          [type='image']
+        ),
+        textarea,
+        [contenteditable='true']
+      ):focus
+    )
+    [data-mobile-tab-bar] {
+    display: none;
+  }
+}
+
+/* A small control inside a denser component (a field's reveal button, a checkbox) keeps its
+   drawn size but answers a touch anywhere in the 44 px square around it. */
+@utility touch-hitbox {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* One selection grammar across tabs, segments and filter chips. Shape follows purpose. */

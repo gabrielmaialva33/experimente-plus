@@ -72,6 +72,7 @@ import { formatCep, formatPhoneBR } from '~/lib/br_format'
 import { firstError } from '~/lib/form_errors'
 import { cn } from '~/lib/utils'
 import type { OrganizationAllowedActions } from '~/types'
+import { scrollBehavior } from '~/lib/motion'
 
 interface CompletenessIssue extends EditorIssue {}
 interface ReviewIssue extends EditorIssue {
@@ -580,10 +581,7 @@ export default function EstablishmentEditorPage({
 
   function navigateTo(section: EditorSectionId) {
     setActiveSection(section)
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    document
-      .getElementById(section)
-      ?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' })
+    document.getElementById(section)?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
   }
 
   /**

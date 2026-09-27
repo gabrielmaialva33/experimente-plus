@@ -227,7 +227,9 @@ export function Sidebar({ surface, isCollapsed = false, onToggle }: SidebarProps
           mode="icon"
           onClick={onToggle}
           aria-label={isCollapsed ? 'Expandir navegação' : 'Recolher navegação'}
-          className="absolute -end-3.5 top-1/2 size-7 -translate-y-1/2 rounded-md bg-background"
+          // A 28 px tab on the sidebar's edge, even on a touch screen; the ::after answers the
+          // 44 px around it.
+          className="absolute -end-3.5 top-1/2 size-7 -translate-y-1/2 rounded-md bg-background after:absolute after:-inset-2.5 after:content-[''] pointer-coarse:size-7"
         >
           {isCollapsed ? (
             <PanelLeftOpen className="size-3.5" />

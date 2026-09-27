@@ -21,7 +21,7 @@ export function PublicHeader() {
   const utilityItems = publicNavigationItemsFor('utility', availability)
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)] short:static">
       <div className="app-container flex min-h-16 items-center justify-between gap-4 py-2">
         {/* Signed in, the bar carries up to five destinations: between 768 and 1024 px the
             name was truncated to "Exp…", so there the mark stands alone (it keeps its label). */}
@@ -37,7 +37,7 @@ export function PublicHeader() {
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                  'inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold pointer-coarse:min-h-11 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   active
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'

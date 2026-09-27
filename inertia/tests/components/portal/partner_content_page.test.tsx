@@ -111,6 +111,27 @@ describe('PartnerContentPage', () => {
     confirm.mockRestore()
   })
 
+  it('fits the three kind tabs in a 320 px phone, dropping a count under its label', () => {
+    render(
+      <PartnerContentPage
+        tenant_id={7}
+        establishments={[establishment]}
+        content={{ experiences: [], events: [], showcase_items: [] }}
+      />
+    )
+
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab).toHaveClass('flex-auto', 'min-w-0', 'flex-wrap', 'sm:flex-nowrap')
+      expect(tab).not.toHaveClass('whitespace-nowrap')
+    }
+    expect(screen.getByRole('tab', { name: /Experiências/ })).toHaveAccessibleName('Experiências 0')
+    // Below 360 px the three summary tiles become rows instead of clipping their pills.
+    expect(screen.getByRole('region', { name: 'Resumo do conteúdo selecionado' })).toHaveClass(
+      'grid-cols-1',
+      'min-[22.5rem]:grid-cols-3'
+    )
+  })
+
   it('agrees the empty-state invitation with each kind', async () => {
     const { user } = render(
       <PartnerContentPage

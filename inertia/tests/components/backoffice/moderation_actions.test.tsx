@@ -77,6 +77,17 @@ describe('ModerationActions', () => {
     expect(alert).toHaveTextContent('A cidade da revisão foi desativada.')
   })
 
+  it('keeps the decision forms in one phone-wide column', () => {
+    renderActions()
+
+    // Without an explicit column, the grid grew to the widest option of the field select
+    // and pushed a 320 px page to 359 px.
+    expect(screen.getByRole('region', { name: 'Ações de moderação' })).toHaveClass(
+      'grid-cols-1',
+      'xl:grid-cols-3'
+    )
+  })
+
   it('renders no alert when there is no moderation error', () => {
     renderActions()
 

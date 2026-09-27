@@ -21,7 +21,10 @@ export default function LoginPage({ errors }: LoginPageProps) {
         footer={
           <>
             <span className="text-muted-foreground">Ainda não tem conta? </span>
-            <Link href="/register" className="font-medium text-primary hover:underline">
+            <Link
+              href="/register"
+              className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+            >
               Criar conta
             </Link>
           </>

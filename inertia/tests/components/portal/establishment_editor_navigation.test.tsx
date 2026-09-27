@@ -63,6 +63,20 @@ describe('EstablishmentEditorNavigation', () => {
     expect(onNavigate).toHaveBeenCalledWith('identity')
   })
 
+  it('sticks under the 72 px header, and to the top where a short screen drops the header', () => {
+    render(
+      <EstablishmentEditorNavigation
+        {...baseProps}
+        variant="mobile"
+        activeSection="identity"
+        onNavigate={vi.fn()}
+      />
+    )
+
+    const bar = screen.getByRole('navigation', { name: 'Etapas do editor' }).parentElement
+    expect(bar).toHaveClass('sticky', 'top-[72px]', 'short:top-0')
+  })
+
   it('blocks moderation submission while local sections are unsaved', () => {
     const { container } = render(
       <EstablishmentEditorNavigation

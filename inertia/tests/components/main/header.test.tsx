@@ -117,4 +117,22 @@ describe('Header mobile navigation', () => {
 
     expect(screen.getByRole('link', { name: 'Negócios' })).toHaveAttribute('href', '/portal')
   })
+
+  it('scrolls away on a short screen and grows its controls to 44 px on touch', () => {
+    authState.user = { id: 4, full_name: 'Parceira Local', email: 'parceira@example.test' }
+    authState.activeTenantId = 7
+    authState.activeTenant = { id: 7, name: 'Operação Norte', role: 'member' }
+    authState.tenants = [authState.activeTenant]
+
+    render(<Header surface="portal" />)
+
+    expect(screen.getByRole('banner')).toHaveClass('sticky', 'short:static')
+    expect(screen.getByRole('button', { name: 'Abrir navegação' })).toHaveClass(
+      'pointer-coarse:size-11'
+    )
+    expect(screen.getByRole('button', { name: 'Abrir menu do usuário' })).toHaveClass(
+      'pointer-coarse:h-11'
+    )
+    expect(screen.getByTitle('Operação Norte')).toHaveClass('pointer-coarse:h-11')
+  })
 })

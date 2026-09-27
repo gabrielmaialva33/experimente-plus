@@ -22,7 +22,10 @@ export default function RegisterPage({ errors }: RegisterPageProps) {
         footer={
           <>
             <span className="text-muted-foreground">Já tem uma conta? </span>
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link
+              href="/login"
+              className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+            >
               Entrar
             </Link>
           </>

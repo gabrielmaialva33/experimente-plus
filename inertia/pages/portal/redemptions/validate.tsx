@@ -203,7 +203,7 @@ export default function PartnerValidationPage({
               </div>
             </article>
 
-            <aside className="rounded-card border border-success/25 bg-success-soft p-5 sm:p-6 lg:sticky lg:top-6">
+            <aside className="rounded-card border border-success/25 bg-success-soft p-5 sm:p-6 lg:sticky lg:top-24">
               <p className="flex items-center gap-2 font-display text-lg font-bold">
                 <CheckCircle2 aria-hidden="true" className="size-6 text-success" />
                 Apresentação válida

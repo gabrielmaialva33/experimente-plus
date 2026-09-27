@@ -100,6 +100,23 @@ describe('new Portal forms', () => {
     expect(screen.getByLabelText(/Cidade/)).toBeDisabled()
   })
 
+  it('wraps a long organization name in the back link instead of widening the page', () => {
+    render(
+      <NewEstablishmentPage
+        organization={{ id: 4, trade_name: 'Grupo Experimente Norte Gastronomia e Eventos' }}
+        cities={[{ id: 2, name: 'Cornélio Procópio' }]}
+        categories={[{ id: 11, name: 'Cafés' }]}
+      />
+    )
+
+    expect(screen.getByRole('link', { name: /Voltar para Grupo Experimente Norte/ })).toHaveClass(
+      'whitespace-normal',
+      'h-auto',
+      'min-h-11',
+      'max-w-full'
+    )
+  })
+
   it('preserves backend limits and prevents duplicate establishment submissions', () => {
     render(
       <NewEstablishmentPage

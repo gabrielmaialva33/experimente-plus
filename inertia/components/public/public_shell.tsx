@@ -40,7 +40,7 @@ export function PublicShell({
       <SkipLink />
       <div
         data-public-shell
-        className="flex min-h-screen flex-col overflow-x-clip bg-background pb-[var(--public-mobile-navigation-space)] text-foreground md:pb-0"
+        className="flex min-h-dvh flex-col overflow-x-clip bg-background pb-[var(--public-mobile-navigation-space)] text-foreground md:pb-0"
       >
         <PublicHeader />
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className={cn('flex-1', mainClassName)}>

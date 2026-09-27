@@ -283,6 +283,16 @@ describe('foundation primitives', () => {
     expect(screen.getByRole('button', { name: 'Criar oferta' })).toBeEnabled()
   })
 
+  it('gives a phone the full width for the title, showing the icon badge from 640 px', () => {
+    const { container } = render(
+      <PageHeader icon={FileText} eyebrow="Pessoas e acesso" title="Usuários" />
+    )
+
+    const badge = container.querySelector('[data-slot="page-header"] span.rounded-full')
+    expect(badge).toHaveClass('hidden', 'sm:flex')
+    expect(badge?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('lets wide header actions take their own row instead of squeezing the title', () => {
     render(
       <PageHeader

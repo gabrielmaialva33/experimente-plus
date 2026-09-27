@@ -21,7 +21,7 @@ export function PasswordField({ leftIcon, ...props }: PasswordFieldProps) {
           aria-pressed={visible}
           title={actionLabel}
           onClick={() => setVisible((current) => !current)}
-          className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="touch-hitbox inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </button>

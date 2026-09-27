@@ -47,10 +47,11 @@ const buttonVariants = cva(
         // Direction A touch sizes: 52 for a screen's single primary action, 48 for form submits.
         '2xl': 'h-13 px-7 text-base font-bold',
         'xl': 'h-12 px-6 text-[0.9375rem] font-bold',
+        // On a touch screen the text sizes below 44 px grow to it; a mouse keeps the density.
         'lg': 'h-11 px-5',
-        'md': 'h-10 px-4',
-        'sm': 'h-9 px-3 text-xs',
-        'icon': 'size-10 p-0',
+        'md': 'h-10 px-4 pointer-coarse:h-11',
+        'sm': 'h-9 px-3 text-xs pointer-coarse:h-11',
+        'icon': 'size-10 p-0 pointer-coarse:size-11',
       },
       autoHeight: {
         true: '',
@@ -91,14 +92,24 @@ const buttonVariants = cva(
         className:
           'bg-transparent text-destructive-accent hover:bg-destructive-soft data-[state=open]:bg-destructive-soft',
       },
-      { size: 'sm', autoHeight: true, className: 'h-auto min-h-9' },
-      { size: 'md', autoHeight: true, className: 'h-auto min-h-10' },
+      {
+        size: 'sm',
+        autoHeight: true,
+        className: 'h-auto min-h-9 pointer-coarse:h-auto pointer-coarse:min-h-11',
+      },
+      {
+        size: 'md',
+        autoHeight: true,
+        className: 'h-auto min-h-10 pointer-coarse:h-auto pointer-coarse:min-h-11',
+      },
       { size: 'lg', autoHeight: true, className: 'h-auto min-h-11' },
       { size: 'xl', autoHeight: true, className: 'h-auto min-h-12' },
       { size: '2xl', autoHeight: true, className: 'h-auto min-h-13' },
-      { size: 'sm', mode: 'icon', className: 'size-9' },
-      { size: 'md', mode: 'icon', className: 'size-10' },
-      { size: 'icon', mode: 'icon', className: 'size-10' },
+      // A glyph-only button reaches the 44 px touch target on a touch screen; a mouse keeps
+      // the denser desktop size.
+      { size: 'sm', mode: 'icon', className: 'size-9 pointer-coarse:size-11' },
+      { size: 'md', mode: 'icon', className: 'size-10 pointer-coarse:size-11' },
+      { size: 'icon', mode: 'icon', className: 'size-10 pointer-coarse:size-11' },
       { size: 'lg', mode: 'icon', className: 'size-11' },
       { size: 'xl', mode: 'icon', className: 'size-12' },
       { size: '2xl', mode: 'icon', className: 'size-13' },
