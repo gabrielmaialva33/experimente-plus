@@ -86,8 +86,9 @@ export default function FilesPage({ files }: FilesPageProps) {
           description="Envie e administre arquivos privados da operação ativa."
           meta={
             <Badge variant="secondary" appearance="light" shape="pill" size="lg">
-              {files.meta.total.toLocaleString('pt-BR')}{' '}
-              {files.meta.total === 1 ? 'arquivo' : 'arquivos'}
+              {files.meta.total === 0
+                ? 'Nenhum arquivo'
+                : `${files.meta.total.toLocaleString('pt-BR')} ${files.meta.total === 1 ? 'arquivo' : 'arquivos'}`}
             </Badge>
           }
         />

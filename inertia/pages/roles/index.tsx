@@ -85,7 +85,9 @@ function RoleCard({ role }: { role: RoleRow }) {
         <CardToolbar>
           <Badge variant="secondary" appearance="light" shape="pill">
             <Users aria-hidden="true" />
-            {role.users_count} {role.users_count === 1 ? 'pessoa' : 'pessoas'}
+            {role.users_count === 0
+              ? 'Nenhuma pessoa'
+              : `${role.users_count} ${role.users_count === 1 ? 'pessoa' : 'pessoas'}`}
           </Badge>
         </CardToolbar>
       </CardHeader>

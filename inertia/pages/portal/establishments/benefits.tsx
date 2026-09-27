@@ -396,11 +396,24 @@ export default function EstablishmentBenefitsPage({
           meta={
             <>
               <Badge variant="neutral" appearance="light" shape="pill" size="lg">
-                {offers.length} {offers.length === 1 ? 'oferta' : 'ofertas'}
+                {offers.length === 0
+                  ? 'Nenhuma oferta'
+                  : `${offers.length} ${offers.length === 1 ? 'oferta' : 'ofertas'}`}
               </Badge>
-              <Badge variant="success" appearance="light" shape="pill" size="lg">
-                {activeOfferCount} {activeOfferCount === 1 ? 'ativa' : 'ativas'}
-              </Badge>
+              {/* Without offers there is nothing to count as active; with offers, none active is
+                  neutral, not green. */}
+              {offers.length > 0 ? (
+                <Badge
+                  variant={activeOfferCount > 0 ? 'success' : 'neutral'}
+                  appearance="light"
+                  shape="pill"
+                  size="lg"
+                >
+                  {activeOfferCount === 0
+                    ? 'Nenhuma ativa'
+                    : `${activeOfferCount} ${activeOfferCount === 1 ? 'ativa' : 'ativas'}`}
+                </Badge>
+              ) : null}
             </>
           }
         />

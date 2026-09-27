@@ -377,7 +377,7 @@ describe('Portal server-projected allowed actions', () => {
       />
     )
 
-    expect(screen.getByText('0 ativas')).toBeVisible()
+    expect(screen.getByText('Nenhuma ativa')).toBeVisible()
     expect(screen.getAllByText('Indisponível')).toHaveLength(2)
     expect(screen.getByText(/pause a oferta antes de arquivar/i)).toBeVisible()
     expect(screen.getByText(/só pode ser arquivada/i)).toBeVisible()
