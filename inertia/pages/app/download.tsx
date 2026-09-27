@@ -1,21 +1,28 @@
 import { Link } from '@inertiajs/react'
 import {
+  CircleCheck,
   Compass,
   Download,
+  Ellipsis,
   MapPinned,
   MessageSquareText,
+  MonitorSmartphone,
   ScanLine,
+  Share,
   Smartphone,
   Sparkles,
+  SquarePlus,
   WalletCards,
+  type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import type { AndroidDistribution } from '#config/app_distribution'
 import { PublicShell } from '~/components/public'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
+import { promptInstall, useInstallAvailability } from '~/pwa/install_prompt'
 
 interface AppDownloadProps {
   android: AndroidDistribution
@@ -85,20 +92,132 @@ function releaseDate(isoDate: string) {
  * Only the browser knows the device; the server renders for everyone and the
  * note for an iPhone appears once the page runs.
  */
-function useIsAppleMobile() {
-  const [apple, setApple] = useState(false)
+function useAppleDevice() {
+  const [device, setDevice] = useState({ apple: false, installed: false })
   useEffect(() => {
     const agent = navigator.userAgent
-    // iPadOS reports a Mac; its touch screen gives it away.
-    setApple(
-      /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1)
-    )
+    setDevice({
+      // iPadOS reports a Mac; its touch screen gives it away.
+      apple:
+        /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1),
+      // Opened from the Home Screen icon: Safari's own flag, or the standard display mode.
+      installed:
+        (navigator as Navigator & { standalone?: boolean }).standalone === true ||
+        window.matchMedia?.('(display-mode: standalone)').matches === true,
+    })
   }, [])
-  return apple
+  return device
+}
+
+/** The control to look for on the phone, drawn as a small chip with its icon. */
+function Control({ icon: Icon, children }: { icon: LucideIcon; children?: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-border-subtle bg-background px-1.5 align-middle font-semibold leading-6 text-foreground">
+      <Icon aria-hidden="true" className="size-4 shrink-0 text-primary-accent" />
+      {children}
+    </span>
+  )
+}
+
+const iosSteps: { title: string; description: ReactNode }[] = [
+  {
+    title: 'Abra no Safari',
+    description: (
+      <>
+        Abra esta página no <Control icon={Compass}>Safari</Control>. No computador, aponte a câmera
+        do iPhone para o código QR do topo.
+      </>
+    ),
+  },
+  {
+    title: 'Toque em Compartilhar',
+    description: (
+      <>
+        Na barra do Safari, toque em <Control icon={Share}>Compartilhar</Control>. Se ele não
+        aparecer, toque antes nos três pontos{' '}
+        <Control icon={Ellipsis}>
+          <span className="sr-only">Mais opções</span>
+        </Control>
+        .
+      </>
+    ),
+  },
+  {
+    title: 'Adicione à Tela de Início',
+    description: (
+      <>
+        Role as opções, escolha <Control icon={SquarePlus}>Adicionar à Tela de Início</Control> e
+        confirme em <strong className="font-semibold text-foreground">Adicionar</strong>.
+      </>
+    ),
+  },
+  {
+    title: 'Abra pelo ícone',
+    description:
+      'O ícone E+ fica na Tela de Início e abre o Experimente+ em tela cheia, sem a barra do Safari, com a mesma conta.',
+  },
+]
+
+/**
+ * Chromium (Chrome, Edge, Samsung Internet) can install the site itself. The
+ * offer only exists when the browser made one, so elsewhere nothing shows.
+ */
+function SiteInstall() {
+  const availability = useInstallAvailability()
+  const [dismissed, setDismissed] = useState(false)
+
+  if (availability === 'unavailable' && !dismissed) return null
+
+  const install = async () => {
+    const outcome = await promptInstall()
+    if (outcome === 'dismissed') setDismissed(true)
+  }
+
+  return (
+    <section aria-labelledby="site-install-title" className="app-container pb-12 sm:pb-16">
+      <div className="flex flex-col gap-5 rounded-card border border-border-subtle bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="max-w-2xl">
+          <h2
+            id="site-install-title"
+            className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+          >
+            Ou instale o site
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            Sem baixar arquivo: o Experimente+ ganha um ícone e abre em janela própria, como um app,
+            com a mesma conta.
+          </p>
+        </div>
+        {availability === 'installed' ? (
+          <p
+            role="status"
+            className="flex shrink-0 items-center gap-2 text-sm font-semibold text-success-accent"
+          >
+            <CircleCheck aria-hidden="true" className="size-5" /> Site instalado
+          </p>
+        ) : dismissed ? (
+          <p role="status" className="max-w-xs shrink-0 text-sm leading-6 text-muted-foreground">
+            Tudo bem. Se mudar de ideia, use a opção de instalar do menu do navegador.
+          </p>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="xl"
+            shape="pill"
+            className="shrink-0"
+            onClick={install}
+          >
+            <MonitorSmartphone aria-hidden="true" /> Instalar o site
+          </Button>
+        )}
+      </div>
+    </section>
+  )
 }
 
 export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
-  const appleMobile = useIsAppleMobile()
+  const { apple, installed } = useAppleDevice()
   const qrSource = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
 
   return (
@@ -143,13 +262,25 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
               {android.sizeMegabytes} MB · Android {android.minimumAndroid} ou superior
             </p>
 
-            {appleMobile ? (
+            {apple ? (
               <p
                 role="status"
                 className="mt-5 rounded-card border border-info/30 bg-info/10 px-4 py-3 text-sm leading-6"
               >
-                Você está num iPhone ou iPad. O app para iOS ainda não está disponível; por
-                enquanto, use o Experimente+ pelo navegador.
+                {installed ? (
+                  'Você está usando o Experimente+ instalado na Tela de Início. O app para iOS chega depois, pela App Store.'
+                ) : (
+                  <>
+                    Você está num iPhone ou iPad. O app para iOS ainda não está disponível, mas dá
+                    para instalar o site na Tela de Início e usá-lo como um app.{' '}
+                    <a
+                      href="#instalar-no-iphone"
+                      className="font-semibold text-primary-accent underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      Veja como
+                    </a>
+                  </>
+                )}
               </p>
             ) : null}
           </div>
@@ -234,25 +365,53 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
         </p>
       </section>
 
-      <section aria-labelledby="ios-title" className="border-y bg-muted/40">
-        <div className="app-container flex flex-col gap-5 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-2xl">
-            <h2
-              id="ios-title"
-              className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
-            >
-              No iPhone
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
-              A versão para iOS chega depois, pela App Store. Por enquanto, use o Experimente+ pelo
-              navegador do iPhone, com a mesma conta.
-            </p>
-          </div>
-          <Button variant="outline" size="xl" shape="pill" asChild>
-            <Link href="/cidades">
-              <Compass /> Abrir no navegador
-            </Link>
-          </Button>
+      <SiteInstall />
+
+      <section
+        id="instalar-no-iphone"
+        aria-labelledby="ios-title"
+        className="scroll-mt-20 border-y bg-muted/40"
+      >
+        <div className="app-container py-12 sm:py-16">
+          <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
+            iPhone e iPad
+          </p>
+          <h2
+            id="ios-title"
+            className="mt-2 font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+          >
+            Instale no iPhone
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            O app para iOS chega depois, pela App Store. Enquanto isso, o site funciona como um app:
+            adicione-o à Tela de Início pelo Safari.
+          </p>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {iosSteps.map((step, index) => (
+              <li key={step.title}>
+                <Card className="h-full border border-border-subtle bg-card">
+                  <CardContent className="p-5 sm:p-6">
+                    <span
+                      aria-hidden="true"
+                      className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-primary-foreground"
+                    >
+                      {index + 1}
+                    </span>
+                    <h3 className="mt-4 font-display text-lg font-extrabold leading-tight">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                      {step.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-5 max-w-3xl text-sm leading-6 text-muted-foreground">
+            Em outros navegadores do iPhone, como Chrome e Edge, a opção fica no mesmo menu
+            Compartilhar.
+          </p>
         </div>
       </section>
 

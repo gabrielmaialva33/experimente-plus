@@ -1,9 +1,11 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { AndroidDistribution } from '#config/app_distribution'
 import AppDownload from '~/pages/app/download'
+import { captureInstallPrompt, resetInstallPrompt } from '~/pwa/install_prompt'
 import { render } from '~/tests/test_utils'
 
 vi.mock('@inertiajs/react', () => ({
@@ -56,8 +58,24 @@ const setUserAgent = (agent: string, touchPoints = 0) => {
   Object.defineProperty(navigator, 'maxTouchPoints', { value: touchPoints, configurable: true })
 }
 
+/** Chromium's install offer, as the browser fires it. */
+function offerInstall(outcome: 'accepted' | 'dismissed') {
+  const offer = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+    prompt: vi.fn(async () => {}),
+    userChoice: Promise.resolve({ outcome }),
+  })
+  act(() => {
+    window.dispatchEvent(offer)
+  })
+  return offer
+}
+
+captureInstallPrompt(window)
+
 afterEach(() => {
   vi.restoreAllMocks()
+  Reflect.deleteProperty(navigator, 'standalone')
+  act(() => resetInstallPrompt())
 })
 
 describe('app download page', () => {
@@ -77,13 +95,13 @@ describe('app download page', () => {
     expect(screen.getByText('Pagamentos são simulados; nada é cobrado.')).toBeVisible()
   })
 
-  it('walks through the three install steps and offers the browser to iPhone users', () => {
+  it('walks through the three Android install steps and keeps the browser one tap away', () => {
     render(<AppDownload {...props} />)
 
     const install = screen.getByRole('heading', { level: 2, name: 'Como instalar' })
       .parentElement as HTMLElement
     expect(within(install).getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.getByRole('link', { name: /Abrir no navegador/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Usar no navegador/ })).toHaveAttribute(
       'href',
       '/cidades'
     )
@@ -92,14 +110,50 @@ describe('app download page', () => {
     ).toHaveAttribute('src', expect.stringMatching(/^data:image\/svg\+xml/))
   })
 
+  it('shows iPhone users how to add the site to the Home Screen from Safari', () => {
+    render(<AppDownload {...props} />)
+
+    const section = screen.getByRole('region', { name: 'Instale no iPhone' })
+    expect(section).toHaveAttribute('id', 'instalar-no-iphone')
+    const steps = within(section).getAllByRole('listitem')
+    expect(
+      steps.map((step) => within(step).getByRole('heading', { level: 3 }).textContent)
+    ).toEqual([
+      'Abra no Safari',
+      'Toque em Compartilhar',
+      'Adicione à Tela de Início',
+      'Abra pelo ícone',
+    ])
+    expect(steps[0]).toHaveTextContent('Safari')
+    expect(steps[1]).toHaveTextContent('Compartilhar')
+    expect(steps[1]).toHaveTextContent('Mais opções')
+    expect(steps[2]).toHaveTextContent('Adicionar à Tela de Início')
+    expect(section).toHaveTextContent('O app para iOS chega depois, pela App Store.')
+  })
+
   it.each([
     ['an iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', 0],
     ['an iPad that reports a Mac', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 5],
-  ])('tells a visitor on %s that iOS is not out yet', (_, agent, touchPoints) => {
+  ])('points a visitor on %s to the Home Screen steps', (_, agent, touchPoints) => {
     setUserAgent(agent, touchPoints)
     render(<AppDownload {...props} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('O app para iOS ainda não está disponível')
+    const note = screen.getByRole('status')
+    expect(note).toHaveTextContent('O app para iOS ainda não está disponível')
+    expect(within(note).getByRole('link', { name: 'Veja como' })).toHaveAttribute(
+      'href',
+      '#instalar-no-iphone'
+    )
+  })
+
+  it('tells an iPhone user already in the installed site that it is installed', () => {
+    setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
+    render(<AppDownload {...props} />)
+
+    const note = screen.getByRole('status')
+    expect(note).toHaveTextContent('instalado na Tela de Início')
+    expect(within(note).queryByRole('link')).toBeNull()
   })
 
   it('says nothing about iOS to an Android visitor', () => {
@@ -107,5 +161,35 @@ describe('app download page', () => {
     render(<AppDownload {...props} />)
 
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  describe('installing the site where the browser offers it', () => {
+    it('shows no install button until the browser makes an offer (Safari, Firefox)', () => {
+      render(<AppDownload {...props} />)
+
+      expect(screen.queryByRole('button', { name: /Instalar o site/ })).toBeNull()
+    })
+
+    it('offers the site below the Android download, which stays the main path', async () => {
+      render(<AppDownload {...props} />)
+      const offer = offerInstall('accepted')
+
+      const button = await screen.findByRole('button', { name: /Instalar o site/ })
+      expect(screen.getByRole('link', { name: /Baixar para Android/ })).toHaveClass('bg-cta')
+      expect(button).not.toHaveClass('bg-cta')
+
+      await userEvent.click(button)
+      expect(offer.prompt).toHaveBeenCalledTimes(1)
+      expect(await screen.findByRole('status')).toHaveTextContent('Site instalado')
+    })
+
+    it('explains the browser menu after the offer is dismissed', async () => {
+      render(<AppDownload {...props} />)
+      offerInstall('dismissed')
+
+      await userEvent.click(await screen.findByRole('button', { name: /Instalar o site/ }))
+      expect(await screen.findByRole('status')).toHaveTextContent('menu do navegador')
+      expect(screen.queryByRole('button', { name: /Instalar o site/ })).toBeNull()
+    })
   })
 })
