@@ -19,6 +19,20 @@ describe('manual search', () => {
     expect(ids('iPhone')[0]).toBe('primeiros-passos-iphone')
   })
 
+  it('understands the words people use for the same thing', () => {
+    expect(ids('funcionário')[0]).toBe('parceiro-equipe-convidar')
+    for (const word of ['atendente', 'garçom', 'caixa', 'colaborador', 'equipe do negócio']) {
+      expect(ids(word), word).toContain('parceiro-equipe-convidar')
+    }
+    for (const word of ['cupom', 'resgatar', 'resgate', 'promoção', 'desconto']) {
+      expect(ids(word), word).toContain('consumidor-apresentar')
+    }
+    expect(ids('cardápio')).toContain('visitante-para-viver-aqui')
+    expect(ids('trocar senha')).toContain('consumidor-conta')
+    expect(ids('trocar e-mail')).toContain('consumidor-conta')
+    expect(ids('convite')).toContain('parceiro-aceitar-convite')
+  })
+
   it('needs every word of the query and puts title matches first', () => {
     const results = ids('perfil parceiro')
     expect(results[0]).toBe('perfil-parceiro')

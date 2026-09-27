@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   CircleHelp,
   Compass,
+  QrCode,
   Rocket,
   ShieldCheck,
   Smartphone,
@@ -19,8 +20,9 @@ import { MANUAL_MEDIA, type ManualMediaId } from '~/content/manual_media'
  * it was written; the pictures come from the demonstration data.
  *
  * Inline text accepts two marks: **bold** (what the screen shows, exactly) and
- * [label](/path or #anchor). The `app-*` anchors are a contract with the mobile app,
- * which opens them from its "Ajuda" entries: never rename one.
+ * [label](/path or #anchor). The `app-*` section anchors are a contract with the mobile
+ * app, which opens them from its "Ajuda" entries: never rename one. The chapter itself is
+ * `app-celular`: `#app` is the page's root element, so a link to it would not scroll.
  */
 
 export const MANUAL_UPDATED_AT = '2026-09-27'
@@ -73,6 +75,8 @@ export interface ManualChapter {
   /** The profiles the chapter serves ("Para: …"). */
   profiles: string
   summary: string
+  /** One line the whole chapter needs, shown under "Para: …". */
+  note?: string
   icon: LucideIcon
   sections: readonly ManualSection[]
 }
@@ -85,7 +89,9 @@ export interface ManualStartCard {
 }
 
 function image(id: ManualMediaId, alt: string, caption: string): ManualImage {
-  const { width, height } = MANUAL_MEDIA[id]
+  // A screenshot missing from the map must not take the site down with it (every page
+  // shares the server bundle); the content tests fail on it instead.
+  const { width, height } = MANUAL_MEDIA[id] ?? { width: 0, height: 0 }
   return {
     id,
     src: `${MANUAL_MEDIA_PATH}/${id}.webp`,
@@ -152,9 +158,15 @@ export const MANUAL_START_CARDS: readonly ManualStartCard[] = [
     icon: ShieldCheck,
   },
   {
+    title: 'Resgate por QR code',
+    text: 'Mostrar o QR da carteira e validar o benefício no balcão, do começo ao comprovante.',
+    href: '#resgate',
+    icon: QrCode,
+  },
+  {
     title: 'App no celular',
     text: 'Instalar o app Android e usar mapa, compra, carteira e Validar.',
-    href: '#app',
+    href: '#app-celular',
     icon: Smartphone,
   },
   {
@@ -269,13 +281,90 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         keywords: ['iphone', 'ios', 'safari', 'tela de início', 'pwa', 'atalho'],
       },
       {
+        id: 'primeiros-passos-palavras',
+        title: 'Palavras que aparecem nas telas',
+        intro: 'Para entender os nomes que o Experimente+ usa, do cadastro ao comprovante.',
+        blocks: [
+          table(
+            'Palavras do Experimente+',
+            ['Palavra', 'O que quer dizer'],
+            [
+              'Operação',
+              'A região atendida pelo Experimente+ (hoje, o norte do Paraná). Toda conta faz parte de uma operação, e o cadastro já faz essa ligação.',
+            ],
+            [
+              'Seletor de operação',
+              'O quadro com o nome da operação, no topo do Portal e da área da equipe. Mostra em que operação você está; quem participa de mais de uma troca por ali.',
+            ],
+            [
+              'Membro da operação, Responsável pela operação',
+              'Aparecem embaixo do menu azul e em **Conta**. Dizem só como a conta está ligada à operação e não dão permissões. Responsável pela operação não é o mesmo que **Responsável técnico**, o papel da equipe do Experimente+ que pode tudo na plataforma.',
+            ],
+            [
+              'Organização (negócio)',
+              'A empresa parceira, com razão social e CNPJ. Uma organização pode ter vários lugares, em cidades diferentes.',
+            ],
+            [
+              'Lugar (unidade)',
+              'Cada endereço que recebe o público: um restaurante, um café, um espaço cultural. Tem página própria no app e no site.',
+            ],
+            [
+              'Edição',
+              'O pacote de benefícios de uma cidade, com preço, período de venda e período de uso.',
+            ],
+            [
+              'Oferta',
+              'O que cada lugar oferece dentro de uma edição (por exemplo, "peça um, ganhe outro"). Quem cria é o parceiro.',
+            ],
+            [
+              'Acesso',
+              'O direito de uma pessoa a uma edição: nasce da compra, de uma cortesia ou de uma concessão da equipe. Aparece como um cartão na **Carteira**.',
+            ],
+            ['Benefício', 'Uma oferta dentro do acesso de uma pessoa: é o que ela usa no lugar.'],
+            [
+              'Apresentação',
+              'O QR (ou o código) que a pessoa mostra no balcão para usar um benefício. Vale por 5 minutos.',
+            ],
+            [
+              'Utilização',
+              'O uso confirmado pelo lugar. Só conta depois de **Confirmar utilização**.',
+            ],
+            [
+              'Comprovante',
+              'O registro da utilização, com código, data e lugar. Fica em **Utilizações**, para a pessoa e para o lugar.',
+            ],
+            [
+              'Resgate',
+              'Usar o benefício: mostrar o QR, o lugar conferir e confirmar. Veja [Resgate por QR code](#resgate).',
+            ]
+          ),
+        ],
+        keywords: [
+          'glossário',
+          'significado',
+          'operação',
+          'organização',
+          'negócio',
+          'unidade',
+          'edição',
+          'oferta',
+          'acesso',
+          'apresentação',
+          'utilização',
+          'comprovante',
+          'membro da operação',
+          'responsável pela operação',
+          'seletor',
+        ],
+      },
+      {
         id: 'primeiros-passos-ajuda',
         title: 'Como encontrar ajuda enquanto usa o site',
         intro: 'Para abrir este manual na parte certa, sem perder o que você estava fazendo.',
         blocks: [
           steps(
             'Em qualquer página pública, role até o rodapé e toque em **Manual**.',
-            'No Portal do parceiro e na área da equipe, toque no **?** do topo, à direita, perto do seu nome.',
+            'Na Carteira e na Conta, no Portal do parceiro e na área da equipe, toque no **?** (**Ajuda**) do topo, à direita.',
             'No menu que abre, escolha **Ajuda desta página** para ir direto à parte do manual sobre a tela em que você está. **Manual completo** abre o começo, e **Baixar manual em PDF** salva a versão para imprimir.'
           ),
           figures(
@@ -287,7 +376,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             image(
               'parceiro-ajuda',
               'Menu de ajuda aberto no topo do Portal, com as opções Ajuda desta página (destacada), Manual completo e Baixar manual em PDF.',
-              'O menu do ?, no topo do Portal e da área da equipe.'
+              'O menu do ?, no topo da Carteira, do Portal e da área da equipe.'
             )
           ),
         ],
@@ -349,14 +438,14 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
               'O Portal do parceiro, com os lugares do negócio.',
               'Depende do papel no negócio: Proprietário, Administrador, Editor ou Analista.',
               'Portal (Visão geral).',
-              'Cadastrar o negócio, ser incluído por quem já cuida dele ou ter a reivindicação aprovada pela equipe.',
+              'Cadastrar o próprio negócio ou aceitar o convite de um Proprietário ou Administrador do negócio.',
             ],
             [
               'Equipe do Experimente+',
               'A área da equipe: Hoje, caixa de moderação, regras, benefícios, pessoas e catálogo.',
               'Depende do papel: Moderador, Administrador ou Responsável técnico.',
               'Hoje (Administrador e Responsável técnico) ou Dados de lugares, na Caixa de moderação (Moderador).',
-              'Só a equipe do Experimente+ concede.',
+              'Só a equipe técnica do Experimente+ concede; não há tela para pedir.',
             ]
           ),
         ],
@@ -401,23 +490,31 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           table(
             'Papéis dentro de um negócio',
-            ['Papel', 'O que pode fazer'],
+            ['Papel', 'O que pode fazer', 'No menu do Portal'],
             [
               'Proprietário',
-              'Tudo no Portal. Inclui e gerencia pessoas de qualquer papel e arquiva a organização enquanto ela é rascunho.',
+              'Controle total: dados da organização, lugares, benefícios, desempenho e toda a equipe, inclusive outros proprietários.',
+              'Tudo, com **Validar benefício**, **Desempenho** e **Equipe**.',
             ],
             [
               'Administrador',
-              'O mesmo que o Proprietário, mas só inclui e gerencia Editores e Analistas, e não arquiva o rascunho.',
+              'Cuida dos dados da organização, dos lugares e dos benefícios, vê o desempenho e convida ou gerencia Editores e Analistas.',
+              'Tudo, com **Validar benefício**, **Desempenho** e **Equipe**.',
             ],
             [
               'Editor',
-              'Lugares, ofertas, experiências, eventos e vitrine; responde avaliações, valida benefícios e vê as utilizações. Não vê Desempenho.',
+              'Atualiza lugares, experiências, eventos, vitrine e ofertas, responde avaliações e valida benefícios no balcão. Não vê o desempenho nem gerencia a equipe.',
+              'Sem **Desempenho** e sem **Equipe**.',
             ],
             [
               'Analista',
-              'Consulta: vê os dados, Desempenho e Utilizações, sem mudar nada. Não valida benefícios.',
+              'Acompanha o desempenho e consulta as utilizações, sem editar dados nem validar benefícios.',
+              'Sem **Validar benefício** e sem **Equipe**.',
             ]
+          ),
+          tip(
+            'Quem só valida no balcão',
+            'Para quem só valida no balcão, escolha **Editor**. Não existe um papel só de validação: o Editor também edita dados e ofertas.'
           ),
           p(
             'Todos começam no **Portal**, na **Visão geral**. O menu azul da esquerda mostra só o que o seu papel permite.'
@@ -425,15 +522,15 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'parceiro-menu',
-              'Menu lateral azul do Portal do parceiro com Visão geral, Validar benefício (destacado), Utilizações, Avaliações, Experiências e eventos, Dados do lugar e Desempenho.',
+              'Menu lateral azul do Portal do parceiro com Visão geral, Validar benefício, Utilizações, Avaliações, Experiências e eventos, Dados do lugar, Desempenho e Equipe (destacado).',
               'O menu do Portal, para um Administrador do negócio.'
             )
           ),
           p(
-            'Como ganhar o acesso: cadastrando o seu negócio (você vira Proprietário; veja [Como cadastrar o seu negócio](#parceiro-cadastrar)), sendo incluído por quem já cuida do negócio, ou tendo a reivindicação aprovada pela equipe. Ainda não há uma tela para convidar pessoas: para incluir alguém no seu negócio, fale com a equipe do Experimente+.'
+            'Como ganhar o acesso: cadastrando o seu negócio (você vira Proprietário; veja [Como cadastrar o seu negócio](#parceiro-cadastrar)) ou aceitando o convite de um Proprietário ou Administrador (veja [Como dar acesso a um funcionário](#parceiro-equipe-convidar) e [Como aceitar um convite](#parceiro-aceitar-convite)).'
           ),
           p(
-            'Tarefas do parceiro: [Visão geral](#parceiro-visao-geral), [editar um lugar](#parceiro-editar-lugar), [publicar conteúdo](#parceiro-conteudo), [responder avaliações](#parceiro-avaliacoes), [validar benefícios](#parceiro-validar), [ofertas](#parceiro-beneficios) e [desempenho](#parceiro-desempenho).'
+            'Tarefas do parceiro: [Visão geral](#parceiro-visao-geral), [editar um lugar](#parceiro-editar-lugar), [publicar conteúdo](#parceiro-conteudo), [responder avaliações](#parceiro-avaliacoes), [validar benefícios](#parceiro-validar), [ofertas](#parceiro-beneficios), [desempenho](#parceiro-desempenho) e [equipe](#parceiro-equipe-convidar).'
           ),
         ],
         keywords: [
@@ -445,12 +542,18 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'analista',
           'organização',
           'membro',
+          'funcionário',
+          'atendente',
+          'garçom',
+          'caixa',
+          'colaborador',
         ],
       },
       {
         id: 'perfil-equipe',
         title: 'Equipe do Experimente+: moderação e administração',
-        intro: 'Quem opera a plataforma. Esses papéis são concedidos pela equipe do Experimente+.',
+        intro:
+          'Quem opera a plataforma. Esses papéis são concedidos pela equipe técnica do Experimente+.',
         blocks: [
           table(
             'Papéis da equipe',
@@ -462,14 +565,10 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             ],
             [
               'Administrador',
-              'Tudo do Moderador, mais as regras (avaliações, publicação e Concierge), edições e benefícios, cortesias, categorias, regiões e cidades e usuários. Vê as permissões, sem mudá-las.',
+              'Tudo do Moderador, mais as regras (avaliações, publicação e Concierge), edições e benefícios, cortesias, categorias, regiões e cidades e as contas em **Pessoas e acesso**. Vê as permissões, sem mudá-las.',
               'Hoje.',
             ],
-            [
-              'Responsável técnico',
-              'Tudo, inclusive mudar permissões e tornar alguém Administrador.',
-              'Hoje.',
-            ]
+            ['Responsável técnico', 'Tudo, inclusive mudar as permissões de cada papel.', 'Hoje.']
           ),
           figures(
             image(
@@ -495,14 +594,24 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'Quem concede cada acesso, em poucas palavras.',
         blocks: [
           list(
-            '**Explorador**: é você quem cria, no cadastro.',
-            '**Parceiro**: nasce ao cadastrar o seu negócio (você vira Proprietário). Para entrar num negócio que já existe, peça a quem cuida dele ou à equipe do Experimente+.',
-            '**Equipe**: só a equipe do Experimente+ concede Moderador, Administrador ou Responsável técnico.',
-            'Quem é suspenso ou removido de um negócio perde o acesso ao Portal daquele negócio.',
-            'O último Proprietário de um negócio não pode ser removido: antes, outra pessoa precisa virar Proprietária.'
+            '**Explorador**: é você quem cria, no cadastro. Uma conta criada pela equipe em **Pessoas e acesso** também já nasce como exploradora.',
+            '**Parceiro**: nasce ao cadastrar o seu negócio (você vira Proprietário) ou ao aceitar o convite que um Proprietário ou Administrador envia pela página **Equipe** do Portal. Veja [Como dar acesso a um funcionário](#parceiro-equipe-convidar).',
+            '**Mudar de papel num negócio**: um Proprietário ou Administrador muda na página **Equipe**, em **Gerenciar > Alterar papel** (veja [Como mudar o papel, suspender ou remover alguém](#parceiro-equipe-gerenciar)).',
+            '**Suspenso**: perde o acesso ao Portal daquele negócio até ser reativado. **Removido**: só volta com um convite novo.',
+            'O negócio sempre mantém um Proprietário ativo: antes de suspender, remover ou mudar o papel do último, promova outra pessoa a Proprietária.',
+            '**Equipe do Experimente+**: Moderador, Administrador e Responsável técnico são concedidos pela equipe técnica do Experimente+. Não há tela para pedir nem para conceder esses papéis.',
+            'Conta antiga que ainda não faz parte da operação: a equipe abre a conta em **Pessoas e acesso > Usuários > Editar usuário** e toca em **Vincular à operação**.'
           ),
         ],
-        keywords: ['convite', 'incluir pessoa', 'remover', 'suspenso'],
+        keywords: [
+          'convite',
+          'incluir pessoa',
+          'remover',
+          'suspenso',
+          'mudar papel',
+          'equipe do negócio',
+          'funcionário',
+        ],
       },
       {
         id: 'perfis-combinacoes',
@@ -510,7 +619,12 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'Quando a mesma pessoa tem mais de um perfil.',
         blocks: [
           p(
-            'Exemplo: a dona de um café que também compra pacotes. Ela usa a **Carteira** como exploradora e o **Portal** como Proprietária. Para passar de uma área à outra, use o menu da conta (seu nome, no topo à direita): **Carteira**, **Negócios** (o Portal) e **Operação** (a área da equipe) aparecem conforme os seus perfis.'
+            'Exemplo: a dona de um café que também compra pacotes. Ela usa a **Carteira** como exploradora e o **Portal** como Proprietária. Para passar de uma área à outra:'
+          ),
+          list(
+            '**Nas páginas públicas** (cidades e lugares): no topo ficam **Explorar**, **Carteira** e **Conta**; à direita, **Negócios** (o Portal) e **Sair**. No celular, tudo isso fica na barra de baixo.',
+            '**Na Carteira**: no topo, **Explorar**, **Carteira** e **Conta** (no celular, na barra de baixo); **Sair** é o ícone da porta, no topo à direita. Para ir ao Portal, toque em **Explorar** e depois em **Negócios**.',
+            '**No Portal e na área da equipe**: toque no seu nome, no topo à direita (no celular, no círculo com as suas iniciais). O menu tem **Explorar**, **Carteira**, **Negócios** ou **Operação** (a área da equipe), **Conta e preferências** e **Sair**, conforme os seus perfis.'
           ),
           p('Depois de entrar, a primeira tela segue esta ordem:'),
           list(
@@ -536,6 +650,216 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
         ],
         keywords: ['homologação', 'teste', 'contas de teste'],
+      },
+    ],
+  },
+  {
+    id: 'resgate',
+    title: 'Resgate por QR code',
+    audience: 'Para quem usa e para quem valida benefícios',
+    profiles: 'Explorador e Parceiro',
+    summary:
+      'Do QR na carteira ao comprovante: o que o cliente faz, o que o lugar faz e o que cada recusa quer dizer.',
+    icon: QrCode,
+    sections: [
+      {
+        id: 'resgate-como-funciona',
+        title: 'Como funciona o resgate por QR code',
+        intro: 'Para entender o caminho do benefício, do QR na carteira ao comprovante.',
+        blocks: [
+          steps(
+            'O cliente abre a **Carteira** e toca em **Usar benefício** (no app, **Apresentar**). Aparece um QR que vale por 5 minutos.',
+            'O lugar lê o QR: no app, pela aba **Validar**; no site, pela página **Validar benefício**.',
+            'Aparece a prévia **Apresentação válida**, com o benefício, o titular e as regras. Conferir não gasta nada.',
+            'O lugar toca em **Confirmar utilização**. Só então o benefício é usado, e o comprovante aparece para o cliente e para o lugar.'
+          ),
+          figures(
+            image(
+              'resgate-fluxo',
+              'Três telas lado a lado: o QR do cliente com o contador Expira em (1, com um QR de exemplo), a prévia Apresentação válida do lugar (2) e o comprovante Utilização confirmada (3).',
+              'O QR do cliente (1), a prévia do lugar (2) e o comprovante (3).'
+            )
+          ),
+          info(
+            'O QR é pessoal',
+            'O QR e o link de validação dão acesso ao benefício de quem os mostra. O cliente não deve enviá-los a outras pessoas, e o lugar não deve fotografá-los.'
+          ),
+        ],
+        keywords: [
+          'resgate',
+          'resgatar',
+          'qr code',
+          'cupom',
+          'promoção',
+          'desconto',
+          'usar benefício',
+          'validar',
+          'balcão',
+        ],
+      },
+      {
+        id: 'consumidor-apresentar',
+        title: 'Como usar um benefício no lugar (QR de 5 minutos)',
+        intro: 'Para ganhar o benefício na hora de pedir ou de pagar.',
+        needs: ['um benefício **Disponível agora**', 'estar no lugar do benefício'],
+        blocks: [
+          steps(
+            'Abra a **Carteira**. No site, ela fica no topo (no celular, na barra de baixo); no app, na aba **Carteira**.',
+            'No benefício que você vai usar, toque em **Usar benefício** (no app, **Apresentar**).',
+            'Mostre o QR para quem está atendendo. O contador **Expira em** mostra quanto falta: o código vale por 5 minutos.',
+            'Espere o lugar conferir e confirmar. Só a confirmação do lugar conta como uso.'
+          ),
+          figures(
+            image(
+              'carteira-apresentar-celular',
+              'Tela Usar benefício no celular com o QR coberto por um bloco "QR de exemplo" e o contador "Expira em" destacado, acima do botão Copiar link de validação.',
+              'O QR é pessoal e temporário (aqui, um QR de exemplo).'
+            )
+          ),
+          info(
+            'No site, a tela do QR não muda sozinha',
+            'Depois que o lugar confirma, a tela continua com o contador. Para ver a confirmação, abra **Utilizações** na Carteira.'
+          ),
+        ],
+        result:
+          'o lugar vê **Benefício validado e comprovante emitido**, e o comprovante aparece em **Utilizações**.',
+        troubleshooting: [
+          'O código expirou: toque em **Gerar novo código** e mostre o QR novo.',
+          'O lugar não consegue ler o QR: toque em **Copiar link de validação** e envie o link só para quem está atendendo.',
+          'O lugar recusou: veja [O que cada recusa quer dizer](#resgate-recusas).',
+        ],
+        keywords: [
+          'qr',
+          'usar benefício',
+          'código',
+          'apresentar',
+          'expira',
+          '5 minutos',
+          'cupom',
+          'resgatar',
+          'resgate',
+          'promoção',
+          'desconto',
+        ],
+      },
+      {
+        id: 'parceiro-validar',
+        title: 'Como validar um benefício',
+        intro: 'Para registrar o uso do benefício que o cliente mostrou no balcão.',
+        needs: [
+          'papel Proprietário, Administrador ou Editor no negócio do benefício',
+          'o QR (ou o link) que o cliente está mostrando',
+        ],
+        blocks: [
+          p(
+            'No celular, o jeito mais rápido é a aba **Validar** do app (veja [Como validar um benefício no app](#app-validar)). No site:'
+          ),
+          steps(
+            'No menu da esquerda, toque em **Validar benefício** (no celular, abra antes o menu ☰, no alto, à esquerda).',
+            'Leia a apresentação do cliente: cole o link (ou o código) que ele mostrou ou enviou em **Link da apresentação** e toque em **Conferir**.',
+            'Confira o benefício, o lugar, o **Titular** e as **Regras**. O quadro **Apresentação válida** mostra quantas utilizações restam. Até aqui, nada foi usado.',
+            'Toque em **Confirmar utilização** e, na janela, em **Confirmar utilização** de novo.'
+          ),
+          info(
+            'Ler o QR pela câmera, na própria página',
+            'A página **Validar benefício** está ganhando a leitura do QR pela câmera. Enquanto essa opção não aparece para você, digite o link ou o código, ou use a dica abaixo.'
+          ),
+          tip(
+            'Sem digitar nada: a câmera do celular',
+            'Com o Portal aberto no navegador do celular, aponte a câmera comum do aparelho para o QR do cliente e toque no link que ela mostrar. A página **Validar benefício** abre já com a apresentação.'
+          ),
+          figures(
+            image(
+              'parceiro-validar',
+              'Página Validar benefício no computador com o campo Link da apresentação (1) e o botão Conferir (2) destacados.',
+              'Cole o link ou o código (1) e confira (2).'
+            ),
+            image(
+              'parceiro-validar-previa-celular',
+              'Prévia no celular com o benefício, o lugar, o titular (e-mail borrado), as regras, o aviso Apresentação válida e o botão laranja Confirmar utilização destacado.',
+              'A prévia: nada é usado até você confirmar.'
+            ),
+            image(
+              'parceiro-validar-confirmar-celular',
+              'Janela "Confirmar utilização?" com o botão azul Confirmar utilização destacado e Cancelar embaixo.',
+              'A confirmação final.'
+            ),
+            image(
+              'parceiro-comprovante-celular',
+              'Comprovante com a mensagem Benefício validado e comprovante emitido, o selo Utilização confirmada destacado, o código coberto e o e-mail do titular borrado.',
+              'O comprovante emitido (código coberto nesta imagem).'
+            )
+          ),
+        ],
+        result:
+          'aparece **Benefício validado e comprovante emitido**, com o comprovante da utilização.',
+        troubleshooting: [
+          'Uma recusa apareceu: veja [O que cada recusa quer dizer](#resgate-recusas).',
+          'A internet caiu na confirmação: toque de novo em **Confirmar utilização**. Se o uso já foi registrado, o mesmo comprovante é devolvido. Na dúvida, confira em **Utilizações**.',
+        ],
+        keywords: [
+          'validar',
+          'qr',
+          'benefício',
+          'confirmar utilização',
+          'balcão',
+          'resgatar',
+          'resgate',
+          'cupom',
+          'atendente',
+          'caixa',
+          'garçom',
+        ],
+      },
+      {
+        id: 'resgate-recusas',
+        title: 'O que cada recusa quer dizer',
+        intro: 'Para saber o que fazer quando a validação não passa.',
+        blocks: [
+          table(
+            'Recusas na validação',
+            ['Situação', 'O que o lugar vê', 'O que fazer'],
+            [
+              'O QR expirou (mais de 5 minutos)',
+              'No site: **Esta apresentação é inválida ou expirou.** No app: **Este código não é uma apresentação válida.**',
+              'O cliente toca em **Gerar novo código** e mostra o QR novo.',
+            ],
+            [
+              'O QR já foi usado',
+              '**Não foi possível validar esta apresentação.**',
+              'Confira em **Utilizações**: se o uso foi registrado, o comprovante está lá. Se o cliente ainda tem usos, ele gera um novo código.',
+            ],
+            [
+              'O benefício acabou, ou está fora do dia ou do horário',
+              '**Não foi possível validar esta apresentação.**',
+              'O cliente confere na **Carteira** as regras e quando o benefício vale.',
+            ],
+            [
+              'A oferta ou a edição está pausada',
+              '**Não foi possível validar esta apresentação.**',
+              'A oferta volta a valer quando for reativada (**Ativar**, em **Benefícios** do lugar). Uma edição pausada volta pela equipe do Experimente+.',
+            ],
+            [
+              'O benefício é de outro negócio',
+              'A apresentação é recusada. Nesta versão, pode aparecer uma mensagem de erro genérica.',
+              'Cada lugar só valida as próprias ofertas. O cliente vê na carteira em qual lugar o benefício vale.',
+            ],
+            [
+              'Conta sem permissão para validar',
+              '**Sua conta não pode validar este benefício.**',
+              'Peça a um Proprietário ou Administrador para mudar o seu papel para **Editor**.',
+            ]
+          ),
+        ],
+        keywords: [
+          'recusado',
+          'expirado',
+          'já usado',
+          'pausado',
+          'outro negócio',
+          'não foi possível validar',
+          'inválida',
+        ],
       },
     ],
   },
@@ -696,18 +1020,26 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'Para descobrir o que o próprio lugar oferece além do básico.',
         blocks: [
           steps(
-            'Na página do lugar, role até **Descubra mais neste lugar**.',
-            'Na parte **Para viver aqui**, veja as **Experiências** (atividades), os **Eventos** (com data e horário) e a **Vitrine** (itens em destaque, com preço informativo).'
+            'Na página do lugar, role até **Descubra mais neste lugar**, com o título pequeno **Novidades do parceiro** logo acima.',
+            'Veja as **Experiências** (atividades), os **Eventos** (com data e horário) e a **Vitrine** (itens em destaque, com preço informativo). No app, essa parte se chama **Para viver aqui**.'
           ),
           figures(
             image(
               'visitante-lugar-para-viver',
-              'Seção "Descubra mais neste lugar" com o título Para viver aqui destacado, a experiência "Aula de massa fresca em família" e o começo da lista de eventos.',
+              'Seção "Descubra mais neste lugar", abaixo de Novidades do parceiro, com a experiência "Aula de massa fresca em família" e o começo da lista de eventos.',
               'Experiências, eventos e vitrine do lugar.'
             )
           ),
         ],
-        keywords: ['experiências', 'eventos', 'vitrine', 'para viver aqui'],
+        keywords: [
+          'experiências',
+          'eventos',
+          'vitrine',
+          'descubra mais',
+          'novidades do parceiro',
+          'para viver aqui',
+          'cardápio',
+        ],
       },
       {
         id: 'visitante-agenda',
@@ -753,7 +1085,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         ],
         result: 'aparece **Sugestão ancorada no catálogo**, com os lugares citados em cartões.',
         troubleshooting: [
-          'Sem resposta ou aviso de indisponível: tente de novo em instantes ou use a busca. Há um limite diário de perguntas por pessoa, definido pela equipe.',
+          'Aparece **Sugestões do catálogo** com "O assistente está indisponível agora": o assistente não respondeu, e a página mostra lugares publicados no lugar da resposta. Use essa lista ou tente de novo mais tarde.',
+          'Há um limite diário de perguntas por pessoa, definido pela equipe. Passado o limite, também aparece a lista do catálogo.',
+          '**Posso ajudar com descoberta local**: a pergunta saiu do assunto. Pergunte sobre lugares, experiências e eventos da cidade.',
         ],
         keywords: ['concierge', 'ia', 'assistente', 'sugestão', 'pergunta'],
       },
@@ -784,6 +1118,10 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         ],
         result:
           'aparece **Denúncia registrada** com um protocolo que começa com DEN-. A denúncia é anônima, e a equipe analisa dentro do prazo definido.',
+        troubleshooting: [
+          'E depois? A equipe decide se o conteúdo sai do ar, se o autor é advertido ou se não havia problema. Nesta versão de testes ainda não há página para acompanhar a denúncia nem aviso da decisão: se quiser falar sobre ela com a equipe do Experimente+, informe o protocolo.',
+          'Informação errada num lugar (horário, telefone, endereço): quem corrige é o próprio negócio, pelo Portal, e a correção passa pela moderação da equipe antes de aparecer.',
+        ],
         keywords: ['denúncia', 'denunciar', 'ofensivo', 'falso', 'spam'],
       },
     ],
@@ -823,7 +1161,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
         ],
         result:
-          'você já entra na conta e volta para a lista de cidades. Um e-mail de confirmação é enviado para o endereço informado.',
+          'você já entra na conta e volta para a lista de cidades. Chega um e-mail de confirmação: toque no link para ver **E-mail confirmado**. O link vale por 24 horas.',
         troubleshooting: [
           'Aviso embaixo de um campo: corrija o que ele pede e toque em **Criar conta** de novo.',
           'O e-mail de confirmação não chegou: veja [Não recebi o e-mail](#duvidas-email).',
@@ -878,7 +1216,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'O link vale por pouco tempo e só uma vez. Um pedido novo cancela os links anteriores: use sempre o e-mail mais recente.',
           'O e-mail não chegou: veja [Não recebi o e-mail](#duvidas-email).',
         ],
-        keywords: ['senha', 'esqueci', 'redefinir', 'recuperar'],
+        keywords: ['senha', 'esqueci', 'redefinir', 'recuperar', 'trocar senha', 'mudar senha'],
       },
       {
         id: 'consumidor-conta',
@@ -888,8 +1226,12 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           steps(
             'No topo, toque em **Conta**.',
-            'Na aba **Perfil**, mude o **Nome completo** ou o **Nome de usuário** e toque em **Salvar alterações**. O e-mail de acesso ainda não muda por esta tela.',
+            'Na aba **Perfil**, mude o **Nome completo** ou o **Nome de usuário** e toque em **Salvar alterações**.',
             'Na aba **Aparência**, escolha **Claro**, **Escuro** ou **Do dispositivo**.'
+          ),
+          info(
+            'Trocar a senha ou o e-mail',
+            'Para trocar a senha, saia da conta e use **Esqueceu a senha?**, na página **Entrar** (veja [Como recuperar a senha](#consumidor-senha)). O e-mail de acesso ainda não muda pelo site: fale com a equipe do Experimente+.'
           ),
           figures(
             image(
@@ -900,7 +1242,16 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
         ],
         result: 'aparece a mensagem **Dados pessoais atualizados**.',
-        keywords: ['perfil', 'nome', 'usuário', 'tema', 'aparência'],
+        keywords: [
+          'perfil',
+          'nome',
+          'usuário',
+          'tema',
+          'aparência',
+          'trocar senha',
+          'trocar e-mail',
+          'mudar senha',
+        ],
       },
       {
         id: 'consumidor-excluir-conta',
@@ -968,46 +1319,13 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         keywords: ['carteira', 'benefícios', 'pacote', 'voucher', 'cortesia'],
       },
       {
-        id: 'consumidor-apresentar',
-        title: 'Como usar um benefício no lugar (QR de 5 minutos)',
-        intro: 'Para ganhar o benefício na hora de pedir ou de pagar.',
-        needs: ['um benefício Disponível agora', 'estar no lugar do benefício'],
-        blocks: [
-          steps(
-            'Na **Carteira**, toque em **Usar benefício** no benefício que você vai usar.',
-            'Mostre o QR para quem está atendendo. O contador **Expira em** mostra quanto tempo falta: o código vale por 5 minutos.',
-            'Espere o lugar ler o QR e confirmar a utilização. Só a confirmação do lugar conta como uso.'
-          ),
-          figures(
-            image(
-              'carteira-apresentar-celular',
-              'Tela Usar benefício no celular com o QR coberto por um bloco "QR de exemplo" e o contador "Expira em 4:59" destacado, acima do botão Copiar link de validação.',
-              'O QR é pessoal e temporário (aqui, um QR de exemplo).'
-            )
-          ),
-          info(
-            'A tela do QR não muda sozinha',
-            'Depois que o lugar confirma, a tela do QR continua com o contador. Para ver a confirmação, abra **Utilizações** na Carteira.'
-          ),
-        ],
-        result:
-          'o lugar vê **Benefício validado e comprovante emitido**, e o comprovante aparece em **Utilizações**.',
-        troubleshooting: [
-          'O código expirou: toque em **Gerar novo código** e mostre o QR novo.',
-          'O lugar não consegue ler o QR: toque em **Copiar link de validação** e envie o link para quem está atendendo.',
-          'O lugar vê **Não foi possível validar esta apresentação**: o benefício não vale agora (já foi usado, está fora do dia ou do horário, ou a oferta foi pausada). Confira as regras do benefício na carteira.',
-          'Não compartilhe o QR nem o link com outras pessoas: eles dão acesso ao seu benefício.',
-        ],
-        keywords: ['qr', 'usar benefício', 'código', 'apresentar', 'expira', '5 minutos'],
-      },
-      {
         id: 'consumidor-utilizacoes',
         title: 'Como ver seus comprovantes',
         intro: 'Para conferir quando e onde você usou cada benefício.',
         needs: ['ter usado um benefício'],
         blocks: [
           steps(
-            'Na **Carteira**, toque em **Utilizações** (no topo, à direita).',
+            'Na **Carteira**, toque em **Utilizações**: no computador, fica no topo, à direita; no celular, logo abaixo do título **Minha carteira**.',
             'No benefício usado, toque em **Ver comprovante**.'
           ),
           figures(
@@ -1045,7 +1363,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
     title: 'Portal do parceiro',
     audience: 'Para a equipe de um negócio',
     profiles: 'Parceiro (Proprietário, Administrador, Editor e Analista)',
-    summary: 'Cadastrar o negócio, dados do lugar, conteúdo, avaliações, benefícios e desempenho.',
+    summary:
+      'Cadastrar o negócio, dados do lugar, conteúdo, avaliações, benefícios, desempenho e equipe.',
+    note: 'No celular, o menu da esquerda fica atrás do botão ☰ (**Abrir navegação**), no alto, à esquerda.',
     icon: Store,
     sections: [
       {
@@ -1076,15 +1396,16 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'Para ter o Portal e publicar os lugares do seu negócio.',
         needs: [
           'uma conta (veja [Como criar uma conta](#consumidor-criar-conta))',
-          'a razão social e o CNPJ do negócio',
+          'a razão social, o CNPJ, um e-mail e um telefone do negócio',
         ],
         blocks: [
           steps(
             'Entre na sua conta e, no topo, à direita, toque em **Negócios**.',
             'Na primeira vez, o Portal mostra **Comece pela organização**: toque em **Criar organização**. (Quem já tem um negócio usa **Nova organização**, na Visão geral.)',
-            'Preencha **Razão social**, **Nome fantasia**, **CNPJ** e, se quiser, **E-mail**, **Telefone** e **Website**. A razão social e o CNPJ ficam privados.',
-            'Toque em **Criar organização**.',
-            'Na página da organização, toque em **Novo lugar** para cadastrar o primeiro lugar.'
+            'Preencha **Razão social**, **Nome fantasia**, **CNPJ**, **E-mail** e **Telefone** (obrigatórios). **Endereço da página** e **Website** são opcionais: sem endereço, usamos o nome fantasia. A razão social e o CNPJ ficam privados.',
+            'Toque em **Criar organização**. Ela nasce como **Rascunho**, e você vira **Proprietário** dela.',
+            'Na página da organização, toque em **Novo lugar** e cadastre os lugares (veja [Como editar os dados de um lugar](#parceiro-editar-lugar)). Dá para preencher tudo enquanto a organização é rascunho.',
+            'Em **Dados da organização**, confira tudo (enquanto a organização é rascunho, o quadro já vem aberto) e toque em **Enviar para análise**. Na janela, confirme em **Enviar para análise**.'
           ),
           figures(
             image(
@@ -1099,19 +1420,31 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             ),
             image(
               'parceiro-nova-organizacao',
-              'Formulário Nova organização preenchido com dados fictícios e o botão Criar organização destacado.',
+              'Formulário Nova organização preenchido com dados fictícios, com e-mail e telefone, e o botão Criar organização destacado.',
               'Os dados da organização.'
             ),
             image(
-              'parceiro-organizacao-criada',
-              'Página da organização recém-criada, em rascunho, com o botão Novo lugar destacado.',
-              'A organização criada: agora, o primeiro lugar.'
+              'parceiro-organizacao-enviar',
+              'Quadro Dados da organização aberto numa organização em rascunho, com os dados fictícios e o botão Enviar para análise destacado.',
+              'Enviar a organização para análise.'
             )
           ),
         ],
         result:
-          'a organização aparece em rascunho e você vira **Proprietário** dela. A equipe do Experimente+ confere a organização antes de os lugares aparecerem no app e no site.',
-        keywords: ['cadastrar negócio', 'organização', 'cnpj', 'novo lugar', 'reivindicar'],
+          'a organização fica **Em análise**. A equipe do Experimente+ confere a razão social, o CNPJ e os contatos e aprova (a organização fica **Ativa**), pede correções (**Correções solicitadas**: ajuste e envie de novo) ou rejeita. Só depois de **Ativa** os lugares dela podem ir para a moderação e aparecer no app e no site.',
+        troubleshooting: [
+          'Durante a análise, a edição da organização e dos lugares pode ficar indisponível por um tempo. Ela volta quando a equipe responder.',
+          '**A organização precisa estar ativa antes do envio para moderação.**: um lugar só vai para a moderação depois que a organização é aprovada.',
+          '**Salve ou descarte os dados antes de enviar a organização para análise.**: toque em **Salvar dados** e depois em **Enviar para análise**.',
+        ],
+        keywords: [
+          'cadastrar negócio',
+          'organização',
+          'cnpj',
+          'novo lugar',
+          'enviar para análise',
+          'aprovação',
+        ],
       },
       {
         id: 'parceiro-lugares',
@@ -1121,7 +1454,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           steps(
             'No menu da esquerda, toque em **Dados do lugar**. Aparecem todos os lugares dos seus negócios, com a situação de cada um.',
-            'Toque em **Editar dados** (dados públicos), **Benefícios** (ofertas) ou **Desempenho** (números da organização).',
+            'Toque em **Editar dados** (dados públicos) ou **Benefícios** (ofertas) no lugar. **Desempenho**, ao lado do nome de cada organização, abre os números dela.',
             'Para ver uma organização e todos os lugares dela, toque em **Abrir**, na Visão geral.'
           ),
           figures(
@@ -1132,8 +1465,8 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             ),
             image(
               'parceiro-organizacao',
-              'Página da organização Grupo Experimente Norte com os números de lugares, completos, em análise e publicados e o botão Novo lugar destacado.',
-              'Uma organização e os seus lugares.'
+              'Página da organização Grupo Experimente Norte com os números de lugares, completos, em análise e publicados; os botões Equipe (1) e Novo lugar (2) estão destacados.',
+              'Uma organização: a equipe (1) e um lugar novo (2).'
             )
           ),
         ],
@@ -1197,7 +1530,8 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
       {
         id: 'parceiro-conteudo',
         title: 'Como publicar uma experiência, um evento ou um item de vitrine',
-        intro: 'Para mostrar em "Para viver aqui" o que o lugar oferece.',
+        intro:
+          'Para mostrar o que o lugar oferece em "Descubra mais neste lugar", no site, e em "Para viver aqui", no app.',
         needs: [
           'papel Proprietário, Administrador ou Editor',
           'uma imagem JPEG, PNG ou WebP de até 10 MB',
@@ -1208,7 +1542,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'No quadro **Adicionar**, escolha o **Lugar**, escreva o **Título** e, se quiser, a **Descrição**.',
             'Toque em **Criar rascunho**. O cartão aparece logo abaixo, como **Rascunho**.',
             'No cartão, em **Imagens**, arraste a imagem (ou toque para escolher), escreva o **Texto alternativo** (o que a imagem mostra, para quem não enxerga), marque **Usar como capa** e toque em **Enviar imagem**.',
-            'Toque em **Publicar** (ou em **Enviar para análise**, se for o botão que aparecer).'
+            'Toque em **Publicar** ou em **Enviar para análise**, conforme a regra da operação para aquele tipo de conteúdo: só um dos dois aparece.'
           ),
           figures(
             image(
@@ -1274,57 +1608,6 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         result:
           'a resposta aparece abaixo da avaliação, no app e no site, e a avaliação vai para **Respondidas**. A nota não muda. Para mudar, use **Editar resposta**.',
         keywords: ['avaliação', 'responder', 'resposta', 'comentário'],
-      },
-      {
-        id: 'parceiro-validar',
-        title: 'Como validar um benefício',
-        intro: 'Para registrar o uso do benefício que o cliente mostrou no balcão.',
-        needs: [
-          'papel Proprietário, Administrador ou Editor no negócio do benefício',
-          'o QR (ou o link) que o cliente está mostrando',
-        ],
-        blocks: [
-          p(
-            'No celular, o jeito mais rápido é a aba **Validar** do app (veja [Como validar no app](#app-validar)). Pelo site:'
-          ),
-          steps(
-            'Entre no Portal no navegador do celular e aponte a câmera para o QR do cliente. O link abre a página **Validar benefício** já com a apresentação. (No computador: toque em **Validar benefício**, cole o link que o cliente enviou em **Link da apresentação** e toque em **Conferir**.)',
-            'Confira o benefício, o lugar, o **Titular** e as **Regras**. O quadro **Apresentação válida** mostra quantas utilizações restam.',
-            'Toque em **Confirmar utilização**.',
-            'Na janela, toque em **Confirmar utilização** de novo.'
-          ),
-          figures(
-            image(
-              'parceiro-validar-previa-celular',
-              'Prévia no celular com o benefício, o lugar, o titular Cliente Experimente+, as regras, o aviso Apresentação válida e o botão laranja Confirmar utilização destacado.',
-              'A prévia: nada é usado até você confirmar.'
-            ),
-            image(
-              'parceiro-validar-confirmar-celular',
-              'Janela "Confirmar utilização?" com o botão azul Confirmar utilização destacado e Cancelar embaixo.',
-              'A confirmação final.'
-            ),
-            image(
-              'parceiro-comprovante-celular',
-              'Comprovante com a mensagem Benefício validado e comprovante emitido, o selo Utilização confirmada destacado e o código coberto.',
-              'O comprovante emitido (código coberto nesta imagem).'
-            ),
-            image(
-              'parceiro-validar',
-              'Página Validar benefício no computador com o campo Link da apresentação (1) e o botão Conferir (2) destacados.',
-              'No computador: cole o link (1) e confira (2).'
-            )
-          ),
-        ],
-        result:
-          'aparece **Benefício validado e comprovante emitido**, com o comprovante da utilização.',
-        troubleshooting: [
-          '**Esta apresentação é inválida ou expirou**: peça ao cliente para gerar um novo código.',
-          '**Não foi possível validar esta apresentação**: o benefício não vale agora (já foi usado, está fora do dia ou do horário, ou a oferta foi pausada). Peça ao cliente para conferir a carteira.',
-          '**Sua conta não pode validar este benefício**: o benefício é de outro negócio, ou o seu papel é Analista.',
-          'A internet caiu na confirmação: toque de novo em **Confirmar utilização**. Se o uso já foi registrado, o mesmo comprovante é devolvido. Na dúvida, confira em **Utilizações**.',
-        ],
-        keywords: ['validar', 'qr', 'benefício', 'confirmar utilização', 'balcão'],
       },
       {
         id: 'parceiro-utilizacoes',
@@ -1395,11 +1678,16 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         needs: ['papel Proprietário, Administrador ou Analista'],
         blocks: [
           steps(
-            'No menu da esquerda, toque em **Desempenho**.',
+            'No menu da esquerda, toque em **Desempenho**. Se você cuida de mais de uma organização, a lista **Dados do lugar** abre: toque em **Desempenho**, ao lado do nome da organização.',
             'Escolha o período em **De** e **Até** e toque em **Atualizar período**.',
             'Veja **Vezes que apareceu**, **Visitas à página**, **Contatos** e **Pico de visitantes**, o gráfico **Dia a dia**, os **Contatos por canal** e o **Desempenho por lugar**.'
           ),
           figures(
+            image(
+              'parceiro-desempenho-organizacoes',
+              'Lista Dados do lugar com duas organizações; o link Desempenho ao lado do nome da primeira está destacado.',
+              'Com mais de uma organização, escolha qual.'
+            ),
             image(
               'parceiro-desempenho',
               'Página Desempenho da descoberta com o período, os quadros de números e o gráfico dia a dia; o botão Atualizar período está destacado.',
@@ -1414,7 +1702,146 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         ],
         result:
           'os números mostram o período escolhido. Ninguém é identificado: tudo é somado por dia.',
-        keywords: ['desempenho', 'números', 'visitas', 'contatos', 'relatório'],
+        troubleshooting: [
+          'Não aparece **Desempenho** no menu: o seu papel é Editor. O desempenho fica com Proprietários, Administradores e Analistas.',
+        ],
+        keywords: ['desempenho', 'números', 'visitas', 'contatos', 'relatório', 'estatísticas'],
+      },
+      {
+        id: 'parceiro-equipe-convidar',
+        title: 'Como dar acesso a um funcionário',
+        intro: 'Para que alguém da sua equipe entre no Portal com o papel certo.',
+        needs: [
+          'papel Proprietário ou Administrador no negócio',
+          'o e-mail que a pessoa usa (ou vai usar) na conta dela',
+        ],
+        blocks: [
+          steps(
+            'No menu da esquerda, toque em **Equipe**. Se você cuida de mais de uma organização, escolha qual e toque em **Gerenciar equipe**.',
+            'Toque em **Convidar pessoa**.',
+            'Escreva o **E-mail** da pessoa e escolha o **Papel na organização**.',
+            'Toque em **Enviar convite**.',
+            'A pessoa recebe o e-mail "Convite para participar de…", abre o link, entra (ou cria a conta) com esse mesmo e-mail e toca em **Aceitar convite**. Depois, ela cai direto no Portal (veja [Como aceitar um convite](#parceiro-aceitar-convite)).'
+          ),
+          tip(
+            'Qual papel escolher',
+            'Para quem só valida no balcão, escolha **Editor** (não existe um papel só de validação; o Editor também edita dados e ofertas). Para quem só acompanha números, **Analista**. O que cada papel faz está em [Parceiro](#perfil-parceiro) e no fim da página **Equipe**.'
+          ),
+          figures(
+            image(
+              'parceiro-equipe',
+              'Página Equipe do Portal com a lista Pessoas, os e-mails borrados, e o botão Convidar pessoa destacado.',
+              'A página Equipe (e-mails borrados nesta imagem).'
+            ),
+            image(
+              'parceiro-convidar',
+              'Janela Convidar com o e-mail de exemplo preenchido, o papel Editor escolhido em Papel na organização e o botão Enviar convite destacado.',
+              'O convite: e-mail e papel.'
+            ),
+            image(
+              'parceiro-convite-pendente',
+              'Lista Convites pendentes com o convite de exemplo como Editor, o selo Aguardando aceite e a data em Vale até destacados, com Reenviar e Cancelar.',
+              'Aguardando aceite (1) e a validade do link (2).'
+            )
+          ),
+        ],
+        result:
+          'aparece **Convite enviado para … como …** e o convite fica em **Convites pendentes**, com a validade em **Vale até**. Quando a pessoa aceita, ela passa para a lista **Pessoas**.',
+        troubleshooting: [
+          'A pessoa não recebeu o e-mail: confira o endereço e o spam. **Reenviar** manda um link novo e invalida o anterior; **Cancelar** desfaz o convite.',
+          '**…mas o e-mail não pôde ser enviado**: o convite foi criado; toque em **Reenviar** em alguns minutos.',
+          '**Esta pessoa já faz parte da equipe**: para mudar o acesso dela, use **Gerenciar > Alterar papel**.',
+          'Administradores convidam só Editores e Analistas. Para convidar um Proprietário ou Administrador, peça a um Proprietário.',
+          '**Convites indisponíveis**: organizações rejeitadas ou arquivadas não recebem convites.',
+        ],
+        keywords: [
+          'funcionário',
+          'atendente',
+          'garçom',
+          'caixa',
+          'colaborador',
+          'convite',
+          'convidar',
+          'equipe do negócio',
+          'incluir pessoa',
+          'dar acesso',
+        ],
+      },
+      {
+        id: 'parceiro-equipe-gerenciar',
+        title: 'Como mudar o papel, suspender ou remover alguém',
+        intro: 'Para ajustar o acesso de quem já faz parte da equipe.',
+        needs: ['papel Proprietário ou Administrador no negócio'],
+        blocks: [
+          steps(
+            'Em **Equipe**, ache a pessoa na lista **Pessoas** e toque em **Gerenciar**.',
+            'Escolha **Alterar papel** (marque o **Novo papel** e toque em **Salvar papel**), **Suspender acesso** ou **Remover da equipe**.',
+            'Na janela, confirme em **Suspender acesso** ou **Remover da equipe**.',
+            'Para devolver o acesso de quem foi suspenso, toque em **Reativar** na linha da pessoa.'
+          ),
+          figures(
+            image(
+              'parceiro-equipe-gerenciar',
+              'Menu Gerenciar aberto na linha de uma pessoa da equipe, com Alterar papel, Suspender acesso e Remover da equipe; Alterar papel está destacado.',
+              'As opções de Gerenciar.'
+            )
+          ),
+          info(
+            'Suspender ou remover?',
+            '**Suspender** tira o acesso ao Portal desta organização, mas mantém a pessoa na lista e o histórico: dá para reativar. **Remover** tira o acesso de vez: para voltar, só com um convite novo.'
+          ),
+        ],
+        result:
+          'a mudança vale na hora e aparece uma mensagem, como **… agora é Editor nesta organização.**',
+        troubleshooting: [
+          '**A organização precisa de pelo menos um proprietário ativo…**: promova outra pessoa a Proprietário antes de mudar o último.',
+          'Não aparece **Gerenciar** para alguém: o seu papel não permite. Administradores gerenciam só Editores e Analistas.',
+          '**Você pode ver a equipe, mas não alterá-la**: convites e mudanças de papel ficam com Proprietários e Administradores.',
+        ],
+        keywords: [
+          'mudar papel',
+          'alterar papel',
+          'suspender',
+          'remover',
+          'reativar',
+          'funcionário',
+          'demitir',
+          'equipe do negócio',
+        ],
+      },
+      {
+        id: 'parceiro-aceitar-convite',
+        title: 'Como aceitar um convite',
+        intro: 'Para entrar na equipe de um negócio que convidou você.',
+        needs: ['o e-mail do convite'],
+        blocks: [
+          steps(
+            'Abra o e-mail **Convite para participar de…** e toque em **Aceitar convite**.',
+            'A página do convite abre, com o seu papel e a validade. Se você ainda não entrou, toque em **Entrar para aceitar** ou, sem conta, em **Criar conta**. Use o mesmo e-mail que recebeu o convite: depois, você volta direto para esta página.',
+            'Toque em **Aceitar convite**.'
+          ),
+          figures(
+            image(
+              'parceiro-convite-aceitar',
+              'Página Convite para Grupo Experimente Norte com o papel Editor, a validade, o e-mail da conta borrado e o botão Aceitar convite destacado.',
+              'O convite, pronto para aceitar.'
+            ),
+            image(
+              'parceiro-menu-editor',
+              'Menu do Portal de um Editor, com Visão geral, Validar benefício, Utilizações, Avaliações, Experiências e eventos e Dados do lugar, sem Desempenho e sem Equipe.',
+              'O menu de quem entrou como Editor.'
+            )
+          ),
+        ],
+        result:
+          'aparece **Convite aceito. Você agora faz parte de … como …** e a página da organização abre no Portal. O menu mostra só o que o seu papel permite.',
+        troubleshooting: [
+          '**Você entrou com uma conta de outro e-mail**: toque em **Sair e entrar com outra conta** e entre com o e-mail convidado.',
+          '**Convite expirado**: o link vale alguns dias. Peça a quem convidou para tocar em **Reenviar**.',
+          '**Convite cancelado** ou **Link de convite inválido**: peça um convite novo. O link mais recente substitui os anteriores.',
+          'Acesso suspenso: um convite não reativa. Peça a um Proprietário ou Administrador para tocar em **Reativar**.',
+        ],
+        keywords: ['convite', 'aceitar convite', 'entrar na equipe', 'funcionário', 'convidado'],
       },
       {
         id: 'parceiro-feedback',
@@ -1446,6 +1873,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
     audience: 'Para a equipe do Experimente+',
     profiles: 'Equipe do Experimente+ (Moderador, Administrador e Responsável técnico)',
     summary: 'Filas de moderação, denúncias, regras, benefícios, pessoas e catálogo.',
+    note: 'No celular, o menu da esquerda fica atrás do botão ☰ (**Abrir navegação**), no alto, à esquerda.',
     icon: ShieldCheck,
     sections: [
       {
@@ -1544,7 +1972,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           steps(
             'Em **Caixa de moderação**, toque em **Denúncias**. Cada caso mostra o protocolo, o motivo, quando chegou, o **Prazo** e o **Conteúdo denunciado**.',
             'Leia o conteúdo (o link **Abrir a página pública da unidade** mostra onde ele aparece).',
-            'Em **Desfecho**, escolha: ocultar o conteúdo, sem violação, autor advertido ou denúncia repetida.',
+            'Em **Desfecho**, escolha: **Ocultar o conteúdo**, **Sem violação**, **Autor advertido** ou **Denúncia repetida**. Ocultar só aparece para avaliações, respostas e conteúdo de parceiros.',
             'Escreva a **Nota da decisão** e toque em **Resolver** (ou em **Descartar**, para uma denúncia sem fundamento).'
           ),
           figures(
@@ -1562,8 +1990,10 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         ],
         result: 'a denúncia sai de **Pendente** e aparece em **Resolvida** (filtro **Estado**).',
         troubleshooting: [
+          'Denúncia sobre informação errada de um lugar: o lugar não sai do ar por denúncia, e **Ocultar o conteúdo** não aparece. Escolha o desfecho que descreve o caso, registre na **Nota da decisão** e peça ao negócio para corrigir os dados pelo Portal; a correção passa por **Dados de lugares**.',
           'Caso grave de um autor: **Banir autor** pede um motivo e impede novas publicações dele.',
           'Os casos fora do prazo aparecem em destaque em **Hoje**.',
+          'Quem denunciou não é avisado da decisão: a denúncia é anônima.',
         ],
         keywords: ['denúncia', 'prazo', 'banir', 'resolver', 'descartar'],
       },
@@ -1682,8 +2112,8 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'admin-acessos',
-              'Página Acessos a edições com o formulário Liberar uma carteira preenchido e o botão Conceder acesso destacado; à direita, os cartões dos acessos ativos.',
-              'Conceder um acesso.'
+              'Página Acessos a edições com o formulário Liberar uma carteira preenchido e o botão Conceder acesso destacado; à direita, os cartões dos acessos ativos. Os e-mails aparecem borrados.',
+              'Conceder um acesso (e-mails borrados nesta imagem).'
             )
           ),
         ],
@@ -1696,28 +2126,38 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
       },
       {
         id: 'administracao-pessoas',
-        title: 'Como consultar pessoas e papéis',
-        intro: 'Para achar uma conta e entender o que cada papel pode fazer.',
+        title: 'Como criar contas e consultar pessoas e papéis',
+        intro: 'Para achar ou criar uma conta e entender o que cada papel pode fazer.',
         needs: ['papel Administrador ou Responsável técnico'],
         blocks: [
           steps(
             'Em **Pessoas e acesso**, toque em **Usuários**. Busque por nome ou e-mail e veja os papéis, a situação e a data de cadastro.',
-            'Para criar uma conta administrativa, toque em **Adicionar usuário** e preencha **Nome completo**, **E-mail**, **Senha** e **Confirmar senha**.',
-            'Em **Papéis** e **Permissões**, veja o que cada papel permite. Mudar permissões é do Responsável técnico.'
+            'Para criar uma conta, toque em **Adicionar usuário** e preencha **Nome completo**, **E-mail**, **Senha** e **Confirmar senha**. A conta entra na operação em uso como membro: ganha carteira e pode ser convidada para a equipe de um negócio.',
+            'Conta antiga que ainda não faz parte da operação: na linha da conta, toque nos três pontos (**Abrir ações do usuário**) e em **Editar usuário**; no quadro **Operação**, toque em **Vincular à operação**.',
+            'Em **Papéis** e **Permissões**, veja o que cada papel permite.'
           ),
           figures(
             image(
               'admin-usuarios',
-              'Página Usuários com a busca por nome ou e-mail, a lista de contas de demonstração e o botão Adicionar usuário destacado.',
-              'A lista de usuários (contas de demonstração).'
+              'Página Usuários com a busca por nome ou e-mail, a lista de contas de demonstração com os e-mails borrados e o botão Adicionar usuário destacado.',
+              'A lista de usuários (e-mails borrados nesta imagem).'
             )
           ),
           info(
-            'Parceiro não é papel da plataforma',
-            'Quem é parceiro recebe acesso pelo negócio, não por um papel em **Papéis**. Veja [Parceiro](#perfil-parceiro).'
+            'Quem concede os papéis',
+            '**Adicionar usuário** não escolhe papel: a conta nasce como Explorador. Moderador, Administrador e Responsável técnico são concedidos pela equipe técnica do Experimente+, sem tela para isso. O acesso a um negócio vem do convite do próprio negócio (veja [Como dar acesso a um funcionário](#parceiro-equipe-convidar)), não de **Papéis**.'
           ),
         ],
-        keywords: ['usuários', 'papéis', 'permissões', 'pessoas', 'adicionar usuário'],
+        result: 'a conta nova aparece em **Usuários** e já pode entrar.',
+        keywords: [
+          'usuários',
+          'papéis',
+          'permissões',
+          'pessoas',
+          'adicionar usuário',
+          'vincular à operação',
+          'criar conta',
+        ],
       },
       {
         id: 'administracao-catalogo',
@@ -1765,7 +2205,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
     ],
   },
   {
-    id: 'app',
+    id: 'app-celular',
     title: 'O app no celular',
     audience: 'Para quem usa o Android',
     profiles: 'Visitante, Explorador e Parceiro',
@@ -2037,7 +2477,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
           warning(
             'Pagamento simulado',
-            'Nesta versão de testes nada é cobrado: o pedido mostra **Pagamento simulado** e a equipe confirma. O cartão de crédito aparece como "Em breve pelo aplicativo".'
+            'Nesta versão de testes nada é cobrado: o pedido mostra **Pagamento simulado** e fica aguardando até a equipe técnica do Experimente+ confirmar no servidor (não há botão para isso no app nem na área da equipe). O cartão de crédito aparece como "Em breve pelo aplicativo".'
           ),
         ],
         result: 'quando o pagamento é confirmado, os benefícios aparecem na **Carteira**.',
@@ -2154,11 +2594,13 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           list(
             'Confira a caixa de spam ou de lixo eletrônico e se o endereço foi digitado certo.',
+            'Confirmação do cadastro: o link vale por 24 horas. Se expirou, entre na conta e abra o link de novo: a página **Link expirado** tem o botão **Enviar novo link**.',
             'Para a senha, peça de novo em **Esqueceu a senha?**: cada pedido novo cancela os links anteriores.',
+            'Convite para a equipe de um negócio: peça a quem convidou para tocar em **Reenviar**, na página **Equipe**.',
             'Nesta versão beta, a conta funciona mesmo antes de o e-mail ser confirmado.'
           ),
         ],
-        keywords: ['email', 'spam', 'confirmação'],
+        keywords: ['email', 'spam', 'confirmação', 'confirmar e-mail', 'link expirado', 'convite'],
       },
       {
         id: 'duvidas-qr-expirou',
@@ -2166,7 +2608,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'O QR vale por 5 minutos, por segurança.',
         blocks: [
           p(
-            'Toque em **Gerar novo código** na mesma tela e mostre o QR novo. Se o lugar já confirmou o uso, o comprovante está em **Utilizações**.'
+            'Toque em **Gerar novo código** na mesma tela e mostre o QR novo. Se o lugar já confirmou o uso, o comprovante está em **Utilizações**. As outras recusas estão em [O que cada recusa quer dizer](#resgate-recusas).'
           ),
         ],
         keywords: ['qr', 'expirado', 'código'],
@@ -2177,7 +2619,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'O aviso que o lugar vê quando o benefício não vale naquele momento.',
         blocks: [
           p(
-            'O benefício já foi usado todas as vezes permitidas, está fora do dia ou do horário da oferta, ou a oferta foi pausada. Confira na carteira quando o benefício vale. Se o aviso falar em apresentação inválida ou expirada, gere um novo código.'
+            'O benefício já foi usado todas as vezes permitidas, está fora do dia ou do horário da oferta, ou a oferta foi pausada. Confira na carteira quando o benefício vale. Se o aviso falar em apresentação inválida ou expirada, gere um novo código. Veja todas as situações em [O que cada recusa quer dizer](#resgate-recusas).'
           ),
         ],
         keywords: ['validar', 'recusado', 'benefício'],
@@ -2202,6 +2644,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           p(
             'Não. Esta é uma versão beta em homologação: lugares, eventos e benefícios são fictícios, de demonstração, e o pagamento é simulado. Nada é cobrado.'
+          ),
+          p(
+            'O pedido fica aguardando até a equipe técnica do Experimente+ confirmar o pagamento simulado no servidor; não há botão para isso na área da equipe. Depois da confirmação, os benefícios entram na **Carteira**. Se um pedido ficar muito tempo pendente, avise a equipe que acompanha os testes.'
           ),
         ],
         keywords: ['pagamento', 'cobrança', 'pix', 'simulado'],
@@ -2231,7 +2676,8 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           list(
             'O Portal aparece para quem faz parte de um negócio. Se você acabou de cadastrar o seu, toque em **Negócios**, no topo.',
-            'Para entrar num negócio que já existe, peça a quem cuida dele ou à equipe do Experimente+.',
+            'Para entrar num negócio que já existe, peça um convite a um Proprietário ou Administrador dele (veja [Como aceitar um convite](#parceiro-aceitar-convite)).',
+            'Falta um item no menu do Portal, como **Desempenho** ou **Equipe**: o menu mostra só o que o seu papel permite (veja [Parceiro](#perfil-parceiro)).',
             'A área da equipe só aparece para Moderador, Administrador e Responsável técnico. Veja [Perfis de acesso](#perfis).'
           ),
         ],

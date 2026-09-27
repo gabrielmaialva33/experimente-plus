@@ -93,14 +93,55 @@ describe('manual content', () => {
     expect(MANUAL_CHAPTERS.map((chapter) => chapter.id)).toEqual([
       'primeiros-passos',
       'perfis',
+      'resgate',
       'visitante',
       'consumidor',
       'parceiro',
       'administracao',
-      'app',
+      'app-celular',
       'duvidas',
     ])
     expect(anchors).toContain('visitante-explorar')
+  })
+
+  it('never uses an anchor the page already gives to another element', () => {
+    // `app` is the root element Inertia renders the page into: a link to it goes nowhere.
+    for (const reserved of ['app', 'conteudo-principal', 'indice', 'sumario-celular']) {
+      expect(manualAnchors(), reserved).not.toContain(reserved)
+    }
+  })
+
+  it('tells the QR redemption from both sides, with every refusal explained', () => {
+    const chapter = MANUAL_CHAPTERS.find((item) => item.id === 'resgate')!
+    expect(chapter.sections.map((section) => section.id)).toEqual([
+      'resgate-como-funciona',
+      'consumidor-apresentar',
+      'parceiro-validar',
+      'resgate-recusas',
+    ])
+    const refusals = chapter.sections.at(-1)!.blocks.find((block) => block.kind === 'table')
+    expect(refusals?.kind === 'table' && refusals.rows.map((row) => row[0])).toEqual([
+      'O QR expirou (mais de 5 minutos)',
+      'O QR já foi usado',
+      'O benefício acabou, ou está fora do dia ou do horário',
+      'A oferta ou a edição está pausada',
+      'O benefício é de outro negócio',
+      'Conta sem permissão para validar',
+    ])
+  })
+
+  it('explains how a business gives, changes and accepts access to its team', () => {
+    const anchors = new Set(manualAnchors())
+    for (const anchor of [
+      'parceiro-equipe-convidar',
+      'parceiro-equipe-gerenciar',
+      'parceiro-aceitar-convite',
+    ]) {
+      expect(anchors.has(anchor), anchor).toBe(true)
+    }
+    const all = texts.join('\n')
+    expect(all).toContain('Para quem só valida no balcão, escolha **Editor**')
+    expect(all).not.toMatch(/Ainda não há uma tela para convidar/)
   })
 
   it('keeps every anchor the mobile app opens', () => {
