@@ -24,19 +24,26 @@ function externalInstagramHref(value: string): string {
 
 export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
   const [shareStatus, setShareStatus] = useState('')
-  const routeAvailable = Boolean(
-    (detail.address.latitude !== null && detail.address.longitude !== null) ||
-    detail.address.street ||
-    detail.address.district
-  )
-  // Keep one conversion in focus even when the preferred contact is missing.
-  const primaryAction = [
-    { name: 'whatsapp', available: detail.contacts.whatsapp },
-    { name: 'route', available: routeAvailable },
-    { name: 'phone', available: detail.contacts.phone },
-    { name: 'website', available: detail.contacts.website },
-    { name: 'booking', available: detail.contacts.bookingUrl },
-  ].find((action) => action.available)?.name
+  // The server builds the route from the published coordinates alone and answers
+  // 404 without them, so a street or district is no reason to offer "Como chegar".
+  const routeAvailable = detail.address.latitude !== null && detail.address.longitude !== null
+  /*
+   * The page's main action is navy (`primary`), not orange: direction A keeps
+   * `cta` for converting a benefit or a purchase, the app's rule since audit A11.
+   * Visiting comes first, as on the phone; without a route the first available
+   * contact takes the place. The rest stay `contact`, so one action leads.
+   */
+  const primaryAction = (
+    [
+      ['route', routeAvailable],
+      ['whatsapp', Boolean(detail.contacts.whatsapp)],
+      ['phone', Boolean(detail.contacts.phone)],
+      ['website', Boolean(detail.contacts.website)],
+      ['booking', Boolean(detail.contacts.bookingUrl)],
+    ] as const
+  ).find(([, available]) => available)?.[0]
+  const variantFor = (action: NonNullable<typeof primaryAction>) =>
+    action === primaryAction ? 'primary' : 'contact'
 
   async function shareEstablishment() {
     const url = window.location.href
@@ -90,8 +97,33 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
       </div>
 
       <div className="mt-5 grid gap-2.5">
+        {routeAvailable ? (
+          <Button
+            variant={variantFor('route')}
+            size="xl"
+            shape="pill"
+            className="justify-start"
+            asChild
+          >
+            <a
+              href={trackedActionHref(detail.city.slug, detail.slug, 'route')}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MapPinned className="size-4" /> Como chegar
+              <span className="sr-only"> (abre em nova aba)</span>
+            </a>
+          </Button>
+        ) : null}
+
         {detail.contacts.whatsapp ? (
-          <Button variant="cta" size="xl" shape="pill" className="justify-start" asChild>
+          <Button
+            variant={variantFor('whatsapp')}
+            size="xl"
+            shape="pill"
+            className="justify-start"
+            asChild
+          >
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'whatsapp')}
               target="_blank"
@@ -103,28 +135,9 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
           </Button>
         ) : null}
 
-        {routeAvailable ? (
-          <Button
-            variant={primaryAction === 'route' ? 'cta' : 'contact'}
-            size="xl"
-            shape="pill"
-            className="justify-start"
-            asChild
-          >
-            <a
-              href={trackedActionHref(detail.city.slug, detail.slug, 'route')}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <MapPinned className="size-4" /> Traçar rota
-              <span className="sr-only"> (abre em nova aba)</span>
-            </a>
-          </Button>
-        ) : null}
-
         {detail.contacts.phone ? (
           <Button
-            variant={primaryAction === 'phone' ? 'cta' : 'contact'}
+            variant={variantFor('phone')}
             size="xl"
             shape="pill"
             className="justify-start"
@@ -138,7 +151,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
 
         {detail.contacts.website ? (
           <Button
-            variant={primaryAction === 'website' ? 'cta' : 'contact'}
+            variant={variantFor('website')}
             size="xl"
             shape="pill"
             className="justify-start"
@@ -157,7 +170,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
 
         {detail.contacts.bookingUrl ? (
           <Button
-            variant={primaryAction === 'booking' ? 'cta' : 'contact'}
+            variant={variantFor('booking')}
             size="xl"
             shape="pill"
             className="justify-start"
