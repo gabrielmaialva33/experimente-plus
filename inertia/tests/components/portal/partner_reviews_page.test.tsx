@@ -21,7 +21,8 @@ vi.mock('@inertiajs/react', () => ({
       {children}
     </a>
   ),
-  router: { get: mocks.get },
+  // The reply forms' unsaved-changes guard listens to visits.
+  router: { get: mocks.get, on: () => () => undefined },
   useForm: <T extends Record<string, string>>(initial: T) => {
     const [data, setState] = useState(initial)
     return {

@@ -20,6 +20,8 @@ vi.mock('@inertiajs/react', async () => {
 
   return {
     Head: () => null,
+    // The forms' unsaved-changes guard listens to visits.
+    router: { on: () => () => undefined },
     Link: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
       <a href={href} {...props}>
         {children}

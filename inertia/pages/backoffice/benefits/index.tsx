@@ -25,6 +25,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { useAuth } from '~/hooks/use_auth'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -153,8 +154,13 @@ export default function BenefitsBackofficePage({
   const canArchive = can('benefit_editions.archive')
   const canListAccesses = can('benefit_accesses.list')
   const [form, setForm] = useState<EditionFormState>(emptyForm)
+  // The form as last emptied or loaded: any difference is typing a visit would lose.
+  const [savedForm, setSavedForm] = useState<EditionFormState>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [processing, setProcessing] = useState(false)
+  const { allowNextVisit, confirmDiscard } = useUnsavedChangesGuard({
+    enabled: !processing && JSON.stringify(form) !== JSON.stringify(savedForm),
+  })
   const [actionId, setActionId] = useState<number | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<BenefitEdition | null>(null)
   const archiveOperationRef = useRef(false)
@@ -173,6 +179,7 @@ export default function BenefitsBackofficePage({
   function resetForm() {
     const editedId = editingId
     setForm(emptyForm)
+    setSavedForm(emptyForm)
     setEditingId(null)
     setLocalError(null)
     // Back to the edition's own "Editar", where the keyboard left the list.
@@ -181,11 +188,16 @@ export default function BenefitsBackofficePage({
     }
   }
 
+  function cancelEdit() {
+    if (!confirmDiscard()) return
+    resetForm()
+  }
+
   function beginEdit(edition: BenefitEdition) {
-    if (!canUpdate) return
+    if (!canUpdate || !confirmDiscard()) return
     setEditingId(edition.id)
     setLocalError(null)
-    setForm({
+    const loaded: EditionFormState = {
       city_id: String(edition.city_id),
       name: edition.name,
       description: edition.description ?? '',
@@ -194,7 +206,9 @@ export default function BenefitsBackofficePage({
       sales_ends_on: dateOnly(edition.sales_ends_at),
       usage_starts_on: dateOnly(edition.usage_starts_at),
       usage_ends_on: dateOnly(edition.usage_ends_at),
-    })
+    }
+    setForm(loaded)
+    setSavedForm(loaded)
     window.scrollTo({ top: 0, behavior: 'smooth' })
     // The form fills at the top of the page; take the keyboard there too, not only the eye.
     requestAnimationFrame(() =>
@@ -240,6 +254,7 @@ export default function BenefitsBackofficePage({
       onFinish: () => setProcessing(false),
     }
 
+    allowNextVisit()
     if (editingId) {
       router.put(`/backoffice/benefits/${editingId}`, payload, options)
     } else {
@@ -334,7 +349,7 @@ export default function BenefitsBackofficePage({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={resetForm}
+                    onClick={cancelEdit}
                   >
                     <X />
                     <span className="sr-only">Cancelar edição</span>
@@ -488,7 +503,7 @@ export default function BenefitsBackofficePage({
                         variant="ghost"
                         size="xl"
                         shape="pill"
-                        onClick={resetForm}
+                        onClick={cancelEdit}
                         disabled={processing}
                       >
                         Cancelar

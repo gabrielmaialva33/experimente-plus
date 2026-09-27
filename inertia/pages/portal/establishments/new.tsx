@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { formatPhoneBR } from '~/lib/br_format'
 import { firstError } from '~/lib/form_errors'
@@ -56,6 +57,10 @@ export default function NewEstablishmentPage({
     whatsapp: '',
     availability_type: 'regular_hours',
   })
+  // Leaving asks before a half-filled form is lost; its own submit is let through.
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.isDirty && !form.processing,
+  })
   const errors = form.errors as Record<string, unknown>
   const generalError = firstError(errors.general ?? errors.establishment ?? errors.form)
   const hasCities = cities.length > 0
@@ -69,6 +74,7 @@ export default function NewEstablishmentPage({
     if (submittingRef.current || !hasCities) return
 
     submittingRef.current = true
+    allowNextVisit()
     form.post(`/portal/organizations/${organization.id}/establishments`, {
       onFinish: () => {
         submittingRef.current = false

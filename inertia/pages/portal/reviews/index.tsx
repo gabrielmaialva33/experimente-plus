@@ -8,6 +8,7 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -387,6 +388,9 @@ function ReplyForm({
   onDone: () => void
 }) {
   const form = useForm({ comment: initial })
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.isDirty && !form.processing,
+  })
   const fieldId = `reply-${reviewId}`
   const hintId = `${fieldId}-hint`
   const errorId = `${fieldId}-error`
@@ -395,6 +399,7 @@ function ReplyForm({
     event.preventDefault()
     const url = `/portal/reviews/${reviewId}/reply`
     const options = { preserveScroll: true, onSuccess: onDone }
+    allowNextVisit()
     if (mode === 'create') form.post(url, options)
     else form.put(url, options)
   }

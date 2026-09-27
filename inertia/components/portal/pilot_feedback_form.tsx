@@ -9,6 +9,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
 import { Textarea } from '~/components/ui/textarea'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { firstError } from '~/lib/form_errors'
 import { pilotFeedbackContextLabel } from '~/lib/labels'
 import { cn } from '~/lib/utils'
@@ -82,6 +83,10 @@ export default function PilotFeedbackForm({
   const selectedEstablishment = targets.establishments.find(
     (establishment) => establishment.id === form.data.establishment_id
   )
+  // Only the message is worth guarding: the context selects are prefilled by the page.
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.data.message.trim() !== '' && !form.processing,
+  })
   const errors = form.errors as Record<string, unknown>
   const generalError = firstError(errors.general ?? errors.feedback ?? errors.form)
   const busy = submitting || form.processing
@@ -98,6 +103,7 @@ export default function PilotFeedbackForm({
     setSubmitting(true)
     setSuccessMessage(null)
 
+    allowNextVisit()
     form.post('/portal/feedback', {
       preserveScroll: true,
       onSuccess: () => {

@@ -7,6 +7,7 @@ import { EditorField } from '~/components/portal/establishment_editor/editor_fie
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { formatCnpj, formatPhoneBR } from '~/lib/br_format'
 import { firstError } from '~/lib/form_errors'
@@ -32,6 +33,10 @@ export default function NewOrganizationPage() {
     phone: '',
     website: '',
   })
+  // Leaving asks before a half-filled form is lost; its own submit is let through.
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: () => form.isDirty && !form.processing,
+  })
   const errors = form.errors as Record<string, unknown>
   const generalError = firstError(errors.general ?? errors.organization ?? errors.form)
 
@@ -44,6 +49,7 @@ export default function NewOrganizationPage() {
     if (submittingRef.current) return
 
     submittingRef.current = true
+    allowNextVisit()
     form.post('/portal/organizations', {
       onFinish: () => {
         submittingRef.current = false

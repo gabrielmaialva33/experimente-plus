@@ -23,6 +23,8 @@ vi.mock('@inertiajs/react', () => ({
   Head: () => null,
   router: {
     post: vi.fn(),
+    // The grant form's unsaved-changes guard listens to visits.
+    on: () => () => undefined,
   },
 }))
 

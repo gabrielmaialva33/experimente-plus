@@ -26,6 +26,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
 import { useAuth } from '~/hooks/use_auth'
+import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 
@@ -105,6 +106,10 @@ export default function BenefitAccessesPage({
   const [source, setSource] = useState<'manual' | 'courtesy'>('manual')
   const [notes, setNotes] = useState('')
   const [processing, setProcessing] = useState(false)
+  // A typed holder e-mail or note is what a visit would lose; the selects keep defaults.
+  const { allowNextVisit } = useUnsavedChangesGuard({
+    enabled: !processing && (email.trim() !== '' || notes.trim() !== ''),
+  })
   const [localError, setLocalError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'revoked'>('all')
@@ -144,6 +149,7 @@ export default function BenefitAccessesPage({
     }
 
     setProcessing(true)
+    allowNextVisit()
     router.post(
       '/backoffice/accesses',
       {

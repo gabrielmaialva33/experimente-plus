@@ -28,6 +28,8 @@ vi.mock('@inertiajs/react', () => {
       delete: vi.fn(),
       post: vi.fn(),
       put: vi.fn(),
+      // The edition form's unsaved-changes guard listens to visits.
+      on: () => () => undefined,
     },
   }
 })
@@ -80,6 +82,20 @@ describe('BenefitsBackofficePage', () => {
     await waitFor(() => expect(screen.getByLabelText(/^Nome da edição/)).toHaveFocus())
     await user.click(screen.getByRole('button', { name: 'Cancelar edição' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Editar' })).toHaveFocus())
+  })
+
+  it('asks before cancelling an edition edit that changed something', async () => {
+    mocks.permissions = ['benefit_editions.update']
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const { user } = render(<BenefitsBackofficePage editions={[edition]} cities={[edition.city]} />)
+
+    await user.click(screen.getByRole('button', { name: 'Editar' }))
+    await user.type(screen.getByLabelText(/^Nome da edição/), ' 2027')
+    await user.click(screen.getByRole('button', { name: 'Cancelar edição' }))
+
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(screen.getByLabelText(/^Nome da edição/)).toHaveValue(`${edition.name} 2027`)
+    confirm.mockRestore()
   })
 
   it('renders editions read-only for moderators without exposing mutations', () => {

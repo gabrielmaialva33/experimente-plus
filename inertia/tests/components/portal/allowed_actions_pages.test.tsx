@@ -26,6 +26,8 @@ vi.mock('@inertiajs/react', () => ({
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
+    // The offer form's unsaved-changes guard listens to visits.
+    on: () => () => undefined,
   },
   usePage: () => ({ props: mocks.pageProps }),
 }))
