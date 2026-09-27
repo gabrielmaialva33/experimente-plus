@@ -70,4 +70,24 @@ describe('OrganizationAnalytics', () => {
     expect(table.getByRole('rowheader', { name: 'Café Central' })).toBeVisible()
     expect(screen.getByText('10% das visitas')).toBeVisible()
   })
+
+  it('gives a phone one card per place instead of a sideways-scrolling table', () => {
+    render(<OrganizationAnalytics dashboard={dashboard} />)
+
+    // JSDOM ignores the breakpoints: both exist, and the classes pick one per width.
+    const cards = screen.getByRole('list', { name: 'Desempenho por lugar' })
+    expect(cards).toHaveClass('sm:hidden')
+    expect(screen.getByRole('region', { name: 'Desempenho por lugar' })).toHaveClass(
+      'hidden',
+      'sm:block'
+    )
+    const card = within(within(cards).getAllByRole('listitem')[0])
+    expect(card.getByText('Café Central')).toBeInTheDocument()
+    expect(card.getAllByRole('term').map((term) => term.textContent)).toEqual([
+      'Apareceu',
+      'Visitas',
+      'Contatos',
+      'Sessões',
+    ])
+  })
 })
