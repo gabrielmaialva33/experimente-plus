@@ -83,6 +83,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
       <nav
         className="fixed inset-x-0 bottom-0 z-50 border-t bg-background pb-[env(safe-area-inset-bottom)] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden"
         aria-label="Navegação principal"
+        data-mobile-tab-bar
       >
         <div
           className="mx-auto grid max-w-lg"

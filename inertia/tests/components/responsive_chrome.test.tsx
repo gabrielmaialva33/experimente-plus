@@ -110,6 +110,34 @@ describe('responsive chrome on short screens', () => {
     }
   })
 
+  it('steps both phone tab bars aside while a text field has the keyboard', () => {
+    const rule = appCss.indexOf('[data-mobile-tab-bar] {')
+    expect(rule).toBeGreaterThan(-1)
+    const prelude = appCss.slice(appCss.lastIndexOf('@media (max-width: 47.999rem)', rule), rule)
+    expect(prelude).toContain('html:has(')
+    expect(prelude).toContain('textarea')
+    expect(prelude).toContain('):focus')
+    expect(appCss.slice(rule, appCss.indexOf('}', rule))).toContain('display: none;')
+
+    pageState.url = '/cidades'
+    const { unmount } = render(<PublicMobileNavigation />)
+    expect(screen.getByRole('navigation', { name: 'Navegação móvel' })).toHaveAttribute(
+      'data-mobile-tab-bar'
+    )
+    unmount()
+
+    pageState.user = { id: 7, full_name: 'Ana Souza', email: 'ana@example.com' }
+    pageState.activeTenantId = 31
+    render(
+      <ConsumerShell>
+        <h1>Carteira</h1>
+      </ConsumerShell>
+    )
+    expect(screen.getByRole('navigation', { name: 'Navegação principal' })).toHaveAttribute(
+      'data-mobile-tab-bar'
+    )
+  })
+
   it('wraps a long tab label on a 320 px phone instead of cutting it with an ellipsis', () => {
     pageState.url = '/cidades'
     render(<PublicMobileNavigation />)
