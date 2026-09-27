@@ -70,10 +70,10 @@ export function AppBrand({
       href={href}
       onClick={onNavigate}
       aria-label={application.name}
-      // 44 px tall on every header, and 44 px wide when only the mark shows.
+      // 44 x 44 px at least, also where a header hides the name and only the mark shows.
       className={cn(
-        'flex min-h-11 min-w-0 items-center gap-3',
-        collapsed && 'min-w-11 justify-center',
+        'flex min-h-11 min-w-11 items-center gap-3',
+        collapsed && 'justify-center',
         className
       )}
     >

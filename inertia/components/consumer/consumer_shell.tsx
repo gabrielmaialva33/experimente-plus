@@ -38,7 +38,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
                   href={item.href}
                   aria-current={selected ? 'page' : undefined}
                   className={cn(
-                    'flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    'flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold pointer-coarse:min-h-11 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     selected
                       ? 'bg-accent text-accent-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'

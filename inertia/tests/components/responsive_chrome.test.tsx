@@ -138,6 +138,28 @@ describe('responsive chrome on short screens', () => {
     )
   })
 
+  it('grows the header destinations to 44 px on a touch tablet', () => {
+    pageState.url = '/cidades'
+    const { unmount } = render(<PublicHeader />)
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Explorar' })).toHaveClass(
+      'min-h-10',
+      'pointer-coarse:min-h-11'
+    )
+    unmount()
+
+    pageState.user = { id: 7, full_name: 'Ana Souza', email: 'ana@example.com' }
+    pageState.activeTenantId = 31
+    render(
+      <ConsumerShell>
+        <h1>Carteira</h1>
+      </ConsumerShell>
+    )
+    const header = within(screen.getByRole('navigation', { name: 'Navegação do consumidor' }))
+    for (const link of header.getAllByRole('link')) {
+      expect(link).toHaveClass('pointer-coarse:min-h-11')
+    }
+  })
+
   it('wraps a long tab label on a 320 px phone instead of cutting it with an ellipsis', () => {
     pageState.url = '/cidades'
     render(<PublicMobileNavigation />)

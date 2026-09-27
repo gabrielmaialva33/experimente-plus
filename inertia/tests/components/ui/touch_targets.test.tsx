@@ -72,10 +72,10 @@ describe('touch targets', () => {
     )
   })
 
-  it('keeps the brand link 44 px tall, and 44 px wide when only the mark shows', () => {
-    const { unmount } = render(<AppBrand href="/" />)
-    expect(screen.getByRole('link', { name: 'Experimente+' })).toHaveClass('min-h-11')
-    expect(screen.getByRole('link', { name: 'Experimente+' })).not.toHaveClass('min-w-11')
+  it('keeps the brand link at least 44 x 44 px, also when only the mark shows', () => {
+    const { unmount } = render(<AppBrand href="/" wordmarkClassName="md:max-lg:hidden" />)
+    // The header hides the name between 768 and 1024 px: the mark alone is 36 px wide.
+    expect(screen.getByRole('link', { name: 'Experimente+' })).toHaveClass('min-h-11', 'min-w-11')
     unmount()
 
     render(<AppBrand href="/" collapsed />)

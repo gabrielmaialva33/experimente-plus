@@ -67,7 +67,8 @@ function NavigationButton({
       aria-label={`${item.label}: ${accessibilityStatus}`}
       className={cn(
         'group flex items-center gap-2.5 rounded-lg text-left text-sm font-medium transition-colors',
-        compact ? 'shrink-0 border px-3 py-2 pointer-coarse:min-h-11' : 'w-full px-3 py-2.5',
+        compact ? 'shrink-0 border px-3 py-2' : 'w-full px-3 py-2.5',
+        'pointer-coarse:min-h-11',
         active
           ? 'border-primary/20 bg-primary/10 text-primary'
           : compact
