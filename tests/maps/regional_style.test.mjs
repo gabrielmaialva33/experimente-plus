@@ -11,7 +11,8 @@ test('regional style uses the measured v4.15.2 schema and native PMTiles v3 sour
   assert.equal(style.metadata['experimente:basemap-version'], '4.15.2')
   assert.equal(style.metadata['experimente:language'], 'pt')
   assert.equal(style.sources.protomaps.maxzoom, 15)
-  assert.deepEqual(style.sources.protomaps.bounds, [-51.4, -23.55, -50.25, -22.95])
+  // From Maringá (west) to Bandeirantes (east), Apucarana (south) included.
+  assert.deepEqual(style.sources.protomaps.bounds, [-52.1, -23.7, -50.25, -22.95])
   assert.match(style.sources.protomaps.url, /^pmtiles:\/\/https:\/\//)
   const schema = new Set([
     'boundaries',
