@@ -18,6 +18,7 @@ export default class ProvisionHomologation extends BaseCommand {
     'The first run creates the operation, the accounts, two fictitious establishments and the editions.',
     'Every run, the first and each replay, then ensures demonstration content through the domain services: two experiences with a cover, two showcase items with an informational price, one event happening today and two in the coming days (dated by the city calendar), a review of each establishment by the provisioned customer with a partner reply, and one pending report so the moderation queue is not empty.',
     "Each item is created once and never restored: what a moderator archived stays archived. A run on a later day adds that day's events; past events leave the agenda on their own.",
+    'Then it ensures the demonstration catalogue: cities of the north of Paraná, the discovery taxonomy, fictitious partners, organizations and places published through submission and moderation, experiences, weekly events, showcase items, city packages with offers and reviews by fictitious consumers. It only creates what is missing, adopts nothing a person created and never changes the provisioned accounts; demo accounts get passwords nobody holds.',
     'Refused outside DEPLOYMENT_ENV=homologation, exactly like the baseline.',
   ]
   static options = { startApp: true }
@@ -43,6 +44,12 @@ export default class ProvisionHomologation extends BaseCommand {
         `Demonstration content: ${demo.created.length} created, ${demo.alreadyPresent.length} already present`
       )
       for (const skipped of demo.notCreated)
+        this.logger.warning(`Not created ${skipped.key}: ${skipped.reason}`)
+      const catalogue = await service.provisionDemoCatalog(config)
+      this.logger.success(
+        `Demonstration catalogue: ${catalogue.created.length} created, ${catalogue.alreadyPresent.length} already present`
+      )
+      for (const skipped of catalogue.notCreated)
         this.logger.warning(`Not created ${skipped.key}: ${skipped.reason}`)
       this.logger.info(
         'Credentials supplied privately; none displayed or rotated. Preserve them in your password manager.'

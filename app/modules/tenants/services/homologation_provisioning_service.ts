@@ -47,8 +47,12 @@ import PaymentProviderService from '#modules/purchases/services/payment_provider
 import HomologationDemoContent, {
   type DemoContentOutcome,
 } from '#modules/tenants/services/homologation_demo_content'
+import DemoCatalogProvisioner, {
+  type DemoCatalogOutcome,
+} from '#database/support/demo/demo_catalog_provisioner'
 
 const ACTION = 'homologation.provision.v1'
+export const DEMO_CATALOG_ACTION = 'homologation.demo-catalog.v1'
 // Each venue has its own point: two at the same coordinate stack on the map,
 // and a tap on one opened the other.
 const VENUES = [
@@ -508,6 +512,50 @@ export default class HomologationProvisioningService {
       if (error instanceof ProvisioningError) throw error
       throw new ProvisioningError(
         'Demonstration content failed; completed steps are kept, verify privately and rerun'
+      )
+    }
+  }
+
+  /**
+   * The rich demonstration catalogue over the baseline: more cities of the
+   * north of Paraná, the discovery taxonomy, fictitious partners with their
+   * organizations and places, partner content, city packages and reviews by
+   * fictitious consumers (see `DemoCatalogProvisioner`).
+   *
+   * Like `provisionDemoContent`, it runs on every invocation and only ever
+   * creates what is missing: it adopts nothing a person created, overwrites
+   * nothing, and never touches the provisioned accounts beyond acting as the
+   * administrator who approves. The demo accounts it creates get random
+   * passwords nobody holds — they exist only as authors. Completed steps
+   * survive a failure, so a rerun continues where the last one stopped.
+   */
+  async provisionDemoCatalog(
+    input: HomologationProvisioningConfig,
+    now: DateTime = DateTime.utc()
+  ): Promise<DemoCatalogOutcome> {
+    this.assertEnvironment()
+    const config = parseProvisioningConfig(input)
+    const tenant = await Tenant.findBy('slug', config.tenantSlug)
+    if (!tenant)
+      throw new ProvisioningError(
+        'No provisioned tenant; run homologation:provision so the baseline exists first'
+      )
+    const receipt = await this.replay(tenant, config)
+    try {
+      const administrator = await User.findOrFail(receipt.accounts.administrator)
+      return await new DemoCatalogProvisioner({
+        tenant,
+        administrator,
+        markerAction: DEMO_CATALOG_ACTION,
+        storagePrefix: `homologation/media/v1/${env.get('DRIVE_DISK')}/${config.tenantSlug}/demo-catalog`,
+        emailDomain: 'example.invalid',
+        source: DEMO_CATALOG_ACTION,
+        now,
+      }).provision()
+    } catch (error) {
+      if (error instanceof ProvisioningError) throw error
+      throw new ProvisioningError(
+        'Demonstration catalogue failed; completed steps are kept, verify privately and rerun'
       )
     }
   }
