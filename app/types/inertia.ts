@@ -13,6 +13,13 @@ import type { DashboardStats } from '#modules/web/services/get_dashboard_stats_s
 import type { WebRole } from '#modules/web/services/list_roles_with_permissions_service'
 import type { WebPermission } from '#modules/web/services/list_all_permissions_service'
 import type { PartnerPlacesPageProps } from '#modules/portal/interfaces/portal_pages'
+import type {
+  OrganizationInvitationAcceptPageProps,
+  OrganizationTeamChooserProps,
+  OrganizationTeamPageProps,
+} from '#modules/organizations/interfaces/organization_team_pages'
+import type { ReturnPath } from '#modules/web/utils/return_path'
+import type { EmailVerificationPageProps } from '#modules/auth/interfaces/email_verification_page'
 import type { BackofficeTodayPageProps } from '#modules/portal/interfaces/backoffice_today_page'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 import type { PublicReviewsPayload } from '#modules/reviews/interfaces/public_reviews_page'
@@ -49,10 +56,14 @@ type PublicServerError = {
 declare module '@adonisjs/inertia/types' {
   interface InertiaPages {
     // Auth
-    'auth/login': Record<string, never>
-    'auth/register': Record<string, never>
+    'auth/login': { next: ReturnPath | null }
+    'auth/register': {
+      next: ReturnPath | null
+      invitation: { email: string; organization_name: string } | null
+    }
     'auth/forgot_password': Record<string, never>
     'auth/reset_password': { token: string }
+    'auth/verify_email': EmailVerificationPageProps
 
     // Legal
     'legal/terms': Record<string, never>
@@ -81,6 +92,11 @@ declare module '@adonisjs/inertia/types' {
     'portal/redemptions/validate': Record<string, any>
     'portal/redemptions/receipt': Record<string, any>
     'portal/content/index': Record<string, any>
+    'portal/team/index': OrganizationTeamChooserProps
+    'portal/organizations/team': OrganizationTeamPageProps
+
+    // Organization invitation e-mail link
+    'organization_invitations/accept': OrganizationInvitationAcceptPageProps
 
     // Backoffice
     'backoffice/today/index': BackofficeTodayPageProps
@@ -152,9 +168,10 @@ declare module '@adonisjs/inertia/types' {
       sortBy: string
       direction: string
     }
-    'users/create': Record<string, never>
+    'users/create': { operation: { id: number; name: string } | null }
     'users/edit': {
       user: Record<string, any>
+      operation: { id: number; name: string; linked: boolean } | null
     }
 
     // Error pages

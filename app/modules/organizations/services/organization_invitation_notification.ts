@@ -2,6 +2,7 @@ import { BaseMail } from '@adonisjs/mail'
 import type { DateTime } from 'luxon'
 
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
+import { organizationRoleLabel } from '#modules/organizations/utils/organization_team_messages'
 import env from '#start/env'
 
 export default class OrganizationInvitationNotification extends BaseMail {
@@ -26,7 +27,12 @@ export default class OrganizationInvitationNotification extends BaseMail {
   prepare() {
     const appName = env.get('MAIL_FROM_NAME', env.get('APP_NAME', 'Experimente+'))
     const invitationUrl = `${env.get('APP_URL', 'http://localhost:3333')}/organization-invitations/accept?token=${encodeURIComponent(this.token)}`
-    const expiration = this.expiresAt.toLocaleString({ dateStyle: 'long', timeStyle: 'short' })
+    // The operation reads Brasília time in Portuguese, as the web pages do.
+    const expiration = this.expiresAt
+      .setZone('America/Sao_Paulo')
+      .setLocale('pt-BR')
+      .toLocaleString({ dateStyle: 'long', timeStyle: 'short' })
+    const role = organizationRoleLabel(this.role)
 
     this.message.from(env.get('MAIL_FROM_ADDRESS', 'noreply@example.com'), appName)
     this.message.to(this.recipientEmail)
@@ -34,7 +40,7 @@ export default class OrganizationInvitationNotification extends BaseMail {
     if (env.get('NODE_ENV') === 'test') {
       this.message.html(`
         <h1>Convite para ${this.organizationName}</h1>
-        <p>${this.inviterName} convidou você como ${this.role}.</p>
+        <p>${this.inviterName} convidou você como ${role}.</p>
         <p><a href="${invitationUrl}">Aceitar convite</a></p>
         <p>${invitationUrl}</p>
         <p>Expira em ${expiration}.</p>
@@ -42,7 +48,7 @@ export default class OrganizationInvitationNotification extends BaseMail {
     } else {
       this.message.html(`
         <h1>Convite para ${this.organizationName}</h1>
-        <p>${this.inviterName} convidou você para participar da organização como <strong>${this.role}</strong>.</p>
+        <p>${this.inviterName} convidou você para participar da organização como <strong>${role}</strong>.</p>
         <p><a href="${invitationUrl}">Aceitar convite</a></p>
         <p>Este convite expira em ${expiration}.</p>
       `)
@@ -51,7 +57,7 @@ export default class OrganizationInvitationNotification extends BaseMail {
     this.message.text(`
       Convite para ${this.organizationName}
 
-      ${this.inviterName} convidou você para participar da organização como ${this.role}.
+      ${this.inviterName} convidou você para participar da organização como ${role}.
 
       Aceite o convite em:
       ${invitationUrl}

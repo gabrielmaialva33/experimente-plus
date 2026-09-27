@@ -10237,7 +10237,7 @@ paths:
     get:
       operationId: verifyEmail
       summary: Verify user email
-      description: Atomically consumes the exact canonical token from the query string. The token is single-use and is never accepted from a request body or normalized.
+      description: Atomically consumes the exact canonical token from the query string. The token is single-use and is never accepted from a request body or normalized. Confirmation e-mails link to the web page `/verificar-email`; a request that prefers `text/html` over JSON (a browser following an older e-mail) is redirected there with the same query token, and consumes nothing here.
       tags:
         - Authentication
       security: []
@@ -10249,6 +10249,18 @@ paths:
             $ref: '#/components/schemas/EmailVerificationToken'
           description: Canonical email-verification credential from the link.
       responses:
+        '302':
+          description: The client asked for HTML (`Accept` prefers `text/html` over JSON). Redirects to the web confirmation page, carrying the query token when one was given; the token is consumed there.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+                example: /verificar-email?token=<token>
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
         '200':
           description: Email verified successfully
           headers:

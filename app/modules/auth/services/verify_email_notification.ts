@@ -19,7 +19,9 @@ export default class VerifyEmailNotification extends BaseMail {
 
   prepare() {
     const appName = env.get('MAIL_FROM_NAME', env.get('APP_NAME', 'Experimente+'))
-    const verificationUrl = `${env.get('APP_URL', 'http://localhost:3333')}/api/v1/verify-email?token=${this.token}`
+    // The web page consumes the token and answers in Portuguese; the API
+    // endpoint stays for API clients and sends browsers here too.
+    const verificationUrl = `${env.get('APP_URL', 'http://localhost:3333')}/verificar-email?token=${encodeURIComponent(this.token)}`
 
     this.message.from(env.get('MAIL_FROM_ADDRESS', 'noreply@example.com'), appName)
     this.message.to(this.user.email, this.user.full_name)

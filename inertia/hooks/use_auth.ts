@@ -11,6 +11,7 @@ export function useAuth() {
   const hasActiveOrganizationMembership = auth?.hasActiveOrganizationMembership ?? false
   const platformAccess = auth?.platformAccess ?? null
   const permissions = auth?.permissions ?? []
+  const portalActions = auth?.portalActions ?? null
 
   return {
     user: auth?.user ?? null,
@@ -22,6 +23,7 @@ export function useAuth() {
     platformAccess,
     isPlatformStaff: platformAccess !== null,
     permissions,
+    portalActions,
     can: (permission: string) => permissions.includes(permission),
     canAny: (required: string[]) => required.some((permission) => permissions.includes(permission)),
     canAll: (required: string[]) =>

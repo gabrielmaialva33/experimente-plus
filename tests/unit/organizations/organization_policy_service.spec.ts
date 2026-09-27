@@ -4,6 +4,9 @@ import type IOrganization from '#modules/organizations/interfaces/organization_i
 import type OrganizationMember from '#modules/organizations/models/organization_member'
 import type OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import OrganizationPolicyService, {
+  canManageOrganizationMember,
+  grantableOrganizationRoles,
+  organizationActorAccessSnapshot,
   organizationPolicyCapabilitiesFor,
   type PlatformAccess,
 } from '#modules/organizations/services/organization_policy_service'
@@ -25,6 +28,7 @@ const readOnly = {
   read_analytics: false,
   read_redemptions: false,
   validate_redemptions: false,
+  manage_team: false,
 }
 
 const matrix: MatrixCase[] = [
@@ -41,6 +45,7 @@ const matrix: MatrixCase[] = [
       read_analytics: true,
       read_redemptions: true,
       validate_redemptions: true,
+      manage_team: true,
     },
   },
   {
@@ -56,6 +61,7 @@ const matrix: MatrixCase[] = [
       read_analytics: true,
       read_redemptions: true,
       validate_redemptions: true,
+      manage_team: true,
     },
   },
   {
@@ -92,6 +98,7 @@ const matrix: MatrixCase[] = [
       read_analytics: true,
       read_redemptions: true,
       validate_redemptions: true,
+      manage_team: true,
     },
   },
   {
@@ -200,5 +207,59 @@ test.group('Organization actor access snapshot', () => {
         capabilities: organizationPolicyCapabilitiesFor('membership', 'editor'),
       },
     ])
+  })
+})
+
+test.group('Organization team policy', () => {
+  const owner = organizationPolicyCapabilitiesFor('membership', 'owner')
+  const admin = organizationPolicyCapabilitiesFor('membership', 'admin')
+  const editor = organizationPolicyCapabilitiesFor('membership', 'editor')
+  const analyst = organizationPolicyCapabilitiesFor('membership', 'analyst')
+  const platformAdmin = organizationPolicyCapabilitiesFor('platform_admin', null)
+  const moderator = organizationPolicyCapabilitiesFor('platform_moderator', null)
+
+  test('grants every role to owners and platform admins and only limited roles to admins', ({
+    assert,
+  }) => {
+    assert.deepEqual(grantableOrganizationRoles(owner), ['owner', 'admin', 'editor', 'analyst'])
+    assert.deepEqual(grantableOrganizationRoles(platformAdmin), [
+      'owner',
+      'admin',
+      'editor',
+      'analyst',
+    ])
+    assert.deepEqual(grantableOrganizationRoles(admin), ['editor', 'analyst'])
+    assert.deepEqual(grantableOrganizationRoles(editor), [])
+    assert.deepEqual(grantableOrganizationRoles(analyst), [])
+    assert.deepEqual(grantableOrganizationRoles(moderator), [])
+  })
+
+  test('lets admins manage only editors and analysts, and only into those roles', ({ assert }) => {
+    assert.isTrue(canManageOrganizationMember(owner, 'owner', 'analyst'))
+    assert.isTrue(canManageOrganizationMember(platformAdmin, 'admin'))
+    assert.isTrue(canManageOrganizationMember(admin, 'editor', 'analyst'))
+    assert.isTrue(canManageOrganizationMember(admin, 'analyst'))
+    assert.isFalse(canManageOrganizationMember(admin, 'editor', 'admin'))
+    assert.isFalse(canManageOrganizationMember(admin, 'admin'))
+    assert.isFalse(canManageOrganizationMember(admin, 'owner'))
+    assert.isFalse(canManageOrganizationMember(editor, 'analyst'))
+    assert.isFalse(canManageOrganizationMember(analyst, 'editor'))
+    assert.isFalse(canManageOrganizationMember(moderator, 'analyst'))
+  })
+
+  test('builds the shared snapshot from the memberships already loaded', ({ assert }) => {
+    const memberships = [{ organization_id: 3, role: 'editor' as const }]
+
+    assert.deepEqual(organizationActorAccessSnapshot(null, memberships), {
+      platform_access: null,
+      has_active_organization_membership: true,
+      organization_accesses: [{ organization_id: 3, capabilities: editor }],
+    })
+    assert.deepEqual(organizationActorAccessSnapshot('platform_admin', memberships), {
+      platform_access: 'platform_admin',
+      has_active_organization_membership: true,
+      organization_accesses: [],
+    })
+    assert.isFalse(organizationActorAccessSnapshot(null, []).has_active_organization_membership)
   })
 })

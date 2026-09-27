@@ -37,4 +37,18 @@ export interface OrganizationAllowedActions {
   pilot_feedback: {
     create: boolean
   }
+  team: {
+    /** See the members and pending invitations of the organization. */
+    read: boolean
+    /** Invite people or change, suspend and remove members. */
+    manage: boolean
+  }
 }
+
+/** `resource.action` of an organization-scoped Portal action, e.g. `analytics.read`. */
+export type OrganizationActionKey = {
+  [Resource in keyof OrganizationAllowedActions]: `${Resource}.${Extract<
+    keyof OrganizationAllowedActions[Resource],
+    string
+  >}`
+}[keyof OrganizationAllowedActions]

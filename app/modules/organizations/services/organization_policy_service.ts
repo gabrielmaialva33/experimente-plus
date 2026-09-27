@@ -4,6 +4,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
+import { ORGANIZATION_ROLES } from '#modules/organizations/interfaces/organization_interface'
 import OrganizationMember from '#modules/organizations/models/organization_member'
 import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import IRole from '#modules/roles/interfaces/role_interface'
@@ -39,6 +40,7 @@ export function organizationPolicyCapabilitiesFor(
     read_analytics: false,
     read_redemptions: false,
     validate_redemptions: false,
+    manage_team: false,
   } satisfies IOrganization.PolicyCapabilities
 
   if (source === 'platform_admin') {
@@ -51,6 +53,7 @@ export function organizationPolicyCapabilitiesFor(
       read_analytics: true,
       read_redemptions: true,
       validate_redemptions: true,
+      manage_team: true,
     }
   }
 
@@ -68,6 +71,7 @@ export function organizationPolicyCapabilitiesFor(
       read_analytics: true,
       read_redemptions: true,
       validate_redemptions: true,
+      manage_team: true,
     }
   }
 
@@ -91,6 +95,70 @@ export function organizationPolicyCapabilitiesFor(
   return {
     ...readOnly,
     read: false,
+  }
+}
+
+/** Roles an organization admin may invite and manage: never an owner or another admin. */
+const ADMIN_MANAGED_ROLES: readonly IOrganization.Role[] = ['editor', 'analyst']
+
+/**
+ * Roles the actor may grant by invitation or role change (ADR-0011): a
+ * platform administrator and an owner grant any role, an organization admin
+ * only editor and analyst, everyone else none. `authorizeInviteRole` enforces
+ * exactly this list, and team pages use it to offer only grantable roles.
+ */
+export function grantableOrganizationRoles(
+  capabilities: Pick<IOrganization.PolicyCapabilities, 'source' | 'role'>
+): IOrganization.Role[] {
+  if (capabilities.source === 'platform_admin') return [...ORGANIZATION_ROLES]
+  if (capabilities.source !== 'membership') return []
+  if (capabilities.role === 'owner') return [...ORGANIZATION_ROLES]
+  if (capabilities.role === 'admin') return [...ADMIN_MANAGED_ROLES]
+  return []
+}
+
+/**
+ * Whether the actor may change, suspend or remove a member holding
+ * `targetRole`, optionally moving it to `nextRole`. Owners and platform
+ * administrators manage anyone; an organization admin only editors and
+ * analysts, and only into those roles. The last-owner invariant is a separate
+ * rule of the membership service.
+ */
+export function canManageOrganizationMember(
+  capabilities: Pick<IOrganization.PolicyCapabilities, 'source' | 'role'>,
+  targetRole: IOrganization.Role,
+  nextRole?: IOrganization.Role
+): boolean {
+  if (capabilities.source === 'platform_admin') return true
+  if (capabilities.source !== 'membership') return false
+  if (capabilities.role === 'owner') return true
+
+  return (
+    capabilities.role === 'admin' &&
+    ADMIN_MANAGED_ROLES.includes(targetRole) &&
+    (nextRole === undefined || ADMIN_MANAGED_ROLES.includes(nextRole))
+  )
+}
+
+/**
+ * Builds the request access snapshot from the platform access and the active
+ * memberships already loaded for the operation. Platform administrators stay
+ * tenant-wide and therefore carry no scoped organization accesses.
+ */
+export function organizationActorAccessSnapshot(
+  platformAccess: PlatformAccess | null,
+  memberships: ReadonlyArray<Pick<OrganizationMember, 'organization_id' | 'role'>>
+): IOrganization.ActorAccessSnapshot {
+  return {
+    platform_access: platformAccess,
+    has_active_organization_membership: memberships.length > 0,
+    organization_accesses:
+      platformAccess === 'platform_admin'
+        ? []
+        : memberships.map((membership) => ({
+            organization_id: membership.organization_id,
+            capabilities: organizationPolicyCapabilitiesFor('membership', membership.role),
+          })),
   }
 }
 
@@ -145,24 +213,8 @@ export default class OrganizationPolicyService {
   ): Promise<IOrganization.ActorAccessSnapshot> {
     const platformAccess = await this.resolvePlatformAccess(actor)
     const memberships = await this.memberRepository.listActiveByUser(tenantId, actor.id)
-    const hasActiveOrganizationMembership = memberships.length > 0
 
-    if (platformAccess === 'platform_admin') {
-      return {
-        platform_access: platformAccess,
-        has_active_organization_membership: hasActiveOrganizationMembership,
-        organization_accesses: [],
-      }
-    }
-
-    return {
-      platform_access: platformAccess,
-      has_active_organization_membership: hasActiveOrganizationMembership,
-      organization_accesses: memberships.map((membership) => ({
-        organization_id: membership.organization_id,
-        capabilities: organizationPolicyCapabilitiesFor('membership', membership.role),
-      })),
-    }
+    return organizationActorAccessSnapshot(platformAccess, memberships)
   }
 
   async resolveAccess(
@@ -333,17 +385,8 @@ export default class OrganizationPolicyService {
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
     const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
-    if (decision.capabilities.source === 'platform_admin') {
-      return null
-    }
-
-    const membership = decision.membership
-    if (membership?.role === 'owner') {
-      return membership
-    }
-
-    if (membership?.role === 'admin' && ['editor', 'analyst'].includes(invitedRole)) {
-      return membership
+    if (grantableOrganizationRoles(decision.capabilities).includes(invitedRole)) {
+      return decision.membership
     }
 
     throw new ForbiddenException('Your organization role cannot create this invitation')
@@ -358,20 +401,8 @@ export default class OrganizationPolicyService {
     client?: TransactionClientContract
   ): Promise<OrganizationMember | null> {
     const decision = await this.resolveAccess(actor, tenantId, organizationId, client)
-    if (decision.capabilities.source === 'platform_admin') {
-      return null
-    }
-
-    const membership = decision.membership
-    if (membership?.role === 'owner') {
-      return membership
-    }
-
-    const managesLimitedRole = ['editor', 'analyst'].includes(target.role)
-    const assignsLimitedRole = nextRole === undefined || ['editor', 'analyst'].includes(nextRole)
-
-    if (membership?.role === 'admin' && managesLimitedRole && assignsLimitedRole) {
-      return membership
+    if (canManageOrganizationMember(decision.capabilities, target.role, nextRole)) {
+      return decision.membership
     }
 
     throw new ForbiddenException('Your organization role cannot manage this member')

@@ -1,13 +1,18 @@
 import { test } from '@japa/runner'
 
 import {
+  projectActorAllowedActions,
   projectEstablishmentBenefitAllowedActions,
   projectEstablishmentRevisionAllowedActions,
   projectOrganizationAllowedActions,
   projectOrganizationStateAllowedActions,
   type EstablishmentRevisionActionState,
 } from '#modules/organizations/services/organization_resource_authorization_service'
-import { organizationPolicyCapabilitiesFor } from '#modules/organizations/services/organization_policy_service'
+import {
+  organizationActorAccessSnapshot,
+  organizationPolicyCapabilitiesFor,
+} from '#modules/organizations/services/organization_policy_service'
+import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 
 const portalPermissions = new Set([
   'organizations.read',
@@ -26,6 +31,8 @@ const portalPermissions = new Set([
   'benefit_offers.archive',
   'analytics.read',
   'pilot_feedback.create',
+  'organization_members.list',
+  'organization_invitations.create',
 ])
 
 test.group('Organization resource action projection', () => {
@@ -279,5 +286,109 @@ test.group('Organization resource action projection', () => {
         archive: true,
       })
     }
+  })
+})
+
+/**
+ * The Portal menu reads these aggregated actions (auth.portalActions): the
+ * audit found an editor offered "Desempenho" and an analyst offered
+ * "Validar benefício" because the menu only checked global permissions.
+ */
+test.group('Portal menu actions by organization role', () => {
+  const menu = (actions: IOrganization.AllowedActions) => ({
+    validate: actions.redemptions.validate,
+    redemptions: actions.redemptions.read,
+    places: actions.establishments.read,
+    performance: actions.analytics.read,
+    team: actions.team.manage,
+  })
+  const forRoles = (...roles: IOrganization.Role[]) =>
+    menu(
+      projectActorAllowedActions(
+        organizationActorAccessSnapshot(
+          null,
+          roles.map((role, index) => ({ organization_id: index + 1, role }))
+        ),
+        portalPermissions
+      )
+    )
+
+  test('offers owners and admins every Portal destination', ({ assert }) => {
+    const everything = {
+      validate: true,
+      redemptions: true,
+      places: true,
+      performance: true,
+      team: true,
+    }
+    assert.deepEqual(forRoles('owner'), everything)
+    assert.deepEqual(forRoles('admin'), everything)
+  })
+
+  test('keeps performance and the team away from editors', ({ assert }) => {
+    assert.deepEqual(forRoles('editor'), {
+      validate: true,
+      redemptions: true,
+      places: true,
+      performance: false,
+      team: false,
+    })
+  })
+
+  test('keeps validation and the team away from analysts', ({ assert }) => {
+    assert.deepEqual(forRoles('analyst'), {
+      validate: false,
+      redemptions: true,
+      places: true,
+      performance: true,
+      team: false,
+    })
+  })
+
+  test('offers nothing organization-scoped without an active membership', ({ assert }) => {
+    assert.deepEqual(forRoles(), {
+      validate: false,
+      redemptions: false,
+      places: false,
+      performance: false,
+      team: false,
+    })
+  })
+
+  test('adds up memberships and keeps the platform administrator view', ({ assert }) => {
+    assert.deepEqual(forRoles('editor', 'analyst'), {
+      validate: true,
+      redemptions: true,
+      places: true,
+      performance: true,
+      team: false,
+    })
+    assert.deepEqual(
+      menu(
+        projectActorAllowedActions(
+          organizationActorAccessSnapshot('platform_admin', []),
+          portalPermissions
+        )
+      ),
+      { validate: true, redemptions: true, places: true, performance: true, team: true }
+    )
+  })
+
+  test('keeps the team read-only for moderation and requires the global permission', ({
+    assert,
+  }) => {
+    const moderation = projectActorAllowedActions(
+      organizationActorAccessSnapshot('platform_moderator', []),
+      portalPermissions
+    )
+    assert.deepEqual(moderation.team, { read: true, manage: false })
+
+    const withoutInvite = new Set(portalPermissions)
+    withoutInvite.delete('organization_invitations.create')
+    const owner = projectActorAllowedActions(
+      organizationActorAccessSnapshot(null, [{ organization_id: 1, role: 'owner' }]),
+      withoutInvite
+    )
+    assert.deepEqual(owner.team, { read: true, manage: false })
   })
 })

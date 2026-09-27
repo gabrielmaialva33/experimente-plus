@@ -9,12 +9,15 @@ import { Button } from '~/components/ui/button'
 
 interface LoginFormProps {
   errors?: Record<string, string>
+  /** Server-validated page to return to after signing in, such as an invitation. */
+  next?: string | null
 }
 
-export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
+export function LoginForm({ errors: serverErrors, next = null }: LoginFormProps = {}) {
   const { data, setData, post, processing, errors, reset } = useForm({
     uid: '',
     password: '',
+    ...(next ? { next } : {}),
   })
 
   const generalError = serverErrors?.general

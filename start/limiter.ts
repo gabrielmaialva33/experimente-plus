@@ -119,6 +119,28 @@ export const emailVerificationThrottle = limiter.define('email-verification', (c
 })
 
 /**
+ * The web confirmation page counts only the requests that consume a token.
+ * Reading the page, after the redirect that drops the token or to ask for a
+ * new link, is not an attempt.
+ */
+export const emailVerificationPageThrottle = limiter.define('email-verification-page', (ctx) => {
+  if (ctx.request.qs().token === undefined) {
+    return null
+  }
+
+  const identifier = throttleIdentifierDigest(ctx.request.ip())
+
+  return limiter
+    .allowRequests(10)
+    .every('15 minutes')
+    .blockFor('30 minutes')
+    .usingKey(`email_verification_page_${identifier}`)
+    .limitExceeded((error) => {
+      error.setMessage('Muitas tentativas de confirmação. Tente de novo em alguns minutos.')
+    })
+})
+
+/**
  * Resends are authenticated before reaching this limiter. Hashing the user/IP
  * tuple keeps the storage key fixed-size without exposing either identifier.
  */
