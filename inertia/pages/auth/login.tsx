@@ -5,9 +5,12 @@ import { AuthSplitLayout } from '~/layouts/auth/auth_split_layout'
 
 interface LoginPageProps {
   errors?: Record<string, string>
+  next?: string | null
 }
 
-export default function LoginPage({ errors }: LoginPageProps) {
+export default function LoginPage({ errors, next = null }: LoginPageProps) {
+  const returnQuery = next ? `?next=${encodeURIComponent(next)}` : ''
+
   return (
     <>
       <Head title="Entrar">
@@ -15,14 +18,18 @@ export default function LoginPage({ errors }: LoginPageProps) {
       </Head>
       <AuthSplitLayout
         title="Entrar"
-        subtitle="Acesse sua carteira e, quando tiver uma organização, o Portal do parceiro."
+        subtitle={
+          next
+            ? 'Entre com o e-mail que recebeu o convite. Depois você volta para aceitá-lo.'
+            : 'Acesse sua carteira e, quando tiver uma organização, o Portal do parceiro.'
+        }
         contextTitle="O catálogo não exige login"
         contextDescription="Você pode explorar cidades, categorias e lugares antes de criar uma conta."
         footer={
           <>
             <span className="text-muted-foreground">Ainda não tem conta? </span>
             <Link
-              href="/register"
+              href={`/register${returnQuery}`}
               className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
             >
               Criar conta
@@ -30,7 +37,7 @@ export default function LoginPage({ errors }: LoginPageProps) {
           </>
         }
       >
-        <LoginForm errors={errors} />
+        <LoginForm errors={errors} next={next} />
       </AuthSplitLayout>
     </>
   )

@@ -11,6 +11,8 @@ import {
   requestPasswordResetValidator,
   resetPasswordValidator,
 } from '#modules/auth/validators/session_validator'
+import OrganizationInvitationService from '#modules/organizations/services/organization_invitation_service'
+import { pendingInvitationToken } from '#modules/organizations/utils/organization_invitation_session'
 import IRole from '#modules/roles/interfaces/role_interface'
 import {
   publicRegistrationValidator,
@@ -18,16 +20,23 @@ import {
 } from '#modules/users/validators/users_validator'
 import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
 import { preventCredentialResponseCaching } from '#modules/web/utils/credential_response'
+import { ORGANIZATION_INVITATION_ACCEPT_PATH, safeReturnPath } from '#modules/web/utils/return_path'
 
 export default class InertiaAuthController {
   async showLogin(ctx: HttpContext) {
     preventCredentialResponseCaching(ctx)
-    return ctx.inertia.render('auth/login', {})
+    return ctx.inertia.render('auth/login', { next: safeReturnPath(ctx.request.qs().next) })
   }
 
   async showRegister(ctx: HttpContext) {
     preventCredentialResponseCaching(ctx)
-    return ctx.inertia.render('auth/register', {})
+    const next = safeReturnPath(ctx.request.qs().next)
+
+    return ctx.inertia.render('auth/register', {
+      next,
+      invitation:
+        next === ORGANIZATION_INVITATION_ACCEPT_PATH ? await this.pendingInvitation(ctx) : null,
+    })
   }
 
   async showForgotPassword(ctx: HttpContext) {
@@ -96,7 +105,8 @@ export default class InertiaAuthController {
         .generate(result.user, result.activeTenantId ? { tenantId: result.activeTenantId } : {})
 
       return response.redirect(
-        await resolveAuthenticatedLandingPath(result.user, result.activeTenantId)
+        safeReturnPath(request.body().next) ??
+          (await resolveAuthenticatedLandingPath(result.user, result.activeTenantId))
       )
     } catch {
       session.flash('errors', {
@@ -138,7 +148,10 @@ export default class InertiaAuthController {
       )
       AuthEventService.emitLoginSucceeded(user, 'password', isAdmin, ctx)
 
-      return response.redirect(await resolveAuthenticatedLandingPath(user, activeTenantId))
+      return response.redirect(
+        safeReturnPath(request.body().next) ??
+          (await resolveAuthenticatedLandingPath(user, activeTenantId))
+      )
     } catch (error) {
       if (error instanceof errors.E_VALIDATION_ERROR) {
         throw error
@@ -156,6 +169,28 @@ export default class InertiaAuthController {
     ctx.auth.use('jwt').clearCookie()
     AuthEventService.emitLogout(user, ctx)
 
+    // "Entrar com outra conta" on the invitation page signs out and returns
+    // to sign-in, which then brings the person back to the invitation.
+    const next = safeReturnPath(ctx.request.body().next)
+    if (next) {
+      return ctx.response.redirect().toPath(`/login?next=${encodeURIComponent(next)}`)
+    }
+
     return ctx.response.redirect('/')
+  }
+
+  /**
+   * The invitation held in this browser's session, for pre-filling sign-up.
+   * The address is shown only to whoever opened the e-mailed link here, and
+   * only while the invitation can still be accepted.
+   */
+  private async pendingInvitation(ctx: HttpContext) {
+    const token = pendingInvitationToken(ctx.session)
+    if (!token) {
+      return null
+    }
+
+    const invitationService = await app.container.make(OrganizationInvitationService)
+    return invitationService.signUpContext(token)
   }
 }

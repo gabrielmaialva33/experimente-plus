@@ -5,7 +5,11 @@ import { LoginForm } from '~/components/auth/login_form'
 import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
 import { render } from '~/tests/test_utils'
 
-const mocks = vi.hoisted(() => ({ mockPost: vi.fn(), processing: false }))
+const mocks = vi.hoisted(() => ({
+  mockPost: vi.fn(),
+  processing: false,
+  initial: {} as Record<string, unknown>,
+}))
 
 // Mock the inertia useForm hook with real local state so the controlled
 // inputs actually update when the user types (the previous static mock left
@@ -23,6 +27,7 @@ vi.mock('@inertiajs/react', async () => {
       </a>
     ),
     useForm: <T extends Record<string, unknown>>(initial: T) => {
+      mocks.initial = initial
       const [data, setData] = React.useState<T>(initial)
       return {
         data,
@@ -60,6 +65,15 @@ describe('LoginForm', () => {
     )
     // A 44 px target that does not grow the label row it sits in.
     expect(screen.getByRole('link', { name: /Esqueceu a senha/i })).toHaveClass('min-h-11', '-my-3')
+  })
+
+  it('carries the server-validated return path with the credentials', () => {
+    render(<LoginForm next="/organization-invitations/accept" />)
+    expect(mocks.initial).toEqual({
+      uid: '',
+      password: '',
+      next: '/organization-invitations/accept',
+    })
   })
 
   it('keeps the skip link as the first keyboard target', async () => {

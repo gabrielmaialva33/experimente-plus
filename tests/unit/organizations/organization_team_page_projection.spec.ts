@@ -10,6 +10,7 @@ import {
   maskEmail,
   organizationTeamErrorMessage,
 } from '#modules/organizations/utils/organization_team_messages'
+import { safeReturnPath } from '#modules/web/utils/return_path'
 
 const NOW = DateTime.fromISO('2026-09-27T12:00:00.000Z')
 
@@ -270,7 +271,7 @@ test.group('Organization team page projection', () => {
   })
 })
 
-test.group('Organization team copy', () => {
+test.group('Organization team copy and return paths', () => {
   test('masks the invited address down to a hint', ({ assert }) => {
     assert.equal(maskEmail('maria.silva@exemplo.com'), 'ma•••@exemplo.com')
     assert.equal(maskEmail('ab@exemplo.com'), 'a•••@exemplo.com')
@@ -294,5 +295,23 @@ test.group('Organization team copy', () => {
       organizationTeamErrorMessage('select * from secrets'),
       'Não foi possível concluir a alteração na equipe. Atualize a página e tente novamente.'
     )
+  })
+
+  test('returns only to the closed list of pages after signing in', ({ assert }) => {
+    assert.equal(
+      safeReturnPath('/organization-invitations/accept'),
+      '/organization-invitations/accept'
+    )
+    for (const unsafe of [
+      'https://example.com',
+      '//example.com/organization-invitations/accept',
+      '/organization-invitations/accept?token=abc',
+      '/portal',
+      ['/organization-invitations/accept'],
+      null,
+      undefined,
+    ]) {
+      assert.isNull(safeReturnPath(unsafe), String(unsafe))
+    }
   })
 })

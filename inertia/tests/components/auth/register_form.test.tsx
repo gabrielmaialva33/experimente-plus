@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   post: vi.fn(),
   processing: false,
   errors: {} as Record<string, string>,
+  initial: {} as Record<string, unknown>,
 }))
 
 vi.mock('@inertiajs/react', async () => {
@@ -20,6 +21,7 @@ vi.mock('@inertiajs/react', async () => {
       </a>
     ),
     useForm: <T extends Record<string, unknown>>(initial: T) => {
+      mocks.initial = initial
       const [data, setData] = React.useState<T>(initial)
       return {
         data,
@@ -105,6 +107,29 @@ describe('RegisterForm', () => {
     await user.click(actions[0])
     expect(password).toHaveAttribute('type', 'text')
     expect(screen.getAllByRole('button', { name: 'Ocultar senha' })).toHaveLength(1)
+  })
+
+  it('pre-fills the invited address and warns before sign-up drifts from it', async () => {
+    const { user } = render(
+      <RegisterForm next="/organization-invitations/accept" invitedEmail="convidada@example.com" />
+    )
+    const email = screen.getByLabelText('E-mail')
+
+    expect(email).toHaveValue('convidada@example.com')
+    expect(mocks.initial).toMatchObject({ next: '/organization-invitations/accept' })
+    expect(screen.getByText(/É o e-mail do convite/)).toBeVisible()
+
+    await user.clear(email)
+    await user.type(email, 'outra@example.com')
+
+    expect(screen.getByText(/o convite só pode ser aceito pelo e-mail convidado/)).toBeVisible()
+  })
+
+  it('sends no return path unless the server provided one', () => {
+    render(<RegisterForm />)
+
+    expect(mocks.initial).not.toHaveProperty('next')
+    expect(screen.getByLabelText('E-mail')).toHaveValue('')
   })
 
   it('announces validation and loading states', () => {

@@ -17,6 +17,8 @@ const AdminOrganizationClaimsController = () =>
   import('#modules/organizations/controllers/admin_organization_claims_controller')
 const OrganizationTeamPagesController = () =>
   import('#modules/organizations/controllers/organization_team_pages_controller')
+const OrganizationInvitationPagesController = () =>
+  import('#modules/organizations/controllers/organization_invitation_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
@@ -199,3 +201,18 @@ router
   .prefix('/portal')
   .use(middleware.auth({ guards: ['jwt'] }))
   .use(middleware.tenant({ required: true }))
+
+/**
+ * The page the invitation e-mail links to. Reading it needs no account: the
+ * link explains the invitation and offers sign-in or sign-up. Accepting needs
+ * the invited account and the permission the API route carries; the token
+ * resolves its own operation, so no active one is required.
+ */
+router
+  .get('/organization-invitations/accept', [OrganizationInvitationPagesController, 'show'])
+  .as('organization_invitations.accept.show')
+router
+  .post('/organization-invitations/accept', [OrganizationInvitationPagesController, 'accept'])
+  .as('organization_invitations.accept.store')
+  .use(middleware.auth({ guards: ['jwt'] }))
+  .use(permission(IPermission.Resources.ORGANIZATION_INVITATIONS, IPermission.Actions.ACCEPT))
