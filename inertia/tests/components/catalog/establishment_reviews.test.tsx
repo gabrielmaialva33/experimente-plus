@@ -93,6 +93,27 @@ describe('establishment reviews (W10)', () => {
     )
 
     expect(screen.getByText('· 1 avaliação')).toBeInTheDocument()
+    // Everything is on the page, so nothing needs explaining.
+    expect(screen.queryByText(/mais recente/)).not.toBeInTheDocument()
+  })
+
+  it('says the list is the latest few when the count is larger', () => {
+    render(
+      <EstablishmentReviews
+        placeName="Bar"
+        timeZone={null}
+        reviews={{
+          summary: { count: 12, average: 4 },
+          latest: [item(), item({ id: 2 }), item({ id: 3 })],
+        }}
+      />
+    )
+
+    expect(
+      screen.getByText(
+        'As 3 avaliações mais recentes de 12 avaliações. Todas estão no app Experimente+.'
+      )
+    ).toBeInTheDocument()
   })
 
   it('shows an empty state, and no zero stars, when nobody has reviewed yet', () => {
