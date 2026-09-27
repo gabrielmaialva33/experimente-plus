@@ -131,8 +131,9 @@ export function EstablishmentEditorNavigation({
   }, [activeSection, variant])
 
   if (variant === 'mobile') {
+    // Under the 72 px header, or at the top where a short screen lets the header scroll away.
     return (
-      <div className="sticky top-[72px] z-30 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:hidden">
+      <div className="sticky top-[72px] z-30 short:top-0 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:hidden">
         <nav
           ref={mobileNavigationRef}
           aria-label="Etapas do editor"

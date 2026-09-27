@@ -460,7 +460,9 @@ export default function EstablishmentBenefitsPage({
           )}
         >
           {canManageOffers && canShowForm ? (
-            <section className="rounded-card border border-border-subtle bg-card p-5 sm:p-6 xl:sticky xl:top-6">
+            // Sticky below the 72 px header, and never taller than the screen: a long offer form
+            // kept its submit button out of reach on a 768 px tall laptop.
+            <section className="rounded-card border border-border-subtle bg-card p-5 sm:p-6 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7.5rem)] xl:overflow-y-auto xl:overscroll-contain">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-display text-xl font-bold tracking-[-0.02em]">
