@@ -14,12 +14,13 @@ import { MANUAL_PATH, MANUAL_PDF_PATH, pageHelp } from '~/config/help'
 import type { NavigationSurface } from '~/config/navigation'
 
 /**
- * The "?" in the portal and back-office header. The manual opens in a new tab, so
- * a form half filled in this one is still there when the reader comes back.
+ * The "?" in the header of the personal area, the portal and the back office. The
+ * manual opens in a new tab, so a form half filled in this one is still there when
+ * the reader comes back.
  */
 export function HelpMenu({ surface }: { surface: NavigationSurface }) {
-  const { component } = usePage()
-  const help = pageHelp(component, surface)
+  const { component, url } = usePage()
+  const help = pageHelp(component, surface, url)
 
   return (
     <DropdownMenu>

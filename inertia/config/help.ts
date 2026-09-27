@@ -26,6 +26,8 @@ export const PAGE_HELP_ANCHORS: Readonly<Record<string, string>> = {
   'portal/redemptions/index': 'parceiro-utilizacoes',
   'portal/redemptions/receipt': 'parceiro-utilizacoes',
   'analytics/organization': 'parceiro-desempenho',
+  'portal/team/index': 'parceiro-equipe-convidar',
+  'portal/organizations/team': 'parceiro-equipe-convidar',
 
   // Operation (back office)
   'backoffice/today/index': 'administracao-hoje',
@@ -48,8 +50,28 @@ export const PAGE_HELP_ANCHORS: Readonly<Record<string, string>> = {
   'backoffice/taxonomy/index': 'administracao-catalogo',
   'backoffice/geography/index': 'administracao-catalogo',
 
-  // Account, drawn in the same layout for partners and the team
+  // The personal area: account, wallet and receipts
   'settings/index': 'consumidor-conta',
+  'wallet/index': 'consumidor-carteira',
+  'wallet/present': 'consumidor-apresentar',
+  'wallet/redemptions': 'consumidor-utilizacoes',
+  'wallet/receipt': 'consumidor-utilizacoes',
+}
+
+/**
+ * Pages reached with a purpose written in the address. "Desempenho", with several
+ * organizations, opens the places list with `?para=desempenho`: its help is the
+ * performance task, not the places one.
+ */
+const URL_HELP_ANCHORS: readonly { path: string; param: string; anchor: string }[] = [
+  { path: '/portal/establishments', param: 'para=desempenho', anchor: 'parceiro-desempenho' },
+]
+
+function urlHelpAnchor(url: string | undefined): string | undefined {
+  if (!url) return undefined
+  const [path, query = ''] = url.split('#')[0].split('?')
+  const params = new Set(query.split('&'))
+  return URL_HELP_ANCHORS.find((entry) => entry.path === path && params.has(entry.param))?.anchor
 }
 
 /** A page without its own section opens the chapter of its area. */
@@ -67,8 +89,12 @@ export interface PageHelp {
   specific: boolean
 }
 
-export function pageHelp(component: string | undefined, surface: NavigationSurface): PageHelp {
-  const own = component ? PAGE_HELP_ANCHORS[component] : undefined
+export function pageHelp(
+  component: string | undefined,
+  surface: NavigationSurface,
+  url?: string
+): PageHelp {
+  const own = urlHelpAnchor(url) ?? (component ? PAGE_HELP_ANCHORS[component] : undefined)
   const anchor = own ?? SURFACE_CHAPTERS[surface]
   return { anchor, href: `${MANUAL_PATH}#${anchor}`, specific: Boolean(own) }
 }

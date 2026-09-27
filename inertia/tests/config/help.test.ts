@@ -15,18 +15,19 @@ function pageComponents(dir: string): string[] {
   })
 }
 
-/** The pages drawn inside the portal and back-office layout, with the header's help menu. */
+/** The pages drawn with a help menu: the personal area, the portal and the back office. */
 const AUTHENTICATED_AREA_PAGES = pageComponents(pagesDir).filter(
   (component) =>
-    /^(portal|backoffice|users|roles|permissions|files|analytics)\//.test(component) ||
-    component === 'dashboard'
+    /^(portal|backoffice|users|roles|permissions|files|analytics|wallet)\//.test(component) ||
+    component === 'dashboard' ||
+    component === 'settings/index'
 )
 
 describe('contextual help', () => {
-  it('points every portal and back-office page to a section of the manual', () => {
+  it('points every page with a help menu to a section of the manual', () => {
     const anchors = new Set(manualAnchors())
 
-    expect(AUTHENTICATED_AREA_PAGES.length).toBeGreaterThan(25)
+    expect(AUTHENTICATED_AREA_PAGES.length).toBeGreaterThan(30)
     for (const component of AUTHENTICATED_AREA_PAGES) {
       expect(PAGE_HELP_ANCHORS, component).toHaveProperty([component])
       expect(anchors.has(PAGE_HELP_ANCHORS[component]), component).toBe(true)
@@ -60,6 +61,27 @@ describe('contextual help', () => {
       specific: false,
     })
     expect(pageHelp(undefined, 'portal').href).toBe('/manual#parceiro')
+  })
+
+  it('opens the wallet tasks from the personal area and the team task from Equipe', () => {
+    expect(pageHelp('wallet/present', 'consumer').href).toBe('/manual#consumidor-apresentar')
+    expect(pageHelp('wallet/redemptions', 'consumer').href).toBe('/manual#consumidor-utilizacoes')
+    expect(pageHelp('portal/organizations/team', 'portal').href).toBe(
+      '/manual#parceiro-equipe-convidar'
+    )
+  })
+
+  it('reads the purpose written in the address before the page', () => {
+    expect(
+      pageHelp('portal/establishments/index', 'portal', '/portal/establishments?para=desempenho')
+        .href
+    ).toBe('/manual#parceiro-desempenho')
+    expect(
+      pageHelp('portal/establishments/index', 'portal', '/portal/establishments?page=2').href
+    ).toBe('/manual#parceiro-lugares')
+    expect(pageHelp('portal/establishments/index', 'portal', '/portal/establishments').href).toBe(
+      '/manual#parceiro-lugares'
+    )
   })
 
   it('serves the manual and its PDF from fixed paths', () => {
