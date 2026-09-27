@@ -1,7 +1,10 @@
 import { Link } from '@inertiajs/react'
 import { MapPin, SearchX } from 'lucide-react'
 
-import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import {
+  CatalogCoverImage,
+  CatalogImageFallback,
+} from '~/components/catalog/catalog_image_fallback'
 import { EstablishmentStatus } from '~/components/catalog/establishment_status'
 import { EmptyState } from '~/components/empty_state'
 import { Badge } from '~/components/ui/badge'
@@ -55,13 +58,13 @@ export default function EstablishmentGrid({
             <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-card transition-colors group-hover:border-primary motion-reduce:transition-none">
               <div className="relative">
                 {entry.cover ? (
-                  <img
+                  <CatalogCoverImage
                     src={entry.cover.url}
                     alt={entry.cover.altText || `Imagem de ${entry.name}`}
-                    width={entry.cover.width ?? undefined}
-                    height={entry.cover.height ?? undefined}
-                    loading="lazy"
-                    decoding="async"
+                    name={entry.name}
+                    categoryName={entry.primaryCategory?.name}
+                    width={entry.cover.width}
+                    height={entry.cover.height}
                     className="aspect-[16/9] w-full object-cover"
                   />
                 ) : (

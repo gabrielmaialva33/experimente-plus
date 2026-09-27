@@ -1,7 +1,10 @@
 import { Link } from '@inertiajs/react'
 import { Building2, CalendarClock, Check, CircleAlert, Clock3, Info, MapPin } from 'lucide-react'
 
-import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
+import {
+  CatalogCoverImage,
+  CatalogImageFallback,
+} from '~/components/catalog/catalog_image_fallback'
 import {
   EstablishmentPartnerContent,
   type PartnerContentPayload,
@@ -237,13 +240,16 @@ function PublishedEstablishment({
               ) : null}
             </div>
             {detail.cover ? (
-              <img
+              <CatalogCoverImage
                 src={detail.cover.url}
                 alt={detail.cover.altText}
-                width={detail.cover.width ?? undefined}
-                height={detail.cover.height ?? undefined}
-                decoding="async"
+                name={detail.name}
+                categoryName={primaryCategory?.name}
+                width={detail.cover.width}
+                height={detail.cover.height}
+                loading="eager"
                 className="aspect-[16/9] max-h-[560px] w-full object-cover"
+                fallbackClassName="min-h-72 w-full sm:min-h-96"
               />
             ) : (
               <CatalogImageFallback
@@ -454,13 +460,13 @@ function PublishedEstablishment({
                     key={media.url}
                     className="min-w-0 overflow-hidden rounded-2xl border border-border-subtle bg-card"
                   >
-                    <img
+                    <CatalogCoverImage
                       src={media.url}
                       alt={media.altText}
-                      width={media.width ?? undefined}
-                      height={media.height ?? undefined}
-                      loading="lazy"
-                      decoding="async"
+                      name={detail.name}
+                      categoryName={primaryCategory?.name}
+                      width={media.width}
+                      height={media.height}
                       className="aspect-[4/3] w-full object-cover"
                     />
                     {media.caption ? (
