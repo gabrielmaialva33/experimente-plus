@@ -1,6 +1,15 @@
 import factory from '@adonisjs/lucid/factories'
 import { DateTime } from 'luxon'
 
+import {
+  asciiSlug,
+  brazilianPhone,
+  businessName,
+  LONDRINA,
+  pointNear,
+  shortDescription,
+  street,
+} from '#database/factories/support/pt_br'
 import { ESTABLISHMENT_COMPLETENESS_RULES_VERSION } from '#modules/establishments/interfaces/establishment_interface'
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
@@ -36,9 +45,15 @@ export const EstablishmentFactory = factory
   })
   .build()
 
+/**
+ * A draft revision with a pt-BR identity and every public contact channel
+ * filled with reserved `example.test` values. The states walk the review
+ * lifecycle; `appointmentOnly` and `alwaysOpen` switch the availability mode
+ * (the latter only publishes under a category that allows it).
+ */
 export const EstablishmentRevisionFactory = factory
   .define(EstablishmentRevision, ({ faker }) => {
-    const publicName = faker.company.name()
+    const publicName = businessName(faker)
     const unique = faker.string.alphanumeric(7).toLowerCase()
 
     return {
@@ -48,14 +63,14 @@ export const EstablishmentRevisionFactory = factory
       status: 'draft' as const,
       city_id: null,
       public_name: publicName,
-      slug: `${faker.helpers.slugify(publicName).toLowerCase()}-${unique}`,
-      short_description: faker.company.catchPhrase(),
-      description: faker.lorem.paragraphs(2),
-      public_phone: `43${faker.string.numeric(8)}`,
-      whatsapp: `439${faker.string.numeric(8)}`,
-      public_email: faker.internet.email({ provider: 'example.test' }).toLowerCase(),
+      slug: `${asciiSlug(publicName)}-${unique}`,
+      short_description: shortDescription(faker),
+      description: `${publicName} é um estabelecimento fictício criado para cenários de teste. ${shortDescription(faker)}`,
+      public_phone: brazilianPhone(faker),
+      whatsapp: brazilianPhone(faker, 'mobile'),
+      public_email: `contato.${unique}@example.test`,
       website: `https://${unique}.example.test`,
-      instagram: `@${unique}`,
+      instagram: unique,
       booking_url: null,
       availability_type: 'regular_hours' as const,
       based_on_revision_id: null,
@@ -86,24 +101,52 @@ export const EstablishmentRevisionFactory = factory
     revision.reviewed_at = reviewedAt
     revision.review_notes = 'Ajustes solicitados pelo cenário de teste.'
   })
+  .state('changesRequested', (revision) => {
+    const reviewedAt = DateTime.utc()
+    revision.status = 'changes_requested'
+    revision.submitted_at ??= reviewedAt
+    revision.reviewed_by = revision.created_by
+    revision.reviewed_at = reviewedAt
+    revision.review_notes = 'Inclua uma foto de capa e o horário de domingo.'
+  })
+  .state('appointmentOnly', (revision) => {
+    revision.availability_type = 'appointment_only'
+    revision.booking_url = `https://${asciiSlug(revision.public_name ?? 'agenda')}.example.test/agendar`
+  })
+  .state('alwaysOpen', (revision) => {
+    revision.availability_type = 'always_open'
+  })
   .build()
 
+/**
+ * An address in the central area of Londrina by default; merge
+ * `pointNear(faker, city)` coordinates for another city. Streets are generic
+ * and the number random, which is fine for test databases only — published
+ * demo content uses "Endereço demonstrativo" instead.
+ */
 export const EstablishmentRevisionAddressFactory = factory
-  .define(EstablishmentRevisionAddress, ({ faker }) => ({
-    tenant_id: 1,
-    revision_id: 1,
-    postal_code: faker.string.numeric(8),
-    street: faker.location.street(),
-    number: faker.location.buildingNumber(),
-    without_number: false,
-    complement: null,
-    district: faker.location.county(),
-    reference: null,
-    latitude: Number(faker.location.latitude({ min: -26.5, max: -22.5 })),
-    longitude: Number(faker.location.longitude({ min: -54.5, max: -48.5 })),
-    coordinate_source: 'manual' as const,
-    geocoded_at: null,
-  }))
+  .define(EstablishmentRevisionAddress, ({ faker }) => {
+    const { latitude, longitude } = pointNear(faker, LONDRINA, 3)
+    return {
+      tenant_id: 1,
+      revision_id: 1,
+      postal_code: `860${faker.string.numeric(5)}`,
+      street: street(faker),
+      number: String(faker.number.int({ min: 10, max: 2400 })),
+      without_number: false,
+      complement: null,
+      district: faker.helpers.arrayElement(LONDRINA.districts),
+      reference: null,
+      latitude,
+      longitude,
+      coordinate_source: 'manual' as const,
+      geocoded_at: null,
+    }
+  })
+  .state('demonstrative', (address) => {
+    address.street = 'Endereço demonstrativo'
+    address.postal_code = null
+  })
   .build()
 
 export const EstablishmentRevisionCategoryFactory = factory
@@ -114,6 +157,10 @@ export const EstablishmentRevisionCategoryFactory = factory
     is_primary: true,
     sort_order: 0,
   }))
+  .state('secondary', (category) => {
+    category.is_primary = false
+    category.sort_order = 1
+  })
   .build()
 
 export const EstablishmentRevisionHourFactory = factory
@@ -130,6 +177,18 @@ export const EstablishmentRevisionHourFactory = factory
     hour.opens_at = '18:00'
     hour.closes_at = '02:00'
     hour.spans_next_day = true
+  })
+  .state('lunch', (hour) => {
+    hour.opens_at = '11:30'
+    hour.closes_at = '15:00'
+  })
+  .state('evening', (hour) => {
+    hour.opens_at = '18:30'
+    hour.closes_at = '23:00'
+  })
+  .state('morning', (hour) => {
+    hour.opens_at = '07:00'
+    hour.closes_at = '12:00'
   })
   .build()
 
