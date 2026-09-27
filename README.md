@@ -412,6 +412,39 @@ Rollback de código não reverte migrations; cada reparo deve documentar essa co
 
 ---
 
+## Manual de uso
+
+O manual para visitantes, consumidores, parceiros e operação fica em `/manual`, com link no
+rodapé público e no botão **?** (Ajuda) do cabeçalho do Portal e da Operação.
+
+| Caminho                                           | Conteúdo                                                                 |
+| ------------------------------------------------- | ------------------------------------------------------------------------ |
+| `inertia/content/manual.ts`                       | Capítulos, seções e blocos (texto com `**negrito**` e `[link](#âncora)`) |
+| `inertia/pages/manual/index.tsx`                  | Página, sumário, regras de impressão                                     |
+| `inertia/config/help.ts`                          | Componente Inertia → seção do manual ("Ajuda desta página")              |
+| `public/manual-media/*.webp`                      | Capturas da demonstração; tamanhos em `inertia/content/manual_media.ts`  |
+| `public/manual-media/manual-experimente-plus.pdf` | PDF do manual, gerado a partir da página                                 |
+
+As capturas usam só dados de demonstração, em tema claro: 1280×800 no computador e 390×844 (2x,
+reduzidas a 600 px de largura) no celular, em WebP com qualidade 80
+(`vips webpsave captura.png destino.webp --Q 80 --strip`). QR de apresentação, credenciais e
+e-mails reais nunca aparecem; cubra-os antes de salvar. Ao trocar uma imagem, atualize o tamanho em
+`manual_media.ts` e o texto alternativo; os testes do Vitest conferem arquivos, tamanhos, âncoras,
+links e o mapeamento de ajuda de cada página do Portal e da Operação.
+
+Para regenerar o PDF depois de mudar o manual, com o servidor rodando:
+
+```bash
+pnpm dev                                   # em outro terminal
+node scripts/build-manual-pdf.mjs          # usa http://localhost:3333/manual
+MANUAL_URL=http://localhost:3360/manual node scripts/build-manual-pdf.mjs  # outra porta
+```
+
+O script abre a página em tema claro, carrega todas as imagens, as converte em JPEG para o arquivo
+ficar leve (menos de 10 MB) e imprime em A4, um capítulo por página. Faça commit do PDF gerado.
+
+---
+
 ## Planejamento de produto
 
 Os documentos de produto, os ADRs, os runbooks e a especificação de design saíram do repositório
