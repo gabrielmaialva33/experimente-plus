@@ -475,6 +475,16 @@ export default function PartnerPortalIndex({
                               </Link>
                             ))}
                           </div>
+                          {/* The card shows three; with ten, the other seven were simply absent. */}
+                          {organization.establishments.length > 3 ? (
+                            <Link
+                              href={`/portal/organizations/${organization.id}#organization-establishments-title`}
+                              className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-accent hover:underline hover:underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              Ver os {organization.establishments.length} lugares
+                              <ArrowRight aria-hidden="true" className="size-4" />
+                            </Link>
+                          ) : null}
                         </div>
                       )}
                   </article>
