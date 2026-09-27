@@ -63,7 +63,7 @@ export function CatalogShell({
                     {item.href ? (
                       <Link
                         href={item.href}
-                        className="inline-flex min-h-8 items-center rounded-sm font-medium outline-none underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                        className="inline-flex min-h-8 items-center rounded-sm font-medium pointer-coarse:min-h-11 outline-none underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {item.label}
                       </Link>

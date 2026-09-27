@@ -68,7 +68,7 @@ function TenantSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="h-9 max-w-[280px] gap-2 rounded-md bg-background px-2.5"
+          className="h-9 max-w-[280px] gap-2 rounded-md bg-background px-2.5 pointer-coarse:h-11"
           title={activeTenant?.name}
         >
           <Avatar className="size-6">
@@ -137,7 +137,7 @@ function UserMenu({ surface }: { surface: NavigationSurface }) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-10 gap-2 rounded-md py-1 pe-2 ps-1 hover:bg-accent"
+          className="h-10 gap-2 rounded-md py-1 pe-2 ps-1 hover:bg-accent pointer-coarse:h-11"
           aria-label="Abrir menu do usuário"
         >
           <Avatar className="size-8">

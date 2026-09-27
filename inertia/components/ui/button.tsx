@@ -50,7 +50,7 @@ const buttonVariants = cva(
         'lg': 'h-11 px-5',
         'md': 'h-10 px-4',
         'sm': 'h-9 px-3 text-xs',
-        'icon': 'size-10 p-0',
+        'icon': 'size-10 p-0 pointer-coarse:size-11',
       },
       autoHeight: {
         true: '',
@@ -96,9 +96,11 @@ const buttonVariants = cva(
       { size: 'lg', autoHeight: true, className: 'h-auto min-h-11' },
       { size: 'xl', autoHeight: true, className: 'h-auto min-h-12' },
       { size: '2xl', autoHeight: true, className: 'h-auto min-h-13' },
-      { size: 'sm', mode: 'icon', className: 'size-9' },
-      { size: 'md', mode: 'icon', className: 'size-10' },
-      { size: 'icon', mode: 'icon', className: 'size-10' },
+      // A glyph-only button reaches the 44 px touch target on a touch screen; a mouse keeps
+      // the denser desktop size.
+      { size: 'sm', mode: 'icon', className: 'size-9 pointer-coarse:size-11' },
+      { size: 'md', mode: 'icon', className: 'size-10 pointer-coarse:size-11' },
+      { size: 'icon', mode: 'icon', className: 'size-10 pointer-coarse:size-11' },
       { size: 'lg', mode: 'icon', className: 'size-11' },
       { size: 'xl', mode: 'icon', className: 'size-12' },
       { size: '2xl', mode: 'icon', className: 'size-13' },

@@ -59,7 +59,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
               variant="ghost"
               size="md"
               shape="pill"
-              className="w-10 px-0 md:w-auto md:px-4"
+              className="w-10 px-0 pointer-coarse:h-11 max-md:pointer-coarse:w-11 md:w-auto md:px-4"
               aria-label="Sair"
               onClick={() => router.post('/logout')}
             >

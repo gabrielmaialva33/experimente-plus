@@ -53,4 +53,20 @@ describe('responsive foundation', () => {
   it("contains a native select's label, so a long option cannot widen a WebKit page", () => {
     expect(blockAfter(appCss, '  select {')).toContain('contain: paint;')
   })
+
+  it('answers a touch in a 44 px square around a small control without resizing it', () => {
+    const utility = blockAfter(appCss, '@utility touch-hitbox {')
+
+    expect(utility).toContain('position: relative;')
+    const hitArea = blockAfter(utility, '&::after {')
+    expect(hitArea).toContain('width: max(100%, 2.75rem);')
+    expect(hitArea).toContain('height: max(100%, 2.75rem);')
+    expect(hitArea).toContain('transform: translate(-50%, -50%);')
+  })
+
+  it('keeps a faint brand tap flash, the only touch feedback where hover never applies', () => {
+    expect(blockAfter(appCss, '  html {')).toContain(
+      '-webkit-tap-highlight-color: color-mix(in oklab, var(--primary) 16%, transparent);'
+    )
+  })
 })

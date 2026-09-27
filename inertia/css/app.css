@@ -261,6 +261,9 @@
 
   html {
     scroll-behavior: smooth;
+    /* Tailwind's preflight removes the tap flash, and hover styles only answer a real
+       pointer: on a touch screen a faint brand tint is the feedback that a tap landed. */
+    -webkit-tap-highlight-color: color-mix(in oklab, var(--primary) 16%, transparent);
   }
 
   /* WebKit counts a native select's selected label at its full width in the page's
@@ -385,6 +388,22 @@ body {
   select,
   textarea {
     font-size: max(1rem, 16px);
+  }
+}
+
+/* A small control inside a denser component (a field's reveal button, a checkbox) keeps its
+   drawn size but answers a touch anywhere in the 44 px square around it. */
+@utility touch-hitbox {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    transform: translate(-50%, -50%);
   }
 }
 
