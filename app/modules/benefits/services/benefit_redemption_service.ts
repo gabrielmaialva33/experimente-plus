@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto'
 import { DateTime } from 'luxon'
 import QRCode from 'qrcode'
 
-import BadRequestException from '#exceptions/bad_request_exception'
+import BenefitRedemptionUnavailableException from '#exceptions/benefit_redemption_unavailable_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import { isCanonicalBenefitReceiptCode } from '#modules/benefits/constants/benefit_redemption'
@@ -153,15 +153,36 @@ export default class BenefitRedemptionService {
     token: string,
     actor: User
   ): Promise<IBenefitRedemption.PreviewProjection> {
-    const claims = this.tokenService.verify(token)
-    this.assertTenantClaim(tenantId, claims)
-    const context = await this.resolveContext(tenantId, claims.access_id, claims.offer_id)
-    this.assertClaims(context, claims)
-    await this.organizationPolicy.authorizeValidateRedemptions(
-      actor,
+    const { claims, context } = await this.resolveAuthorizedPresentation(tenantId, token, actor)
+    const redeemedCount = await this.repository.countForAccessOffer(
       tenantId,
-      context.establishment.organization_id
+      context.access.id,
+      context.offer.id
     )
+    this.assertRedeemable(context, redeemedCount, DateTime.utc())
+
+    return this.toPreview(token, claims, context, redeemedCount)
+  }
+
+  /**
+   * The partner page's read of a presentation. Like `preview` it never redeems,
+   * but a presentation already confirmed answers with its original receipt
+   * instead of a refusal: reading the same code twice is a normal counter
+   * mistake, and the partner should see what was registered.
+   */
+  async inspect(
+    tenantId: number,
+    token: string,
+    actor: User
+  ): Promise<IBenefitRedemption.InspectionProjection> {
+    const { claims, context } = await this.resolveAuthorizedPresentation(tenantId, token, actor)
+    const existing = await this.repository.findByNonceHash(
+      tenantId,
+      this.tokenService.hashNonce(claims.nonce)
+    )
+    if (existing) {
+      return { status: 'redeemed', receipt: this.toReceipt(existing) }
+    }
 
     const redeemedCount = await this.repository.countForAccessOffer(
       tenantId,
@@ -170,16 +191,7 @@ export default class BenefitRedemptionService {
     )
     this.assertRedeemable(context, redeemedCount, DateTime.utc())
 
-    return {
-      token,
-      expires_at: DateTime.fromSeconds(claims.expires_at, { zone: 'utc' }).toISO()!,
-      holder: {
-        id: context.holder.id,
-        full_name: context.holder.full_name,
-        email: context.holder.email,
-      },
-      benefit: this.toBenefitSummary(context, redeemedCount),
-    }
+    return { status: 'valid', preview: this.toPreview(token, claims, context, redeemedCount) }
   }
 
   async redeem(
@@ -401,22 +413,32 @@ export default class BenefitRedemptionService {
   }
 
   private assertRedeemable(context: RedemptionContext, redeemedCount: number, now: DateTime): void {
-    if (context.financiallyBlocked)
-      throw new BadRequestException('Benefit access is financially blocked')
+    if (context.financiallyBlocked) {
+      throw new BenefitRedemptionUnavailableException(
+        'blocked',
+        'Benefit access is financially blocked'
+      )
+    }
     if (context.access.status !== 'active') {
-      throw new BadRequestException('Benefit access is not active')
+      throw new BenefitRedemptionUnavailableException('blocked', 'Benefit access is not active')
     }
     if (context.edition.status !== 'published') {
-      throw new BadRequestException('Benefit edition is not available for redemption')
+      throw new BenefitRedemptionUnavailableException(
+        'paused',
+        'Benefit edition is not available for redemption'
+      )
     }
     if (context.offer.status !== 'active') {
-      throw new BadRequestException('Benefit offer is not active')
+      throw new BenefitRedemptionUnavailableException('paused', 'Benefit offer is not active')
     }
     if (
       context.establishment.lifecycle_status !== 'active' ||
       context.establishment.business_status === 'permanently_closed'
     ) {
-      throw new BadRequestException('Establishment is not available for redemption')
+      throw new BenefitRedemptionUnavailableException(
+        'paused',
+        'Establishment is not available for redemption'
+      )
     }
 
     const nowMillis = now.toMillis()
@@ -424,30 +446,68 @@ export default class BenefitRedemptionService {
       nowMillis < context.edition.usage_starts_at.toMillis() ||
       nowMillis > context.edition.usage_ends_at.toMillis()
     ) {
-      throw new BadRequestException('Benefit edition is outside its usage window')
+      throw new BenefitRedemptionUnavailableException(
+        'outside_window',
+        'Benefit edition is outside its usage window'
+      )
     }
     if (context.offer.starts_at && nowMillis < context.offer.starts_at.toMillis()) {
-      throw new BadRequestException('Benefit offer is not available yet')
+      throw new BenefitRedemptionUnavailableException(
+        'outside_window',
+        'Benefit offer is not available yet'
+      )
     }
     if (context.offer.ends_at && nowMillis > context.offer.ends_at.toMillis()) {
-      throw new BadRequestException('Benefit offer has expired')
+      throw new BenefitRedemptionUnavailableException('outside_window', 'Benefit offer has expired')
     }
 
     const localNow = now.setZone(context.city.timezone)
     const weekdayBit = 1 << (localNow.weekday % 7)
     if ((context.offer.available_weekdays_mask & weekdayBit) === 0) {
-      throw new BadRequestException('Benefit offer is unavailable today')
+      throw new BenefitRedemptionUnavailableException(
+        'outside_window',
+        'Benefit offer is unavailable today'
+      )
     }
     if (context.offer.daily_start_time && context.offer.daily_end_time) {
       const localTime = localNow.toFormat('HH:mm')
       if (localTime < context.offer.daily_start_time || localTime > context.offer.daily_end_time) {
-        throw new BadRequestException('Benefit offer is outside its daily usage window')
+        throw new BenefitRedemptionUnavailableException(
+          'outside_window',
+          'Benefit offer is outside its daily usage window'
+        )
       }
     }
 
     if (redeemedCount >= context.offer.max_redemptions_per_access) {
-      throw new BadRequestException('Benefit offer redemption limit has been reached')
+      throw new BenefitRedemptionUnavailableException(
+        'already_used',
+        'Benefit offer redemption limit has been reached'
+      )
     }
+  }
+
+  /**
+   * Verifies the token and resolves the benefit it names, then checks that the
+   * actor may validate for the establishment's organization. Shared by every
+   * read of a presentation so preview and inspection refuse the same way.
+   */
+  private async resolveAuthorizedPresentation(
+    tenantId: number,
+    token: string,
+    actor: User
+  ): Promise<{ claims: IBenefitRedemption.PresentationClaims; context: RedemptionContext }> {
+    const claims = this.tokenService.verify(token)
+    this.assertTenantClaim(tenantId, claims)
+    const context = await this.resolveContext(tenantId, claims.access_id, claims.offer_id)
+    this.assertClaims(context, claims)
+    await this.organizationPolicy.authorizeValidateRedemptions(
+      actor,
+      tenantId,
+      context.establishment.organization_id
+    )
+
+    return { claims, context }
   }
 
   private assertTenantClaim(tenantId: number, claims: IBenefitRedemption.PresentationClaims): void {
@@ -491,6 +551,24 @@ export default class BenefitRedemptionService {
       max_redemptions_per_access: context.offer.max_redemptions_per_access,
       redeemed_count: redeemedCount,
       remaining_redemptions: Math.max(0, context.offer.max_redemptions_per_access - redeemedCount),
+    }
+  }
+
+  private toPreview(
+    token: string,
+    claims: IBenefitRedemption.PresentationClaims,
+    context: RedemptionContext,
+    redeemedCount: number
+  ): IBenefitRedemption.PreviewProjection {
+    return {
+      token,
+      expires_at: DateTime.fromSeconds(claims.expires_at, { zone: 'utc' }).toISO()!,
+      holder: {
+        id: context.holder.id,
+        full_name: context.holder.full_name,
+        email: context.holder.email,
+      },
+      benefit: this.toBenefitSummary(context, redeemedCount),
     }
   }
 

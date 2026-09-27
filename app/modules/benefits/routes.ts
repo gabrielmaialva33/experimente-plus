@@ -248,6 +248,13 @@ router
     router
       .get('/redemptions/validate', [BenefitRedemptionPagesController, 'validate'])
       .use(permission(IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.UPDATE))
+    // The in-page QR reader: JSON over the session, token in the body only.
+    router
+      .post('/redemptions/preview', [BenefitRedemptionPagesController, 'inspect'])
+      .use(permission(IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.UPDATE))
+    router
+      .post('/redemptions/confirm', [BenefitRedemptionPagesController, 'confirm'])
+      .use(permission(IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.UPDATE))
     router
       .post('/redemptions', [BenefitRedemptionPagesController, 'redeem'])
       .use(permission(IPermission.Resources.BENEFIT_OFFERS, IPermission.Actions.UPDATE))
