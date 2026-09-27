@@ -26,6 +26,11 @@ export interface DemoCity {
   districts: string[]
   /** How far, in kilometres, places may spread from the centre on the map. */
   spread_km: number
+  /**
+   * Approximate centre of a district, where its places are pinned so the
+   * address and the map agree. Districts without one spread around the city.
+   */
+  anchors?: Record<string, readonly [number, number]>
 }
 
 export const DEMO_REGIONS: DemoRegion[] = [
@@ -56,15 +61,27 @@ export const DEMO_CITIES: DemoCity[] = [
     sort_order: 0,
     districts: [
       'Centro',
-      'Gleba Palhano',
-      'Higienópolis',
       'Vila Nova',
-      'Jardim Quebec',
-      'Bela Suíça',
-      'Vila Ipiranga',
+      'Gleba Palhano',
       'Aeroporto',
+      'Vila Casoni',
+      'Jardim Canadá',
+      'Vila Brasil',
+      'Jardim Alpes',
+      'Presidente',
     ],
     spread_km: 3.2,
+    anchors: {
+      'Centro': [-23.3103, -51.1628],
+      'Vila Nova': [-23.297, -51.1673],
+      'Gleba Palhano': [-23.3296, -51.1855],
+      'Aeroporto': [-23.3312, -51.1307],
+      'Vila Casoni': [-23.298, -51.1458],
+      'Jardim Canadá': [-23.3184, -51.1681],
+      'Vila Brasil': [-23.3276, -51.1503],
+      'Jardim Alpes': [-23.2829, -51.1639],
+      'Presidente': [-23.3115, -51.1804],
+    },
   },
   {
     slug: 'maringa',
@@ -95,7 +112,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -51.4608,
     sort_order: 2,
     districts: ['Centro', 'Vila Nova', 'Jardim América', 'Jardim Primavera'],
-    spread_km: 1.8,
+    spread_km: 1.5,
   },
   {
     slug: 'arapongas',
@@ -106,7 +123,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -51.4259,
     sort_order: 3,
     districts: ['Centro', 'Jardim Tropical', 'Vila Nova', 'Jardim Primavera'],
-    spread_km: 1.8,
+    spread_km: 1.5,
   },
   {
     slug: 'cambe',
@@ -117,7 +134,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -51.2798,
     sort_order: 4,
     districts: ['Centro', 'Vila Nova', 'Jardim América', 'Jardim Primavera'],
-    spread_km: 1.6,
+    spread_km: 1.3,
   },
   {
     slug: 'rolandia',
@@ -128,7 +145,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -51.3659,
     sort_order: 5,
     districts: ['Centro', 'Jardim Novo Horizonte', 'Vila Nova', 'Jardim Europa'],
-    spread_km: 1.6,
+    spread_km: 1.3,
   },
   {
     slug: 'ibipora',
@@ -139,7 +156,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -51.0522,
     sort_order: 6,
     districts: ['Centro', 'Vila Nova', 'Jardim Primavera', 'Jardim América'],
-    spread_km: 1.5,
+    spread_km: 1.2,
   },
   {
     slug: 'cornelio-procopio',
@@ -150,7 +167,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -50.6463,
     sort_order: 10,
     districts: ['Centro', 'Vila Nova', 'Jardim Europa', 'Jardim América'],
-    spread_km: 1.5,
+    spread_km: 1.2,
   },
   {
     slug: 'bandeirantes',
@@ -161,7 +178,7 @@ export const DEMO_CITIES: DemoCity[] = [
     longitude: -50.3671,
     sort_order: 20,
     districts: ['Centro', 'Vila Maria', 'Jardim Europa'],
-    spread_km: 1.3,
+    spread_km: 1,
   },
 ]
 

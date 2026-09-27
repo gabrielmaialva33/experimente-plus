@@ -673,13 +673,17 @@ export default class DemoCatalogProvisioner {
   private coordinatesFor(place: DemoPlace): [number, number] {
     const city = demoCity(place.city)
     const rng = seededRandom(`coordinates|${place.key}`)
-    const reach = city.spread_km * (OUTSKIRTS_CATEGORIES.has(place.category) ? 1.7 : 1)
+    const anchor = city.anchors?.[place.district]
+    const [originLatitude, originLongitude] = anchor ?? [city.latitude, city.longitude]
+    const reach = anchor
+      ? 0.6
+      : city.spread_km * (OUTSKIRTS_CATEGORIES.has(place.category) ? 1.7 : 1)
     const distance = reach * Math.sqrt(rng.between(0.04, 1))
     const angle = rng.between(0, Math.PI * 2)
-    const latitude = city.latitude + (distance * Math.cos(angle)) / 111.32
+    const latitude = originLatitude + (distance * Math.cos(angle)) / 111.32
     const longitude =
-      city.longitude +
-      (distance * Math.sin(angle)) / (111.32 * Math.cos((city.latitude * Math.PI) / 180))
+      originLongitude +
+      (distance * Math.sin(angle)) / (111.32 * Math.cos((originLatitude * Math.PI) / 180))
     return [Number(latitude.toFixed(6)), Number(longitude.toFixed(6))]
   }
 

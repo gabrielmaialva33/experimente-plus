@@ -175,6 +175,23 @@ test.group('Development demo catalogue', (group) => {
       }
     }
 
+    // No two places share a point: stacked pins hide each other on the map.
+    const points = await db
+      .from('catalog_establishments')
+      .where('tenant_id', tenant.id)
+      .select('establishment_id', 'city_slug', 'latitude', 'longitude')
+    for (const [index, a] of points.entries())
+      for (const b of points.slice(index + 1))
+        if (a.city_slug === b.city_slug)
+          assert.isAbove(
+            kilometresBetween(
+              [Number(a.latitude), Number(a.longitude)],
+              [Number(b.latitude), Number(b.longitude)]
+            ),
+            0.02,
+            `${a.establishment_id} and ${b.establishment_id} overlap`
+          )
+
     // Partner content, packages and reviews, all published.
     const published = async (table: string) => {
       const row = await db
