@@ -19,6 +19,8 @@ const OrganizationTeamPagesController = () =>
   import('#modules/organizations/controllers/organization_team_pages_controller')
 const OrganizationInvitationPagesController = () =>
   import('#modules/organizations/controllers/organization_invitation_pages_controller')
+const OrganizationReviewPagesController = () =>
+  import('#modules/organizations/controllers/organization_review_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
@@ -129,6 +131,66 @@ router
   })
   .prefix('/api/v1/admin/organization-claims')
   .use(middleware.auth())
+  .use(middleware.tenant({ required: true }))
+
+/**
+ * "Organizações" in the back-office moderation inbox. Each route carries the
+ * permission of its `/api/v1/admin/organizations` or `/organization-claims`
+ * counterpart and calls the same service method; the services require platform
+ * moderation again, so a partner who holds `organizations.list` for the Portal
+ * still gets a 403 here.
+ */
+router
+  .group(() => {
+    router
+      .get('/organizations', [OrganizationReviewPagesController, 'index'])
+      .as('backoffice.organizations.index')
+      .use(permission(IPermission.Resources.ORGANIZATIONS, IPermission.Actions.LIST))
+    router
+      .get('/organizations/:organizationId', [OrganizationReviewPagesController, 'show'])
+      .where('organizationId', router.matchers.number())
+      .as('backoffice.organizations.show')
+      .use(permission(IPermission.Resources.ORGANIZATIONS, IPermission.Actions.READ))
+    router
+      .post('/organizations/:organizationId/approve', [
+        OrganizationReviewPagesController,
+        'approve',
+      ])
+      .where('organizationId', router.matchers.number())
+      .as('backoffice.organizations.approve')
+      .use(permission(IPermission.Resources.ORGANIZATIONS, IPermission.Actions.APPROVE))
+    router
+      .post('/organizations/:organizationId/request-changes', [
+        OrganizationReviewPagesController,
+        'requestChanges',
+      ])
+      .where('organizationId', router.matchers.number())
+      .as('backoffice.organizations.request_changes')
+      .use(permission(IPermission.Resources.ORGANIZATIONS, IPermission.Actions.REQUEST_CHANGES))
+    router
+      .post('/organizations/:organizationId/reject', [OrganizationReviewPagesController, 'reject'])
+      .where('organizationId', router.matchers.number())
+      .as('backoffice.organizations.reject')
+      .use(permission(IPermission.Resources.ORGANIZATIONS, IPermission.Actions.REJECT))
+    router
+      .post('/organization-claims/:claimId/approve', [
+        OrganizationReviewPagesController,
+        'approveClaim',
+      ])
+      .where('claimId', router.matchers.number())
+      .as('backoffice.organization_claims.approve')
+      .use(permission(IPermission.Resources.ORGANIZATION_CLAIMS, IPermission.Actions.APPROVE))
+    router
+      .post('/organization-claims/:claimId/reject', [
+        OrganizationReviewPagesController,
+        'rejectClaim',
+      ])
+      .where('claimId', router.matchers.number())
+      .as('backoffice.organization_claims.reject')
+      .use(permission(IPermission.Resources.ORGANIZATION_CLAIMS, IPermission.Actions.REJECT))
+  })
+  .prefix('/backoffice')
+  .use(middleware.auth({ guards: ['jwt'] }))
   .use(middleware.tenant({ required: true }))
 
 /**

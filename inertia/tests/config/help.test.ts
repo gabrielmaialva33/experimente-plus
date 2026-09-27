@@ -71,6 +71,20 @@ describe('contextual help', () => {
     )
   })
 
+  it('opens the new-business and simulated-payment tasks from their back-office pages', () => {
+    expect(pageHelp('backoffice/organizations/index', 'backoffice').href).toBe(
+      '/manual#administracao-organizacoes'
+    )
+    expect(pageHelp('backoffice/organizations/show', 'backoffice')).toEqual({
+      anchor: 'administracao-organizacoes',
+      href: '/manual#administracao-organizacoes',
+      specific: true,
+    })
+    expect(pageHelp('backoffice/purchases/index', 'backoffice').href).toBe(
+      '/manual#administracao-pagamento-simulado'
+    )
+  })
+
   it('reads the purpose written in the address before the page', () => {
     expect(
       pageHelp('portal/establishments/index', 'portal', '/portal/establishments?para=desempenho')

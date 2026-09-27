@@ -20,6 +20,7 @@ import {
   ReceiptText,
   ScanLine,
   ShieldCheck,
+  ShoppingBag,
   SlidersHorizontal,
   Smartphone,
   Sparkles,
@@ -105,6 +106,11 @@ export interface NavigationItem {
   organizationAction?: OrganizationActionKey
   /** The destination is guarded by tenant middleware and needs an active operation. */
   requiresActiveTenant?: boolean
+  /**
+   * Only platform administrators reach it: the service behind the page requires
+   * platform administration and no global permission names that audience.
+   */
+  requiresPlatformAdmin?: boolean
   /** Matches only this path, excluding descendant routes. */
   exact?: boolean
   /**
@@ -438,6 +444,35 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
       { label: 'Organização' },
       { label: 'Desempenho' },
     ],
+  },
+  {
+    id: 'backoffice-organization-review',
+    pattern: '/backoffice/organizations/:organizationId',
+    surface: 'backoffice',
+    title: 'Analisar organização',
+    description: 'Dados enviados pelo negócio, quem enviou, o histórico e a decisão.',
+    capability: 'organizations.read',
+    breadcrumbs: [
+      { label: 'Organizações', href: '/backoffice/organizations' },
+      { label: 'Análise' },
+    ],
+  },
+  {
+    id: 'backoffice-organizations',
+    pattern: '/backoffice/organizations',
+    surface: 'backoffice',
+    title: 'Organizações',
+    description: 'Negócios novos esperando a conferência da operação, e as reivindicações.',
+    capability: 'organizations.list',
+    breadcrumbs: [{ label: 'Caixa de moderação' }, { label: 'Organizações' }],
+  },
+  {
+    id: 'backoffice-purchases',
+    pattern: '/backoffice/purchases',
+    surface: 'backoffice',
+    title: 'Pedidos',
+    description: 'Compras de pacotes e vouchers feitas no app.',
+    breadcrumbs: [{ label: 'Pedidos' }],
   },
   {
     id: 'backoffice-content',
@@ -811,6 +846,17 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     requiresActiveTenant: true,
   },
   {
+    id: 'backoffice-purchases',
+    label: 'Pedidos',
+    href: '/backoffice/purchases',
+    icon: ShoppingBag,
+    surface: 'backoffice',
+    section: 'Operação',
+    placements: ['sidebar'],
+    requiresActiveTenant: true,
+    requiresPlatformAdmin: true,
+  },
+  {
     id: 'backoffice-feedback',
     label: 'Feedback do piloto',
     href: '/backoffice/feedback',
@@ -819,6 +865,17 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Operação',
     placements: ['sidebar'],
     capability: 'pilot_feedback.list',
+    requiresActiveTenant: true,
+  },
+  {
+    id: 'backoffice-organizations',
+    label: 'Organizações',
+    href: '/backoffice/organizations',
+    icon: Building2,
+    surface: 'backoffice',
+    section: 'Caixa de moderação',
+    placements: ['sidebar'],
+    capability: 'organizations.list',
     requiresActiveTenant: true,
   },
   {
@@ -997,7 +1054,10 @@ export function navigationItemsForSurface(
     (item) =>
       item.surface === surface &&
       (!placement || item.placements.includes(placement)) &&
-      (!availability || !item.requiresActiveTenant || availability.activeTenantId !== null)
+      (!availability || !item.requiresActiveTenant || availability.activeTenantId !== null) &&
+      (!availability ||
+        !item.requiresPlatformAdmin ||
+        availability.platformAccess === 'platform_admin')
   )
 }
 

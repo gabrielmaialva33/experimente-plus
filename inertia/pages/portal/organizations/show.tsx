@@ -17,6 +17,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
 import { PageHeader } from '~/components/page_header'
+import { OrganizationReviewNotice } from '~/components/portal/organization_review_notice'
 import PilotFeedbackForm from '~/components/portal/pilot_feedback_form'
 import { EditorField } from '~/components/portal/establishment_editor/editor_field'
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert'
@@ -56,6 +57,9 @@ interface OrganizationSummary {
   phone: string
   website: string | null
   status: string
+  submitted_at?: string | null
+  reviewed_at?: string | null
+  review_notes?: string | null
   role: string | null
   establishments: EstablishmentSummary[]
   totals: {
@@ -428,6 +432,13 @@ export default function PortalOrganizationPage({
               ) : null}
             </>
           }
+        />
+
+        <OrganizationReviewNotice
+          status={organization.status}
+          reviewNotes={organization.review_notes}
+          submittedAt={organization.submitted_at}
+          reviewedAt={organization.reviewed_at}
         />
 
         <section

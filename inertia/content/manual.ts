@@ -560,12 +560,12 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             ['Papel', 'O que pode fazer', 'Onde começa'],
             [
               'Moderador',
-              'Hoje e a caixa de moderação: dados de lugares, conteúdo de parceiros e denúncias (inclusive banir e desbanir autor). Vê Edições, Acessos e Arquivos, sem mudar edições nem acessos.',
+              'Hoje e a caixa de moderação: organizações (novos negócios e reivindicações), dados de lugares, conteúdo de parceiros e denúncias (inclusive banir e desbanir autor). Vê Edições, Acessos e Arquivos, sem mudar edições nem acessos.',
               'Caixa de moderação.',
             ],
             [
               'Administrador',
-              'Tudo do Moderador, mais as regras (avaliações, publicação e Concierge), edições e benefícios, cortesias, categorias, regiões e cidades e as contas em **Pessoas e acesso**. Vê as permissões, sem mudá-las.',
+              'Tudo do Moderador, mais as regras (avaliações, publicação e Concierge), edições e benefícios, cortesias, **Pedidos** (e, nos testes, a confirmação do pagamento simulado), categorias, regiões e cidades e as contas em **Pessoas e acesso**. Vê as permissões, sem mudá-las.',
               'Hoje.',
             ],
             ['Responsável técnico', 'Tudo, inclusive mudar as permissões de cada papel.', 'Hoje.']
@@ -573,7 +573,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'admin-menu',
-              'Menu lateral da área da equipe com as seções Operação, Caixa de moderação, Regras da operação, Pessoas e acesso e Administração; o item Hoje está destacado.',
+              'Menu lateral da área da equipe com as seções Operação (com Pedidos), Caixa de moderação (com Organizações), Regras da operação, Pessoas e acesso e Administração; o item Hoje está destacado.',
               'O menu da equipe, para um Administrador.'
             ),
             image(
@@ -583,7 +583,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             )
           ),
           p(
-            'Tarefas da equipe: [Hoje](#administracao-hoje), [dados de lugares](#administracao-dados-de-lugares), [conteúdo](#administracao-conteudo), [denúncias](#administracao-denuncias), [regras](#administracao-regras), [edições](#administracao-edicoes) e [acessos](#administracao-acessos).'
+            'Tarefas da equipe: [Hoje](#administracao-hoje), [novos negócios](#administracao-organizacoes), [dados de lugares](#administracao-dados-de-lugares), [conteúdo](#administracao-conteudo), [denúncias](#administracao-denuncias), [regras](#administracao-regras), [edições](#administracao-edicoes), [acessos](#administracao-acessos) e [pagamento simulado](#administracao-pagamento-simulado).'
           ),
         ],
         keywords: ['moderador', 'administrador', 'responsável técnico', 'equipe', 'operação'],
@@ -669,14 +669,14 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           steps(
             'O cliente abre a **Carteira** e toca em **Usar benefício** (no app, **Apresentar**). Aparece um QR que vale por 5 minutos.',
-            'O lugar lê o QR: no app, pela aba **Validar**; no site, pela página **Validar benefício**.',
-            'Aparece a prévia **Apresentação válida**, com o benefício, o titular e as regras. Conferir não gasta nada.',
-            'O lugar toca em **Confirmar utilização**. Só então o benefício é usado, e o comprovante aparece para o cliente e para o lugar.'
+            'O lugar lê o QR: no app, pela aba **Validar**; no site, na página **Validar benefício**, com **Ler QR code** (a câmera abre na própria página).',
+            'Aparece o benefício com o quadro **Apresentação válida**, o titular e as regras. Conferir não gasta nada.',
+            'O lugar toca em **Confirmar utilização**. Só então o benefício é usado: aparece **Utilização registrada**, e o comprovante fica com o cliente e com o lugar.'
           ),
           figures(
             image(
               'resgate-fluxo',
-              'Três telas lado a lado: o QR do cliente com o contador Expira em (1, com um QR de exemplo), a prévia Apresentação válida do lugar (2) e o comprovante Utilização confirmada (3).',
+              'Três telas lado a lado: o QR do cliente com o contador Expira em destacado (1, com um QR de exemplo), a prévia do lugar com Apresentação válida e o botão Confirmar utilização destacado (2) e o comprovante Utilização registrada, com o código coberto (3).',
               'O QR do cliente (1), a prévia do lugar (2) e o comprovante (3).'
             )
           ),
@@ -722,7 +722,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
         ],
         result:
-          'o lugar vê **Benefício validado e comprovante emitido**, e o comprovante aparece em **Utilizações**.',
+          'o lugar vê **Utilização registrada**, com o comprovante, e o mesmo comprovante aparece em **Utilizações**.',
         troubleshooting: [
           'O código expirou: toque em **Gerar novo código** e mostre o QR novo.',
           'O lugar não consegue ler o QR: toque em **Copiar link de validação** e envie o link só para quem está atendendo.',
@@ -748,54 +748,72 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         intro: 'Para registrar o uso do benefício que o cliente mostrou no balcão.',
         needs: [
           'papel Proprietário, Administrador ou Editor no negócio do benefício',
-          'o QR (ou o link) que o cliente está mostrando',
+          'um celular, tablet ou computador com câmera (sem câmera, o link ou o código que o cliente copiou no app)',
         ],
         blocks: [
           p(
-            'No celular, o jeito mais rápido é a aba **Validar** do app (veja [Como validar um benefício no app](#app-validar)). No site:'
+            'No celular, também dá para usar a aba **Validar** do app (veja [Como validar um benefício no app](#app-validar)). No site:'
           ),
           steps(
             'No menu da esquerda, toque em **Validar benefício** (no celular, abra antes o menu ☰, no alto, à esquerda).',
-            'Leia a apresentação do cliente: cole o link (ou o código) que ele mostrou ou enviou em **Link da apresentação** e toque em **Conferir**.',
-            'Confira o benefício, o lugar, o **Titular** e as **Regras**. O quadro **Apresentação válida** mostra quantas utilizações restam. Até aqui, nada foi usado.',
-            'Toque em **Confirmar utilização** e, na janela, em **Confirmar utilização** de novo.'
-          ),
-          info(
-            'Ler o QR pela câmera, na própria página',
-            'A página **Validar benefício** está ganhando a leitura do QR pela câmera. Enquanto essa opção não aparece para você, digite o link ou o código, ou use a dica abaixo.'
+            'Toque em **Ler QR code** (1). A câmera abre na própria página; no celular, a câmera traseira. Na primeira vez, o navegador pede para usar a câmera: toque em **Permitir**.',
+            'Aponte para o QR que o cliente mostra no app. A leitura é automática, e a câmera desliga sozinha.',
+            'Confira o benefício, o **Lugar**, o **Titular**, a **Validade do código** e as **Regras**. O quadro **Apresentação válida** mostra quantas utilizações restam. Até aqui, nada foi usado.',
+            'Toque em **Confirmar utilização** e, na janela, em **Confirmar utilização** de novo.',
+            'Aparece **Utilização registrada**, com o comprovante, na mesma página. Para o próximo cliente, toque em **Ler próximo QR code**.'
           ),
           tip(
-            'Sem digitar nada: a câmera do celular',
-            'Com o Portal aberto no navegador do celular, aponte a câmera comum do aparelho para o QR do cliente e toque no link que ela mostrar. A página **Validar benefício** abre já com a apresentação.'
+            'Sem câmera: Digitar código',
+            'Toque em **Digitar código** (2), cole em **Link ou código da apresentação** o link de validação que o cliente copiou no app (ou o código que aparece nele) e toque em **Conferir**. O resto é igual.'
           ),
           figures(
             image(
               'parceiro-validar',
-              'Página Validar benefício no computador com o campo Link da apresentação (1) e o botão Conferir (2) destacados.',
-              'Cole o link ou o código (1) e confira (2).'
+              'Página Validar benefício no computador com o quadro Ler o benefício do cliente e os botões Ler QR code (1) e Digitar código (2) destacados.',
+              'Ler o QR pela câmera (1) ou digitar o código (2).'
+            ),
+            image(
+              'parceiro-validar-camera-celular',
+              'Leitor Ler QR code aberto no celular, com a imagem da câmera borrada, a orientação Aponte para o QR code que o cliente está mostrando no app destacada e, abaixo, Digitar código e Fechar câmera.',
+              'A câmera, na própria página.'
             ),
             image(
               'parceiro-validar-previa-celular',
-              'Prévia no celular com o benefício, o lugar, o titular (e-mail borrado), as regras, o aviso Apresentação válida e o botão laranja Confirmar utilização destacado.',
+              'Prévia no celular com o benefício Café filtrado de cortesia, o lugar, o titular (e-mail borrado), a validade do código, as regras, o quadro Apresentação válida e o botão laranja Confirmar utilização destacado.',
               'A prévia: nada é usado até você confirmar.'
             ),
             image(
               'parceiro-validar-confirmar-celular',
-              'Janela "Confirmar utilização?" com o botão azul Confirmar utilização destacado e Cancelar embaixo.',
+              'Janela "Confirmar utilização?" com o nome do titular e do lugar, o botão Confirmar utilização destacado e Cancelar embaixo.',
               'A confirmação final.'
             ),
             image(
               'parceiro-comprovante-celular',
-              'Comprovante com a mensagem Benefício validado e comprovante emitido, o selo Utilização confirmada destacado, o código coberto e o e-mail do titular borrado.',
-              'O comprovante emitido (código coberto nesta imagem).'
+              'Comprovante na mesma página, com Utilização registrada (1) e o botão Ler próximo QR code (2) destacados; o código do comprovante está coberto.',
+              'O comprovante (1) e o próximo cliente (2); código coberto nesta imagem.'
+            )
+          ),
+          info(
+            'Câmera bloqueada',
+            'Se o navegador não liberar a câmera, a página mostra **Câmera bloqueada** com o caminho para liberar no Safari e no Chrome. Os mesmos passos estão no fim desta tarefa.'
+          ),
+          figures(
+            image(
+              'parceiro-validar-camera-bloqueada-celular',
+              'Leitor Ler QR code no celular com o aviso Câmera bloqueada destacado, o passo a passo para o iPhone (Safari) e para Android ou computador (Chrome) e os botões Tentar de novo e Digitar código.',
+              'Como liberar a câmera, na própria página.'
             )
           ),
         ],
         result:
-          'aparece **Benefício validado e comprovante emitido**, com o comprovante da utilização.',
+          'aparece **Utilização registrada**, com o comprovante da utilização, e o cliente vê o mesmo comprovante em **Utilizações**.',
         troubleshooting: [
-          'Uma recusa apareceu: veja [O que cada recusa quer dizer](#resgate-recusas).',
-          'A internet caiu na confirmação: toque de novo em **Confirmar utilização**. Se o uso já foi registrado, o mesmo comprovante é devolvido. Na dúvida, confira em **Utilizações**.',
+          '**Câmera bloqueada**: o navegador não deixou a página usar a câmera. No iPhone (Safari), toque em **aA** na barra de endereço, depois em **Ajustes do Site** › **Câmera** › **Permitir**. No Android ou no computador (Chrome), toque no ícone ao lado do endereço, depois em **Permissões** › **Câmera** › **Permitir**. Em seguida, toque em **Tentar de novo**.',
+          '**Nenhuma câmera encontrada** ou **Navegador sem acesso à câmera**: use **Digitar código** ou valide pelo app. **Câmera em uso**: feche o aplicativo ou a aba que está usando a câmera e toque em **Tentar de novo**.',
+          '**Este QR não é um benefício do Experimente+.**: a câmera leu outro QR (de um cardápio, por exemplo). Ela continua ligada: aponte para o QR que o cliente mostra no app.',
+          'Uma recusa apareceu, como **QR code expirado ou inválido** ou **Benefício de outro estabelecimento**: nada foi registrado. Veja [O que cada recusa quer dizer](#resgate-recusas).',
+          '**Este QR code já tinha sido confirmado**: o mesmo QR foi lido de novo. A página mostra o comprovante original; nenhuma utilização nova foi registrada.',
+          '**A confirmação não completou** (a internet caiu): toque em **Tentar de novo**. Se o uso já foi registrado, o mesmo comprovante é devolvido. Na dúvida, confira em **Utilizações**.',
         ],
         keywords: [
           'validar',
@@ -809,6 +827,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'atendente',
           'caixa',
           'garçom',
+          'câmera',
+          'ler qr code',
+          'digitar código',
         ],
       },
       {
@@ -816,39 +837,59 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         title: 'O que cada recusa quer dizer',
         intro: 'Para saber o que fazer quando a validação não passa.',
         blocks: [
+          p(
+            'A recusa aparece no lugar da prévia, com o título abaixo e **Nada foi registrado.** Depois, toque em **Ler outro QR code** ou em **Digitar código**.'
+          ),
           table(
             'Recusas na validação',
             ['Situação', 'O que o lugar vê', 'O que fazer'],
             [
-              'O QR expirou (mais de 5 minutos)',
-              'No site: **Esta apresentação é inválida ou expirou.** No app: **Este código não é uma apresentação válida.**',
+              'O QR expirou (mais de 5 minutos) ou não é válido',
+              '**QR code expirado ou inválido**',
               'O cliente toca em **Gerar novo código** e mostra o QR novo.',
             ],
             [
-              'O QR já foi usado',
-              '**Não foi possível validar esta apresentação.**',
-              'Confira em **Utilizações**: se o uso foi registrado, o comprovante está lá. Se o cliente ainda tem usos, ele gera um novo código.',
-            ],
-            [
-              'O benefício acabou, ou está fora do dia ou do horário',
-              '**Não foi possível validar esta apresentação.**',
-              'O cliente confere na **Carteira** as regras e quando o benefício vale.',
-            ],
-            [
-              'A oferta ou a edição está pausada',
-              '**Não foi possível validar esta apresentação.**',
-              'A oferta volta a valer quando for reativada (**Ativar**, em **Benefícios** do lugar). Uma edição pausada volta pela equipe do Experimente+.',
-            ],
-            [
               'O benefício é de outro negócio',
-              'A apresentação é recusada. Nesta versão, pode aparecer uma mensagem de erro genérica.',
+              '**Benefício de outro estabelecimento**',
               'Cada lugar só valida as próprias ofertas. O cliente vê na carteira em qual lugar o benefício vale.',
             ],
             [
               'Conta sem permissão para validar',
-              '**Sua conta não pode validar este benefício.**',
+              '**Sua conta não pode validar**',
               'Peça a um Proprietário ou Administrador para mudar o seu papel para **Editor**.',
+            ],
+            [
+              'O benefício já foi usado todas as vezes',
+              '**Benefício já utilizado**',
+              'O cliente confere a carteira. Um uso já registrado está em **Utilizações**, com o comprovante.',
+            ],
+            [
+              'A oferta, a edição ou o lugar está pausado',
+              '**Benefício pausado**',
+              'A oferta volta a valer quando for reativada (**Ativar**, em **Benefícios** do lugar). Uma edição pausada volta pela equipe do Experimente+.',
+            ],
+            [
+              'O acesso do cliente está bloqueado',
+              '**Benefício bloqueado**',
+              'O cliente confere a carteira no app. O bloqueio é resolvido pela equipe do Experimente+.',
+            ],
+            [
+              'Fora do dia ou do horário do benefício',
+              '**Fora do período de uso**',
+              'Confira as regras com o cliente: elas dizem os dias e os horários em que o benefício vale.',
+            ],
+            [
+              'O mesmo QR, lido de novo depois de confirmado',
+              '**Este QR code já tinha sido confirmado**, com o comprovante original',
+              'Nada a fazer: nenhuma utilização nova foi registrada.',
             ]
+          ),
+          figures(
+            image(
+              'parceiro-validar-recusa-celular',
+              'Página Validar benefício no celular com a recusa destacada: Benefício de outro estabelecimento, a explicação, Nada foi registrado e os botões Ler outro QR code e Digitar código.',
+              'Uma recusa: nada foi registrado.'
+            )
           ),
         ],
         keywords: [
@@ -857,8 +898,10 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'já usado',
           'pausado',
           'outro negócio',
-          'não foi possível validar',
-          'inválida',
+          'outro estabelecimento',
+          'bloqueado',
+          'fora do período',
+          'inválido',
         ],
       },
     ],
@@ -1429,11 +1472,22 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
               'Enviar a organização para análise.'
             )
           ),
+          p(
+            'Quem responde é um moderador ou administrador do Experimente+, na área da equipe (veja [Como aprovar um novo negócio](#administracao-organizacoes)). A resposta aparece no Portal: no selo da organização, num aviso na página dela e na **Visão geral**. Nenhum e-mail é enviado; volte ao Portal para ver.'
+          ),
+          figures(
+            image(
+              'parceiro-organizacao-correcoes',
+              'Página da organização Armazém Tibagi com o selo Correções solicitadas e o aviso destacado A equipe pediu correções, com o motivo escrito pela equipe e a orientação para enviar de novo.',
+              'Quando a equipe pede correções, o motivo aparece aqui.'
+            )
+          ),
         ],
         result:
-          'a organização fica **Em análise**. A equipe do Experimente+ confere a razão social, o CNPJ e os contatos e aprova (a organização fica **Ativa**), pede correções (**Correções solicitadas**: ajuste e envie de novo) ou rejeita. Só depois de **Ativa** os lugares dela podem ir para a moderação e aparecer no app e no site.',
+          'a organização fica **Em análise**, com o aviso **Em análise pela equipe do Experimente+**. A equipe confere a razão social, o CNPJ e os contatos e decide: aprova (a organização fica **Ativa**, e o aviso some), pede correções (**Correções solicitadas**: o aviso **A equipe pediu correções** traz o motivo; ajuste em **Dados da organização** e envie de novo) ou rejeita (**Cadastro não aprovado**, com o motivo). Só depois de **Ativa** os lugares podem ir para a moderação e aparecer no app e no site.',
         troubleshooting: [
-          'Durante a análise, a edição da organização e dos lugares pode ficar indisponível por um tempo. Ela volta quando a equipe responder.',
+          'Durante a análise, a organização e os lugares ficam sem edição. A edição volta quando a equipe responder.',
+          'A organização está **Em análise** há muito tempo: nenhum e-mail avisa da resposta, então confira o Portal. Se continuar sem resposta, fale com a equipe do Experimente+.',
           '**A organização precisa estar ativa antes do envio para moderação.**: um lugar só vai para a moderação depois que a organização é aprovada.',
           '**Salve ou descarte os dados antes de enviar a organização para análise.**: toque em **Salvar dados** e depois em **Enviar para análise**.',
         ],
@@ -1444,6 +1498,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'novo lugar',
           'enviar para análise',
           'aprovação',
+          'em análise',
+          'correções solicitadas',
+          'cadastro não aprovado',
         ],
       },
       {
@@ -1626,9 +1683,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
               'O histórico de utilizações.'
             ),
             image(
-              'parceiro-validar-recusado-celular',
-              'Página Validar benefício no celular com o aviso destacado "Não foi possível validar esta apresentação. Peça ao cliente para consultar a carteira e gerar um novo código, se o benefício estiver disponível."',
-              'O aviso quando um código já usado é lido de novo.'
+              'parceiro-validar-repetido-celular',
+              'Página Validar benefício no celular com o aviso destacado Este QR code já tinha sido confirmado, o comprovante original com o código coberto e a frase Nenhuma utilização nova foi registrada.',
+              'O mesmo QR lido de novo mostra o comprovante original.'
             )
           ),
         ],
@@ -1884,18 +1941,94 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           steps(
             'No menu da esquerda, toque em **Hoje**.',
-            'Veja os quadros **Dados de lugares para revisar**, **Conteúdo em análise**, **Denúncias pendentes** (os casos fora do prazo aparecem em destaque) e **Feedback do piloto**.',
+            'Veja os quadros **Organizações para aprovar**, **Dados de lugares para revisar**, **Conteúdo em análise**, **Denúncias pendentes** (os casos fora do prazo aparecem em destaque) e **Feedback do piloto** (este, só para administradores).',
             'Na **Caixa de moderação**, que lista tudo com o prazo mais curto primeiro, toque em **Revisar** no item.'
           ),
           figures(
             image(
               'admin-hoje',
-              'Página "O que resolver hoje" com os quatro quadros e a Caixa de moderação destacada, listando denúncia, dados de lugar e evento, cada um com o botão Revisar.',
+              'Página "O que resolver hoje" com os cinco quadros, o quadro Organizações para aprovar destacado, e a Caixa de moderação listando dados de lugar e uma organização, cada um com o botão Revisar.',
               'Hoje: tudo o que espera decisão.'
             )
           ),
         ],
         keywords: ['hoje', 'fila', 'caixa de moderação', 'prazos'],
+      },
+      {
+        id: 'administracao-organizacoes',
+        title: 'Como aprovar um novo negócio',
+        intro:
+          'Para conferir a organização que um negócio cadastrou no Portal e liberar os lugares dele.',
+        needs: ['papel Moderador, Administrador ou Responsável técnico'],
+        blocks: [
+          steps(
+            'Em **Caixa de moderação**, toque em **Organizações**. A lista abre em **Em análise**, com o nome, a razão social, o CNPJ, quem enviou, quando e quantos lugares cada organização tem. O quadro **Organizações para aprovar**, em **Hoje**, leva à mesma lista.',
+            'Toque em **Analisar** na organização.',
+            'Confira **Dados enviados** (1): razão social, CNPJ, e-mail e telefone. Veja o CNPJ numa fonte oficial, como o comprovante de inscrição da Receita Federal. Confira também **Quem enviou**, a **Equipe**, os **Lugares cadastrados** e o **Histórico** (2).',
+            'Em **Decisão**, toque em **Aprovar organização** (1), **Pedir correções** (2) ou **Rejeitar** (3). Na janela, escreva o motivo e confirme.'
+          ),
+          figures(
+            image(
+              'admin-organizacoes',
+              'Fila Organizações com o filtro Em análise e o negócio Armazém Tibagi, com razão social, CNPJ, quem enviou, a data e 1 lugar; o botão Analisar está destacado.',
+              'Um negócio esperando a análise.'
+            ),
+            image(
+              'admin-organizacao-analise',
+              'Análise da organização Armazém Tibagi com os quadros Dados enviados (1) e Histórico (2) destacados.',
+              'O que o negócio enviou (1) e o que já aconteceu (2).'
+            ),
+            image(
+              'admin-organizacao-decisao',
+              'Seção Decisão da análise, abaixo de Quem enviou e Lugares cadastrados, com os botões Aprovar organização (1), Pedir correções (2) e Rejeitar (3) destacados.',
+              'As três decisões.'
+            )
+          ),
+          table(
+            'O que cada decisão faz',
+            ['Decisão', 'A organização', 'O que o negócio vê no Portal'],
+            [
+              '**Aprovar organização**',
+              'Fica **Ativa**. Os lugares podem ir para a moderação, em **Dados de lugares**.',
+              'O selo **Ativa** e, de novo, **Novo lugar** e a edição dos lugares. A observação da aprovação fica só no histórico da equipe.',
+            ],
+            [
+              '**Pedir correções**',
+              'Volta ao negócio como **Correções solicitadas**.',
+              'O aviso **A equipe pediu correções**, com o seu motivo, na página da organização e na **Visão geral**. Ele ajusta e envia de novo.',
+            ],
+            [
+              '**Rejeitar**',
+              'Fica **Rejeitada**, sem novo envio.',
+              'O aviso **Cadastro não aprovado**, com o seu motivo.',
+            ]
+          ),
+          info(
+            'O negócio fica sabendo pelo Portal',
+            'Nenhum e-mail é enviado: o negócio vê a decisão e o motivo quando abre o Portal. Escreva o motivo para ele ler, dizendo o que mudar. Se ele estiver esperando, avise também por outro canal.'
+          ),
+          p(
+            'Abaixo da fila ficam as **Reivindicações**: pedidos de alguém para administrar uma organização que ficou sem proprietário, com a mensagem e a comprovação enviadas. **Aprovar** torna a pessoa proprietária da organização; **Recusar** pede um motivo.'
+          ),
+        ],
+        result:
+          'aparece o aviso **Organização aprovada. O negócio já pode enviar os lugares para a moderação.** A organização sai de **Em análise**; os filtros **Correções solicitadas**, **Ativas** e **Rejeitadas** mostram as já decididas.',
+        troubleshooting: [
+          '**Esta organização não está mais em análise**: outra pessoa da equipe já decidiu. Atualize a página e veja a decisão no **Histórico**.',
+          'O botão de confirmar não liga: escreva o motivo (pelo menos 3 letras). Na aprovação, o texto já vem preenchido e pode ser trocado.',
+          'Na dúvida entre pedir correções e rejeitar, peça correções: a rejeição encerra aquele cadastro.',
+        ],
+        keywords: [
+          'organização',
+          'novo negócio',
+          'aprovar',
+          'cnpj',
+          'cadastro',
+          'em análise',
+          'correções',
+          'rejeitar',
+          'reivindicação',
+        ],
       },
       {
         id: 'administracao-dados-de-lugares',
@@ -2123,6 +2256,56 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'A conta precisa estar ligada à operação. Se não estiver, a concessão é recusada: confira o e-mail ou peça à pessoa para criar a conta antes.',
         ],
         keywords: ['acesso', 'cortesia', 'carteira', 'liberar', 'revogar'],
+      },
+      {
+        id: 'administracao-pagamento-simulado',
+        title: 'Como confirmar um pagamento simulado',
+        intro: 'Para liberar, nos testes, um pedido feito no app sem cobrança real.',
+        needs: [
+          'papel Administrador ou Responsável técnico',
+          'estar no ambiente de testes (homologação): em produção, esta opção não existe',
+          'um pedido **Pendente**, feito no app',
+        ],
+        blocks: [
+          steps(
+            'No menu da esquerda, em **Operação**, toque em **Pedidos**. O selo **Pagamento simulado — ambiente de testes** (1), no topo, confirma que você está no ambiente de testes.',
+            'Encontre o pedido (o filtro **Pendentes** ajuda). Cada pedido mostra o produto, quem comprou, o valor, a forma de pagamento e o prazo para pagar.',
+            'Toque em **Confirmar pagamento simulado** (2) e, na janela, em **Confirmar pagamento simulado** de novo.'
+          ),
+          figures(
+            image(
+              'admin-pedidos',
+              'Página Pedidos com o selo Pagamento simulado — ambiente de testes (1), o aviso Pagamento simulado neste ambiente, os filtros por situação e um pedido pendente com o botão Confirmar pagamento simulado (2) destacado; o e-mail de quem comprou está borrado.',
+              'O selo do ambiente de testes (1) e a confirmação (2).'
+            )
+          ),
+          warning(
+            'Só no ambiente de testes',
+            'Nada é cobrado: o botão confirma o pagamento no simulador, e a conciliação libera o acesso como faria com um pagamento real. Em produção, o botão e o selo não aparecem, e quem confirma o pagamento é o provedor de pagamentos.'
+          ),
+          p(
+            'Fora dos testes, **Pedidos** serve para acompanhar as compras: os filtros **Pendentes**, **Pagos**, **Em conferência**, **Não concluídos**, **Cancelados** e **Reembolsados** mostram cada situação.'
+          ),
+        ],
+        result:
+          'aparece o aviso **Pagamento simulado confirmado. O acesso já está na carteira da pessoa.** O pedido fica **Pago**, e os benefícios entram na **Carteira** de quem comprou.',
+        troubleshooting: [
+          '**O pedido ainda está sendo registrado**: o pedido acabou de ser feito. Espere um minuto e tente de novo.',
+          '**O prazo de pagamento deste pedido acabou**: peça para a pessoa fazer um novo pedido no app.',
+          'O pedido não tem o botão: ele não está **Pendente**, o prazo para pagar acabou ou este não é o ambiente de testes.',
+          '**Pedidos** não aparece no menu: a lista é só para Administrador e Responsável técnico.',
+        ],
+        keywords: [
+          'pedido',
+          'pedidos',
+          'pagamento',
+          'simulado',
+          'compra',
+          'pix',
+          'homologação',
+          'testes',
+          'confirmar pagamento',
+        ],
       },
       {
         id: 'administracao-pessoas',
@@ -2477,7 +2660,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
           warning(
             'Pagamento simulado',
-            'Nesta versão de testes nada é cobrado: o pedido mostra **Pagamento simulado** e fica aguardando até a equipe técnica do Experimente+ confirmar no servidor (não há botão para isso no app nem na área da equipe). O cartão de crédito aparece como "Em breve pelo aplicativo".'
+            'Nesta versão de testes nada é cobrado: o pedido mostra **Pagamento simulado** e fica aguardando até alguém da equipe do Experimente+ tocar em **Confirmar pagamento simulado**, em **Pedidos**, na área da equipe (veja [Como confirmar um pagamento simulado](#administracao-pagamento-simulado)). Não há botão para isso no app. O cartão de crédito aparece como "Em breve pelo aplicativo".'
           ),
         ],
         result: 'quando o pagamento é confirmado, os benefícios aparecem na **Carteira**.',
@@ -2615,14 +2798,14 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
       },
       {
         id: 'duvidas-beneficio-recusado',
-        title: '"Não foi possível validar esta apresentação"',
-        intro: 'O aviso que o lugar vê quando o benefício não vale naquele momento.',
+        title: 'O lugar não validou o benefício',
+        intro: 'Quando o lugar lê o QR e aparece uma recusa em vez da prévia.',
         blocks: [
           p(
-            'O benefício já foi usado todas as vezes permitidas, está fora do dia ou do horário da oferta, ou a oferta foi pausada. Confira na carteira quando o benefício vale. Se o aviso falar em apresentação inválida ou expirada, gere um novo código. Veja todas as situações em [O que cada recusa quer dizer](#resgate-recusas).'
+            'O título da recusa diz o motivo: **Benefício já utilizado**, **Fora do período de uso**, **Benefício pausado**, **Benefício bloqueado**, **Benefício de outro estabelecimento** ou **QR code expirado ou inválido**. Nada é registrado numa recusa. Confira na carteira quando e onde o benefício vale e, se o QR expirou, gere um novo código. Veja todas as situações em [O que cada recusa quer dizer](#resgate-recusas).'
           ),
         ],
-        keywords: ['validar', 'recusado', 'benefício'],
+        keywords: ['validar', 'recusado', 'benefício', 'não foi possível validar'],
       },
       {
         id: 'duvidas-lugar-nao-aparece',
@@ -2646,7 +2829,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'Não. Esta é uma versão beta em homologação: lugares, eventos e benefícios são fictícios, de demonstração, e o pagamento é simulado. Nada é cobrado.'
           ),
           p(
-            'O pedido fica aguardando até a equipe técnica do Experimente+ confirmar o pagamento simulado no servidor; não há botão para isso na área da equipe. Depois da confirmação, os benefícios entram na **Carteira**. Se um pedido ficar muito tempo pendente, avise a equipe que acompanha os testes.'
+            'O pedido fica aguardando até um administrador do Experimente+ tocar em **Confirmar pagamento simulado**, em **Pedidos**, na área da equipe (veja [Como confirmar um pagamento simulado](#administracao-pagamento-simulado)). Isso só existe no ambiente de testes. Depois da confirmação, os benefícios entram na **Carteira**. Se um pedido ficar muito tempo pendente, avise a equipe que acompanha os testes.'
           ),
         ],
         keywords: ['pagamento', 'cobrança', 'pix', 'simulado'],

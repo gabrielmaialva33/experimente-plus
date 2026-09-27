@@ -4,6 +4,7 @@ import app from '@adonisjs/core/services/app'
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { createPurchaseFixture } from '#database/factories/scenarios/purchase_flow_factory'
+import { removeCommittedOperation } from '#tests/helpers/committed_fixtures'
 import { useFakePayments } from '#tests/helpers/fake_payments'
 import PurchaseRepository from '#modules/purchases/repositories/purchase_repository'
 import PurchaseProcessingService from '#modules/purchases/services/purchase_processing_service'
@@ -67,12 +68,16 @@ async function enqueue(repo: ScopedRepository, key = randomUUID()) {
   await db.transaction((trx) => repo.enqueue(repo.purchaseId, 'reconcile', key, trx))
 }
 
-// Independent transactions cannot roll back immutable financial facts. Retire only these
-// fixtures' accounts afterward so global user discovery is not polluted by this spec.
-const fixtureUsers = new Set<number>()
+// Independent transactions cannot be rolled back by a global transaction. Each fixture's
+// operation is removed after the test instead, so a second run of the suite against the
+// same database starts from what the first one found.
+const fixtureOperations = new Map<number, number[]>()
 async function isolatedFixture(...args: Parameters<typeof createPurchaseFixture>) {
   const fixture = await createPurchaseFixture(...args)
-  for (const user of Object.values(fixture.s.users)) fixtureUsers.add(user.id)
+  fixtureOperations.set(
+    fixture.s.tenant.id,
+    Object.values(fixture.s.users).map((user) => user.id)
+  )
   return fixture
 }
 
@@ -130,18 +135,16 @@ test.group('Purchase command concurrency and fencing (independent transactions)'
     const restore = useFakePayments({ autoRefundUnused: true })
     return async () => {
       try {
-        if (fixtureUsers.size)
-          await db
-            .from('users')
-            .whereIn('id', [...fixtureUsers])
-            .update({ is_deleted: true })
+        for (const [tenantId, userIds] of fixtureOperations) {
+          await removeCommittedOperation(tenantId, userIds)
+        }
       } finally {
-        fixtureUsers.clear()
+        fixtureOperations.clear()
         restore()
       }
     }
   })
-  // Financial facts are immutable: committed fixtures live only in the disposable test database.
+  // Committed fixtures live only in the disposable test database and are removed after each test.
   test('reclaims an expired processing lease while its old worker is in flight and grants once', async ({
     assert,
     cleanup,

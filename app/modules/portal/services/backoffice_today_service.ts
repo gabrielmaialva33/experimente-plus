@@ -2,7 +2,9 @@ import { inject } from '@adonisjs/core'
 
 import ForbiddenException from '#exceptions/forbidden_exception'
 import EstablishmentModerationService from '#modules/establishments/services/establishment_moderation_service'
+import OrganizationClaimService from '#modules/organizations/services/organization_claim_service'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
+import OrganizationWorkflowService from '#modules/organizations/services/organization_workflow_service'
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
 import PartnerContentService from '#modules/partner_content/services/partner_content_service'
 import PilotFeedbackService from '#modules/pilot_feedback/services/pilot_feedback_service'
@@ -49,7 +51,9 @@ export default class BackofficeTodayService {
     private contentService: PartnerContentService,
     private reportService: ContentReportService,
     private deadlines: ContentReportDeadlineService,
-    private feedbackService: PilotFeedbackService
+    private feedbackService: PilotFeedbackService,
+    private organizationWorkflow: OrganizationWorkflowService,
+    private organizationClaims: OrganizationClaimService
   ) {}
 
   async overview(
@@ -61,6 +65,13 @@ export default class BackofficeTodayService {
     if (platformAccess === null) {
       throw new ForbiddenException('Platform moderation permission is required')
     }
+
+    const organizations = await this.organizationWorkflow.listForReview(
+      tenantId,
+      actor,
+      'pending_review'
+    )
+    const claims = await this.organizationClaims.listForReview(tenantId, actor, 'pending')
 
     const revisions = await this.moderationService.list(
       tenantId,
@@ -119,6 +130,18 @@ export default class BackofficeTodayService {
         overdue: report.due_at !== null && new Date(report.due_at).getTime() < now.getTime(),
       })),
       ...contentItems,
+      ...organizations
+        .map((organization): BackofficeInboxItem => ({
+          source: 'organization',
+          id: organization.id,
+          trade_name: organization.trade_name,
+          legal_name: organization.legal_name,
+          received_at: organization.submitted_at?.toISO() ?? null,
+          due_at: null,
+          overdue: false,
+        }))
+        .sort(inboxOrder)
+        .slice(0, INBOX_ITEMS_PER_QUEUE),
       ...revisions.data.map((revision): BackofficeInboxItem => ({
         source: 'revision',
         id: revision.id,
@@ -134,6 +157,8 @@ export default class BackofficeTodayService {
       platform_access: platformAccess,
       counts: {
         revisions: Number(revisions.meta.total),
+        organizations: organizations.length,
+        organization_claims: claims.length,
         content: contentCounts,
         reports: Number(reports.meta.total),
         overdue_reports: overdueReports,
