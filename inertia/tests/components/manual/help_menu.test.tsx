@@ -39,7 +39,7 @@ describe('HelpMenu', () => {
   })
 
   it('falls back to the chapter of the area for a page without its own section', async () => {
-    vi.mocked(usePage).mockReturnValue(page('settings/index'))
+    vi.mocked(usePage).mockReturnValue(page('ui_demo'))
     const { user } = render(<HelpMenu surface="backoffice" />)
 
     await user.click(screen.getByRole('button', { name: 'Ajuda' }))

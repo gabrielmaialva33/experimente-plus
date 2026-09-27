@@ -15,7 +15,7 @@ export const PAGE_HELP_ANCHORS: Readonly<Record<string, string>> = {
   // Partner portal
   'portal/index': 'parceiro-visao-geral',
   'portal/organizations/show': 'parceiro-lugares',
-  'portal/organizations/new': 'parceiro-lugares',
+  'portal/organizations/new': 'parceiro-cadastrar',
   'portal/establishments/index': 'parceiro-lugares',
   'portal/establishments/new': 'parceiro-editar-lugar',
   'portal/establishments/edit': 'parceiro-editar-lugar',
@@ -47,6 +47,9 @@ export const PAGE_HELP_ANCHORS: Readonly<Record<string, string>> = {
   'permissions/index': 'administracao-pessoas',
   'backoffice/taxonomy/index': 'administracao-catalogo',
   'backoffice/geography/index': 'administracao-catalogo',
+
+  // Account, drawn in the same layout for partners and the team
+  'settings/index': 'consumidor-conta',
 }
 
 /** A page without its own section opens the chapter of its area. */

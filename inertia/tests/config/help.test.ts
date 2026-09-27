@@ -52,7 +52,9 @@ describe('contextual help', () => {
     expect(pageHelp('backoffice/moderation/show', 'backoffice').href).toBe(
       '/manual#administracao-dados-de-lugares'
     )
-    expect(pageHelp('settings/index', 'backoffice')).toEqual({
+    expect(pageHelp('portal/organizations/new', 'portal').href).toBe('/manual#parceiro-cadastrar')
+    expect(pageHelp('settings/index', 'backoffice').href).toBe('/manual#consumidor-conta')
+    expect(pageHelp('ui_demo', 'backoffice')).toEqual({
       anchor: 'administracao',
       href: '/manual#administracao',
       specific: false,
