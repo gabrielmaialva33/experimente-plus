@@ -98,6 +98,11 @@ export interface NavigationItem {
   requiresActiveTenant?: boolean
   /** Matches only this path, excluding descendant routes. */
   exact?: boolean
+  /**
+   * Other path prefixes (`:param` matches any segment) that belong to this destination,
+   * for pages reached from it that live outside its own path.
+   */
+  activePatterns?: readonly string[]
   developmentOnly?: boolean
 }
 
@@ -642,6 +647,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     placements: ['sidebar'],
     requiresActiveTenant: true,
     exact: true,
+    activePatterns: ['/portal/organizations'],
   },
   {
     id: 'portal-redemption-validation',
@@ -697,6 +703,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     placements: ['sidebar'],
     capability: 'establishments.read',
     requiresActiveTenant: true,
+    activePatterns: ['/portal/organizations/:organizationId/establishments'],
   },
   {
     id: 'portal-performance',
@@ -708,6 +715,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     placements: ['sidebar'],
     capability: 'analytics.read',
     requiresActiveTenant: true,
+    activePatterns: ['/organizations/:organizationId/analytics'],
   },
   {
     id: 'backoffice-today',
@@ -977,15 +985,35 @@ export function isNavigationHrefActive(url: string, href: string, exact = false)
   return pathname === target || pathname.startsWith(`${target}/`)
 }
 
+function isNavigationPatternActive(url: string, pattern: string): boolean {
+  const current = pathSegments(url)
+  const segments = pathSegments(pattern)
+  return (
+    current.length >= segments.length &&
+    segments.every((segment, index) => segment.startsWith(':') || segment === current[index])
+  )
+}
+
+/** Segments of the most specific path of `item` that matches `url`, or null. */
+function navigationMatchDepth(url: string, item: NavigationItem): number | null {
+  const depths = [
+    isNavigationHrefActive(url, item.href, item.exact) ? pathSegments(item.href).length : null,
+    ...(item.activePatterns ?? []).map((pattern) =>
+      isNavigationPatternActive(url, pattern) ? pathSegments(pattern).length : null
+    ),
+  ].filter((depth): depth is number => depth !== null)
+  return depths.length > 0 ? Math.max(...depths) : null
+}
+
 export function matchNavigationItem(
   url: string,
   items: readonly NavigationItem[] = NAVIGATION_ITEMS
 ): NavigationItem | null {
   return (
     items
-      .filter((item) => isNavigationHrefActive(url, item.href, item.exact))
-      .sort((left, right) => pathSegments(right.href).length - pathSegments(left.href).length)[0] ??
-    null
+      .map((item) => ({ item, depth: navigationMatchDepth(url, item) }))
+      .filter((match): match is { item: NavigationItem; depth: number } => match.depth !== null)
+      .sort((left, right) => right.depth - left.depth)[0]?.item ?? null
   )
 }
 
