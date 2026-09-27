@@ -110,9 +110,14 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('heading', { name: 'Conta e preferências' })).toBeVisible()
     expect(screen.getByLabelText('E-mail de acesso')).toHaveAttribute('readonly')
     expect(screen.queryByRole('tab', { name: 'Operações' })).not.toBeInTheDocument()
-    // Sections are pills that wrap on a phone rather than boxes that overflow sideways.
+    // Sections are pills in a 2×2 grid on a phone rather than boxes that overflow sideways.
     const sections = screen.getByRole('tablist', { name: 'Seções da conta' })
-    expect(sections).toHaveClass('flex-wrap', '[&_[role=tab]]:rounded-full')
+    expect(sections).toHaveClass(
+      'grid',
+      'grid-cols-2',
+      'sm:flex-wrap',
+      '[&_[role=tab]]:rounded-full'
+    )
     // The optional hint fits beside its label, so both name fields keep one baseline.
     expect(screen.getByLabelText('Nome de usuário')).toHaveAccessibleDescription('Opcional')
 
