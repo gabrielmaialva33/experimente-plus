@@ -10,7 +10,7 @@
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&labelColor=101214" alt="PostgreSQL 16"/></a>
   <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-cache%20%2B%20fila-DC382D?style=flat-square&labelColor=101214" alt="Redis"/></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-v4-38BDF8?style=flat-square&labelColor=101214" alt="TailwindCSS v4"/></a>
-  <a href="./docs/product/README.md"><img src="https://img.shields.io/badge/dom%C3%ADnio-descoberta%20regional-CE4A09?style=flat-square&labelColor=101214" alt="Descoberta regional"/></a>
+  <a href="#o-que-faz"><img src="https://img.shields.io/badge/dom%C3%ADnio-descoberta%20regional-CE4A09?style=flat-square&labelColor=101214" alt="Descoberta regional"/></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-A1A5B7?style=flat-square&labelColor=101214" alt="MIT"/></a>
 </p>
 
@@ -140,9 +140,7 @@ database/               migrations, factories e seeders
 inertia/                páginas, layouts, componentes e hooks
 resources/              traduções, templates Edge e e-mails
 tests/                  testes unitários, funcionais e browser
-docs/product/           visão, MVP, roadmap e decisões de produto
-docs/architecture/      ADRs e contratos técnicos aceitos
-docs/                   OpenAPI, Redoc e requisições HTTP
+docs/                   OpenAPI, Redoc e requisições HTTP de exemplo
 ```
 
 Cada domínio mantém controllers, services, repositories, models, validators e rotas próximos. Os
@@ -170,8 +168,19 @@ A instalação de homologação usa o comando explícito `homologation:provision
 contas fornecidas por arquivo privado, sem senhas determinísticas ou impressão de
 credenciais. Ele cria conteúdo demonstrativo publicado e os três cenários de benefício;
 a reexecução preserva contas, moderação e histórico financeiro. Exige
-`DEPLOYMENT_ENV=homologation` e pagamentos sandbox. Procedimento e comando para a imagem
-compilada no [runbook de recriação](docs/runbooks/homologation_baseline_recreation.md#provisionamento-próprio-de-homologação).
+`DEPLOYMENT_ENV=homologation` e `PAYMENT_ENVIRONMENT=test`; qualquer outro ambiente é recusado.
+
+```sh
+# Na raiz do artefato compilado (no checkout TypeScript: pnpm ace homologation:provision …)
+node ace.js homologation:provision --config=/run/private/provision.json
+```
+
+O JSON fica fora do checkout, é um arquivo regular `0600` do usuário que executa o comando e
+traz `tenantSlug`, `tenantName` e `accounts.administrator|partner|customer` com `fullName`,
+`email` e `password` (20–128 caracteres, com minúscula, maiúscula e dígito; nunca `.local`).
+As senhas vêm do cofre e nunca passam por argumentos, histórico do shell ou logs; o comando não
+as gera nem imprime e devolve apenas um recibo de IDs. No container, monte o arquivo somente
+leitura e execute com `docker compose -f docker-compose.vps.yml run --rm --no-deps --pull never`.
 
 ### Contas de desenvolvimento
 
@@ -188,12 +197,15 @@ Senha:    experimente123
 > O seed continua exclusivo de desenvolvimento, configurável por `DEV_ADMIN_*`, `DEV_PARTNER_*` e `DEV_CUSTOMER_*`.
 > Produção de negócio nunca admite este provisionamento de teste. Na homologação, a exceção
 > deliberada usa somente `homologation:provision-test-accounts --allow-test-accounts`, com
-> senhas fornecidas em arquivo privado e recibo sem credenciais; veja o
-> [passo opcional do runbook](docs/runbooks/homologation_baseline_recreation.md#contas-de-teste-opcionais).
+> senhas fornecidas em arquivo privado e recibo sem credenciais, depois do provisionamento acima.
 > O provisionamento nominal mantém a recusa de `.local`; não mudar DEPLOYMENT_ENV para contornar guardas.
 > Os dados regionais, estabelecimentos, ofertas e acessos criados pelo seeder são fictícios.
 
-O seed mantém edições gratuitas/cortesias e acrescenta pacote Londrina de 4990 centavos e voucher avulso de 1490 centavos. Capas são ilustrações originais determinísticas de 1200×800, armazenadas no Drive configurado, com checksum/versionamento; não fotos de terceiros. O [runbook](docs/runbooks/purchases.md#cenário-de-desenvolvimento) explica configuração fake e reexecução.
+O seed mantém edições gratuitas/cortesias e acrescenta pacote Londrina de 4990 centavos e voucher avulso de 1490 centavos. Capas são ilustrações originais determinísticas de 1200×800, armazenadas no Drive configurado, com checksum/versionamento; não fotos de terceiros. Para exercitar uma compra sem rede, use
+`PAYMENT_PROVIDER=fake` no seed, no servidor e nos comandos: crie a compra pelo app ou pela API,
+rode `pnpm ace purchases:process` e confirme com `pnpm ace purchases:simulate <id-da-compra>`, que
+passa pela mesma conciliação de um pagamento real. A reexecução do seed preserva preço, termos e
+janelas já vendidos; uma nova campanha exige nova edição, não a edição da vendida.
 
 O seeder é `static environment = ['development']`: com `NODE_ENV=production` ele é ignorado. Além desse filtro Lucid, a execução exige `DEPLOYMENT_ENV=development` antes de acessar o banco, inclusive em chamadas diretas.
 
@@ -242,8 +254,32 @@ assume production e valor inválido impede inicialização. `NODE_ENV` permanece
 a VPS usa `NODE_ENV=production` e **`DEPLOYMENT_ENV=homologation`** enquanto for homologação.
 Homologação aceita Stripe test, mas exige as proteções de host público. Produção de negócio proíbe
 fake e pagamentos test. Configure `DEPLOYMENT_ENV=development` no ambiente local e de testes;
-os arquivos de exemplo/teste já o declaram. Veja a matriz e os requisitos no
-[runbook de compras](docs/runbooks/purchases.md#ambiente-de-implantação-decisão-de-08092026).
+os arquivos de exemplo/teste já o declaram.
+
+`PAYMENT_PROVIDER` aceita `disabled` (padrão), `fake` (recusado em production), `stripe` e
+`mercado_pago`, sem fallback entre eles; `PAYMENT_METHODS` declara `pix`, `card` ou ambos. Em
+homologação use `PAYMENT_ENVIRONMENT=test` e `STRIPE_ENVIRONMENT=test`, com chave e
+`STRIPE_WEBHOOK_SECRET` do mesmo modo, no servidor HTTP e no worker. O acesso nasce apenas da
+conciliação autenticada com o PSP, nunca do corpo do webhook. O webhook responde 400 a
+assinatura ausente ou inválida, 500 a configuração do servidor inválida, 503 a falha transitória
+ao consultar o PSP e 202 ao sinal verificado; não responda 2xx a um evento não verificado para
+silenciar reentregas.
+
+### Comandos agendados
+
+O repositório não agenda comandos; cada ambiente instala o próprio agendador (na homologação,
+timers do systemd que executam `node ace.js <comando>` no container `app`).
+
+| Comando                  | Frequência      | Para quê                                                       |
+| ------------------------ | --------------- | -------------------------------------------------------------- |
+| `purchases:process`      | a cada minuto   | concilia notificações do PSP e executa confirmações e estornos |
+| `reports:notify-overdue` | de hora em hora | avisa a equipe, uma única vez, de denúncias vencidas           |
+| `analytics:prune`        | diário (03:30)  | apaga eventos de analytics com retenção vencida                |
+
+Sem o primeiro, um pagamento ou cancelamento fica pendente para sempre. O aviso de denúncias
+exige SMTP configurado, `APP_URL` público e membership da equipe na operação. Os dois primeiros
+saem com código 1 quando adiam trabalho; a execução seguinte tenta de novo. Rode cada comando uma
+vez à mão antes de agendar e pare os timers durante janelas de manutenção.
 
 A origem incorporada ao QR segue a precedência: `BENEFIT_PRESENTATION_BASE_URL`; depois,
 em homologation/production, `APP_URL`; e protocolo/host confiáveis da requisição apenas em
@@ -312,7 +348,7 @@ Um `flock` no host serializa deploys manuais e da CI até o fim da recuperação
 validação; o script de smoke fica preservado por hash nesse diretório. `HEAD` não é usado como
 fallback implícito. A primeira execução exige `DEPLOY_INITIAL_GOOD_REVISION` da versão realmente
 servida e, se ela não contiver smoke, `DEPLOY_INITIAL_GOOD_SMOKE_REVISION` de um contrato compatível
-revisado, conforme o [runbook](docs/runbooks/catalog_schema_reconciliation.md). `/usr/bin/rsync`,
+revisado. `/usr/bin/rsync`,
 `/usr/bin/sync` e `/usr/bin/jq` são pré-requisitos: os dois primeiros materializam snapshots e
 tornam durável a LKG; o terceiro valida o modelo efetivo do build. O job da CI tem limite de 75
 minutos e o passo SSH, 70 minutos, além de keepalive;
@@ -340,13 +376,14 @@ A chave usada pela CI carrega um _forced command_ no `authorized_keys`. O entryp
 ser instalado fora da working tree para sobreviver ao rollback. Ele aceita somente
 `SSH_ORIGINAL_COMMAND` no formato `deploy <sha completo minúsculo>`, sem avaliar shell. Deploy manual
 também exige esse SHA como argumento único. As exclusões de credenciais, `.env.*.local`, logs,
-`storage/uploads/**` e `storage/seed-media/**` estão em `.dockerignore`; detalhes e allowlist no runbook.
+`storage/uploads/**` e `storage/seed-media/**` estão em `.dockerignore`; a allowlist de arquivos
+operacionais não rastreados fica em `deploy.sh`.
 
 ---
 
 ## Migrations antes da versão 1.0
 
-**Exceção expressa de 08/09/2026:** o dono autorizou consolidar o histórico da homologação para a extensão de voucher avulso. Esta baseline tem **51 migrations**, de 59 anteriores. O piloto terá de ser recriado do zero pelo dono; não aplicar este checkout sobre o banco antigo. O [runbook de recriação](docs/runbooks/homologation_baseline_recreation.md) lista fusões, preservação de histórico financeiro e retorno ao banco/código anteriores. A regra geral abaixo continua válida fora desta exceção.
+**Exceção expressa de 08/09/2026:** o dono autorizou consolidar o histórico da homologação para a extensão de voucher avulso. A baseline daquela data reduziu **59 migrations a 51**; os cinco reparos fundidos estão arquivados em `tests/fixtures/legacy_migrations/`, fora do caminho do migrator. Um banco anterior a ela não recebe upgrade: a recriação usa um banco novo e vazio, `migration:run --force` uma única vez no release preparado e `homologation:provision` em seguida, nunca `migration:fresh`, rollback ou seed de desenvolvimento sobre o banco antigo. Voltar atrás exige restaurar código, banco e configuração juntos. A regra geral abaixo continua válida fora desta exceção.
 
 A consolidação na migration `create_*` original só se aplica a migrations que nunca chegaram a
 um ambiente persistente. Desde o primeiro deploy em piloto ou produção, o histórico aplicado é
@@ -357,15 +394,19 @@ o banco.
 No histórico anterior à baseline, o contrato de `benefit_redemptions.receipt_code` era reconciliado pela migration forward
 `1788556800100_reconcile_benefit_receipt_codes.ts` (agora em `tests/fixtures/legacy_migrations/`): validava os valores existentes antes de aplicar
 `varchar(20) NOT NULL` e o check `^EXP-[0-9A-F]{16}$`. Dados inválidos abortam sem truncamento ou
-normalização. Esse reparo isolado dispensava recriação; a nova baseline consolidada exige banco vazio. Os cenários
-e a janela estão no [runbook dos contratos persistidos](docs/runbooks/persistent_schema_reconciliation.md).
+normalização. Esse reparo isolado dispensava recriação; a nova baseline consolidada exige banco vazio.
 
 Correções forward devem funcionar sobre o schema antigo, sobre uma instalação limpa e sobre
 hotfixes operacionais documentados, preservando dados. O reparo de `catalog_establishments.attribute_slugs`
-e a janela de validação estão descritos no [runbook do catálogo](docs/runbooks/catalog_schema_reconciliation.md).
+já faz parte da migration que cria a projeção do catálogo; a projeção é reconstruível a partir das
+revisões publicadas, que continuam sendo a fonte autoritativa.
 
 O reverse proxy preserva políticas privadas emitidas pela aplicação e evita headers de segurança
-duplicados conforme o [runbook do Nginx](docs/runbooks/nginx_security_headers.md).
+duplicados: a configuração versionada em `infra/nginx/` oculta a cópia do upstream e reemite cada
+header uma única vez. O instalador `install_experimente_plus_config.sh` roda como root a partir de
+uma cópia temporária `root:root 0500`, valida toda a configuração antes do reload e restaura os
+arquivos anteriores se algo falhar. Não há `Content-Security-Policy` estática no proxy: uma CSP
+útil deve nascer na aplicação, com nonces.
 
 Rollback de código não reverte migrations; cada reparo deve documentar essa compatibilidade.
 
@@ -373,13 +414,14 @@ Rollback de código não reverte migrations; cada reparo deve documentar essa co
 
 ## Planejamento de produto
 
-O plano canônico está em [`docs/product/`](docs/product/README.md) e os contratos técnicos aceitos
-em [`docs/architecture/decisions/`](docs/architecture/decisions/README.md): visão e modelo de
-negócio, atores e jornadas, MVP, métricas e roadmap, modelo de cidades, organizações e unidades,
-mapa de domínios, decisões aceitas, questões abertas e referências de mercado.
+Os documentos de produto, os ADRs, os runbooks e a especificação de design saíram do repositório
+em 26/09/2026. Em `docs/` ficam apenas o contrato HTTP (`openapi.yaml`, `redoc.html` e
+`api.http`). As regras de domínio que o código precisa respeitar estão resumidas em
+[AGENTS.md](AGENTS.md); os textos originais continuam consultáveis no histórico Git, mas não são
+mais a fonte vigente.
 
-Nenhuma migration de negócio deve ser criada antes de a decisão correspondente estar registrada no
-planejamento e, quando estrutural, em um ADR aceito.
+Nenhuma migration de negócio deve ser criada antes de a decisão correspondente ter o aceite
+explícito do dono, com domínio, cenários de teste e impacto no schema definidos.
 
 ---
 

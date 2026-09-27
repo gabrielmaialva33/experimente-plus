@@ -4,7 +4,9 @@
 
 Este repositório contém a API, a aplicação web e as regras de negócio do Experimente+. O cliente Expo fica no repositório independente `../experimente-plus-app/`. Este arquivo é o guia canônico de agentes; `CLAUDE.md` o importa.
 
-Leia [README.md](README.md), [produto](docs/product/README.md) e os [ADRs aceitos](docs/architecture/decisions/README.md) relevantes à tarefa. Os marcos EP-00 a EP-12 estão registrados como concluídos; o contrato móvel é definido pelos ADRs 0022/0023 e pelo [documento 17](docs/product/17-aplicativo-movel-consumer-first.md). O foco do piloto é validação operacional e priorização por evidências, sem expansão automática de escopo.
+Leia [README.md](README.md). Os documentos de produto, os ADRs, os runbooks e a especificação de design saíram do repositório em 26/09/2026; em `docs/` ficam apenas `openapi.yaml`, `redoc.html` e `api.http`. As regras que aqueles textos carregavam e que o código precisa respeitar estão resumidas neste guia. O histórico Git ainda guarda os originais (por exemplo, `git show 6b858d6^:docs/architecture/decisions/README.md`) para entender uma decisão, mas eles não são mais a fonte vigente: o código, os testes e este guia são.
+
+Estão implementados: catálogo público, portais do parceiro e da operação, benefícios com carteira e resgate, API móvel consumer-first, compras (pacote da edição e voucher avulso, com Pix e cartão por PSP), avaliações e denúncias, moderação automática, conteúdo do parceiro (experiências, eventos e vitrine), Concierge IA e a camada pessoal do Explorador. Vários parâmetros dessas áreas são por operação e seguem pendentes do contratante; os valores padrão não são decisão dele. O foco do piloto é validação operacional e priorização por evidências, sem expansão automática de escopo.
 
 ## Contratos de domínio
 
@@ -15,8 +17,13 @@ Leia [README.md](README.md), [produto](docs/product/README.md) e os [ADRs aceito
 - Conteúdo público e composição de mídia são versionados. Preserve completude, submissão, moderação e publicação atômica. Busca pública lê uma projeção PostgreSQL reconstruível, não rascunhos de edição.
 - Partner é membership de organização. Roles, permissions e audit logs são globais no modelo atual; policies de domínio autorizam acesso às organizações e unidades.
 - Nas rotas privadas que exigem tenant, valide membership e escopo em toda leitura/escrita. O middleware resolve header, claim do JWT e fallback de membership conforme o contrato existente. Não aplique essa exigência ao catálogo público.
-- Benefícios, carteira e resgate têm contratos próprios nos ADRs 0019–0022. Preview não resgata; confirmação é transacional e repetir o mesmo token devolve o comprovante original. O cliente não decide elegibilidade nem validade localmente.
-- Novas decisões estruturais devem estar aceitas em produto e ADR, com domínio, marco e cenários de teste definidos. Checkout, cobrança e conciliação financeira permanecem cortes posteriores.
+- Benefícios, carteira e resgate: edição, oferta, acesso, benefício derivado, apresentação, utilização e comprovante são o vocabulário; "resgate" pode ficar no domínio interno. Preview não resgata; confirmação é transacional e repetir o mesmo token devolve o comprovante original. O cliente não decide elegibilidade nem validade localmente.
+- Compras: `PAYMENT_PROVIDER` escolhe `disabled`, `fake` (nunca em produção), `stripe` ou `mercado_pago`, sem fallback entre eles. O acesso nasce apenas da conciliação autenticada com o PSP (`purchases:process`), nunca do corpo de um webhook ou do cliente. Preço e termos ficam congelados na compra; `purchase_events` é append-only; estorno total revoga só o acesso vinculado e o parcial o mantém; bloqueios financeiros suspendem o uso até conciliação conclusiva.
+- Avaliações, respostas e denúncias seguem a política da operação (comprovação de visita, limites de texto e mídia, prazos), parametrizada e não fixa no código. A moderação automática é determinística, sem modelo de linguagem: cada regra fica desligada, sinaliza ou retém, e toda ocorrência abre denúncia sem autor na fila única.
+- Conteúdo do parceiro (experiências, eventos, vitrine) tem ciclo próprio, fora da revisão da unidade; "oferta" continua sendo o termo comercial de benefícios.
+- Concierge IA: o modelo compõe linguagem e nunca é fonte de fato; uma validação determinística contra o catálogo publicado remove o que ele inventar, a fronteira de assunto é recusa em código e o módulo não escreve dados.
+- Explorador: favoritos, seguidos, interesses e roteiros são privados da pessoa; segue-se o estabelecimento, não a organização, e toda leitura revalida se o alvo continua descobrível.
+- Decisões estruturais novas exigem aceite explícito do dono antes da migration correspondente, com domínio, cenários de teste e impacto no schema definidos. Backlog não autoriza ampliar a tarefa.
 
 ## Arquitetura e organização
 
@@ -32,9 +39,9 @@ Stack: AdonisJS 7, Lucid/PostgreSQL, Redis, React 19, Inertia 3, Tailwind CSS 4 
 | `inertia/`                        | Páginas, layouts, componentes, hooks, providers, estilos e testes web                            |
 | `resources/`                      | Views Edge, traduções e templates                                                                |
 | `tests/`                          | Suítes Japa e regressões de deploy                                                               |
-| `docs/`                           | Produto, ADRs, OpenAPI, requisições HTTP e runbooks                                              |
+| `docs/`                           | OpenAPI, Redoc e requisições HTTP de exemplo                                                     |
 
-Domínios de produto: `geography`, `taxonomy`, `organizations`, `establishments`, `media`, `catalog`, `analytics`, `benefits`, `portal` e `pilot_feedback`. A base inclui `auth`, `users`, `roles`, `permissions`, `tenants`, `files`, `audits`, `health` e `web`.
+Domínios de produto: `geography`, `taxonomy`, `organizations`, `establishments`, `media`, `catalog`, `analytics`, `benefits`, `purchases`, `reviews`, `partner_content`, `concierge`, `explorer`, `portal` e `pilot_feedback`. A base inclui `auth`, `users`, `roles`, `permissions`, `tenants`, `files`, `audits`, `health` e `web`.
 
 Mantenha o fluxo controller → service → repository → model conforme o módulo vizinho; lógica de negócio fica em services e dependências usam `@inject()` quando aplicável. Cada módulo registra `routes.ts`, importado por `start/routes.ts`.
 
@@ -92,7 +99,9 @@ Ao alterar APIs, mantenha `docs/openapi.yaml` e os testes de paridade com o rout
 
 Migrations que chegaram a qualquer ambiente persistente, inclusive o piloto pré-1.0, são histórico publicado: altere o schema por novas migrations forward. Somente migrations nunca implantadas podem ser consolidadas. `migration:fresh`, reset e recriação de banco destinam-se exclusivamente a ambientes descartáveis.
 
-Reparos devem aceitar schema antigo, instalação limpa e hotfixes documentados sem perda de dados. SQL de reparo deve ser autocontido e versionado; reconstrua projeções a partir das fontes autoritativas. Consulte o [runbook de reconciliação](docs/runbooks/catalog_schema_reconciliation.md) para rollout, rollback e validação.
+Reparos devem aceitar schema antigo, instalação limpa e hotfixes documentados sem perda de dados. SQL de reparo deve ser autocontido e versionado; reconstrua projeções a partir das fontes autoritativas (o catálogo público, a partir das revisões publicadas). Registre no PR como a mudança é implantada, como se reverte o código e o que a migration deixa para trás, já que o rollback não a desfaz.
+
+O repositório não agenda comandos; cada ambiente instala o agendador: `purchases:process` a cada minuto, `reports:notify-overdue` de hora em hora e `analytics:prune` uma vez por dia (detalhes no README).
 
 Mudanças operacionais devem preservar o deploy por SHA validado, snapshots imutáveis, isolamento da migration e readiness/smoke de catálogo. O rollback existente restaura código/imagem, não desfaz migrations. Push em `master` aciona deploy após a CI; considere esse efeito no fluxo de release.
 
