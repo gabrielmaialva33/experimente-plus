@@ -16,6 +16,7 @@ import type { PartnerPlacesPageProps } from '#modules/portal/interfaces/portal_p
 import type { BackofficeTodayPageProps } from '#modules/portal/interfaces/backoffice_today_page'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 import type { PublicReviewsPayload } from '#modules/reviews/interfaces/public_reviews_page'
+import type { AndroidDistribution } from '#config/app_distribution'
 
 type SettingsProfile = {
   id: number
@@ -56,6 +57,9 @@ declare module '@adonisjs/inertia/types' {
     // Legal
     'legal/terms': Record<string, never>
     'legal/privacy': Record<string, never>
+
+    // The mobile app outside the stores
+    'app/download': { android: AndroidDistribution; pageUrl: string; qrSvg: string }
 
     // Root / misc
     'home': Record<string, never>

@@ -20,6 +20,7 @@ import {
   ScanLine,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
   Sparkles,
   Store,
   Tags,
@@ -155,6 +156,7 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
   },
   footer: [
     { label: 'Explorar cidades', href: '/cidades', icon: Compass },
+    { label: 'Baixar o app', href: '/app', icon: Smartphone },
     { label: 'Termos de Uso', href: '/termos', icon: FileCheck2 },
     { label: 'Privacidade', href: '/privacidade', icon: FileLock2 },
   ],

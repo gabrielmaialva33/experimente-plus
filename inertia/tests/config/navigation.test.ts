@@ -172,6 +172,7 @@ describe('navigation configuration', () => {
     ])
     expect(PUBLIC_NAVIGATION.footer.map((item) => item.href)).toEqual([
       '/cidades',
+      '/app',
       '/termos',
       '/privacidade',
     ])
