@@ -73,6 +73,7 @@ describe('camera failures', () => {
     ['OverconstrainedError', 'unavailable'],
     ['NotReadableError', 'busy'],
     ['AbortError', 'busy'],
+    ['NotSupportedError', 'unsupported'],
     ['TypeError', 'failed'],
   ])('reads %s as %s', (name, problem) => {
     expect(classifyCameraError(new DOMException('x', name))).toBe(problem)

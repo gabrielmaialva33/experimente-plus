@@ -159,6 +159,9 @@ export function classifyCameraError(error: unknown): ScannerProblem {
     case 'TrackStartError':
     case 'AbortError':
       return 'busy'
+    // Browsers that cannot capture here at all, such as an embedded webview.
+    case 'NotSupportedError':
+      return 'unsupported'
     default:
       return 'failed'
   }
