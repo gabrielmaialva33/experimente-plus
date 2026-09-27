@@ -874,7 +874,9 @@ export default function EstablishmentEditorPage({
           correctionCount={correctionCount}
         />
 
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+        {/* Two columns only from 1280 px: at 1024 the app sidebar left the form about 400 px
+            beside the step list, and section titles wrapped one word per line. */}
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
           <EstablishmentEditorNavigation
             variant="desktop"
             items={navigationItems}
