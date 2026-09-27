@@ -3,9 +3,18 @@ import { useEffect, useRef, useState } from 'react'
 
 import { ManualSearch } from '~/components/manual/manual_search'
 import { ManualSection } from '~/components/manual/manual_section'
+import { ManualText } from '~/components/manual/manual_text'
 import { ManualToc } from '~/components/manual/manual_toc'
 import { PublicShell } from '~/components/public'
 import { Button } from '~/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '~/components/ui/sheet'
 import { MANUAL_PDF_PATH } from '~/config/help'
 import {
   MANUAL_CHAPTERS,
@@ -27,6 +36,7 @@ const PRINT_CSS = `
   [data-public-shell] > :not(main) { display: none !important; }
   [data-public-shell] { padding-bottom: 0 !important; }
   html { scroll-behavior: auto; }
+  [data-print-toc-row]:has([data-print-page]:empty) [data-print-leader] { display: none; }
 }
 `
 
@@ -67,7 +77,74 @@ function useReadingPosition(ids: readonly string[], chapterIds: ReadonlySet<stri
 }
 
 const ANCHORS = manualAnchors()
+const MOBILE_TOC_ID = 'sumario-celular'
 const CHAPTER_IDS: ReadonlySet<string> = new Set(MANUAL_CHAPTERS.map((chapter) => chapter.id))
+
+/**
+ * True once the reader has scrolled past the element with `id`. A scroll listener,
+ * not an IntersectionObserver: jumping to an anchor carries the element from below
+ * the screen to above it without ever crossing it, which an observer never reports.
+ */
+function usePassed(id: string) {
+  const [passed, setPassed] = useState(false)
+
+  useEffect(() => {
+    const element = document.getElementById(id)
+    if (!element) return
+    let frame = 0
+    const update = () => {
+      frame = 0
+      setPassed(element.getBoundingClientRect().bottom < 0)
+    }
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(update)
+    }
+    update()
+    window.addEventListener('scroll', schedule, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [id])
+
+  return passed
+}
+
+/** The print contents: every chapter and section, with the page the PDF script fills in. */
+function PrintContents() {
+  return (
+    <nav aria-label="Sumário para impressão" className="hidden print:block">
+      <p className="font-display text-xl font-extrabold">Sumário</p>
+      <ol className="mt-3 space-y-3 text-sm">
+        {MANUAL_CHAPTERS.map((chapter, index) => (
+          <li key={chapter.id} className="break-inside-avoid">
+            <span data-print-toc-row className="flex items-baseline gap-2 font-semibold">
+              <span>
+                {index + 1}. {chapter.title}
+              </span>
+              <span data-print-leader className="flex-1 border-b border-dotted border-border" />
+              <span data-print-page={chapter.id} className="tabular-nums" />
+            </span>
+            <ol className="mt-1 space-y-0.5 ps-5 text-muted-foreground">
+              {chapter.sections.map((section) => (
+                <li key={section.id}>
+                  <span data-print-toc-row className="flex items-baseline gap-2">
+                    <span>{section.title}</span>
+                    <span
+                      data-print-leader
+                      className="flex-1 border-b border-dotted border-border"
+                    />
+                    <span data-print-page={section.id} className="tabular-nums" />
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
 
 export default function ManualPage() {
   const active = useReadingPosition(ANCHORS, CHAPTER_IDS)
@@ -75,6 +152,9 @@ export default function ManualPage() {
   const closeMobileToc = () => {
     if (mobileToc.current) mobileToc.current.open = false
   }
+  // The floating "Índice" appears once the contents at the top are out of sight.
+  const pastContents = usePassed(MOBILE_TOC_ID)
+  const [indexOpen, setIndexOpen] = useState(false)
 
   return (
     <PublicShell
@@ -154,7 +234,7 @@ export default function ManualPage() {
         >
           Por onde começar: qual é o seu perfil?
         </h2>
-        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {MANUAL_START_CARDS.map((card) => {
             const Icon = card.icon
             return (
@@ -194,6 +274,7 @@ export default function ManualPage() {
         <div className="min-w-0 max-w-3xl">
           <details
             ref={mobileToc}
+            id={MOBILE_TOC_ID}
             className="group mb-10 rounded-card border border-border-subtle bg-card lg:hidden print:hidden"
           >
             <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
@@ -208,29 +289,15 @@ export default function ManualPage() {
               <ManualToc
                 chapters={MANUAL_CHAPTERS}
                 activeId={active}
-                expanded
+                mode="accordion"
+                idPrefix="sumario-topo"
                 onNavigate={closeMobileToc}
               />
             </nav>
           </details>
 
-          {/* The PDF has no sidebar: a plain contents list opens it instead. */}
-          <nav aria-label="Sumário para impressão" className="hidden print:block">
-            <p className="font-display text-xl font-extrabold">Sumário</p>
-            <ol className="mt-3 space-y-2 text-sm">
-              {MANUAL_CHAPTERS.map((chapter, index) => (
-                <li key={chapter.id}>
-                  <span className="font-semibold">
-                    {index + 1}. {chapter.title}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {' '}
-                    — {chapter.sections.map((section) => section.title).join(' · ')}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </nav>
+          {/* The PDF has no sidebar: a contents list with page numbers opens it instead. */}
+          <PrintContents />
 
           <div className="space-y-16">
             {MANUAL_CHAPTERS.map((chapter, chapterIndex) => {
@@ -258,6 +325,11 @@ export default function ManualPage() {
                       </h2>
                       <p className="mt-2 text-muted-foreground">{chapter.summary}</p>
                       <p className="mt-1 text-sm font-semibold">Para: {chapter.profiles}</p>
+                      {chapter.note ? (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          <ManualText text={chapter.note} />
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 
@@ -279,6 +351,45 @@ export default function ManualPage() {
               )
             })}
           </div>
+
+          <Sheet open={indexOpen} onOpenChange={setIndexOpen}>
+            {pastContents || indexOpen ? (
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  size="lg"
+                  shape="pill"
+                  className="fixed bottom-[var(--public-mobile-focus-clearance)] end-4 z-40 shadow-overlay md:bottom-6 lg:hidden print:hidden"
+                >
+                  <ListTree aria-hidden="true" className="size-4" />
+                  Índice
+                </Button>
+              </SheetTrigger>
+            ) : null}
+            <SheetContent side="bottom" closeLabel="Fechar o índice" className="max-h-[85dvh] p-4">
+              <SheetHeader className="pe-10 text-start">
+                <SheetTitle>Índice do manual</SheetTitle>
+                <SheetDescription>Toque num capítulo para abrir as seções dele.</SheetDescription>
+              </SheetHeader>
+              <nav aria-label="Índice do manual">
+                <ManualToc
+                  chapters={MANUAL_CHAPTERS}
+                  activeId={active}
+                  mode="accordion"
+                  idPrefix="sumario-flutuante"
+                  onNavigate={(event, id) => {
+                    // The open sheet locks the page's scroll: close it, then go.
+                    event.preventDefault()
+                    setIndexOpen(false)
+                    window.setTimeout(() => {
+                      document.getElementById(id)?.scrollIntoView()
+                      window.history.replaceState(null, '', `#${id}`)
+                    }, 50)
+                  }}
+                />
+              </nav>
+            </SheetContent>
+          </Sheet>
 
           <footer className="mt-16 border-t border-border-subtle pt-6 text-sm leading-6 text-muted-foreground">
             <p>

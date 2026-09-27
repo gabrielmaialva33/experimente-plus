@@ -31,7 +31,11 @@ function ManualFigure({ image }: { image: ManualImage }) {
     <figure
       className={cn(
         'break-inside-avoid',
-        phone ? 'w-full max-w-[17rem] min-[400px]:w-[calc(50%-0.5rem)]' : 'w-full'
+        // On paper three phone screens share a row, so a short task does not leave a
+        // page almost empty waiting for a tall picture.
+        phone
+          ? 'w-full max-w-[17rem] min-[400px]:w-[calc(50%-0.5rem)] print:w-[calc(33%-0.75rem)]'
+          : 'w-full'
       )}
       // A detail crop narrower than the column keeps its own size instead of blurring.
       style={phone ? undefined : { maxWidth: image.width }}
@@ -59,7 +63,7 @@ function ManualFigure({ image }: { image: ManualImage }) {
             decoding="async"
             className={cn(
               'block h-auto w-full',
-              phone ? 'print:max-h-[11cm] print:w-auto' : 'print:max-h-[13cm] print:w-auto'
+              phone ? 'print:max-h-[8.5cm] print:w-auto' : 'print:max-h-[9cm] print:w-auto'
             )}
           />
           <span className="sr-only"> (abre a imagem em tamanho real em nova aba)</span>
@@ -164,8 +168,8 @@ export function ManualBlocks({ blocks }: { blocks: readonly ManualBlock[] }) {
 function ManualTable({ block }: { block: Extract<ManualBlock, { kind: 'table' }> }) {
   const [first, ...rest] = block.columns
   return (
-    <figure className="break-inside-avoid">
-      <figcaption className="mb-2 text-sm font-semibold text-muted-foreground">
+    <figure>
+      <figcaption className="mb-2 text-sm font-semibold text-muted-foreground print:break-after-avoid">
         {block.caption}
       </figcaption>
       <div className="hidden overflow-hidden rounded-card border border-border-subtle md:block print:hidden">

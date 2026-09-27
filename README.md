@@ -456,8 +456,8 @@ em laranja (e numerado quando há mais de um): 1280×800 no computador (recortes
 390×844 (2x, reduzidas a 600 px de largura) no celular. As do app (`app-*`) vêm de um Android real,
 sem a barra de status e a de navegação do sistema, reduzidas a 540 px. Todas em WebP com qualidade 78
 (`vips webpsave captura.png destino.webp --Q 78 --strip`), somando menos de 6 MB. QR de
-apresentação, códigos de comprovante, credenciais e e-mails reais nunca aparecem; cubra-os antes de
-salvar. Ao trocar uma imagem, atualize o tamanho em `manual_media.ts` e o texto alternativo; os
+apresentação, códigos de comprovante, credenciais e e-mails reais ou de contas de teste
+(`@experimente.local`) nunca aparecem legíveis; cubra ou borre antes de salvar. Ao trocar uma imagem, atualize o tamanho em `manual_media.ts` e o texto alternativo; os
 testes do Vitest conferem arquivos, tamanhos, âncoras, links, a busca e o mapeamento de ajuda de cada
 página do Portal e da Operação.
 
@@ -473,7 +473,11 @@ MANUAL_URL=http://localhost:3360/manual node scripts/build-manual-pdf.mjs  # out
 ```
 
 O script abre a página em tema claro, carrega todas as imagens, as converte em JPEG para o arquivo
-ficar leve (menos de 10 MB) e imprime em A4, um capítulo por página. Faça commit do PDF gerado.
+ficar leve (menos de 10 MB) e imprime em A4, um capítulo por página, com marcadores (bookmarks) para
+cada capítulo e tarefa. Com o `pdftotext` do poppler instalado (`pacman -S poppler` ou
+`apt install poppler-utils`), o sumário e as referências cruzadas ("veja …") ganham o número da
+página: o script imprime uma vez, lê as páginas no texto do PDF e imprime de novo. Sem ele, o PDF
+sai sem esses números e o script avisa. Faça commit do PDF gerado.
 
 ---
 

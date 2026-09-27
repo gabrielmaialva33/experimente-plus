@@ -1,4 +1,4 @@
-import { within } from '@testing-library/react'
+import { act, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -108,20 +108,52 @@ describe('Manual page', () => {
     expect(search).toHaveValue('')
   })
 
-  it('offers a table of contents on wide screens and a collapsible one on phones', () => {
-    const { container } = render(<ManualPage />)
+  it('offers a table of contents on wide screens and an accordion per chapter on phones', async () => {
+    const { container, user } = render(<ManualPage />)
 
     const wide = screen.getByRole('complementary', { name: 'Sumário' })
     expect(within(wide).getByRole('link', { name: 'Perfis de acesso' })).toHaveAttribute(
       'href',
       '#perfis'
     )
-    const phone = container.querySelector('details nav[aria-label="Sumário"]') as HTMLElement
-    expect(phone).not.toBeNull()
+    const details = container.querySelector('details') as HTMLDetailsElement
+    expect(details.querySelector('summary')).toHaveTextContent('Neste manual')
+    details.open = true
+    const phone = within(details).getByRole('navigation', { name: 'Sumário' })
+    expect(within(phone).queryByRole('link', { name: 'Como escolher uma cidade' })).toBeNull()
+
+    const toggle = within(phone).getByRole('button', {
+      name: 'Abrir as seções de Descobrir lugares',
+    })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(within(phone).getByRole('link', { name: 'Como escolher uma cidade' })).toHaveAttribute(
+      'href',
+      '#visitante-explorar'
+    )
+  })
+
+  it('shows a floating Índice on phones once the contents at the top are out of sight', async () => {
+    const { user } = render(<ManualPage />)
+    expect(screen.queryByRole('button', { name: 'Índice' })).toBeNull()
+
+    const contents = document.getElementById('sumario-celular')!
+    vi.spyOn(contents, 'getBoundingClientRect').mockReturnValue({ bottom: -300 } as DOMRect)
+    await act(async () => {
+      window.dispatchEvent(new Event('scroll'))
+      await new Promise((resolve) => window.requestAnimationFrame(resolve))
+    })
+    await user.click(screen.getByRole('button', { name: 'Índice' }))
+
+    const sheet = screen.getByRole('dialog', { name: 'Índice do manual' })
     expect(
-      within(phone).getByRole('link', { name: 'Como escolher uma cidade', hidden: true })
-    ).toHaveAttribute('href', '#visitante-explorar')
-    expect(container.querySelector('details summary')).toHaveTextContent('Neste manual')
+      within(sheet).getByRole('button', { name: 'Abrir as seções de Perfis de acesso' })
+    ).toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'Resgate por QR code' })).toHaveAttribute(
+      'href',
+      '#resgate'
+    )
   })
 
   it('shows the profile comparison as a table and as cards for phones', () => {
@@ -154,9 +186,12 @@ describe('Manual page', () => {
       /@media print[\s\S]*\[data-public-shell\] > :not\(main\)/
     )
     expect(container.querySelector('section#visitante')).toHaveClass('print:break-before-page')
-    expect(screen.getByRole('navigation', { name: 'Sumário para impressão' })).toHaveClass(
-      'hidden',
-      'print:block'
+    const contents = screen.getByRole('navigation', { name: 'Sumário para impressão' })
+    expect(contents).toHaveClass('hidden', 'print:block')
+    // The PDF script writes the page of every chapter and section into these.
+    expect(contents.querySelector('[data-print-page="resgate-recusas"]')).not.toBeNull()
+    expect(contents.querySelectorAll('[data-print-page]').length).toBe(
+      MANUAL_CHAPTERS.reduce((total, chapter) => total + 1 + chapter.sections.length, 0)
     )
     expect(screen.getByRole('search')).toHaveClass('print:hidden')
   })
