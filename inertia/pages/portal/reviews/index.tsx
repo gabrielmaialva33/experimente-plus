@@ -113,13 +113,22 @@ export default function PartnerReviewsPage({
           aria-current={filter === item ? 'true' : undefined}
           className={cn(
             // The three filters share a phone's width instead of scrolling the selected one away.
-            'inline-flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:flex-none sm:px-4.5 sm:text-[0.9375rem]',
+            'inline-flex h-10 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 sm:gap-1.5 text-[0.8125rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:flex-none sm:px-4.5 sm:text-[0.9375rem]',
             filter === item
               ? 'bg-primary font-bold text-primary-foreground'
               : 'font-semibold text-foreground hover:bg-background'
           )}
         >
-          {FILTER_LABELS[item]} ({counts[item]})
+          {FILTER_LABELS[item]}{' '}
+          {/* The count bubble of the content tabs, not a number in parentheses. */}
+          <span
+            className={cn(
+              'rounded-full px-1.5 text-[0.6875rem] font-bold tabular-nums sm:px-2 sm:text-xs',
+              filter === item ? 'bg-primary-foreground/20' : 'bg-background'
+            )}
+          >
+            {counts[item]}
+          </span>
         </Link>
       ))}
     </nav>

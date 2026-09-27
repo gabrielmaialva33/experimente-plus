@@ -103,15 +103,15 @@ describe('Partner reviews page', () => {
     render(<PartnerReviewsPage {...props()} />)
 
     const filters = screen.getByRole('navigation', { name: 'Filtrar avaliações' })
-    const waiting = within(filters).getByRole('link', { name: 'Sem resposta (1)' })
+    const waiting = within(filters).getByRole('link', { name: 'Sem resposta 1' })
     expect(waiting).toHaveAttribute('aria-current', 'true')
     expect(waiting).toHaveClass('bg-primary', 'text-primary-foreground')
     expect(waiting).toHaveAttribute('href', '/portal/reviews?establishment=7&filter=unanswered')
-    expect(within(filters).getByRole('link', { name: 'Respondidas (2)' })).toHaveAttribute(
+    expect(within(filters).getByRole('link', { name: 'Respondidas 2' })).toHaveAttribute(
       'href',
       '/portal/reviews?establishment=7&filter=answered'
     )
-    expect(within(filters).getByRole('link', { name: 'Todas (3)' })).not.toHaveAttribute(
+    expect(within(filters).getByRole('link', { name: 'Todas 3' })).not.toHaveAttribute(
       'aria-current'
     )
     // On a phone the three share the row instead of scrolling the last one out of view.
