@@ -203,8 +203,10 @@ Senha:    experimente123
 
 O seed mantém edições gratuitas/cortesias e acrescenta pacote Londrina de 4990 centavos e voucher avulso de 1490 centavos. Capas são ilustrações originais determinísticas de 1200×800, armazenadas no Drive configurado, com checksum/versionamento; não fotos de terceiros. Para exercitar uma compra sem rede, use
 `PAYMENT_PROVIDER=fake` no seed, no servidor e nos comandos: crie a compra pelo app ou pela API,
-rode `pnpm ace purchases:process` e confirme com `pnpm ace purchases:simulate <id-da-compra>`, que
-passa pela mesma conciliação de um pagamento real. A reexecução do seed preserva preço, termos e
+rode `pnpm ace purchases:process` e confirme com `pnpm ace purchases:simulate <id-da-compra>` ou,
+na área da equipe, em **Pedidos > Confirmar pagamento simulado** (só administradores, só com o
+provedor `fake` fora de produção). Os dois usam o mesmo serviço e a mesma conciliação de um
+pagamento real. A reexecução do seed preserva preço, termos e
 janelas já vendidos; uma nova campanha exige nova edição, não a edição da vendida.
 
 O seeder é `static environment = ['development']`: com `NODE_ENV=production` ele é ignorado. Além desse filtro Lucid, a execução exige `DEPLOYMENT_ENV=development` antes de acessar o banco, inclusive em chamadas diretas.

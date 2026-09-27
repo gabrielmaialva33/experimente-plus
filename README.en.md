@@ -238,8 +238,10 @@ event to silence redeliveries.
 
 To exercise a purchase locally without network access, use `PAYMENT_PROVIDER=fake` for the seed,
 the server, and the commands: create the purchase from the app or the API, run
-`pnpm ace purchases:process`, then confirm it with `pnpm ace purchases:simulate <purchase-id>`,
-which goes through the same reconciliation as a real payment.
+`pnpm ace purchases:process`, then confirm it with `pnpm ace purchases:simulate <purchase-id>` or,
+in the back office, with **Pedidos > Confirmar pagamento simulado** (administrators only, and only
+with the `fake` provider outside production). Both use the same service and the same
+reconciliation as a real payment.
 
 ### Scheduled commands
 
