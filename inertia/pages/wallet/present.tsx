@@ -51,7 +51,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
   return (
     <ConsumerFlowShell
       title="Usar benefício"
-      description="Mostre a apresentação temporária somente quando estiver no estabelecimento."
+      description="Mostre a apresentação temporária somente quando estiver no lugar."
       actions={
         <Button asChild variant="outline" size="xl" shape="pill">
           <Link href="/wallet">
@@ -175,8 +175,8 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
 
             <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
               <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />A apresentação
-              não conclui o uso sozinha. A confirmação final é feita no servidor por uma pessoa
-              autorizada da organização.
+              não conclui o uso sozinha. Quem confirma a utilização é uma pessoa autorizada do
+              lugar.
             </div>
           </div>
         </CardContent>

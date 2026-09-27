@@ -114,7 +114,7 @@ function HistoricalEstablishment({ detail }: { detail: CatalogHistoricalDetail }
         <EmptyState
           icon={CircleAlert}
           headingLevel={2}
-          title="Este estabelecimento encerrou as atividades"
+          title="Este lugar encerrou as atividades"
           // The page header already reads the closure message; the card adds only what changed.
           description="Os contatos foram removidos e esta página mantém apenas a informação histórica publicada."
         >
@@ -219,7 +219,7 @@ function PublishedEstablishment({
       */}
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <section
-          aria-label="Apresentação do estabelecimento"
+          aria-label="Apresentação do lugar"
           className="min-w-0 overflow-hidden rounded-card border border-border-subtle bg-card lg:col-start-1 lg:row-start-1"
         >
           <div className="relative overflow-hidden">
@@ -357,7 +357,7 @@ function PublishedEstablishment({
                   <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary-accent" />
                   <p className="leading-6 text-muted-foreground">
                     {detail.availabilityType === 'always_open'
-                      ? 'Este estabelecimento informa atendimento contínuo, 24 horas por dia.'
+                      ? 'Este lugar informa atendimento contínuo, 24 horas por dia.'
                       : 'O atendimento acontece mediante agendamento. Use os contatos disponíveis para combinar.'}
                   </p>
                 </div>
@@ -418,8 +418,8 @@ function PublishedEstablishment({
                   <h2 className="font-semibold">Atendimento indisponível</h2>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {detail.businessStatus === 'temporarily_closed'
-                      ? 'O estabelecimento informou fechamento temporário. Consulte novamente mais tarde.'
-                      : 'Este estabelecimento encerrou as atividades.'}
+                      ? 'O lugar informou fechamento temporário. Consulte novamente mais tarde.'
+                      : 'Este lugar encerrou as atividades.'}
                   </p>
                 </div>
               </div>
@@ -553,7 +553,7 @@ export default function CatalogEstablishment({
   if (!detail) {
     return (
       <CatalogShell
-        title="Estabelecimento indisponível"
+        title="Lugar indisponível"
         description="A ficha pública não pôde ser carregada."
         breadcrumbs={[{ label: 'Cidades', href: '/cidades' }, { label: 'Indisponível' }]}
       >

@@ -26,7 +26,7 @@ export function CatalogImageFallback({ name, categoryName, className }: CatalogI
           {initial}
         </span>
         <span className="max-w-full truncate text-xs font-medium text-content-absent-foreground">
-          {categoryName ?? 'Estabelecimento local'}
+          {categoryName ?? 'Lugar da região'}
         </span>
       </div>
     </div>

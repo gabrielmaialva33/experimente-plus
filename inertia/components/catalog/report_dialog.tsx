@@ -99,7 +99,7 @@ export function ReportDialog({
           <DialogDescription>
             {protocol === null
               ? `Sobre: ${subject}. A denúncia é anônima: não fica ligada a você nem a uma conta.`
-              : 'A moderação analisa e responde dentro do prazo definido por esta operação.'}
+              : 'A moderação do Experimente+ analisa e responde dentro do prazo definido.'}
           </DialogDescription>
         </DialogHeader>
 

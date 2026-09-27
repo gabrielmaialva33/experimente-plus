@@ -100,7 +100,7 @@ export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
 
           <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            Este comprovante foi criado pelo servidor no momento da confirmação do estabelecimento.
+            Este comprovante foi registrado no momento em que o lugar confirmou a utilização.
           </div>
 
           <Button asChild variant="outline" size="xl" shape="pill" className="w-full">

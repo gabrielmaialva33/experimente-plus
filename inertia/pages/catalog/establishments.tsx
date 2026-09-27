@@ -97,7 +97,7 @@ export default function CatalogEstablishments({
               ? 'Os anúncios patrocinados acima são exibidos separadamente e não entram na paginação do catálogo.'
               : result.query.q
                 ? 'Tente remover filtros, buscar por outro termo ou navegar pelas categorias da cidade.'
-                : 'Assim que novos estabelecimentos forem publicados, eles aparecerão aqui.'
+                : 'Assim que novos lugares forem publicados, eles aparecerão aqui.'
           }
         />
       </section>

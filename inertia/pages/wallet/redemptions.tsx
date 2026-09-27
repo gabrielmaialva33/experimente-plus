@@ -49,7 +49,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
             headingLevel={2}
             icon={ReceiptText}
             title="Nenhuma utilização ainda"
-            description="Quando uma utilização for confirmada pelo estabelecimento, o comprovante aparecerá aqui."
+            description="Quando uma utilização for confirmada no lugar, o comprovante aparecerá aqui."
           >
             <Button asChild variant="outline" size="xl" shape="pill">
               <Link href="/wallet">Ver minha carteira</Link>

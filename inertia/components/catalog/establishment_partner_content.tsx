@@ -207,7 +207,7 @@ export function EstablishmentPartnerContent({
           Descubra mais neste lugar
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Experiências, eventos e itens informativos publicados pelo estabelecimento.
+          Experiências, eventos e itens informativos publicados pelo lugar.
         </p>
       </div>
 

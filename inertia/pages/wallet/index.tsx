@@ -117,7 +117,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
             description="Após receber acesso a um pacote ou voucher avulso, os benefícios aparecerão aqui."
           >
             <Button asChild variant="outline" size="xl" shape="pill">
-              <Link href="/cidades">Explorar estabelecimentos</Link>
+              <Link href="/cidades">Explorar lugares</Link>
             </Button>
           </EmptyState>
         </Card>
