@@ -19,8 +19,15 @@ interface FlashMessage {
   className: string
 }
 
+/**
+ * Each page renders its own MainLayout, so the layout mounts again on every visit. The
+ * stored choice is read once after hydration (the server cannot see it) and remembered
+ * here, so later visits start collapsed instead of animating the sidebar shut each time.
+ */
+let rememberedCollapsed: boolean | null = null
+
 export function MainLayout({ children }: MainLayoutProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => rememberedCollapsed ?? false)
   const page = usePage()
   const { flash } = page.props as {
     flash?: {
@@ -33,13 +40,24 @@ export function MainLayout({ children }: MainLayoutProps) {
   const surface: NavigationSurface = resolveRouteMetadata(page.url)?.surface ?? 'backoffice'
 
   useEffect(() => {
-    setCollapsed(window.localStorage.getItem('experimente.sidebar.collapsed') === 'true')
+    if (rememberedCollapsed !== null) return
+    try {
+      rememberedCollapsed = window.localStorage.getItem('experimente.sidebar.collapsed') === 'true'
+    } catch {
+      rememberedCollapsed = false
+    }
+    setCollapsed(rememberedCollapsed)
   }, [])
 
   const toggleSidebar = () => {
     setCollapsed((current) => {
       const next = !current
-      window.localStorage.setItem('experimente.sidebar.collapsed', String(next))
+      rememberedCollapsed = next
+      try {
+        window.localStorage.setItem('experimente.sidebar.collapsed', String(next))
+      } catch {
+        // Private mode or blocked storage: the choice lasts for this visit only.
+      }
       return next
     })
   }
