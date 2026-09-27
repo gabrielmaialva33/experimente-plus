@@ -333,7 +333,7 @@ export default function PartnerContentPage({
         />
 
         <div
-          className="flex gap-1 rounded-full bg-muted p-1 sm:inline-flex sm:self-start"
+          className="flex w-full min-w-0 gap-1 rounded-[1.75rem] bg-muted p-1 sm:inline-flex sm:w-auto sm:self-start sm:rounded-full"
           role="tablist"
           aria-label="Tipos de conteúdo"
         >
@@ -348,13 +348,16 @@ export default function PartnerContentPage({
                 aria-selected={selected}
                 onClick={() => changeKind(item.path)}
                 className={cn(
-                  'inline-flex h-10 flex-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-sm transition-colors sm:flex-none sm:gap-2 sm:px-4 sm:text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none',
+                  // The tabs share a phone's width; where a label and its count no longer
+                  // fit (a 320 px phone), the count drops under the label instead of pushing
+                  // the last tab off screen.
+                  'inline-flex min-h-10 min-w-0 flex-auto flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-full px-1.5 py-1 text-[0.8125rem] transition-colors sm:h-10 sm:flex-none sm:flex-nowrap sm:gap-2 sm:px-4 sm:py-0 sm:text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none',
                   selected
                     ? 'bg-primary font-bold text-primary-foreground'
                     : 'font-semibold text-foreground hover:bg-background'
                 )}
               >
-                {item.label}
+                <span className="whitespace-nowrap">{item.label}</span>{' '}
                 <span
                   className={cn(
                     'rounded-full px-2 text-xs font-bold tabular-nums',
@@ -368,7 +371,12 @@ export default function PartnerContentPage({
           })}
         </div>
 
-        <section className="grid grid-cols-3 gap-3" aria-label="Resumo do conteúdo selecionado">
+        {/* Three tiles from 360 px; below it a tile is too narrow for its status pill, so
+            the three become rows with the count beside the pill. */}
+        <section
+          className="grid grid-cols-1 gap-3 min-[22.5rem]:grid-cols-3"
+          aria-label="Resumo do conteúdo selecionado"
+        >
           {(
             [
               ['Rascunhos', draftCount, 'neutral'],
@@ -378,7 +386,7 @@ export default function PartnerContentPage({
           ).map(([label, count, variant]) => (
             <div
               key={label}
-              className="min-w-0 rounded-card border border-border-subtle bg-card p-3 sm:p-5"
+              className="flex min-w-0 items-center justify-between gap-3 rounded-card border border-border-subtle bg-card p-3 min-[22.5rem]:block sm:p-5"
             >
               <Badge
                 variant={variant}
@@ -389,7 +397,9 @@ export default function PartnerContentPage({
               >
                 {label}
               </Badge>
-              <p className="mt-3 font-display text-3xl font-extrabold tabular-nums">{count}</p>
+              <p className="font-display text-2xl font-extrabold tabular-nums min-[22.5rem]:mt-3 min-[22.5rem]:text-3xl">
+                {count}
+              </p>
             </div>
           ))}
         </section>

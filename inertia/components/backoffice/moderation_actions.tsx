@@ -157,7 +157,7 @@ export function ModerationActions({
       ) : null}
 
       {hasReviewActions ? (
-        <section aria-label="Ações de moderação" className="grid gap-4 xl:grid-cols-3">
+        <section aria-label="Ações de moderação" className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           {canApprove ? (
             <form
               onSubmit={approve}
@@ -219,8 +219,8 @@ export function ModerationActions({
               aria-busy={activeOperation === 'request_changes'}
               className="space-y-4 rounded-card border border-border-subtle bg-card p-5 sm:p-6 xl:col-span-2"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 flex-[1_1_16rem]">
                   <h2 className="text-lg font-semibold">Solicitar correções</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     A revisão volta ao parceiro e as pendências estruturadas permanecem no histórico
@@ -272,7 +272,7 @@ export function ModerationActions({
                   return (
                     <div
                       key={issue.key}
-                      className="grid gap-3 rounded-xl bg-background p-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_auto] md:items-start"
+                      className="grid grid-cols-1 gap-3 rounded-xl bg-background p-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_auto] md:items-start"
                     >
                       <EditorField
                         required
