@@ -5,6 +5,7 @@ import { ExceptionHandler, type HttpContext } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
 import { errors as driveErrors } from '@adonisjs/drive'
 
+import ActiveTenantRequiredException from '#exceptions/active_tenant_required_exception'
 import BaseException from '#exceptions/base_exception'
 import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
@@ -124,6 +125,21 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       ctx.request.accepts(['html', 'json']) !== 'json'
     ) {
       return this.renderError(httpError, ctx)
+    }
+
+    /**
+     * A signed-in account with no active operation opened a web area that needs
+     * one, such as /wallet. The API keeps its JSON; a browser gets a page in
+     * Portuguese instead of `{"status":400,"message":"An active tenant…"}`.
+     */
+    if (
+      !isApiRequest &&
+      httpError instanceof ActiveTenantRequiredException &&
+      ctx.request.accepts(['html', 'json']) !== 'json'
+    ) {
+      this.preparePublicErrorResponse(ctx, ctx.request.id())
+      const page = await ctx.inertia.render('errors/no_operation', {})
+      return ctx.response.status(httpError.status).send(page)
     }
 
     /**

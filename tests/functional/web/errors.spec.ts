@@ -79,6 +79,30 @@ test.group('Web error pages', (group) => {
     assert.include(response.text(), 'Página não encontrada')
   })
 
+  // A signed-in account with no active operation opened /wallet and read
+  // {"status":400,"message":"An active tenant is required…"} in English.
+  test('an account with no operation gets a page on the web; the API keeps JSON', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.create({
+      full_name: 'Conta Sem Operacao',
+      email: 'conta-sem-operacao@example.com',
+      username: 'conta-sem-operacao',
+      password: 'password123',
+    })
+
+    const visit = await client.get('/wallet').loginAs(user).accept('html')
+    visit.assertStatus(400)
+    visit.assertHeader('cache-control', 'private, no-store')
+    assert.equal(parseInertiaPage(visit).component, 'errors/no_operation')
+    assert.notInclude(visit.text(), 'An active tenant is required')
+
+    const api = await client.get('/api/v1/benefit-editions').loginAs(user)
+    api.assertStatus(400)
+    api.assertBody({ status: 400, message: 'An active tenant is required for this operation' })
+  })
+
   // Web audit W27: a stale link on a web route showed
   // {"status":404,"message":"Establishment revision not found"} in English.
   test('a web route with an unknown id renders the not-found page; the API keeps JSON', async ({

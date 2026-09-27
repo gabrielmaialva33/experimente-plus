@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
 
+import ActiveTenantRequiredException from '#exceptions/active_tenant_required_exception'
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import { isValidTenantId } from '#shared/utils/active_tenant'
@@ -60,7 +61,7 @@ export default class TenantMiddleware {
     if (firstTenant) {
       ctx.tenant = { id: firstTenant.id }
     } else if (options.required) {
-      throw new BadRequestException('An active tenant is required for this operation')
+      throw new ActiveTenantRequiredException()
     }
 
     return next()
