@@ -153,6 +153,7 @@
     "framer-motion": "^13.1.1",
     "input-otp": "^1.5.0",
     "jsonwebtoken": "^9.0.3",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.33.0",
     "luxon": "^3.7.2",
     "motion": "^13.1.1",
