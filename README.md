@@ -379,6 +379,32 @@ também exige esse SHA como argumento único. As exclusões de credenciais, `.en
 `storage/uploads/**` e `storage/seed-media/**` estão em `.dockerignore`; a allowlist de arquivos
 operacionais não rastreados fica em `deploy.sh`.
 
+### Site instalável (PWA)
+
+O site pode ser instalado (Chrome e Edge oferecem "Instalar"; no iPhone, Safari › Compartilhar ›
+"Adicionar à Tela de Início"). Manifesto, ícones, capturas e a página offline ficam em `public/`. O
+service worker `public/sw.js` é gerado pelo build do Vite a partir de
+[`inertia/pwa/service_worker.ts`](inertia/pwa/service_worker.ts) (plugin em `vite.config.ts`), é
+ignorado pelo Git e chega à imagem porque `ace build` copia `public/**` para `build/public`.
+
+- **O que fica no aparelho:** só os arquivos de `/assets/` com hash de conteúdo e `/offline.html`
+  ([`cache_policy.ts`](inertia/pwa/cache_policy.ts)). Páginas vêm sempre da rede e nunca são
+  guardadas; sem rede, a navegação mostra a página offline. Visitas Inertia, `/api`, login,
+  carteira, portal, back office e configurações passam direto. Não há push nem sincronização.
+- **Cabeçalhos:** `config/static.ts` serve `/sw.js`, `/manifest.webmanifest` e `/offline.html` com
+  `Cache-Control: no-cache` e os arquivos com hash com `immutable`. O nginx só repassa; um proxy ou
+  CDN à frente precisa preservar esses cabeçalhos e nunca guardar `/sw.js`.
+- **Atualização:** cada build muda os bytes de `/sw.js`; o navegador o confere a cada navegação (o
+  app instalado, também ao voltar ao primeiro plano, no máximo de hora em hora) e a nova versão
+  assume na hora, sem recarregar a página: como as páginas vêm da rede, não há versão antiga presa.
+- **Desligar:** `SERVICE_WORKER_ENABLED = false` em [`inertia/pwa/config.ts`](inertia/pwa/config.ts)
+  e deploy. O `/sw.js` passa a apagar os próprios caches e se desregistrar, e as páginas também o
+  removem; mantenha assim por algumas semanas antes de retirar o arquivo. Numa máquina só: DevTools
+  › Application › Service workers › Unregister, ou limpar os dados do site; no iPhone, apagar o
+  ícone da Tela de Início ou remover o site em Ajustes › Safari › Avançado › Dados dos Sites.
+- Em desenvolvimento o worker não é registrado, e um que tenha ficado de uma execução local de
+  produção no mesmo endereço é removido.
+
 ---
 
 ## Migrations antes da versão 1.0

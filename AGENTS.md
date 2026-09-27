@@ -107,6 +107,8 @@ Mudanças operacionais devem preservar o deploy por SHA validado, snapshots imut
 
 Não exponha `.env`, credenciais, tokens, QR de apresentação ou dados privados em logs, documentação ou commits. Preserve autenticação JWT/cookie/bearer, rotação opaca de refresh e separação entre autorização global e policies de domínio.
 
+O site é instalável (PWA). O service worker de `inertia/pwa/` guarda apenas arquivos de `/assets/` com hash e a página offline; páginas, respostas Inertia, `/api` e áreas autenticadas nunca entram em cache, e rotas novas ficam de fora por padrão. Não amplie a allowlist de `cache_policy.ts` nem acrescente push ou sincronização sem aceite; o README descreve atualização e desligamento.
+
 ## Commits e pull requests
 
 O histórico usa Conventional Commits com scopes, como `feat(ui):`, `fix(auth):` e `fix(deploy):`. Mantenha commits focados. PRs devem explicar problema e resultado, vincular issues quando houver, destacar migrations/ambiente, incluir imagens para alterações visuais e informar verificações executadas e limitações.

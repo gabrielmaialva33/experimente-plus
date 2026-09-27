@@ -1,0 +1,72 @@
+{
+  "id": "/",
+  "name": "Experimente+",
+  "short_name": "Experimente+",
+  "description": "Descubra lugares, agenda e novidades das cidades do norte do Paraná, guarde favoritos e use benefícios pela carteira.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#13467c",
+  "background_color": "#f3f5f7",
+  "categories": ["travel", "food", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explorar cidades",
+      "short_name": "Explorar",
+      "description": "Lugares, agenda e novidades das cidades do norte do Paraná.",
+      "url": "/cidades",
+      "icons": [{ "src": "/icons/shortcut-explore-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Carteira de benefícios",
+      "short_name": "Carteira",
+      "description": "Seus benefícios e o QR para apresentar.",
+      "url": "/wallet",
+      "icons": [{ "src": "/icons/shortcut-wallet-96.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home-narrow.webp",
+      "sizes": "412x915",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Início do Experimente+: encontre lugares e serviços na sua cidade"
+    },
+    {
+      "src": "/screenshots/home-wide.webp",
+      "sizes": "1280x800",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Início do Experimente+ no computador"
+    }
+  ]
+}

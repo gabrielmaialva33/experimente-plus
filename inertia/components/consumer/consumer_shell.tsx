@@ -20,7 +20,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <SkipLink />
-      <header className="sticky top-0 z-40 border-b bg-background">
+      <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
         <div className="app-container flex min-h-16 items-center gap-4 py-2">
           <AppBrand href="/cidades" />
 
