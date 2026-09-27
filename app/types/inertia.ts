@@ -19,6 +19,7 @@ import type {
   OrganizationTeamPageProps,
 } from '#modules/organizations/interfaces/organization_team_pages'
 import type { ReturnPath } from '#modules/web/utils/return_path'
+import type { EmailVerificationPageProps } from '#modules/auth/interfaces/email_verification_page'
 import type { BackofficeTodayPageProps } from '#modules/portal/interfaces/backoffice_today_page'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 import type { PublicReviewsPayload } from '#modules/reviews/interfaces/public_reviews_page'
@@ -62,6 +63,7 @@ declare module '@adonisjs/inertia/types' {
     }
     'auth/forgot_password': Record<string, never>
     'auth/reset_password': { token: string }
+    'auth/verify_email': EmailVerificationPageProps
 
     // Legal
     'legal/terms': Record<string, never>

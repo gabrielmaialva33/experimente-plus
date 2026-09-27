@@ -5,6 +5,8 @@ import IPermission from '#modules/permissions/interfaces/permission_interface'
 import env from '#start/env'
 import { middleware } from '#start/kernel'
 import {
+  emailVerificationPageThrottle,
+  emailVerificationResendThrottle,
   passwordResetRequestThrottle,
   passwordResetThrottle,
   signInThrottle,
@@ -66,6 +68,19 @@ router
   .post('/reset-password', [InertiaAuthController, 'resetPassword'])
   .as('password.reset.post')
   .use([middleware.guest({ guards: ['jwt'] }), passwordResetThrottle])
+
+/**
+ * The link in the account confirmation e-mail. Public: the token proves the
+ * address whoever is signed in, as on the API route that sends browsers here.
+ */
+router
+  .get('/verificar-email', [InertiaAuthController, 'showEmailVerification'])
+  .as('email_confirmation.show')
+  .use(emailVerificationPageThrottle)
+router
+  .post('/verificar-email/reenviar', [InertiaAuthController, 'resendEmailVerification'])
+  .as('email_confirmation.resend')
+  .use([middleware.auth({ guards: ['jwt'] }), emailVerificationResendThrottle])
 
 router.get('/termos', [InertiaLegalController, 'terms']).as('legal.terms')
 router.get('/privacidade', [InertiaLegalController, 'privacy']).as('legal.privacy')
