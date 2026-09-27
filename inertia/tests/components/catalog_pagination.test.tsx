@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -82,9 +82,14 @@ describe('CatalogPagination', () => {
   })
 
   it('clamps invalid out-of-range metadata to the canonical last page', () => {
-    render(<CatalogPagination path="/cidades/londrina" query={query} meta={meta(99)} />)
+    const { container } = render(
+      <CatalogPagination path="/cidades/londrina" query={query} meta={meta(99)} />
+    )
 
-    expect(screen.getByText('Página', { exact: false })).toHaveTextContent('Página 3 de 3')
+    const counter = container.querySelector('p[aria-live="polite"]')
+    expect(counter).toHaveTextContent('Página 3 de 3')
+    // A 320 px phone shows "3 de 3"; "Página" stays for screen readers.
+    expect(within(counter as HTMLElement).getByText('Página')).toHaveClass('max-[22.5rem]:sr-only')
     expect(screen.getByLabelText('Página 3, página atual')).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByRole('link', { name: 'Próxima página' })).toBeNull()
 

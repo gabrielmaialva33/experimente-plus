@@ -29,8 +29,10 @@ function positiveInteger(value: number, fallback: number): number {
   return Number.isFinite(value) && value >= 1 ? Math.trunc(value) : fallback
 }
 
+// Below 360 px the buttons tighten and the counter reads "4 de 10" (with "Página" for
+// screen readers): "Anterior", "Página 4 de 10" and "Próxima" cut the last button at 320 px.
 const directionClassName =
-  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border bg-card px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none sm:flex-none'
+  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border bg-card px-3 text-sm min-[22.5rem]:px-4 font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none sm:flex-none'
 const pageClassName =
   'inline-flex size-11 items-center justify-center rounded-full border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none'
 
@@ -70,7 +72,8 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
       )}
 
       <p className="shrink-0 text-sm text-muted-foreground sm:hidden" aria-live="polite">
-        Página <span className="font-semibold text-foreground">{currentPage}</span> de {lastPage}
+        <span className="max-[22.5rem]:sr-only">Página </span>
+        <span className="font-semibold text-foreground">{currentPage}</span> de {lastPage}
       </p>
 
       <div className="hidden items-center gap-2 sm:flex">
