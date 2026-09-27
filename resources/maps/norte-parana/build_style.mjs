@@ -2,7 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-// Offline generator. The runbook downloads and verifies this exact upstream package.
+// Offline generator. Run it on a downloaded, checksum-verified copy of this exact upstream
+// package; the output is published next to the immutable tiles and assets of its release.
 const [packageDirectory, releaseUrl, output] = process.argv.slice(2)
 if (!packageDirectory || !releaseUrl || !output) {
   throw new Error('Usage: node build_style.mjs PACKAGE_DIRECTORY HTTPS_RELEASE_URL OUTPUT_JSON')
@@ -20,7 +21,7 @@ const { layers, namedFlavor } = await import(
   pathToFileURL(resolve(packageDirectory, 'dist/esm/index.js')).href
 )
 
-// Canonical UI colors: docs/design/catalog_tokens.md. Geographic fills are
+// Canonical UI colors: the tokens in inertia/css/app.css. Geographic fills are
 // deliberately pale; primary and CTA are reserved for the application overlay.
 const flavor = namedFlavor('light')
 const groups = {
@@ -85,7 +86,7 @@ const style = {
     'experimente:style-package': '@protomaps/basemaps@5.7.2',
     'experimente:assets-commit': '028c18f713baecad011301ff7a69acc39bcc2ae7',
     'experimente:theme': 'neutro-frio-flat-2.0',
-    'experimente:palette': 'docs/design/catalog_tokens.md',
+    'experimente:palette': 'inertia/css/app.css',
     'experimente:language': 'pt',
   },
   center: [-51.1696, -23.3045],
