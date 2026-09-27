@@ -481,7 +481,8 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
 
       <div className="space-y-6">
         <PageHeader
-          icon={Settings}
+          // The consumer shell's pages (Carteira, Utilizações) carry no section icon.
+          icon={consumerOnly ? undefined : Settings}
           eyebrow="Minha conta"
           title="Conta e preferências"
           description="Seu perfil, a aparência da interface e a segurança da sua conta."
@@ -505,18 +506,20 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
             <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile">
+          {/* Mounted while hidden: a name or password half typed survives a look at
+              another tab, instead of being dropped with the tab that held it. */}
+          <TabsContent value="profile" forceMount className="data-[state=inactive]:hidden">
             <ProfileTab profile={profile} />
           </TabsContent>
-          <TabsContent value="appearance">
+          <TabsContent value="appearance" forceMount className="data-[state=inactive]:hidden">
             <AppearanceTab />
           </TabsContent>
           {showOperations ? (
-            <TabsContent value="operations">
+            <TabsContent value="operations" forceMount className="data-[state=inactive]:hidden">
               <OperationsTab />
             </TabsContent>
           ) : null}
-          <TabsContent value="security">
+          <TabsContent value="security" forceMount className="data-[state=inactive]:hidden">
             <AccountTab />
           </TabsContent>
         </Tabs>

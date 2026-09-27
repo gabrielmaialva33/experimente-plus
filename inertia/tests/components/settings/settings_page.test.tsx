@@ -138,6 +138,22 @@ describe('SettingsPage', () => {
     expect(mocks.setTheme).toHaveBeenCalledWith('dark')
   })
 
+  it('keeps a half-typed name when another section is opened and closed', async () => {
+    const { user } = render(<SettingsPage profile={profile} />)
+
+    const name = screen.getByLabelText(/Nome completo/)
+    await user.clear(name)
+    await user.type(name, 'Ana Paula')
+    await user.click(screen.getByRole('tab', { name: 'Aparência' }))
+    // Hidden, not unmounted: the form keeps its state while another tab shows.
+    const panel = screen.getByLabelText(/Nome completo/).closest('[role="tabpanel"]')
+    expect(panel).toHaveAttribute('data-state', 'inactive')
+    expect(panel).toHaveClass('data-[state=inactive]:hidden')
+    await user.click(screen.getByRole('tab', { name: 'Perfil' }))
+
+    expect(screen.getByLabelText(/Nome completo/)).toHaveValue('Ana Paula')
+  })
+
   // At 390 px four line tabs ran off the page; pills in a 2×2 grid fit, one row from sm.
   it('lays the section tabs out as pills that never scroll the page on a phone', () => {
     mocks.tenants = [{ id: 9, name: 'Norte do Paraná', role: 'owner' }]
