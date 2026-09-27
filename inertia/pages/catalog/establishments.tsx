@@ -1,5 +1,5 @@
 import { CatalogConcierge } from '~/components/catalog/catalog_concierge'
-import { CatalogPagination } from '~/components/catalog/catalog_pagination'
+import { CATALOG_RESULTS_ANCHOR, CatalogPagination } from '~/components/catalog/catalog_pagination'
 import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
@@ -57,50 +57,53 @@ export default function CatalogEstablishments({
 
       <CityAgendaSection agenda={cityAgenda} />
 
-      {result.sponsored.length > 0 ? (
-        <section
-          aria-labelledby="sponsored-results"
-          aria-describedby="sponsored-results-description"
-          className="mt-8"
-        >
-          <CatalogSectionHeader
-            id="sponsored-results"
-            overline="Patrocinado"
-            title="Anúncios nesta cidade"
-            descriptionId="sponsored-results-description"
-            description="Estes lugares pagaram por esta posição. Isso não representa uma avaliação de qualidade."
-          />
-          <EstablishmentGrid entries={result.sponsored} citySlug={resolvedCitySlug} sponsored />
-        </section>
-      ) : null}
+      {/* A page change lands here, below the sticky header: see CatalogPagination. */}
+      <div id={CATALOG_RESULTS_ANCHOR} className="scroll-mt-24">
+        {result.sponsored.length > 0 ? (
+          <section
+            aria-labelledby="sponsored-results"
+            aria-describedby="sponsored-results-description"
+            className="mt-8"
+          >
+            <CatalogSectionHeader
+              id="sponsored-results"
+              overline="Patrocinado"
+              title="Anúncios nesta cidade"
+              descriptionId="sponsored-results-description"
+              description="Estes lugares pagaram por esta posição. Isso não representa uma avaliação de qualidade."
+            />
+            <EstablishmentGrid entries={result.sponsored} citySlug={resolvedCitySlug} sponsored />
+          </section>
+        ) : null}
 
-      <section aria-labelledby="organic-results" className="mt-8">
-        <CatalogSectionHeader
-          id="organic-results"
-          overline="Catálogo publicado"
-          title={result.query.q ? `Resultados para “${result.query.q}”` : 'Todos os lugares'}
-        />
-        <EstablishmentGrid
-          entries={result.organic}
-          citySlug={resolvedCitySlug}
-          emptyTitle={
-            hasSponsoredResults
-              ? result.query.q
-                ? 'Nenhum outro resultado para esta busca'
-                : 'Nenhum outro lugar encontrado'
-              : result.query.q
-                ? 'Nenhum resultado para esta busca'
-                : 'Nenhum lugar publicado ainda'
-          }
-          emptyMessage={
-            hasSponsoredResults
-              ? 'Os anúncios patrocinados acima são exibidos separadamente e não entram na paginação do catálogo.'
-              : result.query.q
-                ? 'Tente remover filtros, buscar por outro termo ou navegar pelas categorias da cidade.'
-                : 'Assim que novos lugares forem publicados, eles aparecerão aqui.'
-          }
-        />
-      </section>
+        <section aria-labelledby="organic-results" className="mt-8">
+          <CatalogSectionHeader
+            id="organic-results"
+            overline="Catálogo publicado"
+            title={result.query.q ? `Resultados para “${result.query.q}”` : 'Todos os lugares'}
+          />
+          <EstablishmentGrid
+            entries={result.organic}
+            citySlug={resolvedCitySlug}
+            emptyTitle={
+              hasSponsoredResults
+                ? result.query.q
+                  ? 'Nenhum outro resultado para esta busca'
+                  : 'Nenhum outro lugar encontrado'
+                : result.query.q
+                  ? 'Nenhum resultado para esta busca'
+                  : 'Nenhum lugar publicado ainda'
+            }
+            emptyMessage={
+              hasSponsoredResults
+                ? 'Os anúncios patrocinados acima são exibidos separadamente e não entram na paginação do catálogo.'
+                : result.query.q
+                  ? 'Tente remover filtros, buscar por outro termo ou navegar pelas categorias da cidade.'
+                  : 'Assim que novos lugares forem publicados, eles aparecerão aqui.'
+            }
+          />
+        </section>
+      </div>
 
       <CatalogPagination path={pagePath} query={result.query} meta={result.meta} />
     </CatalogShell>

@@ -1,4 +1,4 @@
-import { CatalogPagination } from '~/components/catalog/catalog_pagination'
+import { CATALOG_RESULTS_ANCHOR, CatalogPagination } from '~/components/catalog/catalog_pagination'
 import { CatalogSectionHeader } from '~/components/catalog/catalog_section_header'
 import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
@@ -57,44 +57,47 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
         includeCategoryParam={false}
       />
 
-      {result.sponsored.length > 0 ? (
-        <section
-          aria-labelledby="category-sponsored"
-          aria-describedby="category-sponsored-description"
-          className="mt-8"
-        >
-          <CatalogSectionHeader
-            id="category-sponsored"
-            overline="Patrocinado"
-            title="Anúncios nesta categoria"
-            descriptionId="category-sponsored-description"
-            description="Estes lugares pagaram por esta posição. Isso não representa uma avaliação de qualidade."
-          />
-          <EstablishmentGrid entries={result.sponsored} citySlug={resolvedCitySlug} sponsored />
-        </section>
-      ) : null}
+      {/* A page change lands here, below the sticky header: see CatalogPagination. */}
+      <div id={CATALOG_RESULTS_ANCHOR} className="scroll-mt-24">
+        {result.sponsored.length > 0 ? (
+          <section
+            aria-labelledby="category-sponsored"
+            aria-describedby="category-sponsored-description"
+            className="mt-8"
+          >
+            <CatalogSectionHeader
+              id="category-sponsored"
+              overline="Patrocinado"
+              title="Anúncios nesta categoria"
+              descriptionId="category-sponsored-description"
+              description="Estes lugares pagaram por esta posição. Isso não representa uma avaliação de qualidade."
+            />
+            <EstablishmentGrid entries={result.sponsored} citySlug={resolvedCitySlug} sponsored />
+          </section>
+        ) : null}
 
-      <section aria-labelledby="category-results" className="mt-8">
-        <CatalogSectionHeader
-          id="category-results"
-          overline="Catálogo publicado"
-          title={
-            result.query.q ? `Resultados para “${result.query.q}”` : `Opções de ${categoryName}`
-          }
-        />
-        <EstablishmentGrid
-          entries={result.organic}
-          citySlug={resolvedCitySlug}
-          emptyTitle={
-            hasSponsoredResults ? 'Nenhuma outra opção encontrada' : 'Nenhuma opção encontrada'
-          }
-          emptyMessage={
-            hasSponsoredResults
-              ? 'Os anúncios patrocinados acima são exibidos separadamente e não entram na paginação do catálogo.'
-              : 'Ainda não há lugares nesta categoria com os filtros escolhidos.'
-          }
-        />
-      </section>
+        <section aria-labelledby="category-results" className="mt-8">
+          <CatalogSectionHeader
+            id="category-results"
+            overline="Catálogo publicado"
+            title={
+              result.query.q ? `Resultados para “${result.query.q}”` : `Opções de ${categoryName}`
+            }
+          />
+          <EstablishmentGrid
+            entries={result.organic}
+            citySlug={resolvedCitySlug}
+            emptyTitle={
+              hasSponsoredResults ? 'Nenhuma outra opção encontrada' : 'Nenhuma opção encontrada'
+            }
+            emptyMessage={
+              hasSponsoredResults
+                ? 'Os anúncios patrocinados acima são exibidos separadamente e não entram na paginação do catálogo.'
+                : 'Ainda não há lugares nesta categoria com os filtros escolhidos.'
+            }
+          />
+        </section>
+      </div>
 
       <CatalogPagination path={pagePath} query={paginationQuery} meta={result.meta} />
     </CatalogShell>
