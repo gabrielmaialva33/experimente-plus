@@ -44,6 +44,7 @@ import {
 } from '~/lib/partner_content'
 import { partnerContentMediaItems, type PartnerContentMediaItem } from '~/lib/partner_content_media'
 import { cn } from '~/lib/utils'
+import { scrollBehavior } from '~/lib/motion'
 
 interface EstablishmentOption {
   id: number
@@ -242,7 +243,7 @@ export default function PartnerContentPage({
     setLocalError(null)
     setForm(loaded)
     setSavedForm(loaded)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: scrollBehavior() })
   }
 
   function updateField<Key extends keyof FormState>(key: Key, value: FormState[Key]) {

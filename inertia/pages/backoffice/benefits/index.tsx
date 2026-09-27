@@ -28,6 +28,7 @@ import { useAuth } from '~/hooks/use_auth'
 import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
+import { scrollBehavior } from '~/lib/motion'
 
 interface CityOption {
   id: number
@@ -209,7 +210,7 @@ export default function BenefitsBackofficePage({
     }
     setForm(loaded)
     setSavedForm(loaded)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: scrollBehavior() })
     // The form fills at the top of the page; take the keyboard there too, not only the eye.
     requestAnimationFrame(() =>
       document.getElementById('edition-name')?.focus({ preventScroll: true })

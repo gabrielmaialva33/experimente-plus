@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter } from '~/components/ui/card'
 import { ProgressCircle } from '~/components/ui/progress'
 import type { EditorSectionId } from '~/lib/establishment_editor'
 import { cn } from '~/lib/utils'
+import { scrollBehavior } from '~/lib/motion'
 
 export interface EditorNavigationItem {
   id: EditorSectionId
@@ -121,9 +122,8 @@ export function EstablishmentEditorNavigation({
       `[data-editor-navigation-item="${activeSection}"]`
     )
     if (activeButton && typeof activeButton.scrollIntoView === 'function') {
-      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       activeButton.scrollIntoView({
-        behavior: reducedMotion ? 'auto' : 'smooth',
+        behavior: scrollBehavior(),
         block: 'nearest',
         inline: 'center',
       })

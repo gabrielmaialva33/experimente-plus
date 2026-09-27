@@ -28,6 +28,7 @@ import { useUnsavedChangesGuard } from '~/hooks/use_unsaved_changes_guard'
 import { MainLayout } from '~/layouts/main_layout'
 import { cn } from '~/lib/utils'
 import type { OrganizationAllowedActions } from '~/types'
+import { scrollBehavior } from '~/lib/motion'
 
 interface EditionCity {
   id: number
@@ -285,7 +286,7 @@ export default function EstablishmentBenefitsPage({
     }
     setForm(loaded)
     setSavedForm(loaded)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: scrollBehavior() })
   }
 
   function toggleWeekday(bit: number) {
