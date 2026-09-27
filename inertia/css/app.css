@@ -244,6 +244,14 @@
     --action-secondary-foreground: var(--foreground);
     --action-secondary-border: var(--input);
   }
+
+  /* A short viewport (a phone on its side, a laptop zoomed to 200 %): the bottom navigation
+     turns compact (the `short` variant), so the reserve that keeps content clear shrinks too. */
+  @media (max-height: 30rem) {
+    :root {
+      --public-mobile-navigation-reserve: 3.75rem;
+    }
+  }
 }
 
 @layer base {

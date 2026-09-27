@@ -25,7 +25,7 @@ export function PublicErrorShell({ title, description, children }: PublicErrorSh
         <meta name="robots" content="noindex,nofollow" />
       </Head>
       <SkipLink />
-      <div className="flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
+      <div className="flex min-h-dvh flex-col overflow-x-clip bg-background text-foreground">
         <header className="border-b bg-background">
           <div className="app-container flex min-h-16 items-center justify-between gap-4 py-2">
             <AppBrand href="/" />

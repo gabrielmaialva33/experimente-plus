@@ -12,6 +12,8 @@ interface AppBrandProps {
   tone?: 'default' | 'inverse'
   /** Classes for the name beside the mark, e.g. to hide it where a header runs out of room. */
   wordmarkClassName?: string
+  /** Classes for the tagline under the name, e.g. to drop it on a phone too narrow for it. */
+  taglineClassName?: string
 }
 
 /**
@@ -59,6 +61,7 @@ export function AppBrand({
   onNavigate,
   tone = 'default',
   wordmarkClassName,
+  taglineClassName,
 }: AppBrandProps) {
   const application = useApp()
 
@@ -78,7 +81,8 @@ export function AppBrand({
           <span
             className={cn(
               'block truncate text-[0.68rem] font-semibold uppercase tracking-[0.14em]',
-              tone === 'inverse' ? 'text-chrome-muted' : 'text-muted-foreground'
+              tone === 'inverse' ? 'text-chrome-muted' : 'text-muted-foreground',
+              taglineClassName
             )}
           >
             Descoberta regional

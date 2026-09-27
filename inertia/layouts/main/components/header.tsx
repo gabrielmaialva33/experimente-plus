@@ -225,7 +225,7 @@ export function Header({ surface }: { surface: NavigationSurface }) {
   useEffect(() => setMobileOpen(false), [url])
 
   return (
-    <header className="sticky top-0 z-40 flex min-h-[72px] w-full items-center border-b border-border bg-background pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-40 flex min-h-[72px] w-full items-center border-b border-border bg-background pt-[env(safe-area-inset-top)] short:static">
       <div className="app-container flex items-center gap-3">
         <div className="flex items-center gap-2 lg:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

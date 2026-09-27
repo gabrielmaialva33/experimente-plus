@@ -20,9 +20,10 @@ export function ConsumerShell({ children }: PropsWithChildren) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <SkipLink />
-      <header className="sticky top-0 z-40 border-b bg-background">
+      <header className="sticky top-0 z-40 border-b bg-background short:static">
         <div className="app-container flex min-h-16 items-center gap-4 py-2">
-          <AppBrand href="/cidades" />
+          {/* Beside two 44 px actions a 320 px phone cut the tagline to "Descoberta reg…". */}
+          <AppBrand href="/cidades" taglineClassName="max-[360px]:hidden" />
 
           <nav
             className="ms-auto hidden items-center gap-1 md:flex"
@@ -96,7 +97,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
                 href={item.href}
                 aria-current={selected ? 'page' : undefined}
                 className={cn(
-                  'group flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                  'group flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring short:min-h-11 short:flex-row short:gap-2 short:py-1 short:text-xs',
                   selected ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}
               >

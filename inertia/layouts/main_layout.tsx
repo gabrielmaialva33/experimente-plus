@@ -90,13 +90,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-muted/35">
+    <div className="min-h-dvh bg-muted/35">
       <SkipLink />
       <Sidebar surface={surface} isCollapsed={collapsed} onToggle={toggleSidebar} />
 
       <div
         className={cn(
-          'flex min-h-screen flex-col transition-[padding] duration-300',
+          'flex min-h-dvh flex-col transition-[padding] duration-300',
           collapsed ? 'lg:ps-[84px]' : 'lg:ps-[272px]'
         )}
       >

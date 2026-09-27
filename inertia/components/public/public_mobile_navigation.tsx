@@ -28,8 +28,11 @@ export function PublicMobileNavigation() {
           const active = isNavigationHrefActive(url, item.href)
           const Icon = item.icon
           // Same grammar as the wallet's bar: the active icon sits in a pill, the label below.
+          // Icons share one baseline even when a label takes two lines on a 320 px phone. On a
+          // short screen (a phone on its side) the label moves beside the icon, as a compact
+          // tab bar, to give the height back to the content.
           const className = cn(
-            'group flex min-h-13 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+            'group flex min-h-13 min-w-0 flex-col items-center justify-start gap-1 rounded-2xl px-1 text-[0.6875rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring short:min-h-11 short:flex-row short:justify-center short:gap-2 short:text-xs',
             active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
           )
           const content = (
@@ -42,7 +45,10 @@ export function PublicMobileNavigation() {
               >
                 <Icon className="size-4.5" aria-hidden="true" />
               </span>
-              <span className="max-w-full truncate">{item.label}</span>
+              {/* Two lines before an ellipsis: "Cadastrar negócio" did not fit a 320 px third. */}
+              <span className="line-clamp-2 max-w-full text-center leading-[1.1] short:line-clamp-none short:whitespace-nowrap">
+                {item.label}
+              </span>
             </>
           )
 
