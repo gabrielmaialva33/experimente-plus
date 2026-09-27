@@ -1,6 +1,13 @@
 import { Link } from '@inertiajs/react'
-import { CalendarClock, CalendarDays, Sparkles, type LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import {
+  CalendarClock,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import {
   CatalogCoverImage,
@@ -12,6 +19,7 @@ import {
   partnerContentAnchor,
 } from '~/components/catalog/establishment_partner_content'
 import { EmptyState } from '~/components/empty_state'
+import { Button } from '~/components/ui/button'
 
 /**
  * The city's agenda — three chronological bands, no ranking.
@@ -252,7 +260,7 @@ function AgendaCard({
   const placeId = `city-agenda-${bandKey}-${item.id}-place`
 
   return (
-    <li className="min-w-0">
+    <li className="w-[82%] min-w-0 shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]">
       <Link
         href={itemHref(item, kind)}
         aria-labelledby={titleId}
@@ -311,6 +319,56 @@ function AgendaCard({
   )
 }
 
+/**
+ * Whether a rail can move either way, kept in step with its scroll position and
+ * size. Measured after mount: the server renders the rail without the buttons,
+ * and touch, trackpad and the keyboard (focus scrolls a card into view) all work
+ * without them.
+ */
+function useRail() {
+  const ref = useRef<HTMLUListElement>(null)
+  const [edges, setEdges] = useState({ start: true, end: true })
+
+  const measure = useCallback(() => {
+    const rail = ref.current
+    if (!rail) return
+    // One pixel of slack: fractional widths leave the last card a hair short.
+    const start = rail.scrollLeft <= 1
+    const end = rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 1
+    setEdges((current) =>
+      current.start === start && current.end === end ? current : { start, end }
+    )
+  }, [])
+
+  useEffect(() => {
+    const rail = ref.current
+    if (!rail) return
+    measure()
+    rail.addEventListener('scroll', measure, { passive: true })
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    observer?.observe(rail)
+    return () => {
+      rail.removeEventListener('scroll', measure)
+      observer?.disconnect()
+    }
+  }, [measure])
+
+  const page = (direction: 1 | -1) => {
+    const rail = ref.current
+    if (!rail) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    rail.scrollBy({ left: direction * rail.clientWidth, behavior: reduce ? 'auto' : 'smooth' })
+  }
+
+  return { ref, edges, page }
+}
+
+/**
+ * One band of the agenda as a rail: a band is a glance (the server caps it at a
+ * dozen items), so it keeps one row at every width instead of stacking up to
+ * twelve cards above the city's places. On a phone the next card peeks in from
+ * the edge; from 640px two arrows page through it.
+ */
 function AgendaBand({
   bandKey,
   eyebrow,
@@ -327,6 +385,9 @@ function AgendaBand({
   children: ReactNode
 }) {
   const headingId = `city-agenda-${bandKey}-heading`
+  const listId = `city-agenda-${bandKey}-list`
+  const { ref, edges, page } = useRail()
+  const scrollable = !(edges.start && edges.end)
 
   return (
     <section aria-labelledby={headingId}>
@@ -342,8 +403,46 @@ function AgendaBand({
         }
         title={title}
         description={description}
+        action={
+          scrollable ? (
+            <div className="hidden gap-2 sm:flex">
+              <Button
+                type="button"
+                variant="outline"
+                mode="icon"
+                shape="circle"
+                aria-controls={listId}
+                aria-label={`${title}: anteriores`}
+                disabled={edges.start}
+                onClick={() => page(-1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                mode="icon"
+                shape="circle"
+                aria-controls={listId}
+                aria-label={`${title}: próximos`}
+                disabled={edges.end}
+                onClick={() => page(1)}
+              >
+                <ChevronRight aria-hidden="true" />
+              </Button>
+            </div>
+          ) : null
+        }
       />
-      <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">{children}</ul>
+      {/* Bleeds to the screen edge on a phone so the next card shows it is there; from
+          640px the 4px of padding only keeps a card's focus ring from being clipped. */}
+      <ul
+        ref={ref}
+        id={listId}
+        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 list-none gap-4 overflow-x-auto overscroll-x-contain px-4 pb-3 pt-1 sm:-mx-1 sm:scroll-px-1 sm:px-1"
+      >
+        {children}
+      </ul>
     </section>
   )
 }
