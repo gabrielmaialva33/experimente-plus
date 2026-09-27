@@ -150,7 +150,7 @@ export default function PartnerReviewsPage({
             places.length > 1 || filters ? (
               <div className="flex w-full min-w-0 flex-wrap items-end gap-3 sm:w-auto">
                 {places.length > 1 ? (
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto">
                     <Label htmlFor="review-place" className="font-bold">
                       Lugar
                     </Label>
@@ -160,7 +160,9 @@ export default function PartnerReviewsPage({
                       onChange={(event) =>
                         router.get('/portal/reviews', { establishment: event.target.value })
                       }
-                      className="h-11 min-w-56 rounded-full border border-input bg-card px-4 text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      // A native select is as wide as its longest option; a long place
+                      // name with "(N sem resposta)" pushed a 360px screen to 456px.
+                      className="h-11 w-full min-w-0 text-ellipsis rounded-full border border-input bg-card px-4 text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:min-w-56 sm:max-w-sm"
                     >
                       {places.map((item) => (
                         <option key={item.id} value={item.id}>
