@@ -7,7 +7,6 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 import type { ApiClient } from '@japa/api-client'
 import { test } from '@japa/runner'
-import { DateTime } from 'luxon'
 
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
@@ -78,8 +77,6 @@ async function completeProfile(
   scenario: EstablishmentScenario,
   establishmentId: number
 ): Promise<number> {
-  const weekday = DateTime.now().setZone(scenario.city.timezone).weekday % 7
-
   const address = await client
     .put(`/api/v1/establishments/${establishmentId}/address`)
     .headers(tenantHeader(scenario.tenant.id))
@@ -125,7 +122,12 @@ async function completeProfile(
     .headers(tenantHeader(scenario.tenant.id))
     .loginAs(scenario.owner)
     .json({
-      hours: [{ weekday, opens_at: '00:00', closes_at: '23:59' }],
+      // Every day, not only today's: a run that crosses midnight must still find it open.
+      hours: [0, 1, 2, 3, 4, 5, 6].map((day) => ({
+        weekday: day,
+        opens_at: '00:00',
+        closes_at: '23:59',
+      })),
     })
   hours.assertStatus(200)
 

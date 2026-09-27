@@ -5,6 +5,7 @@ import testUtils from '@adonisjs/core/services/test_utils'
 import limiter from '@adonisjs/limiter/services/main'
 import db from '@adonisjs/lucid/services/db'
 import { test } from '@japa/runner'
+import { Settings } from 'luxon'
 
 import DevelopmentSeeder from '#database/seeders/development_seeder'
 import { DEMO_EDITIONS } from '#database/support/demo/catalog/benefits'
@@ -92,6 +93,14 @@ test.group('Development demo catalogue', (group) => {
     client,
     cleanup,
   }) => {
+    // Both runs and the agenda read one "now": a run that crosses midnight in the
+    // city would otherwise add the new day's events and fail the rerun check.
+    const frozen = Date.now()
+    const previousNow = Settings.now
+    Settings.now = () => frozen
+    cleanup(() => {
+      Settings.now = previousNow
+    })
     const outcome = await DevelopmentSeeder.prototype.seed()
     const tenant = await Tenant.findByOrFail('slug', 'development')
     // Only this run's objects: other seeds keep their own files under storage/seed.
