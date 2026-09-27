@@ -25,6 +25,7 @@ import type {
   OrganizationReviewPageProps,
   OrganizationReviewQueuePageProps,
 } from '#modules/organizations/interfaces/organization_review_pages'
+import type { PurchaseOperationsPageProps } from '#modules/purchases/interfaces/purchase_pages'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 import type { PublicReviewsPayload } from '#modules/reviews/interfaces/public_reviews_page'
 import type { AndroidDistribution } from '#config/app_distribution'
@@ -109,6 +110,7 @@ declare module '@adonisjs/inertia/types' {
     'backoffice/today/index': BackofficeTodayPageProps
     'backoffice/organizations/index': OrganizationReviewQueuePageProps
     'backoffice/organizations/show': OrganizationReviewPageProps
+    'backoffice/purchases/index': PurchaseOperationsPageProps
     'backoffice/moderation/index': Record<string, any>
     'backoffice/moderation/show': Record<string, any>
     'backoffice/feedback/index': Record<string, any>

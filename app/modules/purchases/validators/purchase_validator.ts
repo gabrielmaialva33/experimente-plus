@@ -1,5 +1,7 @@
 import vine from '@vinejs/vine'
 
+import { PURCHASE_STATUSES } from '#modules/purchases/interfaces/purchase_pages'
+
 export const purchaseValidator = vine.compile(
   vine.object({
     offer_id: vine.number().positive().withoutDecimals().nullable().optional(),
@@ -55,5 +57,13 @@ export const settlementValidator = vine.compile(
     settled_at: vine
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/),
+  })
+)
+
+/** Filters of the back-office "Pedidos" list. */
+export const listPurchasePagesValidator = vine.compile(
+  vine.object({
+    status: vine.enum(PURCHASE_STATUSES).optional(),
+    page: vine.number().positive().withoutDecimals().max(100000).optional(),
   })
 )

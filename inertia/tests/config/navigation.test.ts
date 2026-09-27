@@ -121,13 +121,15 @@ describe('navigation configuration', () => {
     expect(backofficeItems.some((item) => item.href === '/settings')).toBe(false)
   })
 
-  it('puts Organizações in the moderation inbox, before the other queues', () => {
+  it('puts Organizações in the moderation inbox and Pedidos only in front of administrators', () => {
     const labels = (platformAccess: 'platform_admin' | 'platform_moderator') =>
       navigationItemsForSurface('backoffice', 'sidebar', { activeTenantId: 12, platformAccess })
         .filter((item) => ['Caixa de moderação', 'Operação'].includes(item.section))
         .map((item) => `${item.section}: ${item.label}`)
 
     expect(labels('platform_moderator')).toContain('Caixa de moderação: Organizações')
+    expect(labels('platform_moderator')).not.toContain('Operação: Pedidos')
+    expect(labels('platform_admin')).toContain('Operação: Pedidos')
     expect(
       labels('platform_admin').filter((label) => label.startsWith('Caixa de moderação'))
     ).toEqual([
@@ -140,6 +142,7 @@ describe('navigation configuration', () => {
       'backoffice-organization-review'
     )
     expect(matchNavigationItem('/backoffice/organizations/13')?.id).toBe('backoffice-organizations')
+    expect(resolveRouteMetadata('/backoffice/purchases', 'backoffice')?.title).toBe('Pedidos')
   })
 
   it('fails closed for Backoffice when platform access is absent', () => {

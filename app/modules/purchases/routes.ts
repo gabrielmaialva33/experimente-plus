@@ -5,6 +5,8 @@ import { apiThrottle, throttle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const PurchasesController = () => import('#modules/purchases/controllers/purchases_controller')
+const PurchasePagesController = () =>
+  import('#modules/purchases/controllers/purchase_pages_controller')
 router.get('/api/v1/catalog/benefit-editions', [PurchasesController, 'catalog']).use(throttle)
 router
   .post('/api/v1/payments/webhooks/:provider', [PurchasesController, 'webhook'])
@@ -42,3 +44,21 @@ router
     apiThrottle,
     middleware.tenant({ required: true }),
   ])
+
+/**
+ * "Pedidos" in the back office, for platform administrators as
+ * `/api/v1/admin/purchases` is: the service requires platform administration
+ * on every read and write. Confirming a simulated payment answers only when
+ * the provider is the fake one outside production (404 otherwise); it runs
+ * the reconciliation of `purchases:simulate`, never a grant of its own.
+ */
+router
+  .group(() => {
+    router.get('/purchases', [PurchasePagesController, 'index']).as('backoffice.purchases.index')
+    router
+      .post('/purchases/:id/simulate-payment', [PurchasePagesController, 'confirmSimulatedPayment'])
+      .as('backoffice.purchases.simulate_payment')
+  })
+  .prefix('/backoffice')
+  .use(middleware.auth({ guards: ['jwt'] }))
+  .use(middleware.tenant({ required: true }))

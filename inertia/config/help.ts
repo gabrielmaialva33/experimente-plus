@@ -35,6 +35,7 @@ export const PAGE_HELP_ANCHORS: Readonly<Record<string, string>> = {
   'files/index': 'administracao-painel',
   'backoffice/organizations/index': 'administracao-hoje',
   'backoffice/organizations/show': 'administracao-hoje',
+  'backoffice/purchases/index': 'administracao-acessos',
   'backoffice/moderation/index': 'administracao-dados-de-lugares',
   'backoffice/moderation/show': 'administracao-dados-de-lugares',
   'backoffice/content/index': 'administracao-conteudo',
