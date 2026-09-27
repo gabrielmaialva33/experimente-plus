@@ -6,7 +6,7 @@ const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
   <nav
     data-slot="pagination"
     role="navigation"
-    aria-label="pagination"
+    aria-label="Paginação"
     className={cn('mx-auto flex w-full justify-center', className)}
     {...props}
   />
@@ -34,7 +34,7 @@ const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<'span'
     {...props}
   >
     <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More pages</span>
+    <span className="sr-only">Mais páginas</span>
   </span>
 )
 
