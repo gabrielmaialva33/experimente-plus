@@ -126,6 +126,14 @@ export function projectOrganizationAllowedActions(
     pilot_feedback: {
       create: allows('read', IPermission.Resources.PILOT_FEEDBACK, IPermission.Actions.CREATE),
     },
+    team: {
+      read: allows('read', IPermission.Resources.ORGANIZATION_MEMBERS, IPermission.Actions.LIST),
+      manage: allows(
+        'manage_team',
+        IPermission.Resources.ORGANIZATION_INVITATIONS,
+        IPermission.Actions.CREATE
+      ),
+    },
   }
 }
 
@@ -279,6 +287,18 @@ function capabilitiesForOrganization(
     : []
 }
 
+/**
+ * Actions aggregated across every organization the snapshot reaches. Shared
+ * with every Inertia page so the Portal menu offers only what at least one
+ * active membership (or platform administration) actually allows.
+ */
+export function projectActorAllowedActions(
+  snapshot: IOrganization.ActorAccessSnapshot,
+  permissionNames: ReadonlySet<string>
+): IOrganization.AllowedActions {
+  return projectOrganizationAllowedActions(capabilitiesForActor(snapshot), permissionNames)
+}
+
 @inject()
 export default class OrganizationResourceAuthorizationService {
   constructor(
@@ -313,10 +333,7 @@ export default class OrganizationResourceAuthorizationService {
     const accessSnapshot = await this.organizationPolicy.resolveActorAccess(actor, tenantId)
     const permissions = await this.permissionService.getEffectivePermissionNames(actor.id)
     const permissionNames = new Set(permissions)
-    const allowedActions = projectOrganizationAllowedActions(
-      capabilitiesForActor(accessSnapshot),
-      permissionNames
-    )
+    const allowedActions = projectActorAllowedActions(accessSnapshot, permissionNames)
 
     return {
       access_snapshot: accessSnapshot,

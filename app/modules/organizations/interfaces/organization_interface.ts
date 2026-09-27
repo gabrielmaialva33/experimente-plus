@@ -38,6 +38,13 @@ namespace IOrganization {
     read_analytics: boolean
     read_redemptions: boolean
     validate_redemptions: boolean
+    /**
+     * Invite people and manage memberships for at least part of the team. The
+     * exact roles an actor may grant or manage are narrower (an organization
+     * admin only handles editors and analysts) and come from
+     * `grantableOrganizationRoles` / `canManageOrganizationMember`.
+     */
+    manage_team: boolean
   }
 
   export interface ActorAccessSnapshot {
@@ -88,6 +95,12 @@ namespace IOrganization {
     }
     pilot_feedback: {
       create: boolean
+    }
+    team: {
+      /** See the members and pending invitations of the organization. */
+      read: boolean
+      /** Invite people or change, suspend and remove members. */
+      manage: boolean
     }
   }
 

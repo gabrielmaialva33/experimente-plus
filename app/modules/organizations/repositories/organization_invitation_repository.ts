@@ -35,6 +35,18 @@ export default class OrganizationInvitationRepository {
     return query.first()
   }
 
+  /**
+   * Read-only lookup for the acceptance page. Acceptance itself goes through
+   * `findByTokenHashForUpdate` inside its transaction.
+   */
+  async findByTokenHash(tokenHash: string): Promise<OrganizationInvitation | null> {
+    return OrganizationInvitation.query()
+      .where('token_hash', tokenHash)
+      .preload('organization')
+      .preload('inviter')
+      .first()
+  }
+
   async findByTokenHashForUpdate(
     tokenHash: string,
     client: TransactionClientContract

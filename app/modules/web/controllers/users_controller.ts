@@ -3,6 +3,7 @@ import app from '@adonisjs/core/services/app'
 
 import NotFoundException from '#exceptions/not_found_exception'
 
+import AttachUserToOperationService from '#modules/users/services/attach_user_to_operation_service'
 import CreateUserService from '#modules/users/services/create_user_service'
 import EditUserService from '#modules/users/services/edit_user_service'
 import DeleteUserService from '#modules/users/services/delete_user_service'
@@ -43,21 +44,44 @@ export default class InertiaUsersController {
     })
   }
 
-  async create({ inertia }: HttpContext) {
-    return inertia.render('users/create', {})
+  async create({ inertia, tenant }: HttpContext) {
+    const operations = await app.container.make(AttachUserToOperationService)
+
+    return inertia.render('users/create', {
+      operation: tenant ? await operations.operation(tenant.id) : null,
+    })
   }
 
-  async store({ request, response }: HttpContext) {
+  /**
+   * An account created here joins the operation in use as `member`, as
+   * sign-up and invitation acceptance do: without that link it had no wallet
+   * and could not be invited by an organization of the operation.
+   */
+  async store({ request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(createUserValidator, {
       data: request.body(),
     })
     const createUserService = await app.container.make(CreateUserService)
-    await createUserService.run(payload)
+    const user = await createUserService.run(payload, { attachTenantId: tenant?.id })
+
+    const operations = await app.container.make(AttachUserToOperationService)
+    const operation = tenant ? await operations.operation(tenant.id) : null
+    if (operation) {
+      session.flash(
+        'success',
+        `Conta de ${user.full_name} criada e vinculada à operação ${operation.name} como membro.`
+      )
+    } else {
+      session.flash(
+        'warning',
+        `Conta de ${user.full_name} criada sem operação: escolha uma operação ativa e vincule a conta na edição.`
+      )
+    }
 
     return response.redirect().toPath('/users')
   }
 
-  async edit({ inertia, params, request }: HttpContext) {
+  async edit({ inertia, params, request, tenant }: HttpContext) {
     const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
     const getUserService = await app.container.make(GetUserService)
     const user = await getUserService.run(userId)
@@ -65,9 +89,35 @@ export default class InertiaUsersController {
     // web audit W28.
     if (!user) throw new NotFoundException('User not found')
 
+    const operations = await app.container.make(AttachUserToOperationService)
+    const operation = tenant ? await operations.status(user.id, tenant.id) : null
+
     // A Lucid model reaches the page as its internals ($attributes…), leaving the
     // form and the title empty ("Editar usuário: undefined"); send its JSON shape.
-    return inertia.render('users/edit', { user: user.serialize() })
+    return inertia.render('users/edit', { user: user.serialize(), operation })
+  }
+
+  /**
+   * Links an existing account to the operation in use, for accounts created
+   * here before new ones were linked automatically. Repeating it is harmless.
+   */
+  async attachOperation({ params, request, response, session, tenant }: HttpContext) {
+    const { id: userId } = await request.validateUsing(userIdParamValidator, { data: params })
+    if (!tenant) {
+      session.flash('error', 'Escolha uma operação ativa antes de vincular a conta.')
+      return response.redirect().toPath(`/users/${userId}/edit`)
+    }
+
+    const service = await app.container.make(AttachUserToOperationService)
+    const result = await service.run(userId, tenant.id)
+    session.flash(
+      'success',
+      result.created
+        ? `Conta vinculada à operação ${result.operation} como membro.`
+        : `A conta já estava vinculada à operação ${result.operation}.`
+    )
+
+    return response.redirect().toPath(`/users/${userId}/edit`)
   }
 
   async update({ auth, request, response, params }: HttpContext) {

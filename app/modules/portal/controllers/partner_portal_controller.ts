@@ -176,7 +176,7 @@ export default class PartnerPortalController {
    * organization, so one organization goes straight to its numbers and several
    * choose on the places page, where each has its link.
    */
-  async performance({ auth, response, tenant }: HttpContext) {
+  async performance({ auth, response, session, tenant }: HttpContext) {
     const actor = auth.getUserOrFail()
     const authorizationContext = await this.resourceAuthorization.forActorContext(tenant!.id, actor)
     const overview = await this.portalService.overview(tenant!.id, actor, authorizationContext)
@@ -187,7 +187,16 @@ export default class PartnerPortalController {
     if (readable.length === 1) {
       return response.redirect().toPath(`/organizations/${readable[0].id}/analytics`)
     }
-    return response.redirect().toPath(readable.length === 0 ? '/portal' : '/portal/establishments')
+    if (readable.length === 0) {
+      // The menu no longer offers it without the role; a typed or stale link
+      // still says why it lands on the overview.
+      session.flash(
+        'warning',
+        'O desempenho fica disponível para proprietários, administradores e analistas da organização.'
+      )
+      return response.redirect().toPath('/portal')
+    }
+    return response.redirect().toPath('/portal/establishments')
   }
 
   async establishment({ auth, inertia, params, response, tenant }: HttpContext) {

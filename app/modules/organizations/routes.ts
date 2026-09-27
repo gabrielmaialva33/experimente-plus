@@ -15,9 +15,20 @@ const AdminOrganizationsController = () =>
   import('#modules/organizations/controllers/admin_organizations_controller')
 const AdminOrganizationClaimsController = () =>
   import('#modules/organizations/controllers/admin_organization_claims_controller')
+const OrganizationTeamPagesController = () =>
+  import('#modules/organizations/controllers/organization_team_pages_controller')
+const OrganizationInvitationPagesController = () =>
+  import('#modules/organizations/controllers/organization_invitation_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
+
+/** A page that shows two resources needs the right to read both. */
+const permissions = (...pairs: [IPermission.Resources, IPermission.Actions][]) =>
+  middleware.permission({
+    permissions: pairs.map(([resource, action]) => `${resource}.${action}`),
+    requireAll: true,
+  })
 
 router
   .group(() => {
@@ -119,3 +130,89 @@ router
   .prefix('/api/v1/admin/organization-claims')
   .use(middleware.auth())
   .use(middleware.tenant({ required: true }))
+
+/**
+ * "Equipe" in the partner Portal. Each route carries the permission of its
+ * `/api/v1/organizations/:id/...` counterpart, so the page is never a wider
+ * door than the API; the membership and invitation services decide which
+ * roles the actor may grant or manage.
+ */
+router
+  .group(() => {
+    router
+      .get('/team', [OrganizationTeamPagesController, 'index'])
+      .as('portal.team.index')
+      .use(permission(IPermission.Resources.ORGANIZATION_MEMBERS, IPermission.Actions.LIST))
+    router
+      .get('/organizations/:organizationId/team', [OrganizationTeamPagesController, 'show'])
+      .where('organizationId', router.matchers.number())
+      .as('portal.team.show')
+      .use(
+        permissions(
+          [IPermission.Resources.ORGANIZATION_MEMBERS, IPermission.Actions.LIST],
+          [IPermission.Resources.ORGANIZATION_INVITATIONS, IPermission.Actions.LIST]
+        )
+      )
+    router
+      .post('/organizations/:organizationId/team/invitations', [
+        OrganizationTeamPagesController,
+        'invite',
+      ])
+      .where('organizationId', router.matchers.number())
+      .as('portal.team.invitations.store')
+      .use(permission(IPermission.Resources.ORGANIZATION_INVITATIONS, IPermission.Actions.CREATE))
+    router
+      .post('/organizations/:organizationId/team/invitations/:invitationId/resend', [
+        OrganizationTeamPagesController,
+        'resendInvitation',
+      ])
+      .where('organizationId', router.matchers.number())
+      .where('invitationId', router.matchers.number())
+      .as('portal.team.invitations.resend')
+      .use(permission(IPermission.Resources.ORGANIZATION_INVITATIONS, IPermission.Actions.RESEND))
+    router
+      .delete('/organizations/:organizationId/team/invitations/:invitationId', [
+        OrganizationTeamPagesController,
+        'cancelInvitation',
+      ])
+      .where('organizationId', router.matchers.number())
+      .where('invitationId', router.matchers.number())
+      .as('portal.team.invitations.destroy')
+      .use(permission(IPermission.Resources.ORGANIZATION_INVITATIONS, IPermission.Actions.REVOKE))
+    router
+      .patch('/organizations/:organizationId/team/members/:memberId', [
+        OrganizationTeamPagesController,
+        'updateMember',
+      ])
+      .where('organizationId', router.matchers.number())
+      .where('memberId', router.matchers.number())
+      .as('portal.team.members.update')
+      .use(permission(IPermission.Resources.ORGANIZATION_MEMBERS, IPermission.Actions.UPDATE))
+    router
+      .delete('/organizations/:organizationId/team/members/:memberId', [
+        OrganizationTeamPagesController,
+        'removeMember',
+      ])
+      .where('organizationId', router.matchers.number())
+      .where('memberId', router.matchers.number())
+      .as('portal.team.members.destroy')
+      .use(permission(IPermission.Resources.ORGANIZATION_MEMBERS, IPermission.Actions.DELETE))
+  })
+  .prefix('/portal')
+  .use(middleware.auth({ guards: ['jwt'] }))
+  .use(middleware.tenant({ required: true }))
+
+/**
+ * The page the invitation e-mail links to. Reading it needs no account: the
+ * link explains the invitation and offers sign-in or sign-up. Accepting needs
+ * the invited account and the permission the API route carries; the token
+ * resolves its own operation, so no active one is required.
+ */
+router
+  .get('/organization-invitations/accept', [OrganizationInvitationPagesController, 'show'])
+  .as('organization_invitations.accept.show')
+router
+  .post('/organization-invitations/accept', [OrganizationInvitationPagesController, 'accept'])
+  .as('organization_invitations.accept.store')
+  .use(middleware.auth({ guards: ['jwt'] }))
+  .use(permission(IPermission.Resources.ORGANIZATION_INVITATIONS, IPermission.Actions.ACCEPT))

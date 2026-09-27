@@ -11,18 +11,29 @@ import { Checkbox } from '~/components/ui/checkbox'
 
 interface RegisterFormProps {
   errors?: Record<string, string>
+  /** Server-validated page to return to after signing up, such as an invitation. */
+  next?: string | null
+  /** The invited address, when sign-up comes from an invitation opened in this browser. */
+  invitedEmail?: string | null
 }
 
-export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
+export function RegisterForm({
+  errors: serverErrors,
+  next = null,
+  invitedEmail = null,
+}: RegisterFormProps = {}) {
   const submissionStarted = useRef(false)
   const { data, setData, post, processing, errors } = useForm({
     full_name: '',
-    email: '',
+    email: invitedEmail ?? '',
     username: '',
     password: '',
     password_confirmation: '',
     terms_accepted: false,
+    ...(next ? { next } : {}),
   })
+  const leavesInvitedEmail =
+    invitedEmail !== null && data.email.trim().toLowerCase() !== invitedEmail.toLowerCase()
 
   const generalError = serverErrors?.general
 
@@ -76,6 +87,13 @@ export function RegisterForm({ errors: serverErrors }: RegisterFormProps = {}) {
         onChange={(event) => setData('email', event.target.value)}
         error={errors.email}
         placeholder="voce@exemplo.com"
+        hint={
+          invitedEmail
+            ? leavesInvitedEmail
+              ? 'Com outro e-mail a conta é criada, mas o convite só pode ser aceito pelo e-mail convidado.'
+              : 'É o e-mail do convite: com ele você aceita logo depois de criar a conta.'
+            : undefined
+        }
         required
         autoComplete="email"
         leftIcon={<Mail className="size-4" />}

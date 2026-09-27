@@ -59,6 +59,7 @@ const readOnlyActions: OrganizationAllowedActions = {
   redemptions: { read: true, validate: false },
   analytics: { read: true },
   pilot_feedback: { create: true },
+  team: { read: true, manage: false },
 }
 
 beforeEach(() => {

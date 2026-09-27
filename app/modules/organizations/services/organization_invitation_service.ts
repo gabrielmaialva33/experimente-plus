@@ -7,6 +7,7 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
+import type { OrganizationInvitationAcceptPageProps } from '#modules/organizations/interfaces/organization_team_pages'
 import Organization from '#modules/organizations/models/organization'
 import OrganizationInvitation from '#modules/organizations/models/organization_invitation'
 import OrganizationInvitationRepository from '#modules/organizations/repositories/organization_invitation_repository'
@@ -17,6 +18,7 @@ import OrganizationInvitationNotification from '#modules/organizations/services/
 import OrganizationInvitationTokenService from '#modules/organizations/services/organization_invitation_token_service'
 import OrganizationMembershipService from '#modules/organizations/services/organization_membership_service'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
+import { maskEmail } from '#modules/organizations/utils/organization_team_messages'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import User from '#modules/users/models/user'
 
@@ -254,6 +256,105 @@ export default class OrganizationInvitationService {
       membership_id: result.membershipId,
       role: result.role,
     }
+  }
+
+  /**
+   * What the acceptance page may tell whoever holds the link, without
+   * accepting anything. The raw token is only hashed, never returned; the
+   * invited address appears as a hint, and in full only to its own account.
+   */
+  async preview(
+    token: string | null,
+    viewer: User | null
+  ): Promise<OrganizationInvitationAcceptPageProps> {
+    const unknownInvitation = (
+      state: 'missing' | 'invalid'
+    ): OrganizationInvitationAcceptPageProps => ({
+      state,
+      invitation: null,
+      viewer: {
+        signed_in: viewer !== null,
+        email: viewer?.email ?? null,
+        matches: false,
+        membership: null,
+        accepted: false,
+      },
+      portal_path: null,
+    })
+
+    if (!token) {
+      return unknownInvitation('missing')
+    }
+
+    const invitation = await this.invitationRepository.findByTokenHash(
+      this.tokenService.hash(token)
+    )
+    if (!invitation) {
+      return unknownInvitation('invalid')
+    }
+
+    const organization = invitation.organization
+    const membership = viewer
+      ? await this.memberRepository.findByUser(
+          invitation.tenant_id,
+          invitation.organization_id,
+          viewer.id
+        )
+      : null
+    const membershipStatus =
+      membership && membership.status !== 'removed' ? membership.status : null
+
+    return {
+      state: this.previewState(invitation, organization),
+      invitation: {
+        organization_name: organization.trade_name,
+        role: invitation.role,
+        inviter_name: invitation.inviter?.full_name ?? null,
+        expires_at: invitation.expires_at.toISO() ?? '',
+        email_hint: maskEmail(invitation.email),
+      },
+      viewer: {
+        signed_in: viewer !== null,
+        email: viewer?.email ?? null,
+        matches: viewer !== null && viewer.email.trim().toLowerCase() === invitation.email,
+        membership: membershipStatus,
+        accepted: viewer !== null && invitation.accepted_by === viewer.id,
+      },
+      portal_path:
+        membershipStatus === 'active' ? `/portal/organizations/${organization.id}` : null,
+    }
+  }
+
+  /**
+   * The invited address and organization for the sign-up form, only while the
+   * invitation held in the visitor's session can still be accepted.
+   */
+  async signUpContext(
+    token: string | null
+  ): Promise<{ email: string; organization_name: string } | null> {
+    if (!token) {
+      return null
+    }
+
+    const invitation = await this.invitationRepository.findByTokenHash(
+      this.tokenService.hash(token)
+    )
+    if (!invitation || this.previewState(invitation, invitation.organization) !== 'open') {
+      return null
+    }
+
+    return { email: invitation.email, organization_name: invitation.organization.trade_name }
+  }
+
+  private previewState(
+    invitation: OrganizationInvitation,
+    organization: Organization
+  ): Exclude<OrganizationInvitationAcceptPageProps['state'], 'missing' | 'invalid'> {
+    if (invitation.accepted_at) return 'accepted'
+    if (invitation.revoked_at) return 'revoked'
+    if (['rejected', 'archived'].includes(organization.status)) return 'unavailable'
+    if (invitation.expires_at.toMillis() <= DateTime.now().toMillis()) return 'expired'
+    return 'open'
   }
 
   private async ensureNotActiveMember(

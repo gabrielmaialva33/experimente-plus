@@ -29,10 +29,11 @@ import {
   UserPlus,
   UserRound,
   Users,
+  UsersRound,
   WalletCards,
 } from 'lucide-react'
 
-import type { PlatformAccess } from '~/types'
+import type { OrganizationActionKey, OrganizationAllowedActions, PlatformAccess } from '~/types'
 
 export type NavigationSurface = 'public' | 'consumer' | 'portal' | 'backoffice'
 export type NavigationPlacement = 'consumer-shell' | 'sidebar'
@@ -96,6 +97,12 @@ export interface NavigationItem {
   capability?: string
   /** Any one of these permissions makes the destination available. */
   capabilitiesAnyOf?: readonly string[]
+  /**
+   * Portal action the viewer's organization role must allow in at least one
+   * active membership (`auth.portalActions`), so an editor is not offered
+   * analytics and an analyst is not offered validation.
+   */
+  organizationAction?: OrganizationActionKey
   /** The destination is guarded by tenant middleware and needs an active operation. */
   requiresActiveTenant?: boolean
   /** Matches only this path, excluding descendant routes. */
@@ -364,6 +371,24 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     description: 'Alcance e ações públicas dos seus lugares.',
     capability: 'analytics.read',
     breadcrumbs: [{ label: 'Portal', href: '/portal' }, { label: 'Desempenho' }],
+  },
+  {
+    id: 'portal-organization-team',
+    pattern: '/portal/organizations/:organizationId/team',
+    surface: 'portal',
+    title: 'Equipe',
+    description: 'Quem tem acesso à organização, com que papel, e os convites pendentes.',
+    capability: 'organization_members.list',
+    breadcrumbs: [{ label: 'Portal', href: '/portal' }, { label: 'Equipe' }],
+  },
+  {
+    id: 'portal-team',
+    pattern: '/portal/team',
+    surface: 'portal',
+    title: 'Equipe',
+    description: 'Escolha a organização para ver ou gerenciar a equipe.',
+    capability: 'organization_members.list',
+    breadcrumbs: [{ label: 'Portal', href: '/portal' }, { label: 'Equipe' }],
   },
   {
     id: 'portal-organization-new',
@@ -663,6 +688,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     capability: 'benefit_offers.update',
+    organizationAction: 'redemptions.validate',
     requiresActiveTenant: true,
   },
   {
@@ -674,6 +700,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     capability: 'benefit_offers.read',
+    organizationAction: 'redemptions.read',
     requiresActiveTenant: true,
   },
   {
@@ -685,6 +712,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     capability: 'establishments.read',
+    organizationAction: 'establishments.read',
     requiresActiveTenant: true,
   },
   {
@@ -696,6 +724,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     capability: 'establishments.read',
+    organizationAction: 'establishments.read',
     requiresActiveTenant: true,
   },
   {
@@ -707,6 +736,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     capability: 'establishments.read',
+    organizationAction: 'establishments.read',
     requiresActiveTenant: true,
     activePatterns: ['/portal/organizations/:organizationId/establishments'],
   },
@@ -719,8 +749,22 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     section: 'Portal do parceiro',
     placements: ['sidebar'],
     capability: 'analytics.read',
+    organizationAction: 'analytics.read',
     requiresActiveTenant: true,
     activePatterns: ['/organizations/:organizationId/analytics'],
+  },
+  {
+    id: 'portal-team',
+    label: 'Equipe',
+    href: '/portal/team',
+    icon: UsersRound,
+    surface: 'portal',
+    section: 'Portal do parceiro',
+    placements: ['sidebar'],
+    capability: 'organization_members.list',
+    organizationAction: 'team.manage',
+    requiresActiveTenant: true,
+    activePatterns: ['/portal/organizations/:organizationId/team'],
   },
   {
     id: 'backoffice-today',
@@ -964,6 +1008,26 @@ export function hasNavigationCapability(
   if (item.capability) return can(item.capability)
   if (item.capabilitiesAnyOf?.length) return item.capabilitiesAnyOf.some(can)
   return true
+}
+
+/**
+ * Organization-scoped destinations appear only when an active membership (or
+ * platform administration) allows the action; without the shared projection
+ * they stay hidden.
+ */
+export function hasNavigationOrganizationAction(
+  item: Pick<NavigationItem, 'organizationAction'>,
+  portalActions: OrganizationAllowedActions | null
+): boolean {
+  if (!item.organizationAction) return true
+  if (!portalActions) return false
+
+  const [resource, action] = item.organizationAction.split('.') as [
+    keyof OrganizationAllowedActions,
+    string,
+  ]
+  const actions = portalActions[resource] as Record<string, boolean> | undefined
+  return actions?.[action] === true
 }
 
 export function publicNavigationItemsFor(

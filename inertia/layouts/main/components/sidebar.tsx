@@ -6,6 +6,7 @@ import { AppBrand } from '~/components/app_brand'
 import { Button } from '~/components/ui/button'
 import {
   hasNavigationCapability,
+  hasNavigationOrganizationAction,
   isNavigationItemActive,
   navigationItemsForSurface,
   SURFACE_LABELS,
@@ -47,7 +48,7 @@ export function SidebarNav({
 }) {
   const url = useCurrentUrl()
   const application = useApp()
-  const { activeTenantId, platformAccess, can } = useAuth()
+  const { activeTenantId, platformAccess, portalActions, can } = useAuth()
   const navRef = useRef<HTMLElement>(null)
 
   // Every page mounts its own layout, so the list starts at the top on each visit. On a
@@ -69,7 +70,9 @@ export function SidebarNav({
     platformAccess,
   }).filter((item) => {
     if (item.developmentOnly && !application.demoPagesEnabled) return false
-    return hasNavigationCapability(item, can)
+    return (
+      hasNavigationCapability(item, can) && hasNavigationOrganizationAction(item, portalActions)
+    )
   })
   const visibleSections = visibleItems.reduce<NavigationSection[]>((sections, item) => {
     const section = sections.find((candidate) => candidate.label === item.section)

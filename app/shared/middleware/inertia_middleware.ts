@@ -4,10 +4,13 @@ import app from '@adonisjs/core/services/app'
 import type { NextFn } from '@adonisjs/core/types/http'
 import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
+import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import OrganizationMember from '#modules/organizations/models/organization_member'
 import OrganizationPolicyService, {
+  organizationActorAccessSnapshot,
   type PlatformAccess,
 } from '#modules/organizations/services/organization_policy_service'
+import { projectActorAllowedActions } from '#modules/organizations/services/organization_resource_authorization_service'
 import PermissionService from '#modules/permissions/services/permission_service'
 import { resolveActiveTenantId } from '#shared/utils/active_tenant'
 import { findApplicationSetCookies } from '#shared/utils/public_response_cookies'
@@ -17,6 +20,16 @@ type SharedUser = {
   id: number
   full_name: string
   email: string
+}
+
+/**
+ * `IOrganization.AllowedActions` as an anonymous object type: Inertia shares
+ * only JSON-shaped props, and a named interface has no index signature.
+ */
+type SharedPortalActions = {
+  [Resource in keyof IOrganization.AllowedActions]: {
+    [Action in keyof IOrganization.AllowedActions[Resource]]: boolean
+  }
 }
 
 type SharedTenant = {
@@ -40,13 +53,15 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     const flash = {
       success: ctx.session?.flashMessages.get('success') ?? null,
       error: ctx.session?.flashMessages.get('error') ?? null,
+      warning: ctx.session?.flashMessages.get('warning') ?? null,
     }
 
     if (
       auth.user ||
       Object.keys(errors).length > 0 ||
       flash.success !== null ||
-      flash.error !== null
+      flash.error !== null ||
+      flash.warning !== null
     ) {
       this.personalizedPages.add(ctx)
     }
@@ -195,6 +210,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     hasActiveOrganizationMembership: boolean
     platformAccess: PlatformAccess | null
     permissions: string[]
+    portalActions: SharedPortalActions | null
   }> {
     const empty = {
       user: null,
@@ -203,6 +219,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       hasActiveOrganizationMembership: false,
       platformAccess: null,
       permissions: [] as string[],
+      portalActions: null,
     }
 
     if (!ctx.auth) {
@@ -241,23 +258,29 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       permissionService.getEffectivePermissionNames(user.id),
       organizationPolicy.resolvePlatformAccess(user),
     ])
-    const activeOrganizationMembership =
+    const activeMemberships =
       activeTenantId === null
-        ? null
+        ? []
         : await OrganizationMember.query()
             .where('tenant_id', activeTenantId)
             .where('user_id', user.id)
             .where('status', 'active')
-            .select('id')
-            .first()
+            .select('organization_id', 'role')
+    // The Portal menu follows the same organization policy the pages enforce:
+    // an editor is not offered analytics, an analyst is not offered validation.
+    const accessSnapshot = organizationActorAccessSnapshot(platformAccess, activeMemberships)
 
     return {
       user: { id: user.id, full_name: user.full_name, email: user.email },
       tenants,
       activeTenantId,
-      hasActiveOrganizationMembership: activeOrganizationMembership !== null,
+      hasActiveOrganizationMembership: accessSnapshot.has_active_organization_membership,
       platformAccess,
       permissions,
+      portalActions:
+        activeTenantId === null
+          ? null
+          : projectActorAllowedActions(accessSnapshot, new Set(permissions)),
     }
   }
 }
