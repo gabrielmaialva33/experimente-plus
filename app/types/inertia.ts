@@ -13,6 +13,10 @@ import type { DashboardStats } from '#modules/web/services/get_dashboard_stats_s
 import type { WebRole } from '#modules/web/services/list_roles_with_permissions_service'
 import type { WebPermission } from '#modules/web/services/list_all_permissions_service'
 import type { PartnerPlacesPageProps } from '#modules/portal/interfaces/portal_pages'
+import type {
+  OrganizationTeamChooserProps,
+  OrganizationTeamPageProps,
+} from '#modules/organizations/interfaces/organization_team_pages'
 import type { BackofficeTodayPageProps } from '#modules/portal/interfaces/backoffice_today_page'
 import type { PartnerReviewsPageProps } from '#modules/reviews/interfaces/partner_reviews_page'
 import type { PublicReviewsPayload } from '#modules/reviews/interfaces/public_reviews_page'
@@ -81,6 +85,8 @@ declare module '@adonisjs/inertia/types' {
     'portal/redemptions/validate': Record<string, any>
     'portal/redemptions/receipt': Record<string, any>
     'portal/content/index': Record<string, any>
+    'portal/team/index': OrganizationTeamChooserProps
+    'portal/organizations/team': OrganizationTeamPageProps
 
     // Backoffice
     'backoffice/today/index': BackofficeTodayPageProps

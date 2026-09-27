@@ -40,13 +40,15 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
     const flash = {
       success: ctx.session?.flashMessages.get('success') ?? null,
       error: ctx.session?.flashMessages.get('error') ?? null,
+      warning: ctx.session?.flashMessages.get('warning') ?? null,
     }
 
     if (
       auth.user ||
       Object.keys(errors).length > 0 ||
       flash.success !== null ||
-      flash.error !== null
+      flash.error !== null ||
+      flash.warning !== null
     ) {
       this.personalizedPages.add(ctx)
     }

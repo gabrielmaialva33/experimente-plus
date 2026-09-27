@@ -10,6 +10,7 @@ import {
   Plus,
   Save,
   Send,
+  UsersRound,
 } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 
@@ -161,6 +162,7 @@ export default function PortalOrganizationPage({
     submittableStatuses.has(organization.status) && allowedActions.organizations.submit
   const canCreateEstablishment = allowedActions.establishments.create
   const canReadAnalytics = allowedActions.analytics.read
+  const canReadTeam = allowedActions.team.read
   const canCreateFeedback = allowedActions.pilot_feedback.create
   const formErrors = form.errors as Record<string, unknown>
   const busy = operation !== null || form.processing
@@ -405,6 +407,14 @@ export default function PortalOrganizationPage({
                   <Link href={`/organizations/${organization.id}/analytics`}>
                     <BarChart3 aria-hidden="true" className="size-4" />
                     Desempenho
+                  </Link>
+                </Button>
+              ) : null}
+              {canReadTeam ? (
+                <Button asChild variant="outline" size="lg" shape="pill">
+                  <Link href={`/portal/organizations/${organization.id}/team`}>
+                    <UsersRound aria-hidden="true" className="size-4" />
+                    Equipe
                   </Link>
                 </Button>
               ) : null}

@@ -33,6 +33,35 @@ export function organizationRoleLabel(role: string | null | undefined): string {
   return role ? (ORGANIZATION_ROLE_LABELS[role] ?? role) : 'Acesso da plataforma'
 }
 
+/**
+ * What each organization role can do, as the Portal enforces it (ADR-0011,
+ * narrowed by ADR-0017 for analytics and ADR-0021 for redemptions).
+ */
+export const ORGANIZATION_ROLE_DESCRIPTIONS: Record<string, string> = {
+  owner:
+    'Controle total: dados da organização, lugares, benefícios, desempenho e toda a equipe, inclusive outros proprietários.',
+  admin:
+    'Cuida dos dados da organização, dos lugares e dos benefícios, vê o desempenho e convida ou gerencia editores e analistas.',
+  editor:
+    'Atualiza lugares, experiências e benefícios e valida benefícios no balcão. Não vê o desempenho nem gerencia a equipe.',
+  analyst:
+    'Acompanha o desempenho e consulta as utilizações, sem editar dados nem validar benefícios.',
+}
+
+export function organizationRoleDescription(role: string): string {
+  return ORGANIZATION_ROLE_DESCRIPTIONS[role] ?? 'Papel definido pela organização.'
+}
+
+export const ORGANIZATION_MEMBER_STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo',
+  suspended: 'Suspenso',
+  removed: 'Removido',
+}
+
+export function organizationMemberStatusLabel(status: string): string {
+  return ORGANIZATION_MEMBER_STATUS_LABELS[status] ?? status
+}
+
 export const OPERATION_ROLE_LABELS: Record<string, string> = {
   owner: 'Responsável pela operação',
   member: 'Membro da operação',
