@@ -311,61 +311,93 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
           </CardHeader>
           <CardContent>
             {dashboard.establishments.length > 0 ? (
-              <div
-                className="overflow-x-auto"
-                role="region"
-                aria-label="Desempenho por lugar"
-                tabIndex={0}
-              >
-                <table className="w-full min-w-[640px] text-sm">
-                  <caption className="sr-only">
-                    Vezes que apareceu, visitas, contatos e sessões de cada lugar no período.
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-[0.1em] text-muted-foreground">
-                      <th scope="col" className="px-3 py-3 font-bold">
-                        Lugar
-                      </th>
-                      <th scope="col" className="px-3 py-3 text-right font-bold">
-                        Apareceu
-                      </th>
-                      <th scope="col" className="px-3 py-3 text-right font-bold">
-                        Visitas
-                      </th>
-                      <th scope="col" className="px-3 py-3 text-right font-bold">
-                        Contatos
-                      </th>
-                      <th scope="col" className="px-3 py-3 text-right font-bold">
-                        Sessões
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.establishments.map((establishment) => (
-                      <tr
-                        key={establishment.establishment_id}
-                        className="border-b border-border-subtle last:border-0"
-                      >
-                        <th scope="row" className="px-3 py-4 text-left font-display font-bold">
-                          {establishment.public_name}
+              <>
+                {/* A phone gets one card per place, the four numbers in a grid: a scrolling
+                    640 px table hid three of them behind an iOS scrollbar that only shows
+                    while scrolling. The table returns from 640 px up. */}
+                <ul aria-label="Desempenho por lugar" className="space-y-3 sm:hidden">
+                  {dashboard.establishments.map((establishment) => (
+                    <li
+                      key={establishment.establishment_id}
+                      className="rounded-2xl bg-background px-4 py-3"
+                    >
+                      <p className="font-display font-bold">{establishment.public_name}</p>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        {(
+                          [
+                            ['Apareceu', establishment.impressions],
+                            ['Visitas', establishment.views],
+                            ['Contatos', establishment.conversions],
+                            ['Sessões', establishment.unique_sessions],
+                          ] as const
+                        ).map(([label, value]) => (
+                          <div key={label} className="flex items-baseline justify-between gap-2">
+                            <dt className="text-muted-foreground">{label}</dt>
+                            <dd className="font-display font-bold tabular-nums">
+                              {compactNumber(value)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+                <div
+                  className="hidden overflow-x-auto sm:block"
+                  role="region"
+                  aria-label="Desempenho por lugar"
+                  tabIndex={0}
+                >
+                  <table className="w-full min-w-[640px] text-sm">
+                    <caption className="sr-only">
+                      Vezes que apareceu, visitas, contatos e sessões de cada lugar no período.
+                    </caption>
+                    <thead>
+                      <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-[0.1em] text-muted-foreground">
+                        <th scope="col" className="px-3 py-3 font-bold">
+                          Lugar
                         </th>
-                        <td className="px-3 py-4 text-right tabular-nums">
-                          {compactNumber(establishment.impressions)}
-                        </td>
-                        <td className="px-3 py-4 text-right tabular-nums">
-                          {compactNumber(establishment.views)}
-                        </td>
-                        <td className="px-3 py-4 text-right tabular-nums">
-                          {compactNumber(establishment.conversions)}
-                        </td>
-                        <td className="px-3 py-4 text-right tabular-nums">
-                          {compactNumber(establishment.unique_sessions)}
-                        </td>
+                        <th scope="col" className="px-3 py-3 text-right font-bold">
+                          Apareceu
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-right font-bold">
+                          Visitas
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-right font-bold">
+                          Contatos
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-right font-bold">
+                          Sessões
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {dashboard.establishments.map((establishment) => (
+                        <tr
+                          key={establishment.establishment_id}
+                          className="border-b border-border-subtle last:border-0"
+                        >
+                          <th scope="row" className="px-3 py-4 text-left font-display font-bold">
+                            {establishment.public_name}
+                          </th>
+                          <td className="px-3 py-4 text-right tabular-nums">
+                            {compactNumber(establishment.impressions)}
+                          </td>
+                          <td className="px-3 py-4 text-right tabular-nums">
+                            {compactNumber(establishment.views)}
+                          </td>
+                          <td className="px-3 py-4 text-right tabular-nums">
+                            {compactNumber(establishment.conversions)}
+                          </td>
+                          <td className="px-3 py-4 text-right tabular-nums">
+                            {compactNumber(establishment.unique_sessions)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="rounded-2xl border border-dashed border-border">
                 <EmptyState

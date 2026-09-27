@@ -330,7 +330,7 @@ export default function BackofficeTodayPage({ counts, inbox }: BackofficeTodayPr
                       <td className="px-3 py-2 text-right align-middle">
                         <Link
                           href={row.href}
-                          className="inline-flex h-10 items-center rounded-full border-[1.5px] border-primary px-4 font-bold text-primary transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none"
+                          className="inline-flex h-10 items-center rounded-full border-[1.5px] border-primary px-4 pointer-coarse:h-11 font-bold text-primary transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none"
                         >
                           Revisar<span className="sr-only">: {row.title}</span>
                         </Link>

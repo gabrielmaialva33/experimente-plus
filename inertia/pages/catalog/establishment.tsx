@@ -271,7 +271,7 @@ function PublishedEstablishment({
                   key={category.slug}
                   href={`/cidades/${encodeURIComponent(detail.city.slug)}/categorias/${encodeURIComponent(category.slug)}`}
                   className={cn(
-                    'inline-flex min-h-9 items-center rounded-full border px-3.5 text-[0.8125rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
+                    'touch-hitbox inline-flex min-h-9 items-center rounded-full border px-3.5 text-[0.8125rem] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
                     category.isPrimary
                       ? 'border-primary bg-primary text-primary-foreground hover:bg-primary-hover'
                       : 'bg-choice-background text-choice-foreground hover:bg-accent'

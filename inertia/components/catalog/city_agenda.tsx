@@ -20,6 +20,7 @@ import {
 } from '~/components/catalog/establishment_partner_content'
 import { EmptyState } from '~/components/empty_state'
 import { Button } from '~/components/ui/button'
+import { scrollBehavior } from '~/lib/motion'
 
 /**
  * The city's agenda — three chronological bands, no ranking.
@@ -356,8 +357,7 @@ function useRail() {
   const page = (direction: 1 | -1) => {
     const rail = ref.current
     if (!rail) return
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    rail.scrollBy({ left: direction * rail.clientWidth, behavior: reduce ? 'auto' : 'smooth' })
+    rail.scrollBy({ left: direction * rail.clientWidth, behavior: scrollBehavior() })
   }
 
   return { ref, edges, page }

@@ -69,7 +69,7 @@ function TenantSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="h-9 max-w-[280px] gap-2 rounded-md bg-background px-2.5"
+          className="h-9 max-w-[280px] gap-2 rounded-md bg-background px-2.5 pointer-coarse:h-11"
           title={activeTenant?.name}
         >
           <Avatar className="size-6">
@@ -138,7 +138,7 @@ function UserMenu({ surface }: { surface: NavigationSurface }) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-10 gap-2 rounded-md py-1 pe-2 ps-1 hover:bg-accent"
+          className="h-10 gap-2 rounded-md py-1 pe-2 ps-1 hover:bg-accent pointer-coarse:h-11"
           aria-label="Abrir menu do usuário"
         >
           <Avatar className="size-8">
@@ -226,7 +226,7 @@ export function Header({ surface }: { surface: NavigationSurface }) {
   useEffect(() => setMobileOpen(false), [url])
 
   return (
-    <header className="sticky top-0 z-40 flex min-h-[72px] w-full items-center border-b border-border bg-background pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-40 flex min-h-[72px] w-full items-center border-b border-border bg-background pt-[env(safe-area-inset-top)] short:static">
       <div className="app-container flex items-center gap-3">
         <div className="flex items-center gap-2 lg:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#172641" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#13467c" />
+    <title>Sem conexão — Experimente+</title>
+    <!--
+      Shown by the service worker in place of a page that could not load for
+      lack of network. It is served at whatever address was requested, so it
+      depends on nothing else: styles, script and icons are inline. The colours
+      are the app's tokens (inertia/css/app.css) in sRGB.
+    -->
+    <script>
+      // The theme chosen in the app (next-themes keeps it under "theme"); otherwise the system's.
+      try {
+        var theme = localStorage.getItem('theme')
+        if (theme === 'dark' || theme === 'light') document.documentElement.classList.add(theme)
+      } catch (error) {}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f3f5f7;
+        --foreground: #1e2227;
+        --muted-foreground: #535961;
+        --card: #ffffff;
+        --border: #c7cbd0;
+        --border-subtle: #dde1e6;
+        --primary: #13467c;
+        --primary-hover: #0d3866;
+        --primary-foreground: #ffffff;
+        --primary-soft: #e9f2fe;
+        --primary-accent: #13467c;
+        --cta: #e2661a;
+        --ring: #1a5695;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not(.light) {
+          color-scheme: dark;
+          --background: #11131c;
+          --foreground: #f7f6f2;
+          --muted-foreground: #cec6b6;
+          --card: #1d2134;
+          --border: #40486d;
+          --border-subtle: #2e334f;
+          --primary: #75b0f0;
+          --primary-hover: #9ac5f4;
+          --primary-foreground: #0f1324;
+          --primary-soft: #23374d;
+          --primary-accent: #9ecafa;
+          --cta: #f98c4d;
+          --ring: #75b0f0;
+        }
+      }
+
+      :root.dark {
+        color-scheme: dark;
+        --background: #11131c;
+        --foreground: #f7f6f2;
+        --muted-foreground: #cec6b6;
+        --card: #1d2134;
+        --border: #40486d;
+        --border-subtle: #2e334f;
+        --primary: #75b0f0;
+        --primary-hover: #9ac5f4;
+        --primary-foreground: #0f1324;
+        --primary-soft: #23374d;
+        --primary-accent: #9ecafa;
+        --cta: #f98c4d;
+        --ring: #75b0f0;
+      }
+
+      *,
+      ::before,
+      ::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        display: flex;
+        min-height: 100vh;
+        min-height: 100dvh;
+        flex-direction: column;
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+          'Instrument Sans',
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+          env(safe-area-inset-left);
+      }
+
+      .display {
+        font-family:
+          'Plus Jakarta Sans',
+          'Instrument Sans',
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-weight: 800;
+      }
+
+      header {
+        border-bottom: 1px solid var(--border);
+      }
+
+      .container {
+        width: 100%;
+        max-width: 80rem;
+        margin: 0 auto;
+        padding: 0 1rem;
+      }
+
+      .bar {
+        display: flex;
+        min-height: 4rem;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .mark {
+        display: flex;
+        width: 2.25rem;
+        height: 2.25rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        background: var(--primary);
+        color: var(--primary-foreground);
+      }
+
+      .mark .plus {
+        fill: var(--cta);
+      }
+
+      .mark svg {
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+
+      .wordmark {
+        font-size: 1.125rem;
+        letter-spacing: -0.02em;
+      }
+
+      main {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        padding-top: 3rem;
+        padding-bottom: 3rem;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 42rem;
+        margin: 0 auto;
+        border: 1px solid var(--border-subtle);
+        border-radius: 1.25rem;
+        background: var(--card);
+        padding: 1.5rem;
+      }
+
+      .badge {
+        display: flex;
+        width: 3rem;
+        height: 3rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background: var(--primary-soft);
+        color: var(--primary-accent);
+      }
+
+      .badge svg,
+      button svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
+      }
+
+      h1 {
+        margin: 1.5rem 0 0;
+        font-size: 1.875rem;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        text-wrap: balance;
+      }
+
+      p {
+        margin: 1rem 0 0;
+        max-width: 36rem;
+        color: var(--muted-foreground);
+        font-size: 1rem;
+        line-height: 1.75rem;
+      }
+
+      button {
+        display: inline-flex;
+        height: 3.25rem;
+        width: 100%;
+        margin-top: 2rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 0;
+        border-radius: 9999px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        padding: 0 1.75rem;
+        font: inherit;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 150ms;
+      }
+
+      button:hover {
+        background: var(--primary-hover);
+      }
+
+      button:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      button[aria-busy='true'] {
+        cursor: progress;
+        opacity: 0.8;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+        line-height: 1.5rem;
+      }
+
+      .note {
+        margin-top: 1.5rem;
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 1rem;
+        font-size: 0.875rem;
+        line-height: 1.5rem;
+      }
+
+      @media (min-width: 40rem) {
+        .container {
+          padding: 0 1.5rem;
+        }
+
+        .card {
+          padding: 2.5rem;
+        }
+
+        h1 {
+          font-size: 2.5rem;
+        }
+
+        button {
+          width: auto;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        button {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container bar">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="-280 -305 560 560" focusable="false">
+            <g fill="currentColor">
+              <rect x="-247" y="-224" width="100" height="448" rx="50" />
+              <rect x="-247" y="-224" width="250" height="100" rx="50" />
+              <rect x="-247" y="-50" width="214" height="100" rx="50" />
+              <rect x="-247" y="124" width="300" height="100" rx="50" />
+            </g>
+            <g class="plus">
+              <rect x="47" y="-205" width="200" height="62" rx="31" />
+              <rect x="116" y="-274" width="62" height="200" rx="31" />
+            </g>
+          </svg>
+        </span>
+        <span class="display wordmark">Experimente+</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="container">
+        <section class="card" aria-labelledby="offline-title">
+          <span class="badge" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              focusable="false"
+            >
+              <path d="M12 20h.01" />
+              <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+              <path d="M5 12.859a10 10 0 0 1 5.17-2.69" />
+              <path d="M19 12.859a10 10 0 0 0-2.007-1.523" />
+              <path d="M2 8.82a15 15 0 0 1 4.177-2.643" />
+              <path d="M22 8.82a15 15 0 0 0-11.288-3.764" />
+              <path d="m2 2 20 20" />
+            </svg>
+          </span>
+          <h1 id="offline-title" class="display">Sem conexão</h1>
+          <p>
+            Não foi possível abrir esta página. Confira o Wi-Fi ou os dados móveis e tente de novo.
+          </p>
+
+          <button type="button" id="retry">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            Tentar de novo
+          </button>
+          <p class="status" id="status" role="status" aria-live="polite">
+            A página abre sozinha quando a conexão voltar.
+          </p>
+
+          <p class="note">
+            Por segurança, a carteira e os dados da sua conta não ficam guardados no aparelho: eles
+            só abrem com internet.
+          </p>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      ;(function () {
+        var button = document.getElementById('retry')
+        var status = document.getElementById('status')
+        var busy = false
+        var attempts = 0
+        var timer = null
+
+        // Ask the server for something tiny before reloading, so a retry while still offline
+        // says so instead of silently showing this same page again.
+        function probe() {
+          return fetch('/offline.html', { method: 'HEAD', cache: 'no-store' })
+        }
+
+        function reload() {
+          window.location.reload()
+        }
+
+        function retry() {
+          if (busy) return
+          busy = true
+          button.setAttribute('aria-busy', 'true')
+          status.textContent = 'Tentando conectar…'
+          probe()
+            .then(reload)
+            .catch(function () {
+              busy = false
+              button.removeAttribute('aria-busy')
+              status.textContent =
+                'Ainda sem conexão. Assim que ela voltar, a página abre sozinha.'
+            })
+        }
+
+        // The network may still be settling when the browser reports it: keep trying quietly
+        // for a minute before leaving it to the button.
+        function retryQuietly() {
+          probe()
+            .then(reload)
+            .catch(function () {
+              attempts += 1
+              if (attempts < 12) timer = setTimeout(retryQuietly, 5000)
+            })
+        }
+
+        button.addEventListener('click', retry)
+        window.addEventListener('online', function () {
+          clearTimeout(timer)
+          attempts = 0
+          retryQuietly()
+        })
+      })()
+    </script>
+  </body>
+</html>

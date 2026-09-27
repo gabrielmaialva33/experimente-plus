@@ -9,10 +9,11 @@ const inputShellClasses = `
   motion-reduce:transition-none
 `
 
+// A field is a touch target too: on a touch screen it grows to 44 px.
 const inputShellSizeVariants = {
   lg: 'h-11 px-4',
-  md: 'h-10 px-3',
-  sm: 'h-9 px-3 text-xs',
+  md: 'h-10 px-3 pointer-coarse:h-11',
+  sm: 'h-9 px-3 text-xs pointer-coarse:h-11',
 }
 
 const inputElementSizeVariants = {
@@ -55,8 +56,8 @@ const inputAddonVariants = cva(
   {
     variants: {
       variant: {
-        sm: 'h-9 min-w-9 rounded-md px-3 text-xs [&_svg:not([class*=size-])]:size-3.5',
-        md: 'h-10 min-w-10 rounded-md px-3 text-sm [&_svg:not([class*=size-])]:size-4',
+        sm: 'h-9 min-w-9 rounded-md px-3 text-xs pointer-coarse:h-11 [&_svg:not([class*=size-])]:size-3.5',
+        md: 'h-10 min-w-10 rounded-md px-3 text-sm pointer-coarse:h-11 [&_svg:not([class*=size-])]:size-4',
         lg: 'h-11 min-w-11 rounded-md px-4 text-sm [&_svg:not([class*=size-])]:size-4',
       },
       mode: {

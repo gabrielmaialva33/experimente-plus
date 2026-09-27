@@ -92,7 +92,16 @@ export default function NewEstablishmentPage({
           title="Novo lugar"
           description="Comece pelo nome, cidade e contato. Endereço, categorias, horários e fotos você completa em seguida, nos dados do lugar."
           actions={
-            <Button asChild variant="ghost" size="lg" shape="pill">
+            // The organization's name can be long: the label wraps on a phone instead of
+            // pushing the page sideways.
+            <Button
+              asChild
+              variant="ghost"
+              size="lg"
+              shape="pill"
+              autoHeight
+              className="max-w-full whitespace-normal py-2 text-start"
+            >
               <Link href={`/portal/organizations/${organization.id}`}>
                 <ArrowLeft aria-hidden="true" className="size-4" />
                 Voltar para {organization.trade_name}

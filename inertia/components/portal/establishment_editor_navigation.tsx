@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter } from '~/components/ui/card'
 import { ProgressCircle } from '~/components/ui/progress'
 import type { EditorSectionId } from '~/lib/establishment_editor'
 import { cn } from '~/lib/utils'
+import { scrollBehavior } from '~/lib/motion'
 
 export interface EditorNavigationItem {
   id: EditorSectionId
@@ -67,6 +68,7 @@ function NavigationButton({
       className={cn(
         'group flex items-center gap-2.5 rounded-lg text-left text-sm font-medium transition-colors',
         compact ? 'shrink-0 border px-3 py-2' : 'w-full px-3 py-2.5',
+        'pointer-coarse:min-h-11',
         active
           ? 'border-primary/20 bg-primary/10 text-primary'
           : compact
@@ -121,9 +123,8 @@ export function EstablishmentEditorNavigation({
       `[data-editor-navigation-item="${activeSection}"]`
     )
     if (activeButton && typeof activeButton.scrollIntoView === 'function') {
-      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       activeButton.scrollIntoView({
-        behavior: reducedMotion ? 'auto' : 'smooth',
+        behavior: scrollBehavior(),
         block: 'nearest',
         inline: 'center',
       })
@@ -131,8 +132,9 @@ export function EstablishmentEditorNavigation({
   }, [activeSection, variant])
 
   if (variant === 'mobile') {
+    // Under the 72 px header, or at the top where a short screen lets the header scroll away.
     return (
-      <div className="sticky top-[72px] z-30 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:hidden">
+      <div className="sticky top-[72px] z-30 short:top-0 -mx-4 border-y border-border bg-background px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:hidden">
         <nav
           ref={mobileNavigationRef}
           aria-label="Etapas do editor"

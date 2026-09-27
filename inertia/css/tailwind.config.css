@@ -3,6 +3,10 @@
 /* next-themes owns the `.dark` class; keep Tailwind on the same source of truth. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* A short viewport: a phone on its side or a laptop zoomed to 200 %. Chrome that stays on
+   screen (sticky headers, the bottom navigation) gives that height back to the content. */
+@custom-variant short (@media (max-height: 30rem));
+
 /*
  * Experimente+ foundation contract.
  *

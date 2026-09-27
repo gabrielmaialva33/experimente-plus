@@ -19,7 +19,10 @@ export default function ResetPasswordPage({ token }: ResetPasswordPageProps) {
         contextTitle="Depois da redefinição"
         contextDescription="O link deixa de funcionar e as sessões que poderiam ser renovadas são encerradas. Acessos já emitidos ainda podem funcionar por um curto período, até expirarem."
         footer={
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link
+            href="/login"
+            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+          >
             Voltar para o login
           </Link>
         }

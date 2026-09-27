@@ -9,10 +9,12 @@ import { NetworkNotice } from '~/components/network_notice'
 import { bindInertiaFailureNotice } from '~/lib/network_notice'
 import { ThemeProvider } from '~/providers/theme_provider'
 import { QueryProvider } from '~/providers/query_provider'
+import { setUpProgressiveWebApp } from '~/pwa/register'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Experimente+'
 
 bindInertiaFailureNotice(router)
+setUpProgressiveWebApp()
 
 createInertiaApp({
   // Page loading is navigation feedback, so it takes the navigation role (and follows the

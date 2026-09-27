@@ -4,12 +4,16 @@ import { cva, VariantProps } from 'class-variance-authority'
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 
+// A dialog never outgrows the screen: on a 320 px phone it keeps a 16 px margin, and on a
+// phone on its side (or behind the keyboard) its content scrolls inside it instead of
+// pushing the title and the actions off screen, where nothing could reach them.
 const dialogContentVariants = cva(
-  'flex flex-col fixed outline-0 z-50 border border-border bg-popover text-popover-foreground p-6 shadow-overlay duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+  'flex flex-col fixed outline-0 z-50 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover text-popover-foreground p-6 shadow-overlay duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
   {
     variants: {
       variant: {
-        default: 'left-[50%] top-[50%] max-w-lg translate-x-[-50%] translate-y-[-50%] w-full',
+        default:
+          'left-[50%] top-[50%] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%]',
         fullscreen: 'inset-5',
       },
     },
