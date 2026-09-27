@@ -14,9 +14,28 @@ export {
 } from '#database/factories/establishment_factory'
 export { CityFactory, RegionFactory } from '#database/factories/geography_factory'
 export {
+  EstablishmentRevisionMediaFactory,
+  MediaAssetFactory,
+  StoredFileFactory,
+} from '#database/factories/media_factory'
+export {
   OrganizationFactory,
   OrganizationMemberFactory,
 } from '#database/factories/organization_factory'
-export { CategoryFactory, CategoryFamilyFactory } from '#database/factories/taxonomy_factory'
+export {
+  EstablishmentEventFactory,
+  EstablishmentExperienceFactory,
+  EstablishmentShowcaseItemFactory,
+} from '#database/factories/partner_content_factory'
+export {
+  EstablishmentReviewFactory,
+  EstablishmentReviewReplyFactory,
+} from '#database/factories/review_factory'
+export {
+  CategoryAttributeDefinitionFactory,
+  CategoryAttributeOptionFactory,
+  CategoryFactory,
+  CategoryFamilyFactory,
+} from '#database/factories/taxonomy_factory'
 export { TenantFactory } from '#database/factories/tenant_factory'
 export { UserFactory } from '#database/factories/user_factory'

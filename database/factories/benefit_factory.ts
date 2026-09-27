@@ -7,19 +7,30 @@ import BenefitAccess from '#modules/benefits/models/benefit_access'
 import BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
+import { asciiSlug, businessName, emailFor, personName } from '#database/factories/support/pt_br'
+import { DEMO_CITIES } from '#database/support/demo/catalog/geography'
+
+const OFFER_TITLES = [
+  'Sobremesa da casa de cortesia',
+  'Segundo prato por conta da casa',
+  'Café coado de cortesia',
+  'Desconto no menu executivo',
+  'Pipoca de cortesia na sessão',
+  'Aula experimental sem custo',
+] as const
 
 export const BenefitEditionFactory = factory
   .define(BenefitEdition, ({ faker }) => {
     const now = DateTime.utc()
-    const cityLabel = faker.location.city()
+    const cityLabel = faker.helpers.arrayElement(DEMO_CITIES).name
     const unique = faker.string.alphanumeric(6).toLowerCase()
 
     return {
       tenant_id: 1,
       city_id: 1,
-      name: `Experimente ${cityLabel}`,
-      slug: `experimente-${faker.helpers.slugify(cityLabel).toLowerCase()}-${unique}`,
-      description: faker.lorem.sentences(2),
+      name: `Passaporte Experimente ${cityLabel}`,
+      slug: `passaporte-${asciiSlug(cityLabel)}-${unique}`,
+      description: `Pacote fictício com benefícios em lugares de ${cityLabel}, para cenários de teste.`,
       price_cents: faker.number.int({ min: 7990, max: 19990 }),
       currency: 'BRL',
       sales_starts_at: now.minus({ days: 15 }),
@@ -58,8 +69,8 @@ export const BenefitOfferFactory = factory
     tenant_id: 1,
     edition_id: 1,
     establishment_id: 1,
-    title: faker.commerce.productAdjective() + ' benefício',
-    description: faker.lorem.sentence(),
+    title: faker.helpers.arrayElement(OFFER_TITLES),
+    description: 'Benefício fictício válido uma vez por acesso, para consumo no local.',
     benefit_type: 'custom' as const,
     discount_percentage: null,
     discount_amount_cents: null,
@@ -102,6 +113,18 @@ export const BenefitOfferFactory = factory
     offer.discount_percentage = null
     offer.discount_amount_cents = faker.number.int({ min: 1000, max: 5000 })
   })
+  .state('complimentaryItem', (offer) => {
+    offer.benefit_type = 'complimentary_item'
+    offer.discount_percentage = null
+    offer.discount_amount_cents = null
+  })
+  .state('voucher', (offer, { faker }) => {
+    offer.standalone_price_cents = faker.number.int({ min: 990, max: 3990 })
+  })
+  .state('weekdaysOnly', (offer) => {
+    // Monday to Friday: bit per weekday, Sunday = 1.
+    offer.available_weekdays_mask = 2 | 4 | 8 | 16 | 32
+  })
   .state('buyOneGetOne', (offer) => {
     offer.benefit_type = 'buy_one_get_one'
     offer.discount_percentage = null
@@ -143,6 +166,7 @@ export const BenefitRedemptionFactory = factory
   .define(BenefitRedemption, ({ faker }) => {
     const nonce = randomUUID()
     const receipt = `EXP-${randomBytes(8).toString('hex').toUpperCase()}`
+    const holderName = personName(faker)
 
     return {
       tenant_id: 1,
@@ -160,9 +184,9 @@ export const BenefitRedemptionFactory = factory
       offer_title_snapshot: 'Benefício demonstrativo',
       benefit_type_snapshot: 'custom',
       offer_terms_snapshot: 'Benefício individual, não cumulativo.',
-      establishment_name_snapshot: faker.company.name(),
-      holder_name_snapshot: faker.person.fullName(),
-      holder_email_snapshot: faker.internet.email({ provider: 'example.test' }).toLowerCase(),
+      establishment_name_snapshot: businessName(faker),
+      holder_name_snapshot: holderName,
+      holder_email_snapshot: emailFor(faker, holderName),
       redeemed_at: DateTime.utc(),
     }
   })

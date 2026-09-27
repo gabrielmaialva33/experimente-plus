@@ -1,26 +1,24 @@
 import factory from '@adonisjs/lucid/factories'
 import { DateTime } from 'luxon'
 
+import { asciiSlug, brazilianPhone, businessName, cnpj } from '#database/factories/support/pt_br'
 import Organization from '#modules/organizations/models/organization'
 import OrganizationMember from '#modules/organizations/models/organization_member'
 
-function digits(value: string): string {
-  return value.replace(/\D/g, '')
-}
-
 export const OrganizationFactory = factory
   .define(Organization, ({ faker }) => {
-    const tradeName = faker.company.name()
+    const tradeName = businessName(faker)
     const unique = faker.string.alphanumeric(8).toLowerCase()
 
     return {
       tenant_id: 1,
       legal_name: `${tradeName} Comércio e Serviços Ltda.`,
       trade_name: tradeName,
-      slug: `${faker.helpers.slugify(tradeName).toLowerCase()}-${unique}`,
-      tax_id: digits(faker.string.numeric(14)),
-      email: faker.internet.email({ provider: 'example.test' }).toLowerCase(),
-      phone: `43${faker.string.numeric(8)}`,
+      slug: `${asciiSlug(tradeName)}-${unique}`,
+      // Valid check digits, so the fixture also passes the domain's CNPJ validation.
+      tax_id: cnpj(faker),
+      email: `contato.${unique}@example.test`,
+      phone: brazilianPhone(faker),
       website: `https://${unique}.example.test`,
       status: 'draft' as const,
       created_by: null,
