@@ -82,7 +82,7 @@ const style = {
   name: 'Experimente+ — Norte do Paraná — claro',
   metadata: {
     'experimente:basemap-version': '4.15.2',
-    'experimente:build': '20260911',
+    'experimente:build': '20260926',
     'experimente:style-package': '@protomaps/basemaps@5.7.2',
     'experimente:assets-commit': '028c18f713baecad011301ff7a69acc39bcc2ae7',
     'experimente:theme': 'neutro-frio-flat-2.0',
@@ -99,7 +99,7 @@ const style = {
       url: `pmtiles://${base.href}norte-parana.pmtiles`,
       minzoom: 0,
       maxzoom: 15,
-      bounds: [-51.4, -23.55, -50.25, -22.95],
+      bounds: [-52.1, -23.7, -50.25, -22.95],
       attribution:
         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
     },
