@@ -27,12 +27,12 @@ test.group('Development illustrations and immutable public composition', (group)
   group.each.setup(() => testUtils.db().withGlobalTransaction())
   group.each.teardown(() => mock.restoreAll())
 
-  test('full seed is idempotent with valid originals, complete published composition and both products', async ({
+  test('baseline seed is idempotent with valid originals, complete published composition and both products', async ({
     assert,
     client,
     cleanup,
   }) => {
-    await DevelopmentSeeder.prototype.run()
+    await DevelopmentSeeder.prototype.baseline()
     const tenant = await Tenant.findByOrFail('slug', 'development')
     cleanup(async () =>
       rm(app.makePath('storage', 'seed/media/v2/fs', String(tenant.id)), {
@@ -58,7 +58,7 @@ test.group('Development illustrations and immutable public composition', (group)
       response.assertHeader('content-type', 'image/png')
     }
     const before = await EstablishmentRevision.query().where('tenant_id', tenant.id)
-    await DevelopmentSeeder.prototype.run()
+    await DevelopmentSeeder.prototype.baseline()
     const after = await EstablishmentRevision.query().where('tenant_id', tenant.id)
     assert.deepEqual(
       after.map((r) => r.id),
@@ -112,7 +112,7 @@ test.group('Development illustrations and immutable public composition', (group)
     assert.equal(paid.status, 'paid')
     const paidAccess = await BenefitAccess.findOrFail(paid.access_id!)
     assert.equal(paidAccess.offer_id, quote.offer_id)
-    await DevelopmentSeeder.prototype.run()
+    await DevelopmentSeeder.prototype.baseline()
     assert.deepEqual(await service.catalog('development.experimente.test'), catalog)
   })
 
@@ -129,7 +129,7 @@ test.group('Development illustrations and immutable public composition', (group)
         return 'https://media.example.test/' + key
       },
     }))
-    await DevelopmentSeeder.prototype.run()
+    await DevelopmentSeeder.prototype.baseline()
     const tenant = await Tenant.findByOrFail('slug', 'development')
     const asset = await MediaAsset.query()
       .where('tenant_id', tenant.id)
@@ -145,7 +145,7 @@ test.group('Development illustrations and immutable public composition', (group)
     // Emulate the pre-v2 tiny seed object; the replacement must not edit its asset or composition.
     await asset.file.merge({ file_name: 'seed/media/legacy/' + asset.file.id + '.png' }).save()
     await asset.merge({ checksum_sha256: '0'.repeat(64), width: 8, height: 6 }).save()
-    await DevelopmentSeeder.prototype.run()
+    await DevelopmentSeeder.prototype.baseline()
     await venue.refresh()
     assert.notEqual(venue.published_revision_id, originalRevision)
     await oldComposition.refresh()

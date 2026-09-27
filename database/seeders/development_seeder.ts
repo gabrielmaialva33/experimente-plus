@@ -1,10 +1,12 @@
 import { deploymentEnvironment } from '#shared/utils/deployment_environment'
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
+import router from '@adonisjs/core/services/router'
 
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import { seedDevelopmentBenefits } from '#database/support/development_benefits'
 import { seedDevelopmentCatalog } from '#database/support/development_catalog'
+import { seedDevelopmentDemoCatalog } from '#database/support/development_demo_catalog'
 import { seedDevelopmentEstablishments } from '#database/support/development_establishments'
 import { seedDevelopmentPurchases } from '#database/support/development_purchases'
 import Tenant from '#modules/tenants/models/tenant'
@@ -14,10 +16,28 @@ import env from '#start/env'
 export default class extends BaseSeeder {
   static environment = ['development']
 
+  /**
+   * The local operation: the development accounts, the three original venues,
+   * their benefits and the paid edition, then the shared demo catalogue on top.
+   */
   async run() {
+    await this.seed()
+  }
+
+  /** The whole seed, answering what the demo catalogue created, found and refused. */
+  async seed() {
+    const { tenant, user, partner, holder } = await this.baseline()
+    return seedDevelopmentDemoCatalog(tenant, user, partner, holder)
+  }
+
+  /** Everything the development seed created before the demo catalogue existed. */
+  async baseline() {
     if (deploymentEnvironment(env.get('DEPLOYMENT_ENV')) !== 'development') {
       throw new Error('Development seeding requires DEPLOYMENT_ENV=development')
     }
+    // Ace has no HTTP server to commit the routes, and the fs disk builds its
+    // public URLs from a named route. Committing is idempotent.
+    router.commit()
     const user = await User.updateOrCreate(
       { email: env.get('DEV_ADMIN_EMAIL', 'admin@experimente.local') },
       {
@@ -72,5 +92,6 @@ export default class extends BaseSeeder {
     await seedDevelopmentEstablishments(tenant, user)
     await seedDevelopmentBenefits(tenant, user, partner, holder)
     await seedDevelopmentPurchases(tenant, user, partner)
+    return { tenant, user, partner, holder }
   }
 }

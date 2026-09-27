@@ -3,214 +3,28 @@ import Region from '#modules/geography/models/region'
 import Category from '#modules/taxonomy/models/category'
 import CategoryFamily from '#modules/taxonomy/models/category_family'
 import type Tenant from '#modules/tenants/models/tenant'
+import CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
+import CategoryAttributeOption from '#modules/taxonomy/models/category_attribute_option'
+import { DEMO_CITIES, DEMO_REGIONS } from '#database/support/demo/catalog/geography'
+import {
+  DEMO_ATTRIBUTES,
+  DEMO_CATEGORIES,
+  DEMO_FAMILIES,
+} from '#database/support/demo/catalog/taxonomy'
 
 export const DEVELOPMENT_DATA_NOTICE =
   'Cidades e códigos geográficos usam referências públicas. Organizações, estabelecimentos, endereços, contatos, imagens, ofertas e resgates são inteiramente fictícios e existem apenas para desenvolvimento e demonstração.'
 
-interface RegionDefinition {
-  name: string
-  slug: string
-  description: string
-  sort_order: number
-}
-
-interface CityDefinition {
-  name: string
-  slug: string
-  region_slug: string
-  ibge_code: string
-  latitude: number
-  longitude: number
-  sort_order: number
-}
-
-interface FamilyDefinition {
-  name: string
-  slug: string
-  description: string
-  icon: string
-  sort_order: number
-}
-
-interface CategoryDefinition {
-  name: string
-  slug: string
-  family_slug: string
-  description: string
-  icon: string
-  sort_order: number
-  allows_always_open?: boolean
-}
-
-export const DEVELOPMENT_REGIONS: RegionDefinition[] = [
-  {
-    name: 'Norte do Paraná',
-    slug: 'norte-do-parana',
-    description:
-      'Praça demonstrativa centrada em Londrina, com experiências urbanas, gastronomia, café, cultura e lazer.',
-    sort_order: 0,
-  },
-  {
-    name: 'Norte Pioneiro',
-    slug: 'norte-pioneiro',
-    description:
-      'Praça demonstrativa de cidades do Norte Pioneiro, com negócios locais, rotas regionais e experiências de bairro.',
-    sort_order: 10,
-  },
-]
-
-export const DEVELOPMENT_CITIES: CityDefinition[] = [
-  {
-    name: 'Londrina',
-    slug: 'londrina',
-    region_slug: 'norte-do-parana',
-    ibge_code: '4113700',
-    latitude: -23.3045,
-    longitude: -51.1696,
-    sort_order: 0,
-  },
-  {
-    name: 'Cornélio Procópio',
-    slug: 'cornelio-procopio',
-    region_slug: 'norte-pioneiro',
-    ibge_code: '4106407',
-    latitude: -23.1813,
-    longitude: -50.6463,
-    sort_order: 10,
-  },
-  {
-    name: 'Bandeirantes',
-    slug: 'bandeirantes',
-    region_slug: 'norte-pioneiro',
-    ibge_code: '4102406',
-    latitude: -23.1078,
-    longitude: -50.3671,
-    sort_order: 20,
-  },
-]
-
-export const DEVELOPMENT_FAMILIES: FamilyDefinition[] = [
-  {
-    name: 'Comer & Beber',
-    slug: 'comer-e-beber',
-    description: 'Restaurantes, cafés, bares, padarias e outras experiências gastronômicas.',
-    icon: 'utensils',
-    sort_order: 0,
-  },
-  {
-    name: 'Cultura & Lazer',
-    slug: 'cultura-e-lazer',
-    description: 'Cinema, eventos, arte e experiências culturais para aproveitar a cidade.',
-    icon: 'ticket',
-    sort_order: 10,
-  },
-  {
-    name: 'Bem-estar & Estilo',
-    slug: 'bem-estar-e-estilo',
-    description: 'Cuidados pessoais, beleza, tatuagem e experiências de bem-estar.',
-    icon: 'sparkles',
-    sort_order: 20,
-  },
-]
-
-export const DEVELOPMENT_CATEGORIES: CategoryDefinition[] = [
-  {
-    name: 'Restaurantes',
-    slug: 'restaurantes',
-    family_slug: 'comer-e-beber',
-    description: 'Casas com serviço de refeições e experiências completas à mesa.',
-    icon: 'utensils',
-    sort_order: 0,
-  },
-  {
-    name: 'Bares',
-    slug: 'bares',
-    family_slug: 'comer-e-beber',
-    description: 'Bares, gastrobares, petiscos e programação noturna.',
-    icon: 'glass-water',
-    sort_order: 10,
-  },
-  {
-    name: 'Cafés',
-    slug: 'cafes',
-    family_slug: 'comer-e-beber',
-    description: 'Cafeterias, cafés especiais, brunch e encontros durante o dia.',
-    icon: 'coffee',
-    sort_order: 20,
-  },
-  {
-    name: 'Padarias',
-    slug: 'padarias',
-    family_slug: 'comer-e-beber',
-    description: 'Panificação, confeitaria, café da manhã e produtos artesanais.',
-    icon: 'croissant',
-    sort_order: 30,
-  },
-  {
-    name: 'Docerias',
-    slug: 'docerias',
-    family_slug: 'comer-e-beber',
-    description: 'Doces, sobremesas, bolos e presentes gastronômicos.',
-    icon: 'cake-slice',
-    sort_order: 40,
-  },
-  {
-    name: 'Hamburguerias',
-    slug: 'hamburguerias',
-    family_slug: 'comer-e-beber',
-    description: 'Hambúrgueres artesanais, acompanhamentos e menus descontraídos.',
-    icon: 'sandwich',
-    sort_order: 50,
-  },
-  {
-    name: 'Pizzarias',
-    slug: 'pizzarias',
-    family_slug: 'comer-e-beber',
-    description: 'Pizzas artesanais, tradicionais e contemporâneas.',
-    icon: 'pizza',
-    sort_order: 60,
-  },
-  {
-    name: 'Cozinha japonesa',
-    slug: 'cozinha-japonesa',
-    family_slug: 'comer-e-beber',
-    description: 'Sushi, pratos quentes e experiências inspiradas na culinária japonesa.',
-    icon: 'fish',
-    sort_order: 70,
-  },
-  {
-    name: 'Cinema & Audiovisual',
-    slug: 'cinema-e-audiovisual',
-    family_slug: 'cultura-e-lazer',
-    description: 'Salas, cineclubes, mostras e experiências audiovisuais.',
-    icon: 'clapperboard',
-    sort_order: 0,
-  },
-  {
-    name: 'Cultura & Eventos',
-    slug: 'cultura-e-eventos',
-    family_slug: 'cultura-e-lazer',
-    description: 'Casas culturais, oficinas, exposições, música e eventos independentes.',
-    icon: 'music',
-    sort_order: 10,
-  },
-  {
-    name: 'Estúdios de tatuagem',
-    slug: 'estudios-de-tatuagem',
-    family_slug: 'bem-estar-e-estilo',
-    description: 'Estúdios, artistas e experiências de arte corporal com atendimento agendado.',
-    icon: 'pen-tool',
-    sort_order: 0,
-  },
-  {
-    name: 'Beleza & Bem-estar',
-    slug: 'beleza-e-bem-estar',
-    family_slug: 'bem-estar-e-estilo',
-    description: 'Autocuidado, terapias, beleza e experiências para desacelerar.',
-    icon: 'flower-2',
-    sort_order: 10,
-  },
-]
+/**
+ * The development catalogue is the shared demo catalogue: the same regions,
+ * cities, families, categories and attribute forms the homologation demo
+ * provisions, so the two environments never drift. Development upserts them
+ * (the database is disposable); homologation only ever creates what is missing.
+ */
+export const DEVELOPMENT_REGIONS = DEMO_REGIONS
+export const DEVELOPMENT_CITIES = DEMO_CITIES
+export const DEVELOPMENT_FAMILIES = DEMO_FAMILIES
+export const DEVELOPMENT_CATEGORIES = DEMO_CATEGORIES
 
 export interface DevelopmentCatalogResult {
   regions: Map<string, Region>
@@ -303,6 +117,45 @@ export async function seedDevelopmentCatalog(tenant: Tenant): Promise<Developmen
       }
     )
     categories.set(definition.slug, category)
+
+    for (const [index, attribute] of (DEMO_ATTRIBUTES[definition.slug] ?? []).entries()) {
+      const attributeDefinition = await CategoryAttributeDefinition.updateOrCreate(
+        { tenant_id: tenant.id, category_id: category.id, key: attribute.key },
+        {
+          tenant_id: tenant.id,
+          category_id: category.id,
+          key: attribute.key,
+          name: attribute.name,
+          description: attribute.description,
+          data_type: attribute.data_type,
+          unit: attribute.data_type === 'decimal' ? 'BRL' : null,
+          is_required: attribute.is_required ?? false,
+          is_filterable: attribute.is_filterable ?? false,
+          is_public: true,
+          applies_to_descendants: false,
+          sort_order: index,
+          is_active: true,
+          validation_rules: attribute.validation_rules ?? {},
+        }
+      )
+      for (const [optionIndex, option] of (attribute.options ?? []).entries()) {
+        await CategoryAttributeOption.updateOrCreate(
+          {
+            tenant_id: tenant.id,
+            attribute_definition_id: attributeDefinition.id,
+            value: option.value,
+          },
+          {
+            tenant_id: tenant.id,
+            attribute_definition_id: attributeDefinition.id,
+            label: option.label,
+            value: option.value,
+            sort_order: optionIndex,
+            is_active: true,
+          }
+        )
+      }
+    }
   }
 
   return { regions, cities, families, categories }
