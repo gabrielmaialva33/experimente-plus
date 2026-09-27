@@ -36,8 +36,10 @@ export function PageHeader({
       className={cn('flex flex-wrap items-start justify-between gap-x-6 gap-y-4', className)}
     >
       <div className="flex min-w-0 flex-[1_1_24rem] items-start gap-3">
+        {/* The badge is decorative: on a phone it would indent the title and description
+            by 56 px, so it appears from 640 px up. */}
         {Icon && (
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
+          <span className="hidden size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent sm:flex">
             <Icon className="size-5" aria-hidden="true" />
           </span>
         )}
