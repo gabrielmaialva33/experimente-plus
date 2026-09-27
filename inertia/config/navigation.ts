@@ -434,10 +434,11 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     id: 'backoffice-review-policy',
     pattern: '/backoffice/review-policy',
     surface: 'backoffice',
-    title: 'Regras da operação',
+    // The sidebar's name for the page; "Regras da operação" is its section.
+    title: 'Avaliações e publicação',
     description: 'Avaliações, moderação automática e publicação de conteúdo desta operação.',
     capability: 'settings.read',
-    breadcrumbs: [{ label: 'Regras da operação' }],
+    breadcrumbs: [{ label: 'Regras da operação' }, { label: 'Avaliações e publicação' }],
   },
   {
     id: 'backoffice-concierge',

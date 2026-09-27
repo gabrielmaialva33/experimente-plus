@@ -212,7 +212,7 @@ export default function BackofficeReviewPolicy({
 
   return (
     <MainLayout>
-      <Head title="Regras da operação" />
+      <Head title="Avaliações, moderação e publicação" />
       <div className="space-y-6">
         <PageHeader
           eyebrow="Regras da operação"
