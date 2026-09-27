@@ -1,9 +1,13 @@
 import { inject } from '@adonisjs/core'
 
 import FileRepository from '#modules/files/repositories/file_repository'
+import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
+import type User from '#modules/users/models/user'
 
 export type ListFilesOptions = {
   tenantId: number
+  /** Who is asking: the platform team sees the operation's files, anyone else their own. */
+  viewer: User
   page?: number
   perPage?: number
 }
@@ -38,13 +42,26 @@ export type FileListResult = {
 
 @inject()
 export default class ListFilesService {
-  constructor(private fileRepository: FileRepository) {}
+  constructor(
+    private fileRepository: FileRepository,
+    private organizationPolicy: OrganizationPolicyService
+  ) {}
 
-  async run({ tenantId, page = 1, perPage = 20 }: ListFilesOptions): Promise<FileListResult> {
+  async run({
+    tenantId,
+    viewer,
+    page = 1,
+    perPage = 20,
+  }: ListFilesOptions): Promise<FileListResult> {
+    // Every account holds `files.list`, but the list names who uploaded each file and
+    // links to images still under review: only the platform team reads the whole
+    // operation's; everyone else sees their own uploads.
+    const staff = (await this.organizationPolicy.resolvePlatformAccess(viewer)) !== null
     const paginator = await this.fileRepository.paginateForTenant(
       tenantId,
       Math.max(1, page),
-      Math.min(100, Math.max(1, perPage))
+      Math.min(100, Math.max(1, perPage)),
+      staff ? undefined : viewer.id
     )
 
     // Read the paginator itself, not getMeta(): the meta object follows the naming

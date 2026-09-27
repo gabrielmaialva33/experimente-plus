@@ -5,10 +5,11 @@ import DeleteFileService from '#modules/files/services/delete_file_service'
 import ListFilesService from '#modules/files/services/list_files_service'
 
 export default class InertiaFilesController {
-  async index({ inertia, request, tenant }: HttpContext) {
+  async index({ auth, inertia, request, tenant }: HttpContext) {
     const service = await app.container.make(ListFilesService)
     const files = await service.run({
       tenantId: tenant!.id,
+      viewer: auth.use('jwt').getUserOrFail(),
       page: Number(request.input('page', 1)),
       perPage: Number(request.input('per_page', 20)),
     })

@@ -15,10 +15,12 @@ export default class FileRepository
     return Number(rows[0].$extras.total)
   }
 
-  async paginateForTenant(tenantId: number, page: number, perPage: number) {
+  /** `ownerId` narrows the page to one person's uploads; omitted, it covers the operation. */
+  async paginateForTenant(tenantId: number, page: number, perPage: number, ownerId?: number) {
     return this.model
       .query()
       .where('tenant_id', tenantId)
+      .if(ownerId !== undefined, (query) => query.where('owner_id', ownerId!))
       .preload('owner')
       .orderBy('created_at', 'desc')
       .paginate(page, perPage)

@@ -11619,7 +11619,7 @@ paths:
     get:
       operationId: listFiles
       summary: List files in the active workspace
-      description: Returns a paginated tenant-scoped file list. Requires `files.list` and an active workspace.
+      description: Returns a paginated tenant-scoped file list. Requires `files.list` and an active workspace. Platform staff (root, admin, moderator) see every file of the workspace; anyone else sees only the files they uploaded.
       tags:
         - Files
       parameters:
