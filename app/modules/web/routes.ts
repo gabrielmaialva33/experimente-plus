@@ -126,29 +126,34 @@ router
             })
           )
 
+        // Creation resolves the operation in use (optional, so an account can
+        // still be created without one): the new account joins it as member.
         router
           .get('/create', [InertiaUsersController, 'create'])
           .as('users.create')
-          .use(
+          .use([
+            middleware.tenant(),
             middleware.permission({
               permissions: permission(IPermission.Resources.USERS, IPermission.Actions.CREATE),
-            })
-          )
+            }),
+          ])
 
         router
           .post('/', [InertiaUsersController, 'store'])
           .as('users.store')
-          .use(
+          .use([
+            middleware.tenant(),
             middleware.permission({
               permissions: permission(IPermission.Resources.USERS, IPermission.Actions.CREATE),
-            })
-          )
+            }),
+          ])
 
         router
           .get('/:id/edit', [InertiaUsersController, 'edit'])
           .where('id', /^[0-9]+$/)
           .as('users.edit')
-          .use(
+          .use([
+            middleware.tenant(),
             middleware.permission({
               permissions: [
                 permission(IPermission.Resources.USERS, IPermission.Actions.READ),
@@ -156,8 +161,20 @@ router
               ],
               requireAll: true,
               resourceIdParam: 'id',
-            })
-          )
+            }),
+          ])
+
+        router
+          .post('/:id/operation', [InertiaUsersController, 'attachOperation'])
+          .where('id', /^[0-9]+$/)
+          .as('users.operation.attach')
+          .use([
+            middleware.tenant(),
+            middleware.permission({
+              permissions: permission(IPermission.Resources.USERS, IPermission.Actions.UPDATE),
+              resourceIdParam: 'id',
+            }),
+          ])
 
         router
           .put('/:id', [InertiaUsersController, 'update'])

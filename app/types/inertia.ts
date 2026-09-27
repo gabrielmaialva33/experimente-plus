@@ -166,9 +166,10 @@ declare module '@adonisjs/inertia/types' {
       sortBy: string
       direction: string
     }
-    'users/create': Record<string, never>
+    'users/create': { operation: { id: number; name: string } | null }
     'users/edit': {
       user: Record<string, any>
+      operation: { id: number; name: string; linked: boolean } | null
     }
 
     // Error pages

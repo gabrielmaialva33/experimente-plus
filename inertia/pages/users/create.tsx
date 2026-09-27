@@ -8,7 +8,12 @@ import { Button } from '~/components/ui/button'
 import { Field } from '~/components/forms/field'
 import { PageHeader } from '~/components/page_header'
 
-export default function CreateUserPage() {
+interface CreateUserPageProps {
+  /** The operation in use, which the new account joins as member. */
+  operation?: { id: number; name: string } | null
+}
+
+export default function CreateUserPage({ operation = null }: CreateUserPageProps) {
   const { data, setData, post, processing, errors, isDirty } = useForm({
     full_name: '',
     email: '',
@@ -32,7 +37,11 @@ export default function CreateUserPage() {
         <PageHeader
           eyebrow="Pessoas e acesso"
           title="Adicionar usuário"
-          description="Crie uma conta administrativa com os dados necessários."
+          description={
+            operation
+              ? `A conta entra na operação ${operation.name} como membro: ganha carteira e pode ser convidada para a equipe de uma organização.`
+              : 'Nenhuma operação ativa: a conta será criada sem carteira. Escolha uma operação antes para vinculá-la.'
+          }
           actions={
             <Button asChild variant="outline" size="lg" shape="pill">
               <Link href="/users">
