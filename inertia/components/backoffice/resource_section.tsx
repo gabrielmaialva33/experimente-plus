@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react'
 import { Pencil, Plus, type LucideIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ResourceForm } from '~/components/backoffice/resource_form'
 import { ConfirmDialog } from '~/components/confirm_dialog'
@@ -53,6 +53,15 @@ export function ResourceSection({
 }: ResourceSectionProps) {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<number | null>(null)
+  // The inline form replaces the control that opened it; closing hands focus back to
+  // that control instead of dropping it on the page.
+  const [returnFocusTo, setReturnFocusTo] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (returnFocusTo === null) return
+    document.getElementById(returnFocusTo)?.focus()
+    setReturnFocusTo(null)
+  }, [returnFocusTo])
 
   const toggleActive = (recordId: number, active: boolean) =>
     router.put(`${basePath}/${recordId}`, { is_active: !active }, { preserveScroll: true })
@@ -79,6 +88,7 @@ export function ResourceSection({
         </div>
         {canCreate && !creating ? (
           <Button
+            id={`${id}-create`}
             type="button"
             variant="outline"
             size="lg"
@@ -99,7 +109,11 @@ export function ResourceSection({
             method="post"
             url={basePath}
             submitLabel={createLabel}
-            onDone={() => setCreating(false)}
+            autoFocus
+            onDone={() => {
+              setCreating(false)
+              setReturnFocusTo(`${id}-create`)
+            }}
           />
         </div>
       ) : null}
@@ -140,11 +154,13 @@ export function ResourceSection({
                     {canUpdate ? (
                       <>
                         <Button
+                          id={`${id}-edit-${recordId}`}
                           type="button"
                           variant="outline"
                           size="md"
                           shape="pill"
                           aria-label={`Editar ${name}`}
+                          aria-expanded={editing === recordId}
                           onClick={() => setEditing(editing === recordId ? null : recordId)}
                         >
                           <Pencil aria-hidden="true" className="size-4" />
@@ -195,7 +211,11 @@ export function ResourceSection({
                       method="put"
                       url={`${basePath}/${recordId}`}
                       submitLabel="Salvar alterações"
-                      onDone={() => setEditing(null)}
+                      autoFocus
+                      onDone={() => {
+                        setEditing(null)
+                        setReturnFocusTo(`${id}-edit-${recordId}`)
+                      }}
                     />
                   </div>
                 ) : null}

@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react'
 import { ChevronDown, Loader2, Save } from 'lucide-react'
-import type { FormEvent } from 'react'
+import { useEffect, useRef, type FormEvent, type KeyboardEvent } from 'react'
 
 import {
   EditorField,
@@ -20,6 +20,8 @@ interface ResourceFormProps {
   url: string
   submitLabel: string
   onDone?: () => void
+  /** Moves focus to the first field when the form opens in place of the button that asked for it. */
+  autoFocus?: boolean
 }
 
 /**
@@ -41,11 +43,33 @@ export function ResourceForm({
   url,
   submitLabel,
   onDone,
+  autoFocus = false,
 }: ResourceFormProps) {
   const form = useForm<FormValues>(initialValues(fields, record))
-  const { allowNextVisit } = useUnsavedChangesGuard({
+  const formRef = useRef<HTMLFormElement>(null)
+  const { allowNextVisit, confirmDiscard } = useUnsavedChangesGuard({
     enabled: () => form.isDirty === true && !form.processing,
   })
+
+  useEffect(() => {
+    if (!autoFocus) return
+    formRef.current
+      ?.querySelector<HTMLElement>('input:not([type=hidden]), textarea, select')
+      ?.focus()
+  }, [autoFocus])
+
+  // Closing the form drops what was typed without a visit, so the leave guard never
+  // sees it: Cancelar and Escape ask the same question before discarding.
+  function cancel() {
+    if (!onDone || form.processing || !confirmDiscard()) return
+    onDone()
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== 'Escape' || !onDone) return
+    event.preventDefault()
+    cancel()
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -142,7 +166,13 @@ export function ResourceForm({
   const advancedHasError = advancedFields.some((field) => Boolean(errors[field.name]))
 
   return (
-    <form onSubmit={submit} className="grid gap-4" aria-label={submitLabel}>
+    <form
+      ref={formRef}
+      onSubmit={submit}
+      onKeyDown={handleKeyDown}
+      className="grid gap-4"
+      aria-label={submitLabel}
+    >
       <div className="grid gap-4 md:grid-cols-2">{basicFields.map(renderField)}</div>
 
       {advancedFields.length > 0 ? (
@@ -172,7 +202,7 @@ export function ResourceForm({
             variant="ghost"
             size="xl"
             shape="pill"
-            onClick={onDone}
+            onClick={cancel}
             disabled={form.processing}
           >
             Cancelar

@@ -43,6 +43,7 @@ vi.mock('@inertiajs/react', async () => {
         put: mocks.formPut,
         reset: vi.fn(),
         processing: false,
+        isDirty: JSON.stringify(data) !== JSON.stringify(initial),
         errors: {},
       }
     },
@@ -136,6 +137,35 @@ describe('backoffice administration screens', () => {
 
     expect(screen.queryByRole('button', { name: /Nova família/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Editar/ })).not.toBeInTheDocument()
+  })
+
+  it('opens an inline form on its first field and gives focus back when it closes', () => {
+    mocks.permissions = ['category_families.create']
+    render(<BackofficeTaxonomy families={families} categories={categories} />)
+
+    // The button that opens the form disappears with it: focus must not fall to the page.
+    fireEvent.click(screen.getByRole('button', { name: 'Nova família' }))
+    const name = screen.getByLabelText(/^Nome/)
+    expect(name).toHaveFocus()
+
+    fireEvent.keyDown(name, { key: 'Escape' })
+
+    expect(screen.queryByRole('form', { name: 'Nova família' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nova família' })).toHaveFocus()
+  })
+
+  it('asks before Cancelar throws away what was typed in an inline form', () => {
+    mocks.permissions = ['category_families.create']
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<BackofficeTaxonomy families={families} categories={categories} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nova família' }))
+    fireEvent.change(screen.getByLabelText(/^Nome/), { target: { value: 'Lazer' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(screen.getByRole('form', { name: 'Nova família' })).toBeInTheDocument()
+    confirm.mockRestore()
   })
 
   it('creates a category in the first family by default, with a numeric family id', () => {
