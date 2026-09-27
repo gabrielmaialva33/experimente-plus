@@ -6,6 +6,7 @@ import { Button } from '~/components/ui/button'
 import { Textarea } from '~/components/ui/textarea'
 import type { PartnerContentPath } from '~/lib/partner_content'
 import {
+  partnerContentMediaNoteClassName,
   partnerContentMediaStatusMeta,
   type PartnerContentMediaItem,
 } from '~/lib/partner_content_media'
@@ -144,8 +145,13 @@ export function PartnerContentMediaModeration({
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.caption}</p>
                   ) : null}
                   {item.reviewNotes ? (
-                    <p className="mt-2 rounded-md bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-                      {item.reviewNotes}
+                    <p
+                      className={cn(
+                        'mt-2 rounded-md px-2 py-1.5 text-xs leading-5',
+                        partnerContentMediaNoteClassName(item.moderationStatus)
+                      )}
+                    >
+                      <span className="font-semibold">Nota da moderação:</span> {item.reviewNotes}
                     </p>
                   ) : null}
                 </div>

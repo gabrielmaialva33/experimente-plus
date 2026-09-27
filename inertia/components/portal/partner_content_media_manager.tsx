@@ -8,6 +8,7 @@ import { ImageDropZone } from '~/components/portal/image_drop_zone'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import {
+  partnerContentMediaNoteClassName,
   partnerContentMediaStatusMeta,
   type PartnerContentMediaItem,
 } from '~/lib/partner_content_media'
@@ -239,16 +240,11 @@ export function PartnerContentMediaManager({
                     {item.caption ? (
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.caption}</p>
                     ) : null}
-                    {/* A note on an approved image is context, not a fault: only a
-                        refusal or a quarantine is drawn as an error. */}
                     {item.reviewNotes ? (
                       <p
                         className={cn(
                           'mt-2 rounded-md px-2 py-1.5 text-xs leading-5',
-                          item.moderationStatus === 'rejected' ||
-                            item.moderationStatus === 'quarantined'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-muted text-muted-foreground'
+                          partnerContentMediaNoteClassName(item.moderationStatus)
                         )}
                       >
                         <span className="font-semibold">Nota da moderação:</span> {item.reviewNotes}
