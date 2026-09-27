@@ -70,6 +70,27 @@ describe('establishment editor utilities', () => {
     )
   })
 
+  it('speaks Portuguese for every publication gate blocker on the moderation review', () => {
+    for (const [code, field] of [
+      ['coordinates_missing', 'address.coordinates'],
+      ['approved_cover_missing', 'media.cover'],
+      ['media_pending', 'media'],
+      ['media_quarantined', 'media'],
+      ['review_issues_open', 'review_issues'],
+    ] as const) {
+      const english = 'Exactly one approved cover image is required before publication'
+      const message = localizeCompletenessIssue(issue(code, field, english))
+      expect(message).not.toBe(english)
+      expect(message).not.toMatch(/\b(required|must|before publication)\b/i)
+    }
+    expect(localizeCompletenessIssue(issue('approved_cover_missing', 'media.cover'))).toBe(
+      'A publicação exige exatamente uma imagem de capa aprovada.'
+    )
+    expect(localizeCompletenessIssue(issue('media_pending', 'media'))).toBe(
+      'Todas as imagens do lugar precisam ser analisadas antes da publicação.'
+    )
+  })
+
   it('describes the revision workflow in Portuguese', () => {
     expect(getRevisionStatusMeta('draft').label).toBe('Rascunho')
     expect(getRevisionStatusMeta('changes_requested').label).toBe('Correções pedidas')

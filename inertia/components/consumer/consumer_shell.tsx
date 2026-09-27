@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react'
 import type { PropsWithChildren } from 'react'
 
 import { AppBrand } from '~/components/app_brand'
+import { HelpMenu } from '~/components/manual/help_menu'
 import { MAIN_CONTENT_ID, SkipLink } from '~/components/skip_link'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { Button } from '~/components/ui/button'
@@ -22,8 +23,9 @@ export function ConsumerShell({ children }: PropsWithChildren) {
       <SkipLink />
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)] short:static">
         <div className="app-container flex min-h-16 items-center gap-4 py-2">
-          {/* Beside two 44 px actions a 320 px phone cut the tagline to "Descoberta reg…". */}
-          <AppBrand href="/cidades" taglineClassName="max-[360px]:hidden" />
+          {/* Beside three 44 px actions (help, theme, exit) a phone cut the tagline to
+              "Descoberta reg…", so phones show only the name. */}
+          <AppBrand href="/cidades" taglineClassName="max-[430px]:hidden" />
 
           <nav
             className="ms-auto hidden items-center gap-1 md:flex"
@@ -52,6 +54,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
           </nav>
 
           <div className="ms-auto flex items-center gap-1 md:ms-2">
+            <HelpMenu surface="consumer" />
             <ThemeToggle />
             {/* Same exit as the public header: labelled on a wide screen, an icon on a phone. */}
             <Button

@@ -187,7 +187,7 @@ describe('responsive chrome on short screens', () => {
     expect(screen.getByRole('main').parentElement).toHaveClass('min-h-dvh')
   })
 
-  it('drops the brand tagline beside the wallet actions on a phone narrower than 360 px', () => {
+  it('drops the brand tagline beside the wallet actions (help, theme, exit) on a phone', () => {
     pageState.user = { id: 7, full_name: 'Ana Souza', email: 'ana@example.com' }
     pageState.activeTenantId = 31
     render(
@@ -197,7 +197,7 @@ describe('responsive chrome on short screens', () => {
     )
 
     expect(within(screen.getByRole('banner')).getByText('Descoberta regional')).toHaveClass(
-      'max-[360px]:hidden'
+      'max-[430px]:hidden'
     )
   })
 })

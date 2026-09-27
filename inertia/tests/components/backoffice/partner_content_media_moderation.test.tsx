@@ -72,7 +72,13 @@ describe('PartnerContentMediaModeration', () => {
     )
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(new Headers(options.headers).get('x-tenant-id')).toBe('7')
-    expect(mocks.reload).toHaveBeenCalledWith(expect.objectContaining({ only: ['items'] }))
+    // The queue page takes `sections` and `counts`; reloading anything else refreshed nothing.
+    expect(mocks.reload).toHaveBeenCalledWith(
+      expect.objectContaining({ only: ['sections', 'counts'] })
+    )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Imagem aprovada. Ela já pode aparecer na descoberta pública.'
+    )
   })
 
   it('requires and sends a concrete reason when rejecting media', async () => {
@@ -110,6 +116,38 @@ describe('PartnerContentMediaModeration', () => {
     expect(JSON.parse(String(options.body))).toEqual({
       reason: 'A imagem contém texto promocional ilegível.',
     })
+    expect(mocks.reload).toHaveBeenCalledWith(
+      expect.objectContaining({ only: ['sections', 'counts'] })
+    )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Imagem recusada. O motivo volta para o parceiro.'
+    )
+  })
+
+  it('clears the last confirmation when the next action starts', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: 77, moderation_status: 'approved' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    const { user } = render(
+      <PartnerContentMediaModeration
+        tenantId={7}
+        kind="events"
+        contentId={22}
+        media={[pendingMedia, { ...pendingMedia, id: 78, isCover: false }]}
+        canApprove
+        canReject
+      />
+    )
+
+    await user.click(screen.getAllByRole('button', { name: 'Aprovar imagem' })[0])
+    expect(screen.getByRole('status')).toHaveTextContent('Imagem aprovada.')
+
+    await user.click(screen.getAllByRole('button', { name: 'Recusar imagem' })[1])
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('keeps a note on an approved image neutral and a refusal reason in red', () => {

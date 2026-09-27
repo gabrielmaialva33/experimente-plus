@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
+  BookOpen,
   Building2,
   ClipboardCheck,
   Compass,
@@ -164,6 +165,7 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
   footer: [
     { label: 'Explorar cidades', href: '/cidades', icon: Compass },
     { label: 'Baixar o app', href: '/app', icon: Smartphone },
+    { label: 'Manual', href: '/manual', icon: BookOpen },
     { label: 'Termos de Uso', href: '/termos', icon: FileCheck2 },
     { label: 'Privacidade', href: '/privacidade', icon: FileLock2 },
   ],

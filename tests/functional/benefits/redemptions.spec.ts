@@ -19,6 +19,7 @@ import type BenefitAuditService from '#modules/benefits/services/benefit_audit_s
 import Establishment from '#modules/establishments/models/establishment'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import IRole from '#modules/roles/interfaces/role_interface'
+import { UNAVAILABLE_BENEFIT_PRESENTATION_MESSAGE } from '#modules/benefits/utils/benefit_validation_refusal'
 import { createEstablishmentScenario } from '#tests/functional/establishments/helpers'
 import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
 
@@ -746,6 +747,53 @@ test.group('Benefit redemptions', (group) => {
     redemptionPage.assertStatus(200)
     assert.include(redemptionPage.text(), 'portal/redemptions/validate')
     assert.include(redemptionPage.text(), INVALID_BENEFIT_PRESENTATION_MESSAGE)
+  })
+
+  test('keeps partners on the validation page when the benefit rules refuse a presentation', async ({
+    assert,
+    client,
+  }) => {
+    const fixture = await createFixture('refused-by-rules')
+    const service = await app.container.make(BenefitRedemptionService)
+    const tenantId = fixture.scenario.tenant.id
+    const present = () =>
+      service.present(
+        tenantId,
+        fixture.access.id,
+        fixture.offer.id,
+        fixture.consumer,
+        'http://localhost:3333'
+      )
+    const used = await present()
+    const spare = await present()
+    await service.redeem(tenantId, used.token, fixture.scenario.owner)
+
+    // The used link opened again, and a second code for a benefit with one use.
+    for (const token of [used.token, spare.token]) {
+      const page = await client
+        .get(`/portal/redemptions/validate?token=${encodeURIComponent(token)}`)
+        .header('x-tenant-id', String(tenantId))
+        .loginAs(fixture.scenario.owner)
+      page.assertStatus(200)
+      assert.include(page.text(), 'portal/redemptions/validate')
+      assert.include(page.text(), UNAVAILABLE_BENEFIT_PRESENTATION_MESSAGE)
+      assert.notInclude(page.text(), 'redemption limit has been reached')
+    }
+
+    const confirmation = await client
+      .post('/portal/redemptions')
+      .withCsrfToken()
+      .header('x-tenant-id', String(tenantId))
+      .loginAs(fixture.scenario.owner)
+      .json({ token: spare.token })
+    confirmation.assertStatus(200)
+    assert.include(confirmation.text(), 'portal/redemptions/validate')
+    assert.include(confirmation.text(), UNAVAILABLE_BENEFIT_PRESENTATION_MESSAGE)
+
+    const redemptions = await BenefitRedemption.query()
+      .where('tenant_id', tenantId)
+      .where('access_id', fixture.access.id)
+    assert.lengthOf(redemptions, 1)
   })
 
   test('rejects tampered and cross-tenant presentation tokens', async ({ assert }) => {

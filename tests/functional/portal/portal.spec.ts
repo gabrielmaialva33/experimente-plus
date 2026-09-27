@@ -1351,6 +1351,9 @@ test.group('Operational portals', (group) => {
     assert.include(adminFeedback.text(), scenario.organization.trade_name)
     assert.include(adminFeedback.text(), 'Unidade do portal')
     assert.include(adminFeedback.text(), feedbackMessage)
+    // The server renders the report date as the browser does, so the page hydrates.
+    assert.include(adminFeedback.text(), 'Relatado em')
+    assert.notInclude(adminFeedback.text(), 'Data do relato indisponível')
   })
 
   test('paginates and filters the moderation queue through the validated query contract', async ({

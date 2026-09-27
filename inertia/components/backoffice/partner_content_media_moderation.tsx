@@ -41,10 +41,13 @@ export function PartnerContentMediaModeration({
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // What the last decision did, read aloud once; the next action clears it.
+  const [notice, setNotice] = useState<string | null>(null)
 
-  function reloadItems(): Promise<void> {
+  // The queue page receives its rows as `sections` and its tab totals as `counts`.
+  function reloadQueue(): Promise<void> {
     return new Promise((resolve) => {
-      router.reload({ only: ['items'], onFinish: () => resolve() })
+      router.reload({ only: ['sections', 'counts'], onFinish: () => resolve() })
     })
   }
 
@@ -58,6 +61,7 @@ export function PartnerContentMediaModeration({
 
     setActionId(mediaId)
     setError(null)
+    setNotice(null)
     try {
       const response = await fetch(
         '/api/v1/admin/content/' + kind + '/' + contentId + '/media/' + mediaId + '/' + action,
@@ -85,7 +89,12 @@ export function PartnerContentMediaModeration({
 
       setRejectingId(null)
       setReason('')
-      await reloadItems()
+      setNotice(
+        action === 'approve'
+          ? 'Imagem aprovada. Ela já pode aparecer na descoberta pública.'
+          : 'Imagem recusada. O motivo volta para o parceiro.'
+      )
+      await reloadQueue()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao moderar a imagem.')
     } finally {
@@ -186,6 +195,7 @@ export function PartnerContentMediaModeration({
                             setRejectingId((current) => (current === item.id ? null : item.id))
                             setReason('')
                             setError(null)
+                            setNotice(null)
                           }}
                         >
                           <X aria-hidden="true" className="size-3.5" />
@@ -233,6 +243,13 @@ export function PartnerContentMediaModeration({
         })}
       </div>
 
+      <p
+        role="status"
+        aria-live="polite"
+        className={cn('text-sm text-success', notice ? 'mt-3' : null)}
+      >
+        {notice}
+      </p>
       {error ? (
         <p role="alert" className="mt-3 text-sm text-destructive">
           {error}

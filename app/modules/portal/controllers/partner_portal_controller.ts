@@ -196,7 +196,9 @@ export default class PartnerPortalController {
       )
       return response.redirect().toPath('/portal')
     }
-    return response.redirect().toPath('/portal/establishments')
+    // Several organizations: the places list names each one with its "Desempenho"
+    // link. The query tells that page's help which task the reader came for.
+    return response.redirect().withQs({ para: 'desempenho' }).toPath('/portal/establishments')
   }
 
   async establishment({ auth, inertia, params, response, tenant }: HttpContext) {

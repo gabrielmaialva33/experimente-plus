@@ -18,6 +18,17 @@ function clean(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null
 }
 
+/**
+ * The handle as the service stores it — trimmed, without the leading `@`, in
+ * lower case — shown back with one `@`. A revision saved before that rule, or
+ * seeded as `@Handle`, then reads the same as its normalized copy instead of
+ * counting as a change the partner never made.
+ */
+function instagramHandle(value: string | null | undefined): string | null {
+  const handle = clean(value)?.replace(/^@+/, '').trim().toLowerCase()
+  return handle ? `@${handle}` : null
+}
+
 function hoursFor(revision: EstablishmentRevision, weekday: number): string | null {
   const intervals = revision.hours
     .filter((hour) => hour.weekday === weekday)
@@ -60,7 +71,7 @@ export function moderationSnapshot(revision: EstablishmentRevision): ModerationS
     'contacts.whatsapp': clean(revision.whatsapp),
     'contacts.public_email': clean(revision.public_email),
     'contacts.website': clean(revision.website),
-    'contacts.instagram': clean(revision.instagram),
+    'contacts.instagram': instagramHandle(revision.instagram),
     'contacts.booking_url': clean(revision.booking_url),
     'address.street': clean(address?.street),
     'address.number': address?.without_number ? 's/n' : clean(address?.number),

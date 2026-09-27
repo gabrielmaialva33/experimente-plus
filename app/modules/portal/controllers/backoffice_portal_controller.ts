@@ -117,7 +117,13 @@ export default class BackofficePortalController {
 
     response.header('X-Robots-Tag', 'noindex, nofollow')
     response.header('Cache-Control', 'private, no-store')
-    return inertia.render('backoffice/feedback/index', { feedback, filters: query })
+    // Serialized here, as the other back-office pages do: the server-side render gets
+    // the props as they are, so a Luxon date reached it as an object, the report date
+    // read "indisponível" there and the page failed to hydrate.
+    return inertia.render('backoffice/feedback/index', {
+      feedback: feedback.serialize(),
+      filters: query,
+    })
   }
 
   async reviewFeedback({ auth, request, response, session, params, tenant }: HttpContext) {

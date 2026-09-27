@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { AppBrand } from '~/components/app_brand'
+import { HelpMenu } from '~/components/manual/help_menu'
 import { ThemeToggle } from '~/components/theme/theme_toggle'
 import { Avatar, AvatarFallback } from '~/components/ui/avatar'
 import { Button } from '~/components/ui/button'
@@ -273,6 +274,7 @@ export function Header({ surface }: { surface: NavigationSurface }) {
 
         <div className="ms-auto flex items-center gap-1.5 sm:gap-2">
           {surface !== 'consumer' ? <TenantSwitcher /> : null}
+          <HelpMenu surface={surface} />
           <ThemeToggle />
           <UserMenu surface={surface} />
         </div>

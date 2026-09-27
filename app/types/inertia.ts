@@ -72,6 +72,9 @@ declare module '@adonisjs/inertia/types' {
     // The mobile app outside the stores
     'app/download': { android: AndroidDistribution; pageUrl: string; qrSvg: string }
 
+    // The user manual
+    'manual/index': Record<string, never>
+
     // Root / misc
     'home': Record<string, never>
     'ui_demo': Record<string, never>
