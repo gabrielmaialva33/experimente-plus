@@ -87,6 +87,7 @@ export default function ModerationQueuePage({ revisions, filters }: ModerationIn
       <div className="space-y-7">
         <PageHeader
           eyebrow="Caixa de moderação"
+          icon={ClipboardCheck}
           title="Dados de lugares para revisar"
           description="Versões enviadas pelos parceiros, das mais antigas para as mais novas. Nada fica público sem aprovação."
           meta={
