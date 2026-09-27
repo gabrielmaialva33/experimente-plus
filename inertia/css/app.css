@@ -255,6 +255,13 @@
     scroll-behavior: smooth;
   }
 
+  /* WebKit counts a native select's selected label at its full width in the page's
+     scrollable overflow, even when the control is narrower: one long place name let a
+     320 px iPhone pan sideways. Paint containment keeps the label inside the control. */
+  select {
+    contain: paint;
+  }
+
   @media (max-width: 47.999rem) {
     html:has([data-public-shell]) {
       scroll-padding-bottom: var(--public-mobile-focus-clearance);
@@ -345,6 +352,32 @@ html,
 body {
   min-height: 100%;
   width: 100%;
+}
+
+/*
+ * iOS Safari zooms the page into a focused field whose text is under 16px and leaves it
+ * zoomed after the keyboard closes. On phone widths and touch screens every text field
+ * reads at 16px or more, whatever density its component picked for a desktop. Unlayered,
+ * so it outranks the size utilities; an important utility (`text-2xl!`) still wins where a
+ * field needs a larger size.
+ */
+@media (max-width: 47.999rem), (pointer: coarse) {
+  input:not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='range'],
+    [type='color'],
+    [type='file'],
+    [type='hidden'],
+    [type='button'],
+    [type='submit'],
+    [type='reset'],
+    [type='image']
+  ),
+  select,
+  textarea {
+    font-size: max(1rem, 16px);
+  }
 }
 
 /* One selection grammar across tabs, segments and filter chips. Shape follows purpose. */
