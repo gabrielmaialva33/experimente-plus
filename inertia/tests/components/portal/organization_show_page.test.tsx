@@ -154,6 +154,7 @@ const allowedActions = {
   redemptions: { read: true, validate: true },
   analytics: { read: true },
   pilot_feedback: { create: true },
+  team: { read: true, manage: true },
 }
 
 describe('PortalOrganizationPage', () => {

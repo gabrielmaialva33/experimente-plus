@@ -33,6 +33,7 @@ function actions(redemptions: { read: boolean; validate: boolean }): IOrganizati
     redemptions,
     analytics: { read: false },
     pilot_feedback: { create: false },
+    team: { read: false, manage: false },
   }
 }
 

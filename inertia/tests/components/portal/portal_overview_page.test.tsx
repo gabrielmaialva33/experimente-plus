@@ -51,6 +51,7 @@ const baseActions: OrganizationAllowedActions = {
   redemptions: { read: true, validate: false },
   analytics: { read: true },
   pilot_feedback: { create: false },
+  team: { read: true, manage: false },
 }
 
 const noTasks = {
