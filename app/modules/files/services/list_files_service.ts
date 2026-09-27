@@ -47,17 +47,18 @@ export default class ListFilesService {
       Math.min(100, Math.max(1, perPage))
     )
 
-    const meta = paginator.getMeta()
-
+    // Read the paginator itself, not getMeta(): the meta object follows the naming
+    // strategy (per_page, last_page…), so the camelCase reads were undefined and the
+    // Arquivos page lost its pagination — 20 of 197 files, and no way to the rest.
     return {
       meta: {
-        total: Number(meta.total),
-        perPage: Number(meta.perPage),
-        currentPage: Number(meta.currentPage),
-        lastPage: Number(meta.lastPage),
-        firstPage: Number(meta.firstPage),
-        nextPageUrl: meta.nextPageUrl ?? null,
-        previousPageUrl: meta.previousPageUrl ?? null,
+        total: paginator.total,
+        perPage: paginator.perPage,
+        currentPage: paginator.currentPage,
+        lastPage: paginator.lastPage,
+        firstPage: paginator.firstPage,
+        nextPageUrl: paginator.getNextPageUrl(),
+        previousPageUrl: paginator.getPreviousPageUrl(),
       },
       data: paginator.all().map((file) => ({
         id: file.id,

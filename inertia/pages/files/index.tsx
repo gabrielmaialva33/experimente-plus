@@ -111,7 +111,8 @@ export default function FilesPage({ files }: FilesPageProps) {
           </Card>
         )}
 
-        <Card>
+        {/* Page links land here rather than keeping the scroll at the foot of the list. */}
+        <Card id="arquivos" className="scroll-mt-24">
           <CardHeader>
             <CardHeading>
               <CardTitle className="font-display text-lg font-extrabold">
@@ -202,14 +203,14 @@ export default function FilesPage({ files }: FilesPageProps) {
                 <div className="flex gap-2">
                   {files.meta.currentPage > files.meta.firstPage && (
                     <Button asChild variant="outline" size="md" shape="pill">
-                      <Link href={`/files?page=${files.meta.currentPage - 1}`} preserveScroll>
+                      <Link href={`/files?page=${files.meta.currentPage - 1}#arquivos`}>
                         Anterior
                       </Link>
                     </Button>
                   )}
                   {files.meta.currentPage < files.meta.lastPage && (
                     <Button asChild variant="outline" size="md" shape="pill">
-                      <Link href={`/files?page=${files.meta.currentPage + 1}`} preserveScroll>
+                      <Link href={`/files?page=${files.meta.currentPage + 1}#arquivos`}>
                         Próxima
                       </Link>
                     </Button>
