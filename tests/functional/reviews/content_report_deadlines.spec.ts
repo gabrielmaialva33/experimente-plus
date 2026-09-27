@@ -23,6 +23,7 @@ import {
   type EstablishmentScenario,
 } from '#tests/functional/establishments/helpers'
 import { createUser } from '#tests/functional/organizations/helpers'
+import { removeCommittedOperation, usersOnlyIn } from '#tests/helpers/committed_fixtures'
 
 const DAY = 86_400_000
 const tenantHeader = (tenantId: number) => ({ 'x-tenant-id': String(tenantId) })
@@ -359,9 +360,25 @@ test.group('Content report deadlines (ADR-0027)', (group) => {
  * disposable test database and the second claim is made to wait on the first
  * one's row locks, so the test proves what the single conditional UPDATE is for.
  */
-test.group('Content report deadlines under concurrency (independent transactions)', () => {
-  // Committed fixtures outlive the run, so a fixed prefix collides on the next one.
-  const committed = (prefix: string) => operation(`${prefix}-${randomUUID().slice(0, 8)}`)
+test.group('Content report deadlines under concurrency (independent transactions)', (group) => {
+  // The fixtures are committed, so each test's operation is removed afterwards: a run must
+  // not leave people, places and reports behind for the next one. The random prefix keeps
+  // a test that dies before its teardown from colliding on the next run.
+  const operations = new Set<number>()
+  const committed = async (prefix: string) => {
+    const target = await operation(`${prefix}-${randomUUID().slice(0, 8)}`)
+    operations.add(target.scenario.tenant.id)
+    return target
+  }
+  group.each.teardown(async () => {
+    try {
+      for (const tenantId of operations) {
+        await removeCommittedOperation(tenantId, await usersOnlyIn(tenantId))
+      }
+    } finally {
+      operations.clear()
+    }
+  })
 
   async function waitForLockWaiter() {
     for (let attempt = 0; attempt < 100; attempt++) {

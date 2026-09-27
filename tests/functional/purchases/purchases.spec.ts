@@ -1,4 +1,5 @@
 import { useFakePayments } from '#tests/helpers/fake_payments'
+import { removeCommittedOperation } from '#tests/helpers/committed_fixtures'
 import { mock } from 'node:test'
 import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
@@ -595,12 +596,35 @@ test.group('Purchases EP-14', (group) => {
 })
 
 test.group('Purchases independent PostgreSQL mutexes', (group) => {
-  group.each.setup(() => useFakePayments({ autoRefundUnused: true }))
-  // Committed fixtures intentionally remain in the isolated test ledger: financial facts are immutable.
+  // No global transaction: the mutexes need independent connections. The fixtures are
+  // committed, so each test's operation is removed afterwards; otherwise every run of the
+  // suite would leave its people and places behind for the next one to trip over.
+  const committed = new Map<number, number[]>()
+  const committedFixture = async () => {
+    const f = await createPurchaseFixture()
+    committed.set(
+      f.s.tenant.id,
+      Object.values(f.s.users).map((user) => user.id)
+    )
+    return f
+  }
+  group.each.setup(() => {
+    const restore = useFakePayments({ autoRefundUnused: true })
+    return async () => {
+      try {
+        for (const [tenantId, userIds] of committed) {
+          await removeCommittedOperation(tenantId, userIds)
+        }
+      } finally {
+        committed.clear()
+        restore()
+      }
+    }
+  })
   for (const first of ['redemption', 'refund'] as const) {
     test('serializes the access mutex when ' + first + ' wins', async ({ assert }) => {
       assert.equal(db.connectionGlobalTransactions.size, 0)
-      const f = await fixture()
+      const f = await committedFixture()
       const p = await f.paid()
       const redemption = await app.container.make(BenefitRedemptionService)
       const token = await redemption.present(
@@ -671,7 +695,7 @@ test.group('Purchases independent PostgreSQL mutexes', (group) => {
   test('two devices with one key create one intention and two different keys cannot double charge', async ({
     assert,
   }) => {
-    const f = await fixture()
+    const f = await committedFixture()
     const key = randomUUID()
     const results = await Promise.all([
       f.service.create(f.s.tenant.id, f.s.users.holder, key, f.input),
