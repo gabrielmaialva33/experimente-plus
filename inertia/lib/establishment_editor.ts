@@ -117,6 +117,9 @@ const ISSUE_MESSAGES: Record<string, string> = {
   contact_channel_missing: 'Informe ao menos um canal público de contato.',
   media_missing: 'Adicione ao menos uma imagem do lugar.',
   cover_image_missing: 'Escolha uma imagem como capa do lugar.',
+  // Publication gate, shown on the moderation review.
+  approved_cover_missing: 'A publicação exige exatamente uma imagem de capa aprovada.',
+  media_pending: 'Todas as imagens do lugar precisam ser analisadas antes da publicação.',
   media_quarantined: 'Remova as imagens bloqueadas antes de enviar os dados.',
   review_issues_open: 'Resolva as pendências de moderação que bloqueiam a publicação.',
   establishment_not_active: 'O lugar precisa estar ativo antes do envio.',
