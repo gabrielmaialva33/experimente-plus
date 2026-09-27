@@ -70,3 +70,16 @@ export interface RedemptionHistory {
   redemptions: RedemptionReceipt[]
   total: number
 }
+
+/** The preview the in-page reader receives: the token stays with the page, never in the answer. */
+export type RedemptionPreviewView = Omit<RedemptionPreview, 'token'>
+
+export type RedemptionRefusalReason =
+  'invalid' | 'foreign' | 'not_allowed' | 'already_used' | 'paused' | 'blocked' | 'outside_window'
+
+/** Why the server refused a presentation, already worded for the partner. */
+export interface RedemptionRefusal {
+  reason: RedemptionRefusalReason
+  title: string
+  message: string
+}

@@ -396,7 +396,7 @@ describe('Portal server-projected allowed actions', () => {
     expect(screen.queryByLabelText('Link da apresentação')).not.toBeInTheDocument()
   })
 
-  it('explains an unavailable presentation and keeps the retry path visible', () => {
+  it('explains an unavailable presentation and keeps the retry path visible', async () => {
     mocks.pageProps = {
       errors: {
         presentation:
@@ -408,15 +408,18 @@ describe('Portal server-projected allowed actions', () => {
       redemptions: { read: true, validate: true },
     }
 
-    render(<PartnerValidationPage token="" preview={null} allowed_actions={actions} />)
+    const { user } = render(
+      <PartnerValidationPage token="" preview={null} allowed_actions={actions} />
+    )
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Apresentação indisponível')
-    expect(screen.getByRole('alert')).toHaveTextContent('Peça ao cliente para gerar')
-    expect(screen.getByLabelText('Link da apresentação')).toBeEnabled()
+    const refusal = screen.getByRole('region', { name: 'Apresentação indisponível' })
+    expect(within(refusal).getByText(/Peça ao cliente para gerar/)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Digitar código' }))
+    expect(screen.getByLabelText('Link ou código da apresentação')).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Conferir' })).toBeDisabled()
     // Stacked on a phone, `flex-1` collapsed the field to a sliver; it only grows in a row.
-    expect(screen.getByLabelText('Link da apresentação')).toHaveClass('h-12', 'sm:flex-1')
-    expect(screen.getByLabelText('Link da apresentação')).not.toHaveClass('flex-1')
+    expect(screen.getByLabelText('Link ou código da apresentação')).toHaveClass('h-12', 'sm:flex-1')
+    expect(screen.getByLabelText('Link ou código da apresentação')).not.toHaveClass('flex-1')
   })
 
   it('presents a valid benefit as a ticket with one conversion action to confirm it', () => {
