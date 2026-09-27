@@ -109,7 +109,8 @@ test.group('Benefit redemption browser flow', () => {
 
     await partnerPage.getByRole('heading', { name: 'Validar benefício' }).waitFor()
     await partnerPage.getByText('Apresentação válida', { exact: true }).waitFor()
-    await partnerPage.getByText(scenario.users.holder.full_name, { exact: false }).waitFor()
+    // Exact: the page also announces the valid presentation, holder included, to screen readers.
+    await partnerPage.getByText(scenario.users.holder.full_name, { exact: true }).waitFor()
     await partnerPage.getByRole('heading', { name: scenario.offer.title }).waitFor()
 
     await partnerPage.getByRole('button', { name: 'Confirmar utilização', exact: true }).click()
@@ -118,15 +119,18 @@ test.group('Benefit redemption browser flow', () => {
     await confirmationDialog
       .getByRole('button', { name: 'Confirmar utilização', exact: true })
       .click()
-    await partnerPage.waitForURL(/\/portal\/redemptions\/EXP-[A-F0-9]{16}$/, {
-      timeout: 30_000,
-    })
-    await partnerPage.getByText('Utilização confirmada', { exact: true }).waitFor()
-    await partnerPage.getByText(scenario.offer.terms!, { exact: true }).waitFor()
-
-    const receiptCode = new URL(partnerPage.url()).pathname.split('/').at(-1)
+    // The receipt appears on the validation page itself, ready for the next QR code.
+    await partnerPage.getByText('Utilização registrada', { exact: true }).waitFor()
+    const receiptLink = partnerPage.getByRole('link', { name: 'Abrir comprovante' })
+    const receiptHref = await receiptLink.getAttribute('href')
+    const receiptCode = receiptHref?.match(/\/portal\/redemptions\/(EXP-[A-F0-9]{16})$/)?.[1]
     assert.exists(receiptCode)
     await partnerPage.getByText(receiptCode!, { exact: true }).waitFor()
+
+    await receiptLink.click()
+    await partnerPage.waitForURL(`**/portal/redemptions/${receiptCode}`, { timeout: 30_000 })
+    await partnerPage.getByText('Utilização confirmada', { exact: true }).waitFor()
+    await partnerPage.getByText(scenario.offer.terms!, { exact: true }).waitFor()
 
     await resetSession(browserContext)
 
