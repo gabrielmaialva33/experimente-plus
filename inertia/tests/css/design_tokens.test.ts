@@ -281,7 +281,10 @@ describe('flat foundation token contract', () => {
           expect(Math.hypot(...a.map((channel, k) => channel - b[k]))).toBeGreaterThan(0.04)
         }
       }
-      expect(colorToken(block, 'status-neutral')).toEqual(colorToken(block, 'muted'))
+      // Muted in light; in dark muted sits below the card and neutral status keeps the raised surface.
+      expect(colorToken(block, 'status-neutral')).toEqual(
+        colorToken(block, selector === ':root' ? 'muted' : 'surface-raised')
+      )
       for (const [bg, fg] of [
         ['choice-background', 'choice-foreground'],
         ['choice-selected', 'choice-selected-foreground'],

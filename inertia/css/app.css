@@ -167,7 +167,8 @@
     --secondary: oklch(0.254256 0.036457 274.849);
     --secondary-foreground: oklch(0.972339 0.004673 84.5636);
 
-    --muted: oklch(0.254256 0.036457 274.849);
+    /* Below the card, as light's muted sits below white: an inset reads as inset. */
+    --muted: oklch(0.222 0.0277 275.3);
     --muted-foreground: oklch(0.828324 0.024104 84.5932);
 
     --accent: oklch(0.331538 0.04734 250.976);
@@ -229,7 +230,9 @@
     --temporal-emphasis-foreground: oklch(0.9 0.015 255);
     --temporal-emphasis-border: oklch(0.7 0.025 255);
     --choice-border: oklch(0.7 0.045 253.59);
-    --status-neutral: var(--muted);
+    /* Muted sits below the card in dark; neutral status keeps the raised surface,
+     * apart from absent content. */
+    --status-neutral: var(--surface-raised);
     --status-neutral-foreground: var(--muted-foreground);
     --status-neutral-border: var(--border);
     --choice-background: var(--card);
