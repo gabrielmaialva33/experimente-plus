@@ -15,7 +15,10 @@ export default function ForgotPasswordPage() {
         contextTitle="Recuperação protegida"
         contextDescription="O link é temporário e de uso único. Uma nova solicitação invalida links anteriores."
         footer={
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link
+            href="/login"
+            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+          >
             Voltar para o login
           </Link>
         }

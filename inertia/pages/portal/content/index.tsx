@@ -351,7 +351,7 @@ export default function PartnerContentPage({
                   // The tabs share a phone's width; where a label and its count no longer
                   // fit (a 320 px phone), the count drops under the label instead of pushing
                   // the last tab off screen.
-                  'inline-flex min-h-10 min-w-0 flex-auto flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-full px-1.5 py-1 text-[0.8125rem] transition-colors sm:h-10 sm:flex-none sm:flex-nowrap sm:gap-2 sm:px-4 sm:py-0 sm:text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none',
+                  'inline-flex min-h-10 min-w-0 flex-auto flex-wrap pointer-coarse:min-h-11 items-center justify-center gap-x-1.5 gap-y-0.5 rounded-full px-1.5 py-1 text-[0.8125rem] transition-colors sm:h-10 sm:flex-none sm:flex-nowrap sm:gap-2 sm:px-4 sm:py-0 sm:text-[0.9375rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none',
                   selected
                     ? 'bg-primary font-bold text-primary-foreground'
                     : 'font-semibold text-foreground hover:bg-background'

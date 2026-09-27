@@ -6,6 +6,8 @@ import { AppBrand } from '~/components/app_brand'
 import { PasswordField } from '~/components/auth/password_field'
 import { Button, buttonVariants } from '~/components/ui/button'
 import { Checkbox } from '~/components/ui/checkbox'
+import { Input } from '~/components/ui/input'
+import { editorSelectClassName } from '~/components/portal/establishment_editor/editor_field'
 import { render } from '~/tests/test_utils'
 
 vi.mock('@inertiajs/react', () => ({
@@ -35,6 +37,22 @@ describe('touch targets', () => {
       'size-10',
       'pointer-coarse:size-11'
     )
+  })
+
+  it('grows text buttons and fields under 44 px to it on a coarse pointer', () => {
+    expect(buttonVariants({ size: 'md' })).toContain('pointer-coarse:h-11')
+    expect(buttonVariants({ size: 'sm' })).toContain('pointer-coarse:h-11')
+    // A wrapping button keeps its auto height, with the 44 px floor.
+    const wrapping = buttonVariants({ size: 'md', autoHeight: true })
+    expect(wrapping).toContain('pointer-coarse:h-auto')
+    expect(wrapping).toContain('pointer-coarse:min-h-11')
+
+    render(<Input aria-label="Buscar por nome ou e-mail" />)
+    expect(screen.getByRole('textbox', { name: 'Buscar por nome ou e-mail' })).toHaveClass(
+      'h-10',
+      'pointer-coarse:h-11'
+    )
+    expect(editorSelectClassName).toContain('pointer-coarse:h-11')
   })
 
   it('gives small inline controls a 44 px hit area around their drawn size', () => {

@@ -345,6 +345,7 @@ export function ModerationActions({
                         type="button"
                         variant="ghost"
                         size="sm"
+                        mode="icon"
                         className="justify-self-end text-destructive md:mt-7 md:justify-self-auto"
                         disabled={busy || changesForm.data.issues.length === 1}
                         onClick={() =>
