@@ -66,7 +66,11 @@ describe('authentication and legal experience', () => {
     render(<TermsPage />)
 
     expect(screen.getByRole('heading', { level: 1, name: 'Termos de Uso' })).toBeVisible()
-    expect(screen.getByText(/A apresentação temporária expira em cinco minutos/)).toBeVisible()
+    expect(screen.getByText(/um código que vale por cinco minutos/)).toBeVisible()
+    // Purchases exist: the terms no longer say there is no checkout or payment.
+    expect(screen.getByRole('heading', { name: '5. Compras e benefícios' })).toBeVisible()
+    expect(document.body).not.toHaveTextContent(/não oferece reserva, checkout, pagamento/)
+    expect(document.body).not.toHaveTextContent(/Snapshots|Capacidades sobre uma organização/)
     expect(screen.getByRole('link', { name: 'Ler a Política de Privacidade' })).toHaveAttribute(
       'href',
       '/privacidade'
@@ -93,10 +97,14 @@ describe('authentication and legal experience', () => {
     render(<PrivacyPage />)
 
     expect(screen.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeVisible()
-    expect(screen.getByText(/Global Privacy Control e Do Not Track/)).toBeVisible()
-    expect(screen.getByText(/Um canal público definitivo deve ser formalizado/)).toBeVisible()
-    expect(screen.getByText(/Snapshots transacionais já registrados/)).toBeVisible()
-    expect(screen.getByText(/nome e e-mail vigentes no momento/)).toBeVisible()
+    expect(screen.getByText(/Global Privacy Control ou Do Not Track/)).toBeVisible()
+    expect(screen.getByText(/Um canal público de atendimento será definido/)).toBeVisible()
+    expect(screen.getByText(/comprovantes de benefícios já usados podem manter/)).toBeVisible()
+    expect(screen.getByText(/nome e o e-mail vigentes no momento do uso/)).toBeVisible()
+    // It names who receives data to work, including the Concierge's AI provider.
+    expect(screen.getByText(/provedor de inteligência artificial/)).toBeVisible()
+    // Plain Portuguese: no engineering vocabulary left in the document.
+    expect(document.body).not.toHaveTextContent(/Snapshots|pipeline|first-party|user agent/i)
     expect(document.body).not.toHaveTextContent(/consentimento armazenado|aceite registrado/i)
     expect(document.body).not.toHaveTextContent(/históricos? (?:permanecem )?anonimizados/i)
   })

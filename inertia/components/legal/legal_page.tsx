@@ -33,7 +33,7 @@ export function LegalPage({
       <article className="app-container max-w-4xl py-10 sm:py-14">
         <header className="border-b border-border-subtle pb-7">
           <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
-            Versão do piloto · 3 de setembro de 2026
+            Versão do piloto · 26 de setembro de 2026
           </p>
           <h1 className="mt-2 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]">
             {title}

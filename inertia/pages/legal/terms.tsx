@@ -6,90 +6,108 @@ const sections = [
     content: (
       <>
         <p>
-          Cidades, categorias e fichas publicadas podem ser consultadas sem cadastro. As informações
-          vêm de conteúdo submetido e revisado, mas horários, contatos e disponibilidade podem
-          mudar.
+          Cidades, categorias e lugares publicados podem ser consultados sem cadastro. As
+          informações são enviadas pelos próprios lugares e revisadas antes de publicar, mas
+          horários, contatos e disponibilidade podem mudar.
         </p>
         <p>
-          Rotas, telefone, WhatsApp, sites e redes sociais abrem serviços externos. Essas ações não
-          representam reserva, compra, visita confirmada ou garantia de atendimento.
+          Rotas, telefone, WhatsApp, sites e redes sociais abrem serviços de terceiros. Usá-los não
+          é uma reserva, uma compra nem uma garantia de atendimento.
         </p>
       </>
     ),
   },
   {
-    title: '2. Conta pessoal',
+    title: '2. Sua conta',
     content: (
       <>
         <p>
-          Para criar uma conta, informe dados verdadeiros, mantenha sua senha protegida e aceite
-          estes Termos e a Política de Privacidade. Não crie contas falsas, automatizadas ou
-          destinadas a spam, fraude ou abuso de benefícios.
+          Para criar uma conta, informe dados verdadeiros, mantenha sua senha em segredo e aceite
+          estes Termos e a Política de Privacidade. Não crie contas falsas ou automáticas, nem use o
+          Experimente+ para spam, fraude ou abuso de benefícios.
         </p>
         <p>
-          A conta começa como acesso pessoal. Capacidades sobre uma organização dependem de um
-          vínculo ativo com essa organização e das políticas verificadas no servidor; parceiro não é
-          um papel global escolhido no cadastro.
+          Toda conta começa como pessoal. Administrar um negócio no Portal depende de um vínculo com
+          a organização desse negócio, conferido pela equipe do Experimente+; não é algo escolhido
+          no cadastro.
         </p>
       </>
     ),
   },
   {
-    title: '3. Organizações e conteúdo publicado',
+    title: '3. Negócios e conteúdo publicado',
     content: (
       <p>
-        Dados legais pertencem à organização; endereço, horários, categorias e mídia pertencem às
-        unidades públicas. O envio de conteúdo não garante publicação: informações incompletas ou em
-        desacordo com as regras podem receber pedido de correção, rejeição ou suspensão, com
-        registro operacional da decisão.
+        Cada organização responde pelos dados que envia sobre seus lugares, experiências e eventos.
+        Enviar conteúdo não garante a publicação: o que estiver incompleto ou fora das regras pode
+        receber pedido de correção, ser recusado ou ser suspenso, e cada decisão fica registrada.
       </p>
     ),
   },
   {
-    title: '4. Acessos e benefícios',
+    title: '4. Avaliações, fotos e denúncias',
     content: (
       <>
         <p>
-          Um acesso à edição não é, por si só, uma compra. No piloto, acessos podem ser concedidos
-          pela operação e a carteira calcula a disponibilidade de cada benefício em tempo real.
+          Você pode avaliar lugares com nota, comentário e fotos. A avaliação aparece na hora, e o
+          lugar pode responder. Escreva sobre a sua experiência; não publique conteúdo ofensivo,
+          falso, propaganda, dados pessoais de outras pessoas nem fotos que você não tenha o direito
+          de usar.
         </p>
         <p>
-          A apresentação temporária expira em cinco minutos e não conclui o uso sozinha. A
-          utilização existe somente depois da confirmação, no servidor, por uma pessoa autorizada da
-          organização. O comprovante preserva os termos vigentes naquele momento.
+          Qualquer pessoa pode denunciar uma avaliação, uma resposta ou um lugar. A moderação pode
+          ocultar o que desrespeitar estas regras, e você pode editar ou excluir suas avaliações na
+          sua conta.
         </p>
       </>
     ),
   },
   {
-    title: '5. Limites do piloto',
+    title: '5. Compras e benefícios',
+    content: (
+      <>
+        <p>
+          Pacotes da cidade e vouchers de lugares podem ser comprados no aplicativo. Antes de
+          comprar, você vê e aceita as condições do benefício: o que inclui, onde vale, quantas
+          vezes pode ser usado e até quando. O benefício entra na sua carteira depois que o
+          pagamento é confirmado. Um pedido ainda não pago pode ser cancelado. Pedidos de reembolso
+          seguem as condições do benefício e a lei aplicável.
+        </p>
+        <p>
+          Para usar, você mostra ao lugar um código que vale por cinco minutos. O uso só conta
+          quando uma pessoa autorizada do lugar o confirma. O comprovante guarda as condições que
+          valiam naquele momento.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: '6. Fase de validação',
     content: (
       <p>
-        O produto atual não oferece reserva, checkout, pagamento, reembolso ou utilização offline. O
-        serviço pode receber correções e indisponibilidades próprias de uma validação operacional.
-        Nenhuma interface substitui as regras específicas informadas pelo estabelecimento.
+        O Experimente+ está em fase de validação e pode passar por correções e indisponibilidades.
+        Não há reserva nem uso de benefício sem conexão. As regras informadas por cada lugar
+        continuam valendo no atendimento.
       </p>
     ),
   },
   {
-    title: '6. Encerramento da conta',
+    title: '7. Encerramento da conta',
     content: (
       <p>
-        A conta pode ser encerrada na área de configurações mediante confirmação de senha.
-        Credenciais ativas são revogadas e os identificadores da própria conta são substituídos.
-        Snapshots transacionais já registrados em comprovantes de utilização, incluindo nome e
-        e-mail vigentes no momento da transação, podem permanecer para preservar integridade,
-        segurança e auditoria, conforme a política vigente.
+        Você pode excluir sua conta em Conta, confirmando a senha. O acesso é encerrado e os dados
+        que identificam a conta são substituídos. Os comprovantes de benefícios já usados podem
+        manter o nome e o e-mail vigentes no momento do uso, para garantir a integridade dos
+        registros, a segurança e a auditoria.
       </p>
     ),
   },
   {
-    title: '7. Alterações e dúvidas',
+    title: '8. Alterações e dúvidas',
     content: (
       <p>
-        Mudanças relevantes devem produzir uma nova versão deste documento. Durante o piloto
-        assistido, dúvidas e solicitações são encaminhadas à equipe responsável pelo acesso à
-        operação.
+        Mudanças relevantes geram uma nova versão deste documento. Durante a fase de validação,
+        dúvidas e pedidos são atendidos pela equipe responsável pelo Experimente+ na sua região.
       </p>
     ),
   },
