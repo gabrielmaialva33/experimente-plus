@@ -451,12 +451,18 @@ rodapé público e no botão **?** (Ajuda) do cabeçalho do Portal e da Operaç�
 | `public/manual-media/*.webp`                      | Capturas da demonstração; tamanhos em `inertia/content/manual_media.ts`  |
 | `public/manual-media/manual-experimente-plus.pdf` | PDF do manual, gerado a partir da página                                 |
 
-As capturas usam só dados de demonstração, em tema claro: 1280×800 no computador e 390×844 (2x,
-reduzidas a 600 px de largura) no celular, em WebP com qualidade 80
-(`vips webpsave captura.png destino.webp --Q 80 --strip`). QR de apresentação, credenciais e
-e-mails reais nunca aparecem; cubra-os antes de salvar. Ao trocar uma imagem, atualize o tamanho em
-`manual_media.ts` e o texto alternativo; os testes do Vitest conferem arquivos, tamanhos, âncoras,
-links e o mapeamento de ajuda de cada página do Portal e da Operação.
+As capturas usam só dados de demonstração, em tema claro, com o elemento de cada passo contornado
+em laranja (e numerado quando há mais de um): 1280×800 no computador (recortes no tamanho da área) e
+390×844 (2x, reduzidas a 600 px de largura) no celular. As do app (`app-*`) vêm de um Android real,
+sem a barra de status e a de navegação do sistema, reduzidas a 540 px. Todas em WebP com qualidade 78
+(`vips webpsave captura.png destino.webp --Q 78 --strip`), somando menos de 6 MB. QR de
+apresentação, códigos de comprovante, credenciais e e-mails reais nunca aparecem; cubra-os antes de
+salvar. Ao trocar uma imagem, atualize o tamanho em `manual_media.ts` e o texto alternativo; os
+testes do Vitest conferem arquivos, tamanhos, âncoras, links, a busca e o mapeamento de ajuda de cada
+página do Portal e da Operação.
+
+As âncoras `app-*` (`app-instalar` … `app-problemas`) são abertas pelos botões de ajuda do app
+(`src/help/manual.ts` no repositório do app): não as renomeie sem atualizar o app.
 
 Para regenerar o PDF depois de mudar o manual, com o servidor rodando:
 
