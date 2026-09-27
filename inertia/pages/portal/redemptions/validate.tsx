@@ -151,19 +151,29 @@ export default function PartnerValidationPage({
     }
   }, [stage.name])
 
+  // Switching between reading, typing and choosing moves the focus into the
+  // part that just opened: the field to type in, or the heading of the reader.
+  const entryFocus = useRef(false)
   useEffect(() => {
+    if (!entryFocus.current || stage.name !== 'entry') return
+    entryFocus.current = false
     if (mode === 'type') inputRef.current?.focus()
-    if (mode === 'scan') entryHeadingRef.current?.focus()
-  }, [mode])
+    else entryHeadingRef.current?.focus()
+  }, [stage.name, mode])
+
+  const openEntry = useCallback((next: EntryMode) => {
+    entryFocus.current = true
+    setMode(next)
+  }, [])
 
   const startOver = useCallback(
     (next: EntryMode) => {
       validation.reset()
       setInput('')
       setInputError(null)
-      setMode(next)
+      openEntry(next)
     },
-    [validation]
+    [validation, openEntry]
   )
 
   const onDecode = useCallback(
@@ -271,8 +281,8 @@ export default function PartnerValidationPage({
                   onDecode={onDecode}
                   rejectedMessage={FOREIGN_QR_MESSAGE}
                   hint="Aponte para o QR code que o cliente está mostrando no app."
-                  onTypeInstead={() => setMode('type')}
-                  onClose={() => setMode('choose')}
+                  onTypeInstead={() => openEntry('type')}
+                  onClose={() => openEntry('choose')}
                 />
               </div>
             ) : mode === 'type' ? (
@@ -337,7 +347,7 @@ export default function PartnerValidationPage({
                     variant="outline"
                     size="lg"
                     shape="pill"
-                    onClick={() => setMode('scan')}
+                    onClick={() => openEntry('scan')}
                   >
                     <ScanLine aria-hidden="true" />
                     Ler QR code
@@ -363,7 +373,9 @@ export default function PartnerValidationPage({
                   <div>
                     <h2
                       id="validation-entry-title"
-                      className="font-display text-xl font-bold leading-tight"
+                      ref={entryHeadingRef}
+                      tabIndex={-1}
+                      className="font-display text-xl font-bold leading-tight outline-none"
                     >
                       Ler o benefício do cliente
                     </h2>
@@ -374,7 +386,7 @@ export default function PartnerValidationPage({
                   </div>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-                  <Button type="button" size="2xl" shape="pill" onClick={() => setMode('scan')}>
+                  <Button type="button" size="2xl" shape="pill" onClick={() => openEntry('scan')}>
                     <ScanLine aria-hidden="true" />
                     Ler QR code
                   </Button>
@@ -383,7 +395,7 @@ export default function PartnerValidationPage({
                     variant="outline"
                     size="2xl"
                     shape="pill"
-                    onClick={() => setMode('type')}
+                    onClick={() => openEntry('type')}
                   >
                     <Keyboard aria-hidden="true" />
                     Digitar código

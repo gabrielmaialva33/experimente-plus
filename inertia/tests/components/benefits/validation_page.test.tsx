@@ -162,7 +162,10 @@ describe('Validar benefício', () => {
     const { user } = renderPage()
 
     expect(screen.getByRole('button', { name: 'Ler QR code' })).toHaveClass('bg-primary')
-    await readBenefit(user)
+    await user.click(screen.getByRole('button', { name: 'Ler QR code' }))
+    // The reader opened where the button was; the keyboard lands on it.
+    expect(screen.getByRole('heading', { name: 'Ler QR code' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Câmera lê o benefício' }))
 
     const ticket = await screen.findByRole('region', { name: 'Benefício apresentado' })
     expect(mocks.decisions).toEqual([true])
