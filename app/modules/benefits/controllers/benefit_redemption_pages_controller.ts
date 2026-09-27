@@ -2,15 +2,14 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import { errors } from '@vinejs/vine'
 
-import InvalidBenefitPresentationException, {
-  INVALID_BENEFIT_PRESENTATION_MESSAGE,
-} from '#exceptions/invalid_benefit_presentation_exception'
+import { INVALID_BENEFIT_PRESENTATION_MESSAGE } from '#exceptions/invalid_benefit_presentation_exception'
 import BenefitPresentationOriginService from '#modules/benefits/services/benefit_presentation_origin_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import {
   normalizeBenefitPresentationTokenQuery,
   validateBenefitPresentationTokenInput,
 } from '#modules/benefits/utils/benefit_presentation_token_input'
+import { benefitValidationRefusalMessage } from '#modules/benefits/utils/benefit_validation_refusal'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
@@ -62,11 +61,14 @@ export default class BenefitRedemptionPagesController {
       token = normalizeBenefitPresentationTokenQuery(input)
       preview = token ? await this.redemptionService.preview(tenant!.id, token, actor) : null
     } catch (error) {
-      if (!(error instanceof InvalidBenefitPresentationException)) {
+      // A refused presentation keeps the partner on this page with the reason in
+      // Portuguese, never the API's JSON.
+      const message = benefitValidationRefusalMessage(error)
+      if (!message) {
         throw error
       }
 
-      session.flash('errors', { presentation: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+      session.flash('errors', { presentation: message })
       return response.redirect().toPath('/portal/redemptions/validate')
     }
 
@@ -92,14 +94,15 @@ export default class BenefitRedemptionPagesController {
       const payload = await validateBenefitPresentationTokenInput(request, ['json', 'urlencoded'])
       receipt = await this.redemptionService.redeem(tenant!.id, payload.token, auth.getUserOrFail())
     } catch (error) {
-      if (
-        !(error instanceof InvalidBenefitPresentationException) &&
-        !(error instanceof errors.E_VALIDATION_ERROR)
-      ) {
+      const message =
+        error instanceof errors.E_VALIDATION_ERROR
+          ? INVALID_BENEFIT_PRESENTATION_MESSAGE
+          : benefitValidationRefusalMessage(error)
+      if (!message) {
         throw error
       }
 
-      session.flash('errors', { presentation: INVALID_BENEFIT_PRESENTATION_MESSAGE })
+      session.flash('errors', { presentation: message })
       return response.redirect().toPath('/portal/redemptions/validate')
     }
 
