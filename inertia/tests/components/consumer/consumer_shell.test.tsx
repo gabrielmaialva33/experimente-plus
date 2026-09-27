@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({ post: vi.fn(), activeTenantId: 7 as number | n
 vi.mock('@inertiajs/react', () => {
   return {
     usePage: () => ({
+      component: 'wallet/index',
       url: '/wallet?from=consumer-test',
       props: {
         auth: {
@@ -67,6 +68,21 @@ describe('ConsumerShell', () => {
     await user.click(screen.getByRole('button', { name: 'Sair' }))
     expect(mocks.post).toHaveBeenCalledWith('/logout')
     expect(container.innerHTML).not.toMatch(/backdrop-blur|shadow-(?:xl|2xl)/)
+  })
+
+  it('opens the manual at the wallet task from the header help', async () => {
+    const { user } = render(
+      <ConsumerShell>
+        <p>Conteúdo da carteira</p>
+      </ConsumerShell>
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Ajuda' }))
+
+    expect(screen.getByRole('menuitem', { name: /Ajuda desta página/ })).toHaveAttribute(
+      'href',
+      '/manual#consumidor-carteira'
+    )
   })
 
   it('does not expose tenant-required destinations without an active operation', () => {
