@@ -163,6 +163,36 @@ describe('establishment partner content', () => {
     })
   })
 
+  it('keeps a photo-less item level with a photographed neighbour, and only then', () => {
+    const photo = [
+      {
+        id: 91,
+        is_cover: true,
+        alt_text: 'Talharim no prato',
+        asset: { url: 'https://example.com/t.jpg' },
+      },
+    ]
+    render(
+      <EstablishmentPartnerContent
+        timeZone="America/Sao_Paulo"
+        content={{
+          showcase_items: [
+            { id: 1, title: 'Lasanha', media: [] },
+            { id: 2, title: 'Talharim', media: photo },
+          ],
+          experiences: [{ id: 3, title: 'Aula sem foto', media: [] }],
+        }}
+      />
+    )
+
+    expect(screen.getByRole('img', { name: 'Imagem ilustrativa de Lasanha' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Talharim no prato' })).toBeInTheDocument()
+    // A section where no item has a photo stays compact.
+    expect(
+      screen.queryByRole('img', { name: 'Imagem ilustrativa de Aula sem foto' })
+    ).not.toBeInTheDocument()
+  })
+
   it('renders nothing when the server sent no publishable item', () => {
     const { container } = render(
       <EstablishmentPartnerContent

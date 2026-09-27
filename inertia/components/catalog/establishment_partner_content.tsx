@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 
-import { CatalogCoverImage } from '~/components/catalog/catalog_image_fallback'
+import {
+  CatalogCoverImage,
+  CatalogImageFallback,
+} from '~/components/catalog/catalog_image_fallback'
 import { cn } from '~/lib/utils'
 
 interface JsonRecord {
@@ -275,7 +278,7 @@ export function EstablishmentPartnerContent({
             </h3>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {section.items.map((item) => {
+              {section.items.map((item, _index, items) => {
                 const eventWindow =
                   section.key === 'events'
                     ? formatEventWindow(item.startsAt, item.endsAt, timeZone)
@@ -316,6 +319,16 @@ export function EstablishmentPartnerContent({
                           </figcaption>
                         ) : null}
                       </figure>
+                    ) : items.some((other) => other.media.length > 0) ? (
+                      // A card without a photo beside one with a photo left the pair
+                      // misaligned; the catalogue's placeholder keeps the row even.
+                      <div className="aspect-[16/9] overflow-hidden">
+                        <CatalogImageFallback
+                          name={item.title}
+                          categoryName={section.title}
+                          className="size-full"
+                        />
+                      </div>
                     ) : null}
 
                     <div className="p-4">
