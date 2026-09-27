@@ -1,3 +1,5 @@
+import type { OrganizationAllowedActions } from './organization_authorization'
+
 export * from './api'
 export * from './organization_authorization'
 
@@ -32,6 +34,12 @@ export interface AuthSharedProps {
   hasActiveOrganizationMembership: boolean
   platformAccess: PlatformAccess | null
   permissions: string[]
+  /**
+   * Portal actions aggregated across the viewer's active memberships in the
+   * active operation (every action for platform administrators); null without
+   * an active operation. Presentation only: each page is authorized again.
+   */
+  portalActions: OrganizationAllowedActions | null
 }
 
 export interface AppSharedProps {

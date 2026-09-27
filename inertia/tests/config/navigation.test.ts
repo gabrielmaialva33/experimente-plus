@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import {
+  hasNavigationOrganizationAction,
   isNavigationHrefActive,
   matchNavigationItem,
   navigationItemsForSurface,
@@ -100,6 +101,7 @@ describe('navigation configuration', () => {
       'Experiências e eventos',
       'Dados do lugar',
       'Desempenho',
+      'Equipe',
     ])
     expect(portalItems.map((item) => item.href)).toEqual([
       '/portal',
@@ -109,6 +111,7 @@ describe('navigation configuration', () => {
       '/portal/content',
       '/portal/establishments',
       '/portal/performance',
+      '/portal/team',
     ])
     expect(portalItems.every((item) => item.surface === 'portal')).toBe(true)
     // The operation opens on what it has to resolve today.
@@ -287,6 +290,51 @@ describe('navigation configuration', () => {
     expect(resolveRouteMetadata('/backoffice/geography')?.capability).toBe('cities.list')
     expect(resolveRouteMetadata('/backoffice/review-policy')?.capability).toBe('settings.read')
     expect(resolveRouteMetadata('/backoffice/concierge')?.capability).toBe('settings.read')
+  })
+
+  it('gates every organization-scoped Portal destination by an organization action', () => {
+    const portalActions = Object.fromEntries(
+      NAVIGATION_ITEMS.filter((item) => item.surface === 'portal').map((item) => [
+        item.id,
+        item.organizationAction ?? null,
+      ])
+    )
+
+    // The overview stays for everyone in the Portal; the rest follows the role.
+    expect(portalActions).toEqual({
+      'portal-home': null,
+      'portal-redemption-validation': 'redemptions.validate',
+      'portal-redemptions': 'redemptions.read',
+      'portal-reviews': 'establishments.read',
+      'portal-content': 'establishments.read',
+      'portal-establishments': 'establishments.read',
+      'portal-performance': 'analytics.read',
+      'portal-team': 'team.manage',
+    })
+  })
+
+  it('fails closed when the shared organization actions are absent', () => {
+    const validation = NAVIGATION_ITEMS.find((item) => item.id === 'portal-redemption-validation')!
+    const overview = NAVIGATION_ITEMS.find((item) => item.id === 'portal-home')!
+
+    expect(hasNavigationOrganizationAction(validation, null)).toBe(false)
+    expect(hasNavigationOrganizationAction(overview, null)).toBe(true)
+  })
+
+  it('resolves the team pages inside the Portal and marks Equipe on them', () => {
+    expect(resolveRouteMetadata('/portal/organizations/9/team')).toMatchObject({
+      id: 'portal-organization-team',
+      surface: 'portal',
+      title: 'Equipe',
+      capability: 'organization_members.list',
+    })
+    expect(resolveRouteMetadata('/portal/team')).toMatchObject({
+      id: 'portal-team',
+      surface: 'portal',
+    })
+    expect(matchNavigationItem('/portal/organizations/9/team')?.id).toBe('portal-team')
+    // The organization page itself still belongs to the overview.
+    expect(matchNavigationItem('/portal/organizations/9')?.id).toBe('portal-home')
   })
 
   it('does not expose the conditional UI demo route in central navigation', () => {

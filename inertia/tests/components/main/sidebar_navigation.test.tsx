@@ -3,12 +3,61 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SidebarNav } from '~/layouts/main/components/sidebar'
 import { render, screen } from '~/tests/test_utils'
+import type { OrganizationAllowedActions } from '~/types'
+
+/**
+ * The shared projection the server sends for each organization role (global
+ * permissions of the USER role included), as `projectActorAllowedActions`
+ * builds it from the organization policy.
+ */
+function portalActionsFor(
+  role: 'owner' | 'admin' | 'editor' | 'analyst' | 'none'
+): OrganizationAllowedActions {
+  const member = role !== 'none'
+  const manages = role === 'owner' || role === 'admin'
+  const edits = manages || role === 'editor'
+
+  return {
+    organizations: { read: member, update: manages, submit: manages },
+    establishments: {
+      read: member,
+      list: member,
+      create: edits,
+      create_revision: false,
+      update: edits,
+      submit: edits,
+      archive: manages,
+    },
+    benefit_offers: {
+      read: member,
+      list: member,
+      create: edits,
+      update: edits,
+      activate: edits,
+      pause: edits,
+      archive: edits,
+    },
+    redemptions: { read: member, validate: edits },
+    analytics: { read: manages || role === 'analyst' },
+    pilot_feedback: { create: member },
+    team: { read: member, manage: manages },
+  }
+}
+
+const USER_PORTAL_PERMISSIONS = [
+  'benefit_offers.read',
+  'benefit_offers.update',
+  'establishments.read',
+  'analytics.read',
+  'organization_members.list',
+]
 
 const mocks = vi.hoisted(() => ({
   url: '/portal',
   activeTenantId: 7 as number | null,
   platformAccess: null as 'platform_admin' | 'platform_moderator' | null,
   permissions: [] as string[],
+  portalActions: null as unknown,
 }))
 
 vi.mock('@inertiajs/react', () => ({
@@ -25,6 +74,7 @@ vi.mock('@inertiajs/react', () => ({
         activeTenantId: mocks.activeTenantId,
         platformAccess: mocks.platformAccess,
         permissions: mocks.permissions,
+        portalActions: mocks.portalActions,
         tenants: [{ id: 7, name: 'Operação Norte', role: 'admin' }],
       },
     },
@@ -37,6 +87,103 @@ describe('SidebarNav', () => {
     mocks.activeTenantId = 7
     mocks.platformAccess = null
     mocks.permissions = []
+    mocks.portalActions = portalActionsFor('owner')
+  })
+
+  const portalLabels = () =>
+    screen
+      .getAllByRole('link')
+      .map((link) => link.textContent?.trim())
+      .filter(Boolean)
+
+  it.each([
+    [
+      'owner',
+      [
+        'Visão geral',
+        'Validar benefício',
+        'Utilizações',
+        'Avaliações',
+        'Experiências e eventos',
+        'Dados do lugar',
+        'Desempenho',
+        'Equipe',
+      ],
+    ],
+    [
+      'admin',
+      [
+        'Visão geral',
+        'Validar benefício',
+        'Utilizações',
+        'Avaliações',
+        'Experiências e eventos',
+        'Dados do lugar',
+        'Desempenho',
+        'Equipe',
+      ],
+    ],
+    [
+      'editor',
+      [
+        'Visão geral',
+        'Validar benefício',
+        'Utilizações',
+        'Avaliações',
+        'Experiências e eventos',
+        'Dados do lugar',
+      ],
+    ],
+    [
+      'analyst',
+      [
+        'Visão geral',
+        'Utilizações',
+        'Avaliações',
+        'Experiências e eventos',
+        'Dados do lugar',
+        'Desempenho',
+      ],
+    ],
+    ['none', ['Visão geral']],
+  ] as const)('offers a %s only the Portal destinations the role allows', (role, expected) => {
+    mocks.permissions = USER_PORTAL_PERMISSIONS
+    mocks.portalActions = portalActionsFor(role)
+
+    render(<SidebarNav surface="portal" />)
+
+    expect(portalLabels()).toEqual(expected)
+  })
+
+  it('keeps the whole Portal menu for platform administrators', () => {
+    mocks.platformAccess = 'platform_admin'
+    mocks.permissions = USER_PORTAL_PERMISSIONS
+    mocks.portalActions = portalActionsFor('owner')
+
+    render(<SidebarNav surface="portal" />)
+
+    expect(screen.getByRole('link', { name: 'Equipe' })).toHaveAttribute('href', '/portal/team')
+    expect(screen.getByRole('link', { name: 'Desempenho' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Validar benefício' })).toBeVisible()
+  })
+
+  it('marks Equipe on an organization team page', () => {
+    mocks.url = '/portal/organizations/4/team'
+    mocks.permissions = USER_PORTAL_PERMISSIONS
+
+    render(<SidebarNav surface="portal" />)
+
+    expect(screen.getByRole('link', { name: 'Equipe' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Visão geral' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('hides organization destinations while the shared actions are unknown', () => {
+    mocks.permissions = USER_PORTAL_PERMISSIONS
+    mocks.portalActions = null
+
+    render(<SidebarNav surface="portal" />)
+
+    expect(portalLabels()).toEqual(['Visão geral'])
   })
 
   it('lists the partner day-to-day destinations the permissions allow, marking the current one', () => {
