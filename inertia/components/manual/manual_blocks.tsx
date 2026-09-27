@@ -149,8 +149,78 @@ export function ManualBlocks({ blocks }: { blocks: readonly ManualBlock[] }) {
                 ))}
               </div>
             )
+          case 'table':
+            return <ManualTable key={index} block={block} />
         }
       })}
     </div>
+  )
+}
+
+/**
+ * A comparison table on wide screens; on a phone (and in print, where columns get
+ * too narrow) each row becomes a card with its labels, so nothing scrolls sideways.
+ */
+function ManualTable({ block }: { block: Extract<ManualBlock, { kind: 'table' }> }) {
+  const [first, ...rest] = block.columns
+  return (
+    <figure className="break-inside-avoid">
+      <figcaption className="mb-2 text-sm font-semibold text-muted-foreground">
+        {block.caption}
+      </figcaption>
+      <div className="hidden overflow-hidden rounded-card border border-border-subtle md:block print:hidden">
+        <table className="w-full border-collapse text-left text-sm leading-6">
+          <thead className="bg-muted/60">
+            <tr>
+              {block.columns.map((column) => (
+                <th key={column} scope="col" className="px-4 py-3 align-bottom font-semibold">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-subtle bg-card">
+            {block.rows.map((row) => (
+              <tr key={row[0]}>
+                {row.map((cell, index) =>
+                  index === 0 ? (
+                    <th key={index} scope="row" className="px-4 py-3 align-top font-semibold">
+                      <ManualText text={cell} />
+                    </th>
+                  ) : (
+                    <td key={index} className="px-4 py-3 align-top text-foreground/90">
+                      <ManualText text={cell} />
+                    </td>
+                  )
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="space-y-3 md:hidden print:block">
+        {block.rows.map((row) => (
+          <li
+            key={row[0]}
+            className="break-inside-avoid rounded-card border border-border-subtle bg-card p-4"
+          >
+            <p className="font-display font-extrabold leading-tight">
+              <span className="sr-only">{first}: </span>
+              <ManualText text={row[0]} />
+            </p>
+            <dl className="mt-2 space-y-2 text-sm leading-6">
+              {rest.map((column, index) => (
+                <div key={column}>
+                  <dt className="font-semibold text-muted-foreground">{column}</dt>
+                  <dd>
+                    <ManualText text={row[index + 1]} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+    </figure>
   )
 }

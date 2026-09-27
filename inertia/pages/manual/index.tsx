@@ -1,13 +1,21 @@
 import { ArrowUp, ChevronDown, Download, ListTree, TriangleAlert } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { ManualBlocks } from '~/components/manual/manual_blocks'
+import { ManualSearch } from '~/components/manual/manual_search'
+import { ManualSection } from '~/components/manual/manual_section'
 import { ManualToc } from '~/components/manual/manual_toc'
 import { PublicShell } from '~/components/public'
-import { MAIN_CONTENT_ID } from '~/components/skip_link'
 import { Button } from '~/components/ui/button'
 import { MANUAL_PDF_PATH } from '~/config/help'
-import { MANUAL_CHAPTERS, MANUAL_UPDATED_AT, manualAnchors } from '~/content/manual'
+import {
+  MANUAL_CHAPTERS,
+  MANUAL_START_CARDS,
+  MANUAL_UPDATED_AT,
+  manualAnchors,
+} from '~/content/manual'
+
+/** The "Por onde começar" block, where each chapter's "Voltar ao índice" leads. */
+export const MANUAL_INDEX_ID = 'indice'
 
 /**
  * Printing (and the PDF built from it) keeps only the manual: the site's header,
@@ -76,86 +84,94 @@ export default function ManualPage() {
       <style>{PRINT_CSS}</style>
 
       <header className="border-b bg-background">
-        <div className="app-container py-10 sm:py-14">
-          <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent sm:text-[0.8125rem]">
-            Manual de uso
-          </p>
-          <h1 className="mt-3 max-w-3xl text-balance font-display text-[2.25rem] font-extrabold leading-[1.08] tracking-[-0.02em] sm:text-[3rem]">
-            Como usar o Experimente+
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
-            Um passo a passo para quem explora a região, para quem usa benefícios, para a equipe dos
-            negócios parceiros e para a operação. Escolha a sua parte ou leia do começo.
-          </p>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center print:hidden">
-            <Button variant="outline" size="xl" shape="pill" asChild>
-              <a href={MANUAL_PDF_PATH} download data-testid="manual-pdf">
-                <Download aria-hidden="true" /> Baixar manual em PDF
-              </a>
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Atualizado em {longDate(MANUAL_UPDATED_AT)}
+        <div className="app-container grid gap-8 py-10 sm:py-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-end">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent sm:text-[0.8125rem]">
+              Manual de uso
             </p>
-          </div>
-          <p className="mt-4 hidden text-sm text-muted-foreground print:block">
-            Atualizado em {longDate(MANUAL_UPDATED_AT)}
-          </p>
+            <h1 className="mt-3 max-w-3xl text-balance font-display text-[2.25rem] font-extrabold leading-[1.08] tracking-[-0.02em] sm:text-[3rem]">
+              Como usar o Experimente+
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+              Passo a passo para quem explora a região, para quem usa benefícios, para a equipe dos
+              negócios parceiros e para a equipe do Experimente+. Escolha o seu perfil abaixo,
+              busque uma tarefa ou leia do começo.
+            </p>
 
-          <div
-            role="note"
-            aria-labelledby="manual-beta-title"
-            className="mt-8 flex max-w-3xl gap-3 rounded-card border border-warning/40 bg-warning-soft p-4 sm:p-5"
-          >
-            <TriangleAlert
-              aria-hidden="true"
-              className="mt-0.5 size-5 shrink-0 text-warning-accent"
-            />
-            <div>
-              <p
-                id="manual-beta-title"
-                className="font-display font-extrabold leading-tight text-foreground"
-              >
-                Versão beta em homologação
-              </p>
-              <p className="mt-1.5 text-sm leading-6 sm:text-[0.9375rem]">
-                Os lugares, eventos, benefícios e pessoas que aparecem aqui são fictícios, de
-                demonstração. Os pagamentos são simulados: nada é cobrado. Telas e regras podem
-                mudar até a versão final.
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center print:hidden">
+              <Button variant="outline" size="xl" shape="pill" asChild>
+                <a href={MANUAL_PDF_PATH} download data-testid="manual-pdf">
+                  <Download aria-hidden="true" /> Baixar manual em PDF
+                </a>
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                Atualizado em {longDate(MANUAL_UPDATED_AT)}
               </p>
             </div>
+            <p className="mt-4 hidden text-sm text-muted-foreground print:block">
+              Atualizado em {longDate(MANUAL_UPDATED_AT)}
+            </p>
+
+            <div
+              role="note"
+              aria-labelledby="manual-beta-title"
+              className="mt-8 flex max-w-3xl gap-3 rounded-card border border-warning/40 bg-warning-soft p-4 sm:p-5"
+            >
+              <TriangleAlert
+                aria-hidden="true"
+                className="mt-0.5 size-5 shrink-0 text-warning-accent"
+              />
+              <div>
+                <p
+                  id="manual-beta-title"
+                  className="font-display font-extrabold leading-tight text-foreground"
+                >
+                  Versão beta em homologação
+                </p>
+                <p className="mt-1.5 text-sm leading-6 sm:text-[0.9375rem]">
+                  Os lugares, eventos, benefícios e pessoas que aparecem aqui são fictícios, de
+                  demonstração. Os pagamentos são simulados: nada é cobrado. Telas e regras podem
+                  mudar até a versão final.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-card border border-border-subtle bg-card p-5 sm:p-6 print:hidden">
+            <ManualSearch chapters={MANUAL_CHAPTERS} />
           </div>
         </div>
       </header>
 
-      <nav aria-labelledby="manual-audiences-title" className="app-container pt-10 sm:pt-12">
+      <nav
+        id={MANUAL_INDEX_ID}
+        aria-labelledby="manual-start-title"
+        className="app-container scroll-mt-24 pt-10 sm:pt-12"
+      >
         <h2
-          id="manual-audiences-title"
+          id="manual-start-title"
           className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
         >
-          Por onde começar
+          Por onde começar: qual é o seu perfil?
         </h2>
         <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {MANUAL_CHAPTERS.map((chapter) => {
-            const Icon = chapter.icon
+          {MANUAL_START_CARDS.map((card) => {
+            const Icon = card.icon
             return (
-              <li key={chapter.id} className="break-inside-avoid">
+              <li key={card.href} className="break-inside-avoid">
                 <a
-                  href={`#${chapter.id}`}
+                  href={card.href}
                   className="flex h-full gap-4 rounded-card border border-border-subtle bg-card p-4 outline-none transition-colors hover:border-primary focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
                 >
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                     <Icon aria-hidden="true" className="size-5" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                      {chapter.audience}
-                    </span>
-                    <span className="mt-1 block font-display text-base font-extrabold leading-tight">
-                      {chapter.title}
+                    <span className="block font-display text-base font-extrabold leading-tight">
+                      {card.title}
                     </span>
                     <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-                      {chapter.summary}
+                      {card.text}
                     </span>
                   </span>
                 </a>
@@ -241,34 +257,22 @@ export default function ManualPage() {
                         {chapter.title}
                       </h2>
                       <p className="mt-2 text-muted-foreground">{chapter.summary}</p>
+                      <p className="mt-1 text-sm font-semibold">Para: {chapter.profiles}</p>
                     </div>
                   </div>
 
-                  <div className="mt-8 space-y-12">
+                  <div className="mt-8 space-y-14">
                     {chapter.sections.map((section) => (
-                      <section
-                        key={section.id}
-                        id={section.id}
-                        aria-labelledby={`${section.id}-titulo`}
-                        className="scroll-mt-24"
-                      >
-                        <h3
-                          id={`${section.id}-titulo`}
-                          className="mb-4 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em] print:break-after-avoid"
-                        >
-                          {section.title}
-                        </h3>
-                        <ManualBlocks blocks={section.blocks} />
-                      </section>
+                      <ManualSection key={section.id} section={section} />
                     ))}
                   </div>
 
                   <p className="mt-10 print:hidden">
                     <a
-                      href={`#${MAIN_CONTENT_ID}`}
+                      href={`#${MANUAL_INDEX_ID}`}
                       className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-primary-accent outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <ArrowUp aria-hidden="true" className="size-4" /> Voltar ao topo
+                      <ArrowUp aria-hidden="true" className="size-4" /> Voltar ao índice
                     </a>
                   </p>
                 </section>
@@ -279,8 +283,8 @@ export default function ManualPage() {
           <footer className="mt-16 border-t border-border-subtle pt-6 text-sm leading-6 text-muted-foreground">
             <p>
               Este manual acompanha a versão beta do Experimente+ e foi feito a partir do próprio
-              site, com dados de demonstração. Encontrou algo diferente na tela? Conte à equipe do
-              Experimente+ (no Portal, pelo quadro Feedback do piloto).
+              site e do app, com dados de demonstração. Encontrou algo diferente na tela? Conte à
+              equipe do Experimente+ (no Portal, pelo quadro Feedback do piloto).
             </p>
           </footer>
         </div>
