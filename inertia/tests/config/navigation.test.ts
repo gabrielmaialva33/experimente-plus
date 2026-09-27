@@ -123,6 +123,17 @@ describe('navigation configuration', () => {
     expect(NAVIGATION_ITEMS.some((item) => item.href === '/settings')).toBe(false)
   })
 
+  it('draws the wallet with one icon in the public bars and in the wallet shell', () => {
+    const walletIcon = NAVIGATION_ITEMS.find((item) => item.id === 'consumer-wallet')?.icon
+    expect(walletIcon).toBeDefined()
+    for (const item of [
+      ...PUBLIC_NAVIGATION.header.authenticated,
+      ...PUBLIC_NAVIGATION.mobile.authenticated,
+    ].filter((entry) => entry.href === '/wallet')) {
+      expect(item.icon).toBe(walletIcon)
+    }
+  })
+
   it('keeps authenticated and guest public navigation in the central tree', () => {
     expect(PUBLIC_NAVIGATION.header.authenticated.map((item) => item.href)).toEqual([
       '/cidades',

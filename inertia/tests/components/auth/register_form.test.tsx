@@ -81,6 +81,9 @@ describe('RegisterForm', () => {
     await user.type(screen.getByLabelText('Usuário'), 'maria.silva')
     await user.type(screen.getByLabelText('Senha'), 'password123')
     await user.type(screen.getByLabelText('Confirmar senha'), 'password123')
+    // A met rule speaks in the success role, not a raw palette green.
+    expect(screen.getByText('Use ao menos 8 caracteres')).toHaveClass('text-success-accent')
+    expect(screen.getByText('As duas senhas devem coincidir')).toHaveClass('text-success-accent')
     await user.click(
       screen.getByRole('checkbox', { name: 'Li e aceito os documentos obrigatórios' })
     )

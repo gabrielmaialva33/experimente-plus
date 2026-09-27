@@ -76,6 +76,10 @@ describe('CatalogSearchForm', () => {
     expect(screen.getByRole('combobox', { name: 'Categoria' })).toHaveValue('cafes')
     expect(screen.getByRole('combobox', { name: 'Ordenar por' })).toHaveValue('recent')
     expect(screen.getByRole('checkbox', { name: 'Aberto agora' })).toBeChecked()
+    // The chip matches the 52 px fields of the bar instead of sitting shorter between them.
+    expect(screen.getByRole('checkbox', { name: 'Aberto agora' }).closest('label')).toHaveClass(
+      'h-13'
+    )
     expect(screen.getByText('Busca: “brunch”')).toBeInTheDocument()
     expect(screen.getByText('Limpar filtros')).toBeInTheDocument()
   })

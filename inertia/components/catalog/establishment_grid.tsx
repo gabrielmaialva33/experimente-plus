@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { ImageIcon, MapPin } from 'lucide-react'
+import { MapPin, SearchX } from 'lucide-react'
 
 import { CatalogImageFallback } from '~/components/catalog/catalog_image_fallback'
 import { EstablishmentStatus } from '~/components/catalog/establishment_status'
@@ -25,7 +25,7 @@ export default function EstablishmentGrid({
   if (entries.length === 0) {
     return (
       <div className="rounded-card border border-dashed bg-card">
-        <EmptyState title={emptyTitle} description={emptyMessage} icon={ImageIcon} />
+        <EmptyState title={emptyTitle} description={emptyMessage} icon={SearchX} />
       </div>
     )
   }

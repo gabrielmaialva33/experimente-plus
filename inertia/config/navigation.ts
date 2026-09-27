@@ -114,7 +114,7 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
       {
         label: 'Carteira',
         href: '/wallet',
-        icon: TicketPercent,
+        icon: WalletCards,
         requiresActiveTenant: true,
       },
     ],
@@ -126,7 +126,7 @@ export const PUBLIC_NAVIGATION: PublicNavigationConfig = {
       {
         label: 'Carteira',
         href: '/wallet',
-        icon: TicketPercent,
+        icon: WalletCards,
         requiresActiveTenant: true,
       },
       { label: 'Negócios', href: '/portal', icon: Store, requiresActiveTenant: true },

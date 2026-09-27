@@ -18,7 +18,7 @@ export default function RegisterPage({ errors }: RegisterPageProps) {
         subtitle="Crie seu acesso pessoal. Organizações e unidades são configuradas separadamente depois."
         contentWidth="wide"
         contextTitle="Uma conta, usos diferentes"
-        contextDescription="A conta começa como acesso pessoal. O Portal é liberado pelas relações reais com organizações, sem escolher um papel global no cadastro."
+        contextDescription="A conta começa como acesso pessoal. O Portal do parceiro aparece quando você cadastra uma organização ou é convidado por uma — não é preciso escolher um perfil agora."
         footer={
           <>
             <span className="text-muted-foreground">Já tem uma conta? </span>

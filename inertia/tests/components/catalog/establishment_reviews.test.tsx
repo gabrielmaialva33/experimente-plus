@@ -104,7 +104,9 @@ describe('establishment reviews (W10)', () => {
       />
     )
 
-    expect(screen.getByText('Ainda não há avaliações deste lugar.')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Ainda não há avaliações deste lugar' })
+    ).toBeInTheDocument()
     expect(screen.getByText('Quem visitar pode avaliar pelo app Experimente+.')).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.queryByRole('article')).not.toBeInTheDocument()
@@ -113,6 +115,8 @@ describe('establishment reviews (W10)', () => {
   it('treats a stale payload without reviews as an empty section', () => {
     render(<EstablishmentReviews placeName="Bar" timeZone={null} reviews={undefined} />)
 
-    expect(screen.getByText('Ainda não há avaliações deste lugar.')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Ainda não há avaliações deste lugar' })
+    ).toBeInTheDocument()
   })
 })

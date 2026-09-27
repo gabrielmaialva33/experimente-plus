@@ -10,6 +10,10 @@ import PrivacyPage from '~/pages/legal/privacy'
 import TermsPage from '~/pages/legal/terms'
 import { render } from '~/tests/test_utils'
 
+const pageState = vi.hoisted(() => ({
+  user: null as null | { id: number; full_name: string; email: string },
+}))
+
 vi.mock('@inertiajs/react', () => ({
   Head: () => null,
   Link: ({ href, children, ...props }: ComponentProps<'a'> & { href: string }) => (
@@ -27,7 +31,7 @@ vi.mock('@inertiajs/react', () => ({
         environment: 'test',
         demoPagesEnabled: false,
       },
-      auth: { user: null, tenants: [], activeTenantId: null, permissions: [] },
+      auth: { user: pageState.user, tenants: [], activeTenantId: null, permissions: [] },
     },
   }),
 }))
@@ -71,6 +75,18 @@ describe('authentication and legal experience', () => {
       'href',
       '/register'
     )
+  })
+
+  it('does not send a signed-in reader back to the sign-up form', () => {
+    pageState.user = { id: 3, full_name: 'Ana Souza', email: 'ana@example.com' }
+    try {
+      render(<TermsPage />)
+
+      expect(screen.getByRole('link', { name: 'Ler a Política de Privacidade' })).toBeVisible()
+      expect(screen.queryByRole('link', { name: 'Voltar ao cadastro' })).not.toBeInTheDocument()
+    } finally {
+      pageState.user = null
+    }
   })
 
   it('describes the implemented privacy controls without claiming persisted consent', () => {

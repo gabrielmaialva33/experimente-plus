@@ -195,7 +195,8 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         </Button>
       </div>
 
-      <p aria-live="polite" className="mt-3 min-h-5 text-xs text-muted-foreground">
+      {/* Always mounted so the result is announced; it takes room only once it speaks. */}
+      <p aria-live="polite" className="mt-3 text-xs text-muted-foreground empty:mt-0">
         {shareStatus}
       </p>
     </section>

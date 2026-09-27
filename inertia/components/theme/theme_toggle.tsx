@@ -12,7 +12,7 @@ import {
 const options = [
   { value: 'light', label: 'Claro', icon: Sun },
   { value: 'dark', label: 'Escuro', icon: Moon },
-  { value: 'system', label: 'Sistema', icon: Monitor },
+  { value: 'system', label: 'Do dispositivo', icon: Monitor },
 ] as const
 
 export function ThemeToggle() {

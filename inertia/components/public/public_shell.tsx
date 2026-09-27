@@ -32,7 +32,10 @@ export function PublicShell({
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Experimente+" />
+        <meta property="og:locale" content="pt_BR" />
         {image ? <meta property="og:image" content={image} /> : null}
+        <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
       </Head>
       <SkipLink />
       <div

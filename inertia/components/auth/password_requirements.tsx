@@ -12,11 +12,11 @@ function Requirement({ met, children }: { met: boolean; children: string }) {
   return (
     <li
       className={cn(
-        'flex items-center gap-2',
-        met ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'
+        'flex items-start gap-2 leading-5',
+        met ? 'font-semibold text-success-accent' : 'text-muted-foreground'
       )}
     >
-      <Icon className="size-3.5 shrink-0" /> {children}
+      <Icon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /> {children}
     </li>
   )
 }
@@ -26,9 +26,13 @@ export function PasswordRequirements({ password, confirmation }: PasswordRequire
   const matches = hasConfirmation && confirmation.length > 0 && password === confirmation
 
   return (
-    <div className="rounded-xl border bg-muted/35 px-4 py-3" aria-live="polite">
+    <div
+      className="rounded-2xl border border-border-subtle bg-background px-4 py-3"
+      aria-live="polite"
+    >
       <p className="text-xs font-semibold text-foreground">Para continuar</p>
-      <ul className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">
+      {/* One rule per line: side by side, a narrow card wrapped one rule and not the other. */}
+      <ul className="mt-2 grid gap-1.5 text-xs">
         <Requirement met={password.length >= 8}>Use ao menos 8 caracteres</Requirement>
         {hasConfirmation ? (
           <Requirement met={matches}>As duas senhas devem coincidir</Requirement>

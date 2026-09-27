@@ -29,13 +29,15 @@ export function EmptyState({
       className={cn('flex flex-col items-center justify-center px-6 py-12 text-center', className)}
     >
       {Icon && (
-        <span className="mb-4 flex size-11 items-center justify-center rounded-md border border-border bg-content-absent text-content-absent-foreground">
+        <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-content-absent text-content-absent-foreground">
           <Icon className="size-5" aria-hidden="true" />
         </span>
       )}
-      <Heading className="text-lg font-semibold leading-6">{title}</Heading>
+      <Heading className="text-balance font-display text-lg font-extrabold leading-6">
+        {title}
+      </Heading>
       {description && (
-        <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">{description}</p>
+        <p className="mt-1.5 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
       )}
       {children && (
         <div data-slot="empty-state-actions" className="mt-5 flex flex-wrap justify-center gap-2">

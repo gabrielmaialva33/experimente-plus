@@ -11,7 +11,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import { ConfirmDialog } from '~/components/confirm_dialog'
 import { EmptyState } from '~/components/empty_state'
@@ -102,7 +102,7 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
             <EditorField
               htmlFor="settings-username"
               label="Nome de usuário"
-              hint="Opcional. Usado apenas para identificar sua conta dentro da plataforma."
+              hint="Opcional"
               error={firstError(form.errors.username)}
             >
               <Input
@@ -153,6 +153,10 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
 
 function AppearanceTab() {
   const { theme, setTheme } = useTheme()
+  // The saved theme lives in this browser, so the server cannot know it: mark a choice only
+  // after hydration, or the server's unselected cards would not match the client's first render.
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => setHydrated(true), [])
 
   return (
     <Card className="max-w-3xl">
@@ -167,7 +171,7 @@ function AppearanceTab() {
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Tema da interface">
           {THEMES.map((option) => {
-            const active = theme === option.value
+            const active = hydrated && theme === option.value
             const Icon = option.icon
 
             return (
@@ -177,7 +181,7 @@ function AppearanceTab() {
                 aria-pressed={active}
                 onClick={() => setTheme(option.value)}
                 className={cn(
-                  'relative flex min-h-32 flex-col items-start gap-3 rounded-md border p-4 text-start outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  'relative flex min-h-32 flex-col items-start gap-3 rounded-2xl border p-4 text-start outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   active
                     ? 'border-primary bg-primary-soft text-foreground'
                     : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -470,7 +474,13 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
         />
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
-          <TabsList variant="line" aria-label="Seções da conta">
+          {/* Pills that wrap: four sections never push a phone into sideways scrolling. */}
+          <TabsList
+            variant="button"
+            shape="pill"
+            aria-label="Seções da conta"
+            className="flex-wrap [&_[role=tab]]:px-4"
+          >
             <TabsTrigger value="profile">Dados pessoais</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             {showOperations ? <TabsTrigger value="operations">Operações</TabsTrigger> : null}

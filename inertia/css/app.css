@@ -342,8 +342,10 @@ body {
 @utility choice-control {
   @apply inline-flex items-center justify-center gap-2 border-2 border-choice-border bg-choice-background text-choice-foreground font-medium outline-none transition-colors;
 
+  /* The check exists only on a selection: an idle choice keeps its label centred
+   * instead of reserving a blank slot (selection already re-weights the label). */
   & .choice-marker {
-    opacity: 0;
+    display: none;
   }
 
   &:is(
@@ -356,7 +358,7 @@ body {
     @apply border-choice-selected-border bg-choice-selected text-choice-selected-foreground font-bold;
 
     & .choice-marker {
-      opacity: 1;
+      display: block;
     }
   }
 

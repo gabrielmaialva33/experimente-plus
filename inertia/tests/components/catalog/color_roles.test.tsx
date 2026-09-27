@@ -34,6 +34,8 @@ describe('distinct catalog color roles', () => {
     expect(current).toHaveTextContent('Segunda-feira')
     expect(current).toHaveTextContent('Hoje')
     expect(current).toHaveTextContent('Fechado')
+    // A day reads on one line when it fits, the hours wrapping under the name only when long.
+    expect(current).toHaveClass('flex', 'flex-wrap', 'justify-between')
     act(() => vi.advanceTimersByTime(60_000))
     expect(container.querySelector('[aria-current="date"]')).toHaveTextContent('Terça-feira')
     expect(container.querySelectorAll('[aria-current="date"]')).toHaveLength(1)
@@ -67,6 +69,7 @@ describe('distinct catalog color roles', () => {
     const chip = checkbox.closest('label')
     expect(chip).toHaveClass('choice-control', 'rounded-full', 'min-h-11')
     expect(chip).toHaveAttribute('data-selected', 'false')
+    expect(chip?.querySelector('.choice-marker')).toBeInTheDocument()
     await user.click(checkbox)
     expect(checkbox).toBeChecked()
     expect(chip).toHaveAttribute('data-selected', 'true')

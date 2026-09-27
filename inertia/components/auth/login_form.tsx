@@ -60,7 +60,7 @@ export function LoginForm({ errors: serverErrors }: LoginFormProps = {}) {
         labelAction={
           <Link
             href="/forgot-password"
-            className="text-xs font-medium text-primary hover:underline"
+            className="-my-3 inline-flex min-h-11 items-center rounded-full text-[0.8125rem] font-semibold text-primary-accent underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
             Esqueceu a senha?
           </Link>

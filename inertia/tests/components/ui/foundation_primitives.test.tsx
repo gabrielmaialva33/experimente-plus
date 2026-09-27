@@ -251,9 +251,14 @@ describe('foundation primitives', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Benefícios' })).toBeVisible()
     expect(screen.getByText('Gerencie as ofertas desta unidade.')).toBeVisible()
-    expect(
-      screen.getByRole('heading', { level: 2, name: 'Nenhum benefício publicado' })
-    ).toBeVisible()
+    const emptyHeading = screen.getByRole('heading', {
+      level: 2,
+      name: 'Nenhum benefício publicado',
+    })
+    expect(emptyHeading).toBeVisible()
+    // Direction A: the icon sits in a round badge and the title uses the display face.
+    expect(emptyHeading).toHaveClass('font-display')
+    expect(emptyHeading.previousElementSibling).toHaveClass('rounded-full', 'bg-content-absent')
     expect(screen.getByRole('button', { name: 'Criar oferta' })).toBeEnabled()
   })
 })

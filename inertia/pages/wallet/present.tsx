@@ -23,15 +23,15 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
     () => new Date(presentation.expires_at).getTime(),
     [presentation.expires_at]
   )
-  const [remaining, setRemaining] = useState(() =>
-    Math.max(0, Math.ceil((expiry - Date.now()) / 1000))
-  )
+  // Start from the server's count so the first client render matches the server-rendered
+  // HTML (reading the clock here made "5:00" hydrate as "4:59"); the effect then follows it.
+  const [remaining, setRemaining] = useState(() => Math.max(0, presentation.expires_in_seconds))
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setRemaining(Math.max(0, Math.ceil((expiry - Date.now()) / 1000)))
-    }, 1000)
+    const tick = () => setRemaining(Math.max(0, Math.ceil((expiry - Date.now()) / 1000)))
+    tick()
+    const timer = window.setInterval(tick, 1000)
 
     return () => window.clearInterval(timer)
   }, [expiry])
@@ -67,7 +67,9 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
 
       <Card className="mx-auto max-w-5xl overflow-hidden border border-border-subtle bg-card">
         <CardContent className="grid p-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="p-5 sm:p-7">
+          {/* A phone reads the offer, then the code the counter needs, then the details;
+              a wide screen keeps the code in its own column to the right. */}
+          <div className="p-5 sm:p-7 lg:col-start-1 lg:row-start-1 lg:pb-6">
             <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
               {benefit.establishment_name}
             </p>
@@ -77,49 +79,9 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               {benefit.offer_description}
             </p>
-
-            <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border-subtle bg-card p-4">
-                <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
-                  Edição
-                </dt>
-                <dd className="mt-1 font-semibold">{benefit.edition_name}</dd>
-              </div>
-              <div className="rounded-2xl border border-border-subtle bg-card p-4">
-                <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
-                  Utilizações restantes
-                </dt>
-                <dd className="mt-1 font-display text-2xl font-extrabold leading-tight tabular-nums">
-                  {benefit.remaining_redemptions}
-                </dd>
-              </div>
-            </dl>
-
-            {benefit.terms ? (
-              <section
-                aria-labelledby="benefit-terms-title"
-                className="mt-5 rounded-2xl border border-border-subtle p-4"
-              >
-                <h3
-                  id="benefit-terms-title"
-                  className="font-display text-[0.9375rem] font-extrabold"
-                >
-                  Regras do benefício
-                </h3>
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                  {benefit.terms}
-                </p>
-              </section>
-            ) : null}
-
-            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />A apresentação
-              não conclui o uso sozinha. A confirmação final é feita no servidor por uma pessoa
-              autorizada da organização.
-            </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center border-t border-border-subtle bg-background p-5 sm:p-7 lg:border-l lg:border-t-0">
+          <div className="mb-5 flex flex-col items-center justify-center border-y border-border-subtle bg-background p-5 sm:mb-7 sm:p-7 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mb-0 lg:border-y-0 lg:border-l">
             {/* The code stays on white in both themes: readers need the contrast. */}
             <div className="w-full max-w-[18rem] rounded-2xl border border-border-subtle bg-white p-3">
               <img
@@ -175,6 +137,47 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
                 Gerar novo código
               </Button>
             )}
+          </div>
+          <div className="p-5 pt-0 sm:p-7 sm:pt-0 lg:col-start-1 lg:row-start-2 lg:pt-0">
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border-subtle bg-card p-4">
+                <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                  Edição
+                </dt>
+                <dd className="mt-1 font-semibold">{benefit.edition_name}</dd>
+              </div>
+              <div className="rounded-2xl border border-border-subtle bg-card p-4">
+                <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                  Utilizações restantes
+                </dt>
+                <dd className="mt-1 font-display text-2xl font-extrabold leading-tight tabular-nums">
+                  {benefit.remaining_redemptions}
+                </dd>
+              </div>
+            </dl>
+
+            {benefit.terms ? (
+              <section
+                aria-labelledby="benefit-terms-title"
+                className="mt-5 rounded-2xl border border-border-subtle p-4"
+              >
+                <h3
+                  id="benefit-terms-title"
+                  className="font-display text-[0.9375rem] font-extrabold"
+                >
+                  Regras do benefício
+                </h3>
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                  {benefit.terms}
+                </p>
+              </section>
+            ) : null}
+
+            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-sm leading-6 text-primary-accent">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />A apresentação
+              não conclui o uso sozinha. A confirmação final é feita no servidor por uma pessoa
+              autorizada da organização.
+            </div>
           </div>
         </CardContent>
       </Card>

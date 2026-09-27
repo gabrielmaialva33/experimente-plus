@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { renderToString } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import SettingsPage from '~/pages/settings'
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   setTheme: vi.fn(),
   permissions: [] as string[],
   tenants: [] as Array<{ id: number; name: string; role: string }>,
+  url: '/settings',
 }))
 
 vi.mock('@inertiajs/react', async () => {
@@ -20,7 +22,7 @@ vi.mock('@inertiajs/react', async () => {
     // The profile form's unsaved-changes guard listens to visits.
     router: { post: mocks.post, on: () => () => undefined },
     usePage: () => ({
-      url: '/settings',
+      url: mocks.url,
       props: {
         errors: {},
         auth: {
@@ -90,6 +92,16 @@ describe('SettingsPage', () => {
     vi.clearAllMocks()
     mocks.permissions = []
     mocks.tenants = []
+    mocks.url = '/settings'
+  })
+
+  it('renders the theme cards the same on the server and before hydration', () => {
+    mocks.url = '/settings?tab=appearance'
+    // The browser's saved theme is unknown to the server; no card may claim it yet.
+    const markup = renderToString(<SettingsPage profile={profile} />)
+
+    expect(markup).toContain('Tema da interface')
+    expect(markup).not.toContain('aria-pressed="true"')
   })
 
   it('presents personal settings in pt-BR without inventing an operation destination', async () => {
@@ -98,6 +110,11 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('heading', { name: 'Conta e preferências' })).toBeVisible()
     expect(screen.getByLabelText('E-mail de acesso')).toHaveAttribute('readonly')
     expect(screen.queryByRole('tab', { name: 'Operações' })).not.toBeInTheDocument()
+    // Sections are pills that wrap on a phone rather than boxes that overflow sideways.
+    const sections = screen.getByRole('tablist', { name: 'Seções da conta' })
+    expect(sections).toHaveClass('flex-wrap', '[&_[role=tab]]:rounded-full')
+    // The optional hint fits beside its label, so both name fields keep one baseline.
+    expect(screen.getByLabelText('Nome de usuário')).toHaveAccessibleDescription('Opcional')
 
     await user.click(screen.getByRole('tab', { name: 'Aparência' }))
     const darkTheme = screen.getByRole('button', { name: /Escuro/ })

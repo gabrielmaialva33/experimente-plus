@@ -332,6 +332,8 @@ describe('flat foundation token contract', () => {
     expect(choiceStyles).toContain('[data-state=')
     expect(choiceStyles).toContain('[data-selected=')
     expect(choiceStyles).toContain('.choice-marker')
+    // An idle choice reserves no blank slot for its check: the label stays centred.
+    expect(choiceStyles).toMatch(/& \.choice-marker \{\s*display: none;/)
     expect(choiceStyles).not.toMatch(/underline|shadow/)
   })
 
@@ -438,11 +440,32 @@ describe('flat foundation token contract', () => {
     expect(appCss).toContain('@utility app-container')
   })
 
+  it('lets the server-rendered page title come before the generic fallback', () => {
+    // Browsers and crawlers read the first <title>; the page's own must win before hydration.
+    expect(inertiaLayout.indexOf('@inertiaHead()')).toBeGreaterThan(-1)
+    expect(inertiaLayout.indexOf('<title inertia>')).toBeGreaterThan(
+      inertiaLayout.indexOf('@inertiaHead()')
+    )
+  })
+
   it('keeps the browser chrome and loaded font aligned with the product brand', () => {
     expect(inertiaLayout).toContain('<meta name="theme-color" content="#13467c" />')
     expect(inertiaLayout).toContain('instrument-sans:400,500,600,700')
     expect(appCss).toContain('font-family: var(--font-sans)')
+    // The page-loading bar is navigation feedback: the navy role, never the conversion orange.
+    expect(projectFile('inertia/app/app.tsx')).toContain("progress: { color: 'var(--primary)' }")
   })
+
+  it.each(['verify_email_html', 'password_reset_html'])(
+    'sends the %s email in the brand navy with a pill action',
+    (template) => {
+      const email = projectFile(`resources/views/emails/${template}.edge`)
+      expect(email).toContain('background: #13467c')
+      expect(email).toContain('border-radius: 999px')
+      expect(email).toContain('border-radius: 20px')
+      expect(email).not.toMatch(/#2563eb|#f4f4f5|#71717a/)
+    }
+  )
 
   it('loads the direction A display face and exposes it apart from the text face', () => {
     expect(inertiaLayout).toContain('plus-jakarta-sans:600,700,800')

@@ -63,8 +63,10 @@ function benefitLabel(benefit: WalletBenefit): string {
 
 function SummaryItem({ label, value }: { label: string; value: number }) {
   return (
-    <Card className="border border-border-subtle bg-card">
-      <CardContent className="p-4 sm:p-5">
+    <Card className="h-full border border-border-subtle bg-card">
+      {/* The number sits on the tile's floor, so a label that wraps on a phone
+          ("Utilizações concluídas") does not lift its neighbour's number. */}
+      <CardContent className="flex h-full flex-col justify-between p-4 sm:p-5">
         <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
           {label}
         </p>
@@ -232,7 +234,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                                   </Link>
                                 </Button>
                               ) : (
-                                <p className="rounded-2xl bg-status-neutral px-4 py-3 text-center text-xs leading-5 text-status-neutral-foreground">
+                                <p className="rounded-2xl border border-border-subtle bg-status-neutral px-4 py-3 text-center text-xs leading-5 text-status-neutral-foreground">
                                   {state === 'redeemed'
                                     ? 'Todas as utilizações foram concluídas.'
                                     : 'Este benefício não pode ser apresentado agora.'}
