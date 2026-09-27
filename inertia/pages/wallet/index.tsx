@@ -125,8 +125,11 @@ export default function WalletPage({ wallet }: WalletPageProps) {
         <div className="space-y-6">
           {passes.map(({ edition, access, benefits }) => (
             <Card key={access.id} className="border border-border-subtle bg-card">
-              <CardHeader className="flex-col sm:flex-row sm:items-start">
-                <div className="min-w-0">
+              <CardHeader className="gap-x-6">
+                {/* The period sits beside the title while both fit and drops below it
+                    otherwise; it stays start-aligned so the label and the dates line up
+                    in either place. */}
+                <div className="min-w-0 flex-[1_1_20rem]">
                   <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                     <MapPin className="size-3.5" aria-hidden="true" />
                     {edition.city.name} · {edition.city.state_code}
@@ -142,7 +145,7 @@ export default function WalletPage({ wallet }: WalletPageProps) {
                     </p>
                   ) : null}
                 </div>
-                <dl className="shrink-0 text-sm sm:text-end">
+                <dl className="shrink-0 text-sm">
                   <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
                     Período de utilização
                   </dt>
