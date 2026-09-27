@@ -2,9 +2,24 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {{-- viewport-fit=cover lets the page reach the screen edges, under the home indicator in an
+         installed app; the body, the headers and the fixed bottom navigation pad themselves
+         with env(safe-area-inset-*). --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    {{-- The first matching theme-color wins: the dark chrome blue for a dark system, else navy. --}}
+    <meta name="theme-color" content="#172641" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#13467c" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    {{-- Installable site: the manifest for Chromium and Android, the Apple tags for "Adicionar
+         à Tela de Início" on iOS. "default" keeps the status bar out of the page, in the
+         theme-color; "black-translucent" would put it over the header. --}}
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Experimente+" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
     <link rel="preconnect" href="https://fonts.bunny.net" />
     <link
@@ -20,7 +35,11 @@
     @vite(['inertia/app/app.tsx', `inertia/pages/${page.component}.tsx`])
   </head>
 
-  <body class="min-h-screen w-screen font-sans antialiased">
+  {{-- The side insets keep content off the notch in landscape, as Safari's letterboxing did
+       before viewport-fit=cover. Fixed bars sit outside the body and pad themselves. --}}
+  <body
+    class="min-h-screen w-screen pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] font-sans antialiased"
+  >
     @inertia()
   </body>
 </html>
