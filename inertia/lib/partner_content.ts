@@ -35,13 +35,14 @@ export const partnerContentStatusMeta: Record<
     label: 'Rascunho',
     className: 'border-border bg-muted text-muted-foreground',
   },
+  // Direction A: blue "em análise", amber only for what waits on the partner.
   pending_review: {
     label: 'Em análise',
-    className: 'border-warning/25 bg-warning/15 text-warning-foreground',
+    className: 'border-info/30 bg-info-soft text-info-accent',
   },
   published: {
     label: 'Publicado',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   archived: {
     label: 'Arquivado',

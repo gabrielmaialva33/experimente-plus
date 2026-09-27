@@ -104,6 +104,14 @@ function kindLabel(kind: PartnerContentPath): string {
   return partnerContentKinds.find((item) => item.path === kind)!.label
 }
 
+/** The state as it follows a count: "1 item publicado", "3 itens publicados", "2 itens em rascunho". */
+const STATUS_COUNT_LABEL: Record<PartnerContentStatus, [one: string, many: string]> = {
+  draft: ['em rascunho', 'em rascunho'],
+  pending_review: ['em análise', 'em análise'],
+  published: ['publicado', 'publicados'],
+  archived: ['arquivado', 'arquivados'],
+}
+
 export default function BackofficePartnerContentPage({
   sections: rawSections,
   counts = {},
@@ -133,7 +141,7 @@ export default function BackofficePartnerContentPage({
   }
   const isPlatformAdmin = platformAccess === 'platform_admin'
   const totalAll = partnerContentKinds.reduce((sum, kind) => sum + (counts[kind.path] ?? 0), 0)
-  const statusLabel = partnerContentStatusMeta[status].label.toLowerCase()
+  const [statusOne, statusMany] = STATUS_COUNT_LABEL[status]
 
   function scopeHref(next: Scope, page?: number): string {
     return buildPageHref(QUEUE_PATH, {
@@ -184,10 +192,15 @@ export default function BackofficePartnerContentPage({
           title="Conteúdo de parceiros"
           description="Experiências, eventos e itens de vitrine que os parceiros enviaram. Leia, confira as imagens e decida."
           meta={
-            <Badge variant={totalAll > 0 ? 'warning' : 'success'} appearance="light" shape="pill">
+            // Amber only for work waiting on the operation; any other count is neutral.
+            <Badge
+              variant={status === 'pending_review' && totalAll > 0 ? 'warning' : 'neutral'}
+              appearance="light"
+              shape="pill"
+            >
               {totalAll === 1
-                ? '1 item ' + statusLabel
-                : totalAll.toLocaleString('pt-BR') + ' itens ' + statusLabel}
+                ? '1 item ' + statusOne
+                : totalAll.toLocaleString('pt-BR') + ' itens ' + statusMany}
             </Badge>
           }
           actions={
@@ -276,8 +289,8 @@ export default function BackofficePartnerContentPage({
             headingLevel={2}
             title={
               scope === 'all'
-                ? 'Nenhum conteúdo ' + statusLabel
-                : 'Nenhum item de ' + kindLabel(scope).toLowerCase() + ' ' + statusLabel
+                ? 'Nenhum conteúdo ' + statusOne
+                : 'Nenhum item de ' + kindLabel(scope).toLowerCase() + ' ' + statusOne
             }
             description={
               scope !== 'all' && totalAll > 0
@@ -300,7 +313,8 @@ export default function BackofficePartnerContentPage({
                 >
                   {kindLabel(section.kind)}{' '}
                   <span className="text-sm font-semibold text-muted-foreground">
-                    · {section.total.toLocaleString('pt-BR')} {statusLabel}
+                    · {section.total.toLocaleString('pt-BR')}{' '}
+                    {section.total === 1 ? statusOne : statusMany}
                   </span>
                 </h2>
                 {scope === 'all' && section.total > section.rows.length ? (

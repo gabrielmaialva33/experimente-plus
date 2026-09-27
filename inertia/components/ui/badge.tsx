@@ -16,7 +16,8 @@ const badgeVariants = cva(
         warning: 'border-transparent bg-warning text-warning-foreground',
         info: 'border-transparent bg-info text-info-foreground',
         outline: 'border-border bg-transparent text-secondary-foreground',
-        neutral: 'border-transparent bg-muted text-muted-foreground',
+        // Muted matches the card surface in the dark theme; a quiet outline keeps the pill visible.
+        neutral: 'border-border-subtle bg-muted text-muted-foreground',
         destructive: 'border-transparent bg-destructive text-destructive-foreground',
       },
       appearance: {
@@ -46,9 +47,10 @@ const badgeVariants = cva(
       { variant: 'primary', appearance: 'light', className: 'bg-primary-soft text-primary-accent' },
       { variant: 'cta', appearance: 'light', className: 'bg-cta-soft text-cta-accent' },
       {
+        // Secondary is the card colour: without an outline the pill vanishes on a card.
         variant: 'secondary',
         appearance: 'light',
-        className: 'bg-secondary text-secondary-foreground',
+        className: 'border-border-subtle bg-secondary text-secondary-foreground',
       },
       { variant: 'success', appearance: 'light', className: 'bg-success-soft text-success-accent' },
       { variant: 'warning', appearance: 'light', className: 'bg-warning-soft text-warning-accent' },

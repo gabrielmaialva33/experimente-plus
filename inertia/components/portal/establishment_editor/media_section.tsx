@@ -30,19 +30,19 @@ import type { EstablishmentMediaEditor } from './use_media_editor'
 const mediaStatusMeta: Record<string, { label: string; className: string }> = {
   pending: {
     label: 'Pendente',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   approved: {
     label: 'Aprovada',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   rejected: {
     label: 'Rejeitada',
-    className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
   quarantined: {
     label: 'Em quarentena',
-    className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
 }
 
@@ -192,6 +192,7 @@ export function MediaSection({
             <div className="flex flex-wrap items-center gap-3">
               {editor.uploadDraftDirty ? (
                 <Button
+                  shape="pill"
                   type="button"
                   variant="outline"
                   disabled={controlsDisabled}
@@ -200,7 +201,7 @@ export function MediaSection({
                   Limpar formulário
                 </Button>
               ) : null}
-              <Button type="submit" disabled={controlsDisabled}>
+              <Button shape="pill" type="submit" disabled={controlsDisabled}>
                 <ImagePlus />
                 {editor.uploading ? 'Enviando…' : 'Adicionar imagem'}
               </Button>
@@ -314,6 +315,7 @@ export function MediaSection({
                     {editable ? (
                       <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
                         <Button
+                          shape="pill"
                           type="button"
                           variant="outline"
                           size="sm"
@@ -328,6 +330,7 @@ export function MediaSection({
                               : 'Definir capa'}
                         </Button>
                         <Button
+                          shape="pill"
                           type="button"
                           variant="outline"
                           size="sm"

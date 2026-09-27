@@ -96,7 +96,7 @@ export function EditorSection({
                   key={issue.key}
                   className="flex items-start gap-2.5 rounded-xl border border-warning/20 bg-background/75 px-3 py-2.5"
                 >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-foreground" />
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-accent" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium leading-5">{issue.message}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

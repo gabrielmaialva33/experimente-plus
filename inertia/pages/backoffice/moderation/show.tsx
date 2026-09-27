@@ -219,7 +219,8 @@ export default function ModerationRevisionPage({
           }
           actions={
             <>
-              <Button asChild variant="cta" size="xl" shape="pill" className="sm:order-last">
+              {/* A moderation decision is not a conversion: the neutral main action is navy. */}
+              <Button asChild variant="primary" size="xl" shape="pill" className="sm:order-last">
                 <a href="#decisao">Decidir</a>
               </Button>
               <Button asChild variant="outline" size="lg" shape="pill">
@@ -292,7 +293,7 @@ export default function ModerationRevisionPage({
                   {[...blockingIssues, ...warnings].map((issue) => (
                     <li
                       key={`${text(issue, 'code')}-${text(issue, 'field')}`}
-                      className="rounded-xl bg-muted p-3"
+                      className="rounded-xl bg-background p-3"
                     >
                       <p className="text-sm font-semibold">
                         {localizeCompletenessIssue({

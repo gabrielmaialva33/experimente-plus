@@ -61,7 +61,7 @@ export default function CreateUserPage() {
                 required
               />
               <Field
-                label="Email"
+                label="E-mail"
                 name="email"
                 type="email"
                 value={data.email}

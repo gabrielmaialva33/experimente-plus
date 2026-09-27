@@ -58,18 +58,18 @@ export const partnerContentMediaStatusMeta: Record<
 > = {
   pending: {
     label: 'Imagem em análise',
-    className: 'border-warning/25 bg-warning/15 text-warning-foreground',
+    className: 'border-info/30 bg-info-soft text-info-accent',
   },
   approved: {
     label: 'Imagem aprovada',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   rejected: {
     label: 'Imagem recusada',
-    className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
   quarantined: {
     label: 'Imagem em quarentena',
-    className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
   },
 }

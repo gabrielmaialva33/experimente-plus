@@ -77,7 +77,7 @@ function NavigationButton({
       <Icon className="size-4 shrink-0" />
       <span className="whitespace-nowrap">{item.label}</span>
       {item.issueCount > 0 ? (
-        <span className="ms-auto inline-flex min-w-5 items-center justify-center rounded-full bg-warning/15 px-1.5 py-0.5 text-[0.65rem] font-bold text-warning-foreground">
+        <span className="ms-auto inline-flex min-w-5 items-center justify-center rounded-full bg-warning-soft px-1.5 py-0.5 text-[0.65rem] font-bold text-warning-accent">
           {item.issueCount}
         </span>
       ) : item.optional ? (

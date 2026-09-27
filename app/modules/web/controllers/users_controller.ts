@@ -65,7 +65,9 @@ export default class InertiaUsersController {
     // web audit W28.
     if (!user) throw new NotFoundException('User not found')
 
-    return inertia.render('users/edit', { user })
+    // A Lucid model reaches the page as its internals ($attributes…), leaving the
+    // form and the title empty ("Editar usuário: undefined"); send its JSON shape.
+    return inertia.render('users/edit', { user: user.serialize() })
   }
 
   async update({ auth, request, response, params }: HttpContext) {

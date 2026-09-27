@@ -81,7 +81,7 @@ export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps)
             </dl>
 
             {receipt.offer.terms ? (
-              <div className="rounded-2xl bg-muted/50 p-4">
+              <div className="rounded-2xl bg-background p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                   Regras no momento do uso
                 </p>

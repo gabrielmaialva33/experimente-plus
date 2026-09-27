@@ -123,8 +123,8 @@ export default function PartnerValidationPage({
                 onChange={(event) => setInput(event.target.value)}
                 autoComplete="off"
                 spellCheck={false}
-                placeholder="https://… ou o código mostrado pelo cliente"
-                className="h-12 flex-1 rounded-full px-5"
+                placeholder="https://… ou o código do cliente"
+                className="h-12 rounded-full px-5 sm:flex-1"
                 disabled={inspecting}
               />
               <Button
@@ -156,7 +156,7 @@ export default function PartnerValidationPage({
             className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
           >
             <article className="overflow-hidden rounded-card border border-border-subtle bg-card sm:flex">
-              <div className="bg-primary p-5 text-primary-foreground sm:w-60 sm:shrink-0 sm:p-6">
+              <div className="bg-chrome p-5 text-chrome-foreground sm:w-60 sm:shrink-0 sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-80">
                   Benefício
                 </p>
@@ -191,7 +191,7 @@ export default function PartnerValidationPage({
                 </dl>
 
                 {preview.benefit.terms ? (
-                  <div className="mt-5 rounded-2xl bg-muted/50 p-4">
+                  <div className="mt-5 rounded-2xl bg-background p-4">
                     <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                       Regras
                     </p>

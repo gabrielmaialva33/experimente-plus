@@ -57,6 +57,8 @@ describe('ModerationQueuePage', () => {
     render(<ModerationQueuePage revisions={{ data: [], meta: { total: 0 } }} filters={{}} />)
 
     expect(screen.getByText('Nada para revisar')).toBeInTheDocument()
-    expect(screen.getByText('Nada esperando')).toBeInTheDocument()
+    // An empty queue is not a warning: amber stays for work waiting.
+    expect(screen.getByText('Nada esperando')).toHaveClass('bg-muted')
+    expect(screen.getByText('Nada esperando')).not.toHaveClass('bg-warning-soft')
   })
 })

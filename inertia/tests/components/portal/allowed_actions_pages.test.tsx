@@ -412,6 +412,9 @@ describe('Portal server-projected allowed actions', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Peça ao cliente para gerar')
     expect(screen.getByLabelText('Link da apresentação')).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Conferir' })).toBeDisabled()
+    // Stacked on a phone, `flex-1` collapsed the field to a sliver; it only grows in a row.
+    expect(screen.getByLabelText('Link da apresentação')).toHaveClass('h-12', 'sm:flex-1')
+    expect(screen.getByLabelText('Link da apresentação')).not.toHaveClass('flex-1')
   })
 
   it('presents a valid benefit as a ticket with one conversion action to confirm it', () => {
@@ -454,6 +457,10 @@ describe('Portal server-projected allowed actions', () => {
     expect(screen.getByRole('button', { name: 'Confirmar utilização' })).toHaveClass('bg-cta')
     expect(document.querySelectorAll('.bg-cta')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Conferir outro' })).toBeVisible()
+    // The ticket stub is navy chrome in both themes, never the light-blue dark `primary`.
+    expect(
+      within(ticket).getByRole('heading', { name: 'Sobremesa cortesia' }).parentElement
+    ).toHaveClass('bg-chrome', 'text-chrome-foreground')
   })
 
   it('lists each confirmed use with a link to its receipt', () => {

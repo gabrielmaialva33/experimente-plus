@@ -422,7 +422,7 @@ export default function BenefitAccessesPage({
                           className={cn(
                             'flex size-10 shrink-0 items-center justify-center rounded-full border',
                             isActive
-                              ? 'border-success/20 bg-success/10 text-success'
+                              ? 'border-success/20 bg-success-soft text-success-accent'
                               : 'border-border bg-muted text-muted-foreground'
                           )}
                         >
@@ -436,7 +436,7 @@ export default function BenefitAccessesPage({
                           className={cn(
                             'rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold',
                             isActive
-                              ? 'border-success/25 bg-success/10 text-success'
+                              ? 'border-success/25 bg-success-soft text-success-accent'
                               : 'border-border bg-muted text-muted-foreground'
                           )}
                         >
@@ -452,7 +452,7 @@ export default function BenefitAccessesPage({
                         {access.edition.city.name} · {access.edition.city.state_code}
                       </p>
 
-                      <dl className="mt-5 grid gap-3 rounded-xl bg-muted/50 p-4 text-sm">
+                      <dl className="mt-5 grid gap-3 rounded-xl bg-background p-4 text-sm">
                         <div className="flex items-start justify-between gap-4">
                           <dt className="text-muted-foreground">Origem</dt>
                           <dd className="text-right font-semibold">
@@ -474,7 +474,7 @@ export default function BenefitAccessesPage({
                       </dl>
 
                       {access.notes ? (
-                        <p className="mt-4 rounded-xl bg-muted/50 p-3 text-sm leading-6">
+                        <p className="mt-4 rounded-xl bg-background p-3 text-sm leading-6">
                           {access.notes}
                         </p>
                       ) : null}
@@ -498,6 +498,7 @@ export default function BenefitAccessesPage({
                                   </p>
                                 </div>
                                 <Button
+                                  shape="circle"
                                   type="button"
                                   variant="ghost"
                                   size="icon"

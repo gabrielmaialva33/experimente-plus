@@ -86,6 +86,20 @@ describe('PartnerContentPage', () => {
     })
   })
 
+  it('agrees the empty-state invitation with each kind', async () => {
+    const { user } = render(
+      <PartnerContentPage
+        tenant_id={7}
+        establishments={[establishment]}
+        content={{ experiences: [], events: [], showcase_items: [] }}
+      />
+    )
+
+    expect(screen.getByText('Use o formulário acima para criar a primeira.')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: /Eventos/ }))
+    expect(screen.getByText('Use o formulário acima para criar o primeiro.')).toBeInTheDocument()
+  })
+
   it('explains that an approved snapshot stays public while an edit waits', () => {
     render(
       <PartnerContentPage

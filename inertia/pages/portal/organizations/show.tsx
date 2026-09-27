@@ -340,7 +340,7 @@ export default function PortalOrganizationPage({
                   </span>
                 </div>
                 <div
-                  className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
+                  className="mt-4 h-2 overflow-hidden rounded-full bg-border-subtle"
                   role="progressbar"
                   aria-label={`Dados preenchidos de ${establishment.public_name}`}
                   aria-valuemin={0}
@@ -550,7 +550,8 @@ export default function PortalOrganizationPage({
               </Alert>
             ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Bottom-aligned: a hint that wraps under one label must not drop only its input. */}
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
               <EditorField
                 htmlFor="organization-legal-name"
                 label="Razão social"

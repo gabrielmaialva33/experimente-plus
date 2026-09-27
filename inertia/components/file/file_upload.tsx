@@ -7,7 +7,7 @@ import { Button } from '~/components/ui/button'
 import { Alert, AlertIcon, AlertTitle, AlertContent, AlertDescription } from '~/components/ui/alert'
 import { cn } from '~/lib/utils'
 import { useApi } from '~/hooks/use_api'
-import { fileCategoryLabel } from '~/lib/file_presentation'
+import { fileCategoryLabel, formatFileSize } from '~/lib/file_presentation'
 import type { FileUploadResponse } from '~/types'
 
 const ACCEPTED_FILE_TYPES: Record<string, string[]> = {
@@ -26,14 +26,6 @@ const ACCEPTED_FILE_TYPES: Record<string, string[]> = {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 bytes'
-  const k = 1024
-  const sizes = ['bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
-}
 
 export function FileUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -102,7 +94,7 @@ export function FileUpload() {
       <div
         {...getRootProps()}
         className={cn(
-          'flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-input bg-background px-6 py-10 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-input bg-background px-6 py-10 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           loading
             ? 'cursor-not-allowed opacity-60'
             : 'cursor-pointer hover:border-primary/50 hover:bg-accent/40',
@@ -110,7 +102,7 @@ export function FileUpload() {
         )}
       >
         <input {...getInputProps()} />
-        <div className="flex size-11 items-center justify-center rounded-md bg-primary-soft text-primary-accent">
+        <div className="flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
           <CloudUpload aria-hidden="true" className="size-6" />
         </div>
         <div className="space-y-1">
@@ -124,7 +116,7 @@ export function FileUpload() {
       </div>
 
       {selectedFile && (
-        <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground">
             <FileIcon aria-hidden="true" className="size-5" />
           </div>
@@ -133,6 +125,7 @@ export function FileUpload() {
             <p className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
           </div>
           <Button
+            shape="circle"
             type="button"
             variant="ghost"
             mode="icon"
@@ -148,6 +141,8 @@ export function FileUpload() {
 
       <div className="flex justify-end">
         <Button
+          shape="pill"
+          size="lg"
           type="button"
           variant="primary"
           onClick={handleUpload}

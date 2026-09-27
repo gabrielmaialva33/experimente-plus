@@ -157,6 +157,8 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
             </div>
           ),
           enableSorting: true,
+          // Fixed table layout: the name and e-mail need the room the action column does not.
+          size: 300,
         }),
         columnHelper.accessor('roles', {
           id: 'roles',
@@ -183,6 +185,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
             )
           },
           enableSorting: false,
+          size: 180,
         }),
         columnHelper.accessor('email_verified_at', {
           id: 'email_verified_at',
@@ -198,6 +201,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
               </Badge>
             ),
           enableSorting: false,
+          size: 150,
         }),
         columnHelper.accessor('created_at', {
           id: 'created_at',
@@ -208,14 +212,22 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
             </span>
           ),
           enableSorting: true,
+          size: 160,
         }),
         columnHelper.display({
           id: 'actions',
-          header: '',
+          header: () => <span className="sr-only">Ações</span>,
+          size: 64,
           cell: ({ row }) => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" mode="icon" size="sm" aria-label="Abrir ações do usuário">
+                <Button
+                  shape="circle"
+                  variant="ghost"
+                  mode="icon"
+                  size="sm"
+                  aria-label="Abrir ações do usuário"
+                >
                   <MoreVertical className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -317,15 +329,18 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
                 Todos os usuários
               </CardTitle>
             </CardHeading>
-            <CardToolbar>
+            <CardToolbar className="w-full sm:w-auto">
               <form
                 onSubmit={(event) => {
                   event.preventDefault()
                   navigate({ search: searchValue, page: 1 })
                 }}
-                className="relative"
+                className="relative w-full sm:w-auto"
               >
-                <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Search
+                  aria-hidden="true"
+                  className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                />
                 <Input
                   type="search"
                   placeholder="Buscar por nome ou e-mail"

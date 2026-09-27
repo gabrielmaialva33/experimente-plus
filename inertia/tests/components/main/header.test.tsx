@@ -69,6 +69,8 @@ describe('Header mobile navigation', () => {
     const close = screen.getByRole('button', { name: 'Fechar navegação' })
     expect(close).toHaveClass('text-chrome-foreground', 'data-[state=open]:bg-chrome-hover')
     expect(close).not.toHaveClass('data-[state=open]:bg-secondary')
+    // Touch target: a 44 px circle, not the bare 16 px glyph.
+    expect(close).toHaveClass('size-11', 'rounded-full')
   })
 
   it('hides the operation surface from a USER with shared Portal permissions', async () => {

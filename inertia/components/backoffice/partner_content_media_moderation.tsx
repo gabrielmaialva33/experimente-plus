@@ -189,7 +189,7 @@ export function PartnerContentMediaModeration({
                     </div>
 
                     {rejectingId === item.id ? (
-                      <div className="grid gap-2 rounded-md bg-muted/40 p-3">
+                      <div className="grid gap-2 rounded-md bg-background p-3">
                         <label
                           htmlFor={'partner-media-reason-' + item.id}
                           className="text-xs font-semibold"

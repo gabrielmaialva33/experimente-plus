@@ -194,7 +194,9 @@ function RuleSection({
 }
 
 function ReadOnly({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">{children}</p>
+  return (
+    <p className="rounded-xl bg-background px-4 py-3 text-sm text-muted-foreground">{children}</p>
+  )
 }
 
 export default function BackofficeReviewPolicy({

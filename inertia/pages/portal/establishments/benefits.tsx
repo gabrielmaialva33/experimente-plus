@@ -114,11 +114,11 @@ const statusMeta: Record<string, { label: string; className: string }> = {
   },
   active: {
     label: 'Ativa',
-    className: 'border-success/25 bg-success/10 text-success',
+    className: 'border-success/25 bg-success-soft text-success-accent',
   },
   paused: {
     label: 'Pausada',
-    className: 'border-warning/25 bg-warning/10 text-warning-foreground',
+    className: 'border-warning/30 bg-warning-soft text-warning-accent',
   },
   archived: {
     label: 'Arquivada',
@@ -774,7 +774,7 @@ export default function EstablishmentBenefitsPage({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                          <p className="text-xs font-semibold uppercase leading-5 tracking-[0.12em] text-primary">
                             {offer.edition.name}
                           </p>
                           <h2 className="mt-1 font-display text-lg font-bold tracking-[-0.02em]">
@@ -795,7 +795,7 @@ export default function EstablishmentBenefitsPage({
                         {offer.description}
                       </p>
 
-                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-muted/50 p-4 text-sm">
+                      <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-background p-4 text-sm">
                         <div className="col-span-2">
                           <dt className="text-xs text-muted-foreground">Benefício</dt>
                           <dd className="mt-1 font-semibold">{describeBenefit(offer)}</dd>
@@ -833,7 +833,7 @@ export default function EstablishmentBenefitsPage({
                       ) : null}
 
                       {editionArchived ? (
-                        <p className="mt-4 rounded-xl bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                        <p className="mt-4 rounded-xl bg-background px-3 py-2 text-xs leading-5 text-muted-foreground">
                           {offer.status === 'active'
                             ? 'Esta edição foi arquivada e a oferta não está mais disponível. Pause a oferta antes de arquivar seu histórico.'
                             : offer.status === 'archived'

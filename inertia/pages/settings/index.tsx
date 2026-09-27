@@ -6,7 +6,7 @@ import {
   Loader2,
   Monitor,
   Moon,
-  ShieldAlert,
+  Settings,
   Sun,
   Trash2,
   type LucideIcon,
@@ -81,7 +81,8 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} aria-busy={form.processing} className="space-y-5">
-          <div className="grid gap-5 sm:grid-cols-2">
+          {/* One column: the username hint would push its input below its neighbour's. */}
+          <div className="grid gap-5">
             <EditorField
               htmlFor="settings-full-name"
               label="Nome completo"
@@ -420,7 +421,13 @@ function OperationsTab() {
                     </span>
                   </span>
                   {active ? (
-                    <Badge variant="primary" appearance="light" shape="pill" size="sm">
+                    <Badge
+                      variant="primary"
+                      appearance="light"
+                      shape="pill"
+                      size="sm"
+                      className="self-start sm:self-auto"
+                    >
                       Operação ativa
                     </Badge>
                   ) : (
@@ -467,19 +474,19 @@ export default function SettingsPage({ profile }: SettingsPageProps) {
 
       <div className="space-y-6">
         <PageHeader
-          icon={ShieldAlert}
+          icon={Settings}
           eyebrow="Minha conta"
           title="Conta e preferências"
           description="Gerencie seus dados pessoais, a aparência da interface e as opções de segurança realmente disponíveis."
         />
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
-          {/* Pills that wrap: four sections never push a phone into sideways scrolling. */}
+          {/* Pills in a 2×2 grid on a phone, one row from sm: four tabs never scroll the page. */}
           <TabsList
             variant="button"
             shape="pill"
             aria-label="Seções da conta"
-            className="flex-wrap [&_[role=tab]]:px-4"
+            className="grid grid-cols-2 sm:flex sm:flex-wrap [&_[role=tab]]:px-4"
           >
             <TabsTrigger value="profile">Dados pessoais</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>

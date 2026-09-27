@@ -127,10 +127,10 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
         {canOpenToday ? (
           <section
             aria-labelledby="dashboard-today-heading"
-            className="flex flex-col gap-4 rounded-card bg-primary p-5 text-primary-foreground sm:flex-row sm:items-center sm:justify-between sm:p-7"
+            className="flex flex-col gap-4 rounded-card bg-chrome p-5 text-chrome-foreground sm:flex-row sm:items-center sm:justify-between sm:p-7"
           >
             <div className="flex items-start gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-chrome-foreground/15">
                 <Inbox aria-hidden="true" className="size-5" />
               </span>
               <div>
@@ -140,7 +140,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
                 >
                   O que pede atenção hoje
                 </h2>
-                <p className="mt-1 max-w-2xl text-sm text-primary-foreground/80">
+                <p className="mt-1 max-w-2xl text-sm text-chrome-muted">
                   Moderação, denúncias e prazos da operação em uma lista só. Comece o dia por lá;
                   este painel mostra a visão de longo prazo.
                 </p>

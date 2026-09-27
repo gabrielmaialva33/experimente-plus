@@ -272,7 +272,7 @@ export function ModerationActions({
                   return (
                     <div
                       key={issue.key}
-                      className="grid gap-3 rounded-xl bg-muted/50 p-4 md:grid-cols-[1fr_1.6fr_0.8fr_auto] md:items-start"
+                      className="grid gap-3 rounded-xl bg-background p-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_auto] md:items-start"
                     >
                       <EditorField
                         htmlFor={`${issue.key}-field`}
@@ -340,10 +340,11 @@ export function ModerationActions({
                         </select>
                       </EditorField>
                       <Button
+                        shape="pill"
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-destructive md:mt-7"
+                        className="justify-self-end text-destructive md:mt-7 md:justify-self-auto"
                         disabled={busy || changesForm.data.issues.length === 1}
                         onClick={() =>
                           changesForm.setData(

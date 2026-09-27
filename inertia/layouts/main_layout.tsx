@@ -49,25 +49,25 @@ export function MainLayout({ children }: MainLayoutProps) {
       key: 'success',
       message: flash?.success,
       icon: CheckCircle2,
-      className: 'border-success/25 bg-success/10 text-success',
+      className: 'border-success/25 bg-success-soft text-success-accent',
     },
     {
       key: 'error',
       message: flash?.error,
       icon: AlertCircle,
-      className: 'border-destructive/25 bg-destructive/10 text-destructive',
+      className: 'border-destructive/25 bg-destructive-soft text-destructive-accent',
     },
     {
       key: 'warning',
       message: flash?.warning,
       icon: TriangleAlert,
-      className: 'border-warning/30 bg-warning/10 text-warning-foreground',
+      className: 'border-warning/30 bg-warning-soft text-warning-accent',
     },
     {
       key: 'info',
       message: flash?.info,
       icon: Info,
-      className: 'border-info/25 bg-info/10 text-info',
+      className: 'border-info/25 bg-info-soft text-info-accent',
     },
   ]
 
@@ -92,7 +92,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   key={key}
                   role={key === 'error' ? 'alert' : 'status'}
                   className={cn(
-                    'mb-4 flex items-start gap-3 rounded-md border px-4 py-3 text-sm',
+                    'mb-4 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm font-medium',
                     className
                   )}
                 >

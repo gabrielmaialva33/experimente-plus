@@ -105,7 +105,7 @@ export function PartnerContentAdminEditor({
     <form
       onSubmit={submit}
       aria-label="Corrigir conteúdo"
-      className="mt-4 grid w-full gap-4 rounded-xl bg-muted/50 p-4"
+      className="mt-4 grid w-full gap-4 rounded-xl bg-background p-4"
     >
       <p className="text-sm leading-6" data-testid={prefix + '-effect'}>
         {status === 'published'

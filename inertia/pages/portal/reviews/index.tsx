@@ -104,7 +104,7 @@ export default function PartnerReviewsPage({
   const filters = place ? (
     <nav
       aria-label="Filtrar avaliações"
-      className="flex min-w-0 max-w-full gap-1 self-start overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex"
+      className="flex w-full min-w-0 max-w-full gap-1 overflow-x-auto rounded-full bg-muted p-1 sm:inline-flex sm:w-auto"
     >
       {(['unanswered', 'answered', 'all'] as const).map((item) => (
         <Link
@@ -112,7 +112,8 @@ export default function PartnerReviewsPage({
           href={reviewsHref(place.id, item)}
           aria-current={filter === item ? 'true' : undefined}
           className={cn(
-            'inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:px-4.5 sm:text-[0.9375rem]',
+            // The three filters share a phone's width instead of scrolling the selected one away.
+            'inline-flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted motion-reduce:transition-none sm:flex-none sm:px-4.5 sm:text-[0.9375rem]',
             filter === item
               ? 'bg-primary font-bold text-primary-foreground'
               : 'font-semibold text-foreground hover:bg-background'
@@ -324,7 +325,7 @@ function ReviewCard({ review, canReply }: { review: Review; canReply: boolean })
 
       <div className="border-t border-border-subtle pt-4">
         {review.reply && !editing ? (
-          <div className="space-y-2.5 rounded-2xl bg-muted p-4">
+          <div className="space-y-2.5 rounded-2xl bg-background p-4">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-bold text-primary-accent">Sua resposta</p>
               {review.reply.status === 'hidden' ? (

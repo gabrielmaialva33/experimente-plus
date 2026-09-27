@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { fileCategoryLabel, formatFileDate } from '~/lib/file_presentation'
+import { fileCategoryLabel, formatFileDate, formatFileSize } from '~/lib/file_presentation'
 
 describe('file presentation', () => {
   it('translates every file category emitted by the upload service', () => {
@@ -13,6 +13,14 @@ describe('file presentation', () => {
 
   it('uses a safe human fallback for an unknown category', () => {
     expect(fileCategoryLabel('future_category')).toBe('Arquivo')
+  })
+
+  it('writes sizes with the Brazilian decimal comma and no trailing zero', () => {
+    expect(formatFileSize(16_998)).toBe('16,6 KB')
+    expect(formatFileSize(16_384)).toBe('16 KB')
+    expect(formatFileSize(10 * 1024 * 1024)).toBe('10 MB')
+    expect(formatFileSize(512)).toBe('512 B')
+    expect(formatFileSize(0)).toBe('0 B')
   })
 
   describe('sent date', () => {

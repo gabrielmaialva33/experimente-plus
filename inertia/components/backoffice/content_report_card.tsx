@@ -167,7 +167,7 @@ export function ContentReportCard({ report }: { report: JsonRecord }) {
               <p className="text-muted-foreground">Encontrado: {evidence}</p>
             ) : null}
             {holdsContent && !settled ? (
-              <p className="font-semibold text-warning-foreground">
+              <p className="font-semibold text-warning-accent">
                 Conteúdo retido fora das áreas públicas até a decisão. Descartar ou resolver sem
                 ocultar libera o conteúdo.
               </p>
@@ -401,6 +401,7 @@ function BanAuthorControl({
           Autor banido nesta operação
         </span>
         <Button
+          shape="pill"
           type="button"
           variant="outline"
           size="sm"
@@ -418,7 +419,13 @@ function BanAuthorControl({
   if (!confirming) {
     return (
       <div className="mt-3 border-t border-border pt-3">
-        <Button type="button" variant="outline" size="sm" onClick={() => setConfirming(true)}>
+        <Button
+          shape="pill"
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setConfirming(true)}
+        >
           <UserX aria-hidden="true" className="size-4" />
           Banir autor
         </Button>
@@ -462,6 +469,7 @@ function BanAuthorControl({
       </EditorField>
       <div className="flex gap-2">
         <Button
+          shape="pill"
           type="submit"
           variant="destructive"
           size="sm"
@@ -469,7 +477,13 @@ function BanAuthorControl({
         >
           Confirmar banimento
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => setConfirming(false)}>
+        <Button
+          shape="pill"
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setConfirming(false)}
+        >
           Cancelar
         </Button>
       </div>
