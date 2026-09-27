@@ -284,6 +284,12 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Names come from partners and editors: a long unbroken word (an e-mail, a URL, a
+     compound name) wraps inside its card instead of pushing the page sideways. */
+  :where(h1, h2, h3, h4, p, dd, li) {
+    overflow-wrap: break-word;
+  }
+
   ::selection {
     background-color: color-mix(in srgb, var(--primary) 22%, transparent);
     color: var(--foreground);
