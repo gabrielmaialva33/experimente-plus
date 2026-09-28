@@ -1,6 +1,7 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import BadRequestException from '#exceptions/bad_request_exception'
 import EstablishmentAddressService from '#modules/establishments/services/establishment_address_service'
 import EstablishmentAttributesService from '#modules/establishments/services/establishment_attributes_service'
 import EstablishmentCategoriesService from '#modules/establishments/services/establishment_categories_service'
@@ -17,9 +18,11 @@ import {
   updateEstablishmentRevisionValidator,
 } from '#modules/establishments/validators/establishment_validator'
 import { createEstablishmentRevisionValidator } from '#modules/establishments/validators/establishment_review_validator'
+import type Organization from '#modules/organizations/models/organization'
 import OrganizationService from '#modules/organizations/services/organization_service'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import OrganizationWorkflowService from '#modules/organizations/services/organization_workflow_service'
+import { organizationFormErrors } from '#modules/organizations/utils/organization_form_messages'
 import {
   createOrganizationValidator,
   updateOrganizationValidator,
@@ -67,11 +70,16 @@ export default class PartnerPortalController {
 
   async createOrganization({ auth, request, response, session, tenant }: HttpContext) {
     const payload = await request.validateUsing(createOrganizationValidator)
-    const organization = await this.organizationService.create(
-      tenant!.id,
-      auth.getUserOrFail(),
-      payload
-    )
+    let organization: Organization
+    try {
+      organization = await this.organizationService.create(
+        tenant!.id,
+        auth.getUserOrFail(),
+        payload
+      )
+    } catch (error) {
+      return this.backWithOrganizationFieldError(error, { response, session })
+    }
 
     session.flash('success', 'Organização criada. Complete os dados e envie para análise.')
     return response.redirect().toPath(`/portal/organizations/${organization.id}`)
@@ -98,12 +106,16 @@ export default class PartnerPortalController {
 
   async updateOrganization({ auth, request, response, session, params, tenant }: HttpContext) {
     const payload = await request.validateUsing(updateOrganizationValidator)
-    await this.organizationService.update(
-      tenant!.id,
-      Number(params.organizationId),
-      auth.getUserOrFail(),
-      payload
-    )
+    try {
+      await this.organizationService.update(
+        tenant!.id,
+        Number(params.organizationId),
+        auth.getUserOrFail(),
+        payload
+      )
+    } catch (error) {
+      return this.backWithOrganizationFieldError(error, { response, session })
+    }
 
     session.flash('success', 'Dados da organização atualizados.')
     return response.redirect().back()
@@ -330,5 +342,21 @@ export default class PartnerPortalController {
   private setPrivateHeaders(response: HttpContext['response']): void {
     response.header('X-Robots-Tag', 'noindex, nofollow')
     response.header('Cache-Control', 'private, no-store')
+  }
+
+  /**
+   * A service rule the person can fix in the form goes back under its field,
+   * like a validation error. Anything else keeps its own handling.
+   */
+  private backWithOrganizationFieldError(
+    error: unknown,
+    { response, session }: Pick<HttpContext, 'response' | 'session'>
+  ) {
+    const fieldErrors =
+      error instanceof BadRequestException ? organizationFormErrors(error.message) : null
+    if (!fieldErrors) throw error
+
+    session.flash('errors', fieldErrors)
+    return response.redirect().back()
   }
 }

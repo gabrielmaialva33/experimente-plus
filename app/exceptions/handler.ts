@@ -11,6 +11,7 @@ import { setPrivateResponseHeaders } from '#shared/utils/private_response_header
 
 const MALFORMED_JSON_MESSAGE = 'Malformed JSON request body'
 const UNAUTHORIZED_ACCESS_MESSAGE = 'Unauthorized access'
+const WEB_FORM_REFUSED_MESSAGE = 'Não foi possível concluir. Confira os dados e tente novamente.'
 const INTERNAL_SERVER_ERROR_CODE = 'E_INTERNAL_SERVER_ERROR'
 const FILE_NOT_FOUND_ERROR_CODE = 'E_FILE_NOT_FOUND'
 const FILE_NOT_FOUND_ERROR_MESSAGE = 'File not found'
@@ -140,6 +141,28 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       this.preparePublicErrorResponse(ctx, ctx.request.id())
       const page = await ctx.inertia.render('errors/no_operation', {})
       return ctx.response.status(httpError.status).send(page)
+    }
+
+    /**
+     * A domain rule refused something the Portal or the back office sent. Its
+     * message is the API's, in English, and an Inertia visit answered with a
+     * bare 400 opens a modal holding the raw response: what a partner saw when
+     * the organization form sent a CNPJ with a wrong check digit. Forms that can
+     * put the rule under a field translate it in their controllers; anything
+     * left over brings the person back with a notice, which the layout of these
+     * two areas shows above the page.
+     */
+    if (
+      !isApiRequest &&
+      httpError instanceof BaseException &&
+      httpError.status === 400 &&
+      ctx.request.header('x-inertia') === 'true' &&
+      /^\/(portal|backoffice)(\/|$)/.test(ctx.request.url()) &&
+      ctx.session
+    ) {
+      setPrivateResponseHeaders(ctx.response)
+      ctx.session.flash('error', WEB_FORM_REFUSED_MESSAGE)
+      return ctx.response.redirect().back()
     }
 
     /**
