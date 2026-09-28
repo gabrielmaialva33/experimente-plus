@@ -3,6 +3,7 @@ import { HttpContext } from '@adonisjs/core/http'
 
 import UsersRepository from '#modules/users/repositories/users_repository'
 import IRole from '#modules/roles/interfaces/role_interface'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
 import AuthEventService from '#modules/auth/services/auth_event_service'
@@ -19,7 +20,8 @@ type SignInRequest = {
 export default class AdminSignInService {
   constructor(
     private usersRepository: UsersRepository,
-    private jwtAuthTokensService: JwtAuthTokensService
+    private jwtAuthTokensService: JwtAuthTokensService,
+    private tenantRepository: TenantRepository
   ) {}
 
   async run({ uid, password }: SignInRequest) {
@@ -44,7 +46,7 @@ export default class AdminSignInService {
       }
 
       // Active tenant = the user's first tenant (N:N via user_tenants).
-      const tenant = await user.related('tenants').query().first()
+      const tenant = await this.tenantRepository.findFirstForUser(user)
 
       const auth = await this.jwtAuthTokensService.startChain(
         { userId: user.id, tenantId: tenant?.id },

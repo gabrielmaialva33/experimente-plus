@@ -2,8 +2,10 @@ import { inject } from '@adonisjs/core'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { DateTime } from 'luxon'
 
+import AccessTokenRepository from '#modules/auth/repositories/access_token_repository'
 import PasswordResetTokenRepository from '#modules/auth/repositories/password_reset_token_repository'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
+import UsersRepository from '#modules/users/repositories/users_repository'
 import { MAX_CREDENTIAL_VERSION } from '#shared/jwt/credential_version'
 
 export class CredentialVersionExhaustedError extends Error {
@@ -25,7 +27,9 @@ export class CredentialVersionExhaustedError extends Error {
 export default class CredentialInvalidationService {
   constructor(
     private passwordResetTokenRepository: PasswordResetTokenRepository,
-    private refreshTokenRepository: RefreshTokenRepository
+    private refreshTokenRepository: RefreshTokenRepository,
+    private usersRepository: UsersRepository,
+    private accessTokenRepository: AccessTokenRepository
   ) {}
 
   async run(
@@ -36,19 +40,17 @@ export default class CredentialInvalidationService {
     // Never wrap the generation back to 1: doing so could make an old signed
     // JWT valid again. The caller owns the transaction, so a terminal version
     // also rolls back its password/account mutation and every token change.
-    const advanced = await client.rawQuery<{ rows: Array<{ credential_version: number }> }>(
-      `UPDATE users
-       SET credential_version = credential_version + 1
-       WHERE id = ? AND credential_version < ?
-       RETURNING credential_version`,
-      [userId, MAX_CREDENTIAL_VERSION]
+    const advanced = await this.usersRepository.advanceCredentialVersion(
+      userId,
+      MAX_CREDENTIAL_VERSION,
+      client
     )
-    if (advanced.rows.length !== 1) {
+    if (!advanced) {
       throw new CredentialVersionExhaustedError()
     }
 
     await this.passwordResetTokenRepository.consumeActiveForUser(userId, client, invalidatedAt)
     await this.refreshTokenRepository.revokeAllForUser(userId, client, invalidatedAt)
-    await client.from('auth_access_tokens').where('tokenable_id', userId).delete()
+    await this.accessTokenRepository.deleteAllForUser(userId, client)
   }
 }

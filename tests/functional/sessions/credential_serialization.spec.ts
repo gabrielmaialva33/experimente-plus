@@ -10,6 +10,7 @@ import UnauthorizedException from '#exceptions/unauthorized_exception'
 import PasswordResetToken from '#modules/auth/models/password_reset_token'
 import RefreshToken from '#modules/auth/models/refresh_token'
 import PasswordResetTokenRepository from '#modules/auth/repositories/password_reset_token_repository'
+import AccessTokenRepository from '#modules/auth/repositories/access_token_repository'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
 import AdminSignInService from '#modules/auth/services/admin_sign_in_service'
 import CredentialInvalidationService, {
@@ -22,6 +23,7 @@ import PermissionCacheService from '#modules/permissions/services/permission_cac
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import RolesRepository from '#modules/roles/repositories/roles_repository'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
@@ -59,7 +61,9 @@ function createServices() {
   const passwordResetTokenRepository = new PasswordResetTokenRepository()
   const credentialInvalidationService = new CredentialInvalidationService(
     passwordResetTokenRepository,
-    refreshTokenRepository
+    refreshTokenRepository,
+    usersRepository,
+    new AccessTokenRepository()
   )
   const jwtTokens = new JwtAuthTokensService(
     new JwtService(),
@@ -82,8 +86,8 @@ function createServices() {
       usersRepository,
       credentialInvalidationService
     ),
-    signIn: new SignInService(usersRepository, jwtTokens),
-    adminSignIn: new AdminSignInService(usersRepository, jwtTokens),
+    signIn: new SignInService(usersRepository, jwtTokens, new TenantRepository()),
+    adminSignIn: new AdminSignInService(usersRepository, jwtTokens, new TenantRepository()),
     deleteOwnAccount: new DeleteOwnAccountService(
       usersRepository,
       credentialInvalidationService,

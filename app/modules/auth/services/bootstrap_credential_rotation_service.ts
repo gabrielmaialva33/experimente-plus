@@ -308,11 +308,11 @@ export default class BootstrapCredentialRotationService {
     client: TransactionClientContract,
     namespace: number
   ): Promise<boolean> {
-    const lock = await client.rawQuery<{ rows: Array<{ acquired: boolean }> }>(
-      'SELECT pg_try_advisory_xact_lock(CAST(? AS integer), hashtext(?)) AS acquired',
-      [namespace, BOOTSTRAP_ROTATION_LOCK_NAME]
+    return this.usersRepository.tryAdvisoryTransactionLock(
+      namespace,
+      BOOTSTRAP_ROTATION_LOCK_NAME,
+      client
     )
-    return lock.rows.length === 1 && lock.rows[0].acquired === true
   }
 
   private async generateCredentials(userIds: number[]): Promise<GeneratedCredential[]> {
@@ -338,17 +338,11 @@ export default class BootstrapCredentialRotationService {
     userIds: number[],
     client: TransactionClientContract
   ): Promise<Map<number, string[]>> {
-    const rows = await client
-      .from('user_roles')
-      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
-      .whereIn('user_roles.user_id', userIds)
-      .orderBy('user_roles.user_id', 'asc')
-      .orderBy('roles.slug', 'asc')
-      .select('user_roles.user_id', 'roles.slug')
+    const rows = await this.usersRepository.listRoleSlugs(userIds, client, 'slug')
 
     const rolesByUserId = new Map(userIds.map((userId) => [userId, [] as string[]]))
     for (const row of rows) {
-      rolesByUserId.get(Number(row.user_id))?.push(String(row.slug))
+      rolesByUserId.get(row.userId)?.push(row.slug)
     }
     return rolesByUserId
   }
@@ -380,18 +374,11 @@ export default class BootstrapCredentialRotationService {
     let verificationTransaction: TransactionClientContract | undefined
     try {
       verificationTransaction = await db.transaction()
-      await verificationTransaction.rawQuery("SET LOCAL lock_timeout TO '2s'")
-      await verificationTransaction.rawQuery("SET LOCAL statement_timeout TO '5s'")
 
-      const rows = await verificationTransaction
-        .from('users')
-        .whereIn(
-          'id',
-          [...states].sort((left, right) => left.userId - right.userId).map((state) => state.userId)
-        )
-        .orderBy('id', 'asc')
-        .forUpdate()
-        .select('id', 'password')
+      const rows = await this.usersRepository.lockPasswordHashesByIds(
+        [...states].sort((left, right) => left.userId - right.userId).map((state) => state.userId),
+        verificationTransaction
+      )
 
       const outcome = classifyBootstrapCommitOutcome(states, rows)
       await verificationTransaction.commit()

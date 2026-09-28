@@ -6,6 +6,7 @@ import JwtAuthTokensService, {
   type GenerateAuthTokensResponse,
 } from '#modules/auth/services/jwt_auth_tokens_service'
 import SendVerificationEmailService from '#modules/auth/services/send_verification_email_service'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
 import type IUser from '#modules/users/interfaces/user_interface'
 import User from '#modules/users/models/user'
@@ -33,7 +34,8 @@ export default class SignUpService {
     private createUserService: CreateUserService,
     private jwtAuthTokensService: JwtAuthTokensService,
     private sendVerificationEmailService: SendVerificationEmailService,
-    private publicOperationResolver: PublicOperationResolver
+    private publicOperationResolver: PublicOperationResolver,
+    private tenantRepository: TenantRepository
   ) {}
 
   async run(payload: IUser.CreatePayload, options: SignUpOptions = {}): Promise<SignUpResult> {
@@ -51,12 +53,7 @@ export default class SignUpService {
     const expectedPasswordHash = user.password
     await user.load('roles')
 
-    const activeTenant = await user
-      .related('tenants')
-      .query()
-      .where('tenants.is_active', true)
-      .orderBy('tenants.id', 'asc')
-      .first()
+    const activeTenant = await this.tenantRepository.findFirstActiveForUser(user)
 
     const emailVerificationSent =
       (await this.sendVerificationEmailService.handle(user.id)) === 'sent'

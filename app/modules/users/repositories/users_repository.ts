@@ -230,13 +230,33 @@ export default class UsersRepository
   }
 
   /**
+   * Try to take the transaction-scoped advisory lock `(namespace, name)`
+   * without waiting. Returns whether the lock was acquired.
+   */
+  async tryAdvisoryTransactionLock(
+    namespace: number,
+    name: string,
+    client: TransactionClientContract
+  ): Promise<boolean> {
+    const lock = await client.rawQuery<{ rows: Array<{ acquired: boolean }> }>(
+      'SELECT pg_try_advisory_xact_lock(CAST(? AS integer), hashtext(?)) AS acquired',
+      [namespace, name]
+    )
+    return lock.rows.length === 1 && lock.rows[0].acquired === true
+  }
+
+  /**
    * Lock the given user rows in primary-key order, soft-deleted ones included,
-   * and read their stored password hashes.
+   * and read their stored password hashes. The rest of the calling transaction
+   * waits at most 2s for a lock and 5s for a statement.
    */
   async lockPasswordHashesByIds(
     userIds: number[],
     client: TransactionClientContract
   ): Promise<Array<{ id: number; password: string }>> {
+    await client.rawQuery("SET LOCAL lock_timeout TO '2s'")
+    await client.rawQuery("SET LOCAL statement_timeout TO '5s'")
+
     return client
       .from('users')
       .whereIn('id', userIds)

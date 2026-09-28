@@ -57,6 +57,12 @@ namespace IUser {
       client: TransactionClientContract
     ): Promise<boolean>
 
+    tryAdvisoryTransactionLock(
+      namespace: number,
+      name: string,
+      client: TransactionClientContract
+    ): Promise<boolean>
+
     lockPasswordHashesByIds(
       userIds: number[],
       client: TransactionClientContract

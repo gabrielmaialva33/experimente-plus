@@ -11,6 +11,7 @@ import type { ApiResponse } from '@japa/api-client'
 import PasswordResetToken from '#modules/auth/models/password_reset_token'
 import RefreshToken from '#modules/auth/models/refresh_token'
 import PasswordResetTokenRepository from '#modules/auth/repositories/password_reset_token_repository'
+import AccessTokenRepository from '#modules/auth/repositories/access_token_repository'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
 import CredentialInvalidationService from '#modules/auth/services/credential_invalidation_service'
 import PasswordResetNotification from '#modules/auth/services/password_reset_notification'
@@ -520,7 +521,9 @@ test.group('Password reset delivery serialization', () => {
     const passwordResetTokenRepository = new PasswordResetTokenRepository()
     const credentialInvalidationService = new CredentialInvalidationService(
       passwordResetTokenRepository,
-      new RefreshTokenRepository()
+      new RefreshTokenRepository(),
+      usersRepository,
+      new AccessTokenRepository()
     )
     const passwordResetTokenService = new PasswordResetTokenService(
       passwordResetTokenRepository,
