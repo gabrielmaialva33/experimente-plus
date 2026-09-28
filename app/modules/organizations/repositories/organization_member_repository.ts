@@ -53,6 +53,15 @@ export default class OrganizationMemberRepository {
       .first()
   }
 
+  /** Any active membership of the user in an organization of the operation. */
+  async findActiveInTenant(tenantId: number, userId: number): Promise<OrganizationMember | null> {
+    return OrganizationMember.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', userId)
+      .where('status', 'active')
+      .first()
+  }
+
   async findByIdForOrganization(
     tenantId: number,
     organizationId: number,

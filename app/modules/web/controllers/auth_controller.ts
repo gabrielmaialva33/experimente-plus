@@ -1,5 +1,5 @@
+import { inject } from '@adonisjs/core'
 import { type HttpContext } from '@adonisjs/core/http'
-import app from '@adonisjs/core/services/app'
 import { errors } from '@vinejs/vine'
 
 import AuthEventService from '#modules/auth/services/auth_event_service'
@@ -23,7 +23,7 @@ import {
   publicRegistrationValidator,
   signInValidator,
 } from '#modules/users/validators/users_validator'
-import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
+import ResolveAuthenticatedLandingService from '#modules/web/services/resolve_authenticated_landing_service'
 import { preventCredentialResponseCaching } from '#modules/web/utils/credential_response'
 import {
   EMAIL_VERIFICATION_PATH,
@@ -47,7 +47,19 @@ function pageOutcome(outcome: EmailVerificationOutcome): EmailVerificationPageOu
   return outcome.status
 }
 
+@inject()
 export default class InertiaAuthController {
+  constructor(
+    private requestPasswordResetService: RequestPasswordResetService,
+    private resetPasswordService: ResetPasswordService,
+    private signInService: SignInService,
+    private signUpService: SignUpService,
+    private verifyEmailService: VerifyEmailService,
+    private sendVerificationEmailService: SendVerificationEmailService,
+    private organizationInvitationService: OrganizationInvitationService,
+    private landing: ResolveAuthenticatedLandingService
+  ) {}
+
   async showLogin(ctx: HttpContext) {
     preventCredentialResponseCaching(ctx)
     return ctx.inertia.render('auth/login', { next: safeReturnPath(ctx.request.qs().next) })
@@ -75,8 +87,7 @@ export default class InertiaAuthController {
     const { email } = await request.validateUsing(requestPasswordResetValidator, {
       data: request.body(),
     })
-    const service = await app.container.make(RequestPasswordResetService)
-    await service.run(email)
+    await this.requestPasswordResetService.run(email)
 
     session.flash(
       'success',
@@ -99,8 +110,7 @@ export default class InertiaAuthController {
       const { token, password } = await request.validateUsing(resetPasswordValidator, {
         data: request.body(),
       })
-      const service = await app.container.make(ResetPasswordService)
-      await service.run(token, password)
+      await this.resetPasswordService.run(token, password)
 
       session.flash('success', 'Senha redefinida com sucesso. Você já pode entrar.')
       return response.redirect().toPath('/login')
@@ -122,8 +132,7 @@ export default class InertiaAuthController {
     })
 
     try {
-      const signInService = await app.container.make(SignInService)
-      const result = await signInService.run({ uid, password, ctx }, { issueApiTokens: false })
+      const result = await this.signInService.run({ uid, password, ctx }, { issueApiTokens: false })
 
       await auth
         .use('jwt')
@@ -131,7 +140,7 @@ export default class InertiaAuthController {
 
       return response.redirect(
         safeReturnPath(request.body().next) ??
-          (await resolveAuthenticatedLandingPath(result.user, result.activeTenantId))
+          (await this.landing.run(result.user, result.activeTenantId))
       )
     } catch {
       session.flash('errors', {
@@ -155,8 +164,7 @@ export default class InertiaAuthController {
         username: registration.username,
         password: registration.password,
       }
-      const signUpService = await app.container.make(SignUpService)
-      const { user, activeTenantId, emailVerificationSent } = await signUpService.run(data, {
+      const { user, activeTenantId, emailVerificationSent } = await this.signUpService.run(data, {
         issueApiTokens: false,
       })
 
@@ -174,8 +182,7 @@ export default class InertiaAuthController {
       AuthEventService.emitLoginSucceeded(user, 'password', isAdmin, ctx)
 
       return response.redirect(
-        safeReturnPath(request.body().next) ??
-          (await resolveAuthenticatedLandingPath(user, activeTenantId))
+        safeReturnPath(request.body().next) ?? (await this.landing.run(user, activeTenantId))
       )
     } catch (error) {
       if (error instanceof errors.E_VALIDATION_ERROR) {
@@ -201,10 +208,9 @@ export default class InertiaAuthController {
 
     const token: unknown = request.qs().token
     if (token !== undefined) {
-      const service = await app.container.make(VerifyEmailService)
       const outcome =
         typeof token === 'string' && token.length <= 256
-          ? pageOutcome(await service.verify(token))
+          ? pageOutcome(await this.verifyEmailService.verify(token))
           : 'invalid'
       session.flash(EMAIL_VERIFICATION_FLASH_KEY, outcome)
       return response.redirect().toPath(EMAIL_VERIFICATION_PATH)
@@ -235,8 +241,7 @@ export default class InertiaAuthController {
   async resendEmailVerification(ctx: HttpContext) {
     const { auth, response, session } = ctx
     const user = auth.getUserOrFail()
-    const service = await app.container.make(SendVerificationEmailService)
-    const result = await service.handle(user.id)
+    const result = await this.sendVerificationEmailService.handle(user.id)
 
     if (result === 'already_verified') {
       session.flash('success', 'Seu e-mail já está confirmado. Não é preciso fazer mais nada.')
@@ -281,7 +286,6 @@ export default class InertiaAuthController {
       return null
     }
 
-    const invitationService = await app.container.make(OrganizationInvitationService)
-    return invitationService.signUpContext(token)
+    return this.organizationInvitationService.signUpContext(token)
   }
 }

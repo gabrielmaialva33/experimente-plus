@@ -1,7 +1,4 @@
-import type User from '#modules/users/models/user'
-import OrganizationMember from '#modules/organizations/models/organization_member'
 import IRole from '#modules/roles/interfaces/role_interface'
-import { resolveActiveTenantId } from '#shared/utils/active_tenant'
 
 export type AuthenticatedLandingPath =
   '/backoffice/today' | '/backoffice/moderation' | '/portal' | '/wallet' | '/cidades'
@@ -41,34 +38,4 @@ export function authenticatedLandingPath({
   }
 
   return '/wallet'
-}
-
-export async function resolveAuthenticatedLandingPath(
-  user: User,
-  claimedActiveTenantId?: number | null
-): Promise<AuthenticatedLandingPath> {
-  const activeTenants = await user
-    .related('tenants')
-    .query()
-    .where('tenants.is_active', true)
-    .orderBy('tenants.id', 'asc')
-
-  const activeTenantId = resolveActiveTenantId(activeTenants, claimedActiveTenantId)
-
-  if (!activeTenantId) {
-    return authenticatedLandingPath({ activeTenantId: null })
-  }
-
-  const roles = await user.related('roles').query().select('roles.slug')
-  const activeOrganizationMembership = await OrganizationMember.query()
-    .where('tenant_id', activeTenantId)
-    .where('user_id', user.id)
-    .where('status', 'active')
-    .first()
-
-  return authenticatedLandingPath({
-    activeTenantId,
-    hasActiveOrganizationMembership: Boolean(activeOrganizationMembership),
-    roleSlugs: roles.map((role) => role.slug),
-  })
 }
