@@ -17,7 +17,6 @@ import ImageProbeService from '#modules/media/services/image_probe_service'
 import MediaAuditService from '#modules/media/services/media_audit_service'
 import MediaStorageService from '#modules/media/services/media_storage_service'
 import type IReview from '#modules/reviews/interfaces/review_interface'
-import EstablishmentReviewPhoto from '#modules/reviews/models/establishment_review_photo'
 import EstablishmentReviewRepository from '#modules/reviews/repositories/establishment_review_repository'
 import ReviewPhotoRepository from '#modules/reviews/repositories/review_photo_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
@@ -130,7 +129,7 @@ export default class ReviewPhotoService {
           { client }
         )
 
-        const photo = await EstablishmentReviewPhoto.create(
+        const photo = await this.photos.create(
           {
             tenant_id: tenantId,
             establishment_id: review.establishment_id,
@@ -139,7 +138,7 @@ export default class ReviewPhotoService {
             sort_order: await this.photos.nextSortOrder(tenantId, reviewId, client),
             alt_text: payload.alt_text?.trim() || null,
           },
-          { client }
+          client
         )
 
         // The counter is the server's, derived from what exists. It used to be

@@ -1,5 +1,4 @@
 import { inject } from '@adonisjs/core'
-import db from '@adonisjs/lucid/services/db'
 
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import {
@@ -9,6 +8,7 @@ import {
   type PurchaseStatusFilter,
 } from '#modules/purchases/interfaces/purchase_pages'
 import type { PurchaseSnapshot } from '#modules/purchases/models/purchase'
+import PurchaseRepository from '#modules/purchases/repositories/purchase_repository'
 import { paymentSimulationAvailable } from '#modules/purchases/services/purchase_simulation_service'
 import type User from '#modules/users/models/user'
 
@@ -18,7 +18,10 @@ import type User from '#modules/users/models/user'
  */
 @inject()
 export default class PurchasePagesService {
-  constructor(private policy: OrganizationPolicyService) {}
+  constructor(
+    private policy: OrganizationPolicyService,
+    private repository: PurchaseRepository
+  ) {}
 
   async list(
     tenantId: number,
@@ -30,41 +33,18 @@ export default class PurchasePagesService {
     const perPage = filters.perPage ?? 20
     const page = Math.max(1, filters.page ?? 1)
 
-    const query = db
-      .from('purchases')
-      .leftJoin('users', 'users.id', 'purchases.user_id')
-      .where('purchases.tenant_id', tenantId)
-      .orderBy('purchases.created_at', 'desc')
-      .orderBy('purchases.id', 'desc')
-      .select(
-        'purchases.id',
-        'purchases.created_at',
-        'purchases.snapshot',
-        'purchases.offer_id',
-        'purchases.amount_cents',
-        'purchases.currency',
-        'purchases.method',
-        'purchases.status',
-        'purchases.provider',
-        'purchases.paid_at',
-        'purchases.expires_at',
-        'purchases.access_id',
-        'users.full_name as buyer_name',
-        'users.email as buyer_email'
-      )
-    if (filters.status) query.where('purchases.status', filters.status)
-    const result = await query.paginate(page, perPage)
+    const result = await this.repository.paginateForOperations(
+      tenantId,
+      filters.status,
+      page,
+      perPage
+    )
 
     const counts = Object.fromEntries(PURCHASE_STATUSES.map((status) => [status, 0])) as Record<
       PurchaseStatusFilter,
       number
     >
-    const grouped = await db
-      .from('purchases')
-      .where('tenant_id', tenantId)
-      .groupBy('status')
-      .select('status')
-      .count('* as total')
+    const grouped = await this.repository.countByStatus(tenantId)
     for (const row of grouped) {
       if (row.status in counts) counts[row.status as PurchaseStatusFilter] = Number(row.total)
     }

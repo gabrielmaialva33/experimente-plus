@@ -70,6 +70,38 @@ export default class BenefitEditionRepository {
     return edition
   }
 
+  async findById(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract
+  ): Promise<BenefitEdition | null> {
+    return BenefitEdition.query({ client }).where('tenant_id', tenantId).where('id', id).first()
+  }
+
+  /**
+   * Published BRL editions on sale at `now` whose sales close no later than
+   * their usage, priced as a package or through a standalone offer, with the
+   * city, by id and capped at 100.
+   */
+  async listOnSaleForTenant(tenantId: number, now: Date): Promise<BenefitEdition[]> {
+    return BenefitEdition.query()
+      .where('tenant_id', tenantId)
+      .where('status', 'published')
+      .where('usage_ends_at', '>', now)
+      .where('sales_starts_at', '<=', now)
+      .where('sales_ends_at', '>', now)
+      .whereColumn('sales_ends_at', '<=', 'usage_ends_at')
+      .where('currency', 'BRL')
+      .where((q) =>
+        q
+          .where('price_cents', '>', 0)
+          .orWhereHas('offers', (o) => o.where('standalone_price_cents', '>', 0))
+      )
+      .preload('city')
+      .orderBy('id')
+      .limit(100)
+  }
+
   async findLocked(
     tenantId: number,
     id: number,

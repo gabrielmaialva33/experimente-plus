@@ -1,13 +1,16 @@
 import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 
-import db from '@adonisjs/lucid/services/db'
+import PermissionRepository from '#modules/permissions/repositories/permission_repository'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import NotFoundException from '#exceptions/not_found_exception'
 
 @inject()
 export default class GetUserPermissionsService {
-  constructor(private usersRepository: UsersRepository) {}
+  constructor(
+    private usersRepository: UsersRepository,
+    private permissionRepository: PermissionRepository
+  ) {}
 
   async run(userId: number) {
     const { i18n } = HttpContext.getOrFail()
@@ -22,42 +25,10 @@ export default class GetUserPermissionsService {
     }
 
     // Get direct user permissions
-    const directPermissions = await db
-      .from('user_permissions')
-      .join('permissions', 'user_permissions.permission_id', 'permissions.id')
-      .where('user_permissions.user_id', userId)
-      .where('user_permissions.granted', true)
-      .where(function (query) {
-        query.whereNull('user_permissions.expires_at')
-        query.orWhere('user_permissions.expires_at', '>', new Date())
-      })
-      .select(
-        'permissions.id',
-        'permissions.name',
-        'permissions.resource',
-        'permissions.action',
-        'permissions.description',
-        'user_permissions.expires_at',
-        'user_permissions.granted'
-      )
-      .orderBy('permissions.resource')
-      .orderBy('permissions.action')
+    const directPermissions = await this.permissionRepository.listGrantedDirectForUser(userId)
 
     // Get permissions through roles
-    const rolePermissions = await db
-      .from('user_roles')
-      .join('role_permissions', 'user_roles.role_id', 'role_permissions.role_id')
-      .join('permissions', 'role_permissions.permission_id', 'permissions.id')
-      .where('user_roles.user_id', userId)
-      .select(
-        'permissions.id',
-        'permissions.name',
-        'permissions.resource',
-        'permissions.action',
-        'permissions.description'
-      )
-      .orderBy('permissions.resource')
-      .orderBy('permissions.action')
+    const rolePermissions = await this.permissionRepository.listThroughRolesForUser(userId)
 
     // Combine permissions (remove duplicates)
     const permissionMap = new Map()

@@ -1,18 +1,17 @@
 import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { DateTime } from 'luxon'
 
 import NotFoundException from '#exceptions/not_found_exception'
 import { DuplicateReportException } from '#modules/reviews/exceptions'
-import Establishment from '#modules/establishments/models/establishment'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
-import { discoverableEstablishmentExistsSql } from '#modules/catalog/repositories/catalog_discoverability'
 import PartnerContentService from '#modules/partner_content/services/partner_content_service'
 import IReview from '#modules/reviews/interfaces/review_interface'
 import type ContentReport from '#modules/reviews/models/content_report'
-import EstablishmentReview from '#modules/reviews/models/establishment_review'
-import EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
 import ContentReportRepository from '#modules/reviews/repositories/content_report_repository'
+import EstablishmentReviewReplyRepository from '#modules/reviews/repositories/establishment_review_reply_repository'
+import EstablishmentReviewRepository from '#modules/reviews/repositories/establishment_review_repository'
 import PublicReportTargetRepository from '#modules/reviews/repositories/public_report_target_repository'
 import ContentReportTargetRepository from '#modules/reviews/repositories/content_report_target_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
@@ -27,7 +26,9 @@ export default class ContentReportService {
     private policyRepository: ReviewPolicyRepository,
     private organizationPolicy: OrganizationPolicyService,
     private partnerContent: PartnerContentService,
-    private publicTargets: PublicReportTargetRepository
+    private publicTargets: PublicReportTargetRepository,
+    private reviewRepository: EstablishmentReviewRepository,
+    private replyRepository: EstablishmentReviewReplyRepository
   ) {}
 
   async createReport(
@@ -173,16 +174,15 @@ export default class ContentReportService {
   private async releaseAutomaticHold(
     tenantId: number,
     report: ContentReport,
-    client: any
+    client: TransactionClientContract
   ): Promise<void> {
-    const hiddenByPerson = await client
-      .from('content_reports')
-      .where('tenant_id', tenantId)
-      .where('target_type', report.target_type)
-      .where('target_id', report.target_id)
-      .whereNot('id', report.id)
-      .where('resolution_action', 'content_hidden')
-      .first()
+    const hiddenByPerson = await this.reportRepository.hasOtherHiddenResolution(
+      tenantId,
+      report.target_type,
+      report.target_id,
+      report.id,
+      client
+    )
     if (hiddenByPerson) return
 
     if (IReview.isPartnerContentTarget(report.target_type)) {
@@ -190,20 +190,11 @@ export default class ContentReportService {
       return
     }
 
-    const model =
-      report.target_type === 'review'
-        ? EstablishmentReview
-        : report.target_type === 'reply'
-          ? EstablishmentReviewReply
-          : null
-    if (!model) return
-
-    await model
-      .query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', report.target_id)
-      .where('status', 'hidden')
-      .update({ status: 'published', updated_at: new Date() })
+    if (report.target_type === 'review') {
+      await this.reviewRepository.republishHidden(tenantId, report.target_id, client)
+    } else if (report.target_type === 'reply') {
+      await this.replyRepository.republishHidden(tenantId, report.target_id, client)
+    }
   }
 
   /**
@@ -221,7 +212,7 @@ export default class ContentReportService {
     tenantId: number,
     targetType: IReview.ReportTargetType,
     targetId: number,
-    client: any
+    client: TransactionClientContract
   ): Promise<void> {
     if (!(await this.publicTargets.isVisible(tenantId, targetType, targetId, client))) {
       throw new NotFoundException('Report target not found')
@@ -233,7 +224,7 @@ export default class ContentReportService {
     targetType: IReview.ReportTargetType,
     targetId: number,
     actor: User,
-    client: any
+    client: TransactionClientContract
   ): Promise<void> {
     // Partner content is hidden by archiving it, which is what ADR-0028 §4 says
     // deactivating means. It goes through the partner-content service rather
@@ -248,15 +239,9 @@ export default class ContentReportService {
     }
 
     if (targetType === 'review') {
-      await EstablishmentReview.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', targetId)
-        .update({ status: 'hidden' })
+      await this.reviewRepository.hide(tenantId, targetId, client)
     } else if (targetType === 'reply') {
-      await EstablishmentReviewReply.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', targetId)
-        .update({ status: 'hidden' })
+      await this.replyRepository.hide(tenantId, targetId, client)
     }
   }
 }

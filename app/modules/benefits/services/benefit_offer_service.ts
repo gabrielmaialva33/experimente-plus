@@ -6,12 +6,14 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IBenefit from '#modules/benefits/interfaces/benefit_interface'
-import BenefitEdition from '#modules/benefits/models/benefit_edition'
-import BenefitOffer from '#modules/benefits/models/benefit_offer'
+import type BenefitEdition from '#modules/benefits/models/benefit_edition'
+import type BenefitOffer from '#modules/benefits/models/benefit_offer'
+import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
 import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
-import Establishment from '#modules/establishments/models/establishment'
-import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import type Establishment from '#modules/establishments/models/establishment'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
+import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type User from '#modules/users/models/user'
 
@@ -39,7 +41,10 @@ export default class BenefitOfferService {
   constructor(
     private offerRepository: BenefitOfferRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private audit: BenefitAuditService
+    private audit: BenefitAuditService,
+    private editionRepository: BenefitEditionRepository,
+    private establishments: EstablishmentRepository,
+    private revisions: EstablishmentRevisionRepository
   ) {}
 
   async listForEstablishment(
@@ -123,11 +128,7 @@ export default class BenefitOfferService {
         client
       )
 
-      const edition = await BenefitEdition.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', payload.edition_id)
-        .forUpdate()
-        .first()
+      const edition = await this.editionRepository.findLocked(tenantId, payload.edition_id, client)
       if (!edition || edition.status === 'archived') {
         throw new BadRequestException('Benefit edition is not available for offers')
       }
@@ -353,10 +354,7 @@ export default class BenefitOfferService {
     id: number,
     client: TransactionClientContract
   ): Promise<BenefitEdition> {
-    const edition = await BenefitEdition.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', id)
-      .first()
+    const edition = await this.editionRepository.findById(tenantId, id, client)
     if (!edition) {
       throw new NotFoundException('Benefit edition not found')
     }
@@ -369,16 +367,12 @@ export default class BenefitOfferService {
     client?: TransactionClientContract,
     forUpdate = false
   ): Promise<Establishment> {
-    const query = Establishment.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', id)
-      .preload('organization')
-      .preload('published_revision')
-    if (forUpdate) {
-      query.forUpdate()
-    }
-
-    const establishment = await query.first()
+    const establishment = await this.establishments.findWithOrganizationAndPublishedRevision(
+      tenantId,
+      id,
+      client,
+      forUpdate
+    )
     if (!establishment) {
       throw new NotFoundException('Establishment not found')
     }
@@ -398,10 +392,11 @@ export default class BenefitOfferService {
       throw new BadRequestException('Permanently closed establishments cannot receive offers')
     }
 
-    const revision = await EstablishmentRevision.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', establishment.published_revision_id)
-      .first()
+    const revision = await this.revisions.findByIdForTenant(
+      tenantId,
+      establishment.published_revision_id,
+      client
+    )
     if (!revision || revision.city_id !== edition.city_id) {
       throw new BadRequestException('Establishment and edition must belong to the same city')
     }

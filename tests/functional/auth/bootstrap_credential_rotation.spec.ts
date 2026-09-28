@@ -10,6 +10,7 @@ import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import PasswordResetTokenRepository from '#modules/auth/repositories/password_reset_token_repository'
+import AccessTokenRepository from '#modules/auth/repositories/access_token_repository'
 import RefreshTokenRepository from '#modules/auth/repositories/refresh_token_repository'
 import BootstrapCredentialRotationService from '#modules/auth/services/bootstrap_credential_rotation_service'
 import CredentialInvalidationService from '#modules/auth/services/credential_invalidation_service'
@@ -64,7 +65,9 @@ function deferred(): Deferred {
 function makeCredentialInvalidationService(): CredentialInvalidationService {
   return new CredentialInvalidationService(
     new PasswordResetTokenRepository(),
-    new RefreshTokenRepository()
+    new RefreshTokenRepository(),
+    new UsersRepository(),
+    new AccessTokenRepository()
   )
 }
 

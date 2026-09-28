@@ -81,7 +81,16 @@ export interface ProvisioningReceipt {
   courtesyAccessId: number
 }
 
-/** Explicit one-shot bootstrap; never called by migrations, HTTP or development seed. */
+/**
+ * Explicit one-shot bootstrap; never called by migrations, HTTP or development seed.
+ *
+ * Layering exception: like a seeder, it writes a whole demonstration operation
+ * (accounts, geography, taxonomy, organization, establishments, media, benefits
+ * and its audit ledger) through the models of those modules, inside the one
+ * transaction and advisory lock that make a replay safe. Routing each insert
+ * through the owning module's repository would only relocate these writes; the
+ * sequence reads best in one place.
+ */
 export default class HomologationProvisioningService {
   assertEnvironment() {
     if (deploymentEnvironment(env.get('DEPLOYMENT_ENV')) !== 'homologation')

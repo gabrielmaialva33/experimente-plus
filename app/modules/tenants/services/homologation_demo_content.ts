@@ -60,6 +60,11 @@ import User from '#modules/users/models/user'
  *   today and two in the coming days, and a run on a later day adds that day's
  *   events rather than moving old ones: nothing already published is edited,
  *   and yesterday's events leave the agenda by their own window.
+ *
+ * Layering exception: the reads of its own ledger and of the provisioned
+ * fixtures, and the few writes no domain service covers (the ledger entries and
+ * the demo media behind an item), use the models directly, as the baseline
+ * provisioner does.
  */
 
 export const DEMO_CONTENT_ACTION = 'homologation.demo-content.v1'

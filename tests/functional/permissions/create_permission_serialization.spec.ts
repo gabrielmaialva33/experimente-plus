@@ -5,12 +5,14 @@ import db from '@adonisjs/lucid/services/db'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import Permission from '#modules/permissions/models/permission'
+import PermissionRepository from '#modules/permissions/repositories/permission_repository'
 import CreatePermissionService from '#modules/permissions/services/create_permission_service'
 import FreshPlatformPermissionService from '#modules/permissions/services/fresh_platform_permission_service'
 import PermissionAdministrationPolicyService from '#modules/permissions/services/permission_administration_policy_service'
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
+import RolesRepository from '#modules/roles/repositories/roles_repository'
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 
@@ -40,10 +42,16 @@ async function createAdmin(label: string, role: Role): Promise<User> {
 }
 
 function createService(usersRepository: UsersRepository): CreatePermissionService {
-  const freshPermission = new FreshPlatformPermissionService()
+  const permissionRepository = new PermissionRepository()
+  const freshPermission = new FreshPlatformPermissionService(permissionRepository)
   return new CreatePermissionService(
     new PermissionCacheService(usersRepository),
-    new PermissionAdministrationPolicyService(usersRepository, freshPermission)
+    new PermissionAdministrationPolicyService(
+      usersRepository,
+      freshPermission,
+      new RolesRepository()
+    ),
+    permissionRepository
   )
 }
 

@@ -11,23 +11,29 @@ import NotFoundException from '#exceptions/not_found_exception'
 import { isCanonicalBenefitReceiptCode } from '#modules/benefits/constants/benefit_redemption'
 import type IBenefitAccess from '#modules/benefits/interfaces/benefit_access_interface'
 import type IBenefitRedemption from '#modules/benefits/interfaces/benefit_redemption_interface'
-import BenefitFinancialHoldService from '#modules/benefits/services/benefit_financial_hold_service'
-import BenefitAccess from '#modules/benefits/models/benefit_access'
-import BenefitEdition from '#modules/benefits/models/benefit_edition'
-import BenefitOffer from '#modules/benefits/models/benefit_offer'
-import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
+import type BenefitAccess from '#modules/benefits/models/benefit_access'
+import type BenefitEdition from '#modules/benefits/models/benefit_edition'
+import type BenefitOffer from '#modules/benefits/models/benefit_offer'
+import type BenefitRedemption from '#modules/benefits/models/benefit_redemption'
+import BenefitAccessRepository from '#modules/benefits/repositories/benefit_access_repository'
+import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
+import BenefitFinancialHoldRepository from '#modules/benefits/repositories/benefit_financial_hold_repository'
+import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
 import BenefitRedemptionRepository from '#modules/benefits/repositories/benefit_redemption_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
 import BenefitPresentationTokenService from '#modules/benefits/services/benefit_presentation_token_service'
-import Establishment from '#modules/establishments/models/establishment'
-import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
-import City from '#modules/geography/models/city'
+import type Establishment from '#modules/establishments/models/establishment'
+import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
+import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
+import type City from '#modules/geography/models/city'
+import CityRepository from '#modules/geography/repositories/city_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import OrganizationResourceAuthorizationService, {
   type OrganizationActorAuthorizationContext,
 } from '#modules/organizations/services/organization_resource_authorization_service'
 import type User from '#modules/users/models/user'
-import UserModel from '#modules/users/models/user'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 type RedemptionContext = {
   financiallyBlocked: boolean
@@ -37,7 +43,7 @@ type RedemptionContext = {
   establishment: Establishment
   revision: EstablishmentRevision
   city: City
-  holder: UserModel
+  holder: User
 }
 
 @inject()
@@ -47,7 +53,15 @@ export default class BenefitRedemptionService {
     private tokenService: BenefitPresentationTokenService,
     private organizationPolicy: OrganizationPolicyService,
     private resourceAuthorization: OrganizationResourceAuthorizationService,
-    private audit: BenefitAuditService
+    private audit: BenefitAuditService,
+    private accessRepository: BenefitAccessRepository,
+    private offerRepository: BenefitOfferRepository,
+    private editionRepository: BenefitEditionRepository,
+    private establishments: EstablishmentRepository,
+    private revisions: EstablishmentRevisionRepository,
+    private cities: CityRepository,
+    private usersRepository: UsersRepository,
+    private financialHolds: BenefitFinancialHoldRepository
   ) {}
 
   async decorateWallet(
@@ -351,18 +365,10 @@ export default class BenefitRedemptionService {
     client?: TransactionClientContract,
     lock = false
   ): Promise<RedemptionContext> {
-    const accessQuery = BenefitAccess.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', accessId)
-    if (lock) accessQuery.forUpdate()
-    const access = await accessQuery.first()
+    const access = await this.accessRepository.findById(tenantId, accessId, client, lock)
     if (!access) throw new NotFoundException('Benefit not found')
 
-    const offerQuery = BenefitOffer.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', offerId)
-    if (lock) offerQuery.forUpdate()
-    const offer = await offerQuery.first()
+    const offer = await this.offerRepository.findById(tenantId, offerId, client, lock)
     if (
       !offer ||
       offer.edition_id !== access.edition_id ||
@@ -371,27 +377,23 @@ export default class BenefitRedemptionService {
       throw new NotFoundException('Benefit not found')
     }
 
-    const edition = await BenefitEdition.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', access.edition_id)
-      .first()
-    const establishment = await Establishment.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', offer.establishment_id)
-      .first()
-    const holder = await UserModel.query({ client }).where('id', access.user_id).first()
+    const edition = await this.editionRepository.findById(tenantId, access.edition_id, client)
+    const establishment = await this.establishments.findByIdForTenant(
+      tenantId,
+      offer.establishment_id,
+      client
+    )
+    const holder = await this.usersRepository.findById(access.user_id, client)
     if (!edition || !establishment || !holder || !establishment.published_revision_id) {
       throw new NotFoundException('Benefit not found')
     }
 
-    const revision = await EstablishmentRevision.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', establishment.published_revision_id)
-      .first()
-    const city = await City.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', edition.city_id)
-      .first()
+    const revision = await this.revisions.findByIdForTenant(
+      tenantId,
+      establishment.published_revision_id,
+      client
+    )
+    const city = await this.cities.findScopedById(tenantId, edition.city_id, { client })
     if (!revision || !city || revision.city_id !== city.id) {
       throw new NotFoundException('Benefit not found')
     }
@@ -404,11 +406,7 @@ export default class BenefitRedemptionService {
       revision,
       city,
       holder,
-      financiallyBlocked: await new BenefitFinancialHoldService().blocked(
-        tenantId,
-        access.id,
-        client
-      ),
+      financiallyBlocked: await this.financialHolds.blocked(tenantId, access.id, client),
     }
   }
 

@@ -74,6 +74,25 @@ export default class CityRepository {
       .select(['id', 'name', 'state_code', 'timezone'])
   }
 
+  /**
+   * The city by id within the operation, without its region. `activeOnly`
+   * ignores inactive cities; `client` reads inside a transaction.
+   */
+  async findScopedById(
+    tenantId: number,
+    id: number,
+    options: { activeOnly?: boolean; client?: TransactionClientContract } = {}
+  ): Promise<City | null> {
+    const query = City.query({ client: options.client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+    if (options.activeOnly) {
+      query.where('is_active', true)
+    }
+
+    return query.first()
+  }
+
   async findBySlugForTenant(tenantId: number, slug: string): Promise<City | null> {
     return City.query().where('tenant_id', tenantId).where('slug', slug).preload('region').first()
   }

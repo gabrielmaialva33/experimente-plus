@@ -1,42 +1,37 @@
+import { inject } from '@adonisjs/core'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import IRole from '#modules/roles/interfaces/role_interface'
+import RolesRepository from '#modules/roles/repositories/roles_repository'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 /** Preserves at least one active platform Root across every account-removal path. */
+@inject()
 export default class ActiveRootGuardService {
-  async assertCanRemove(userId: number, client: TransactionClientContract): Promise<void> {
-    const targetRootRole = await client
-      .from('user_roles')
-      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
-      .where('user_roles.user_id', userId)
-      .where('roles.slug', IRole.Slugs.ROOT)
-      .select('roles.id')
-      .first()
+  constructor(
+    private usersRepository: UsersRepository,
+    private rolesRepository: RolesRepository
+  ) {}
 
-    if (!targetRootRole) {
+  async assertCanRemove(userId: number, client: TransactionClientContract): Promise<void> {
+    const targetRootRoleId = await this.usersRepository.findAssignedRoleId(
+      userId,
+      IRole.Slugs.ROOT,
+      client
+    )
+
+    if (targetRootRoleId === null) {
       return
     }
 
     // The role row is a common transaction mutex for deletions of different
     // Root users, whose individual user-row locks would otherwise be disjoint.
-    await client
-      .from('roles')
-      .where('id', Number(targetRootRole.id))
-      .select('id')
-      .forUpdate()
-      .first()
+    await this.rolesRepository.lockRowById(targetRootRoleId, client)
 
-    const row = await client
-      .from('users')
-      .innerJoin('user_roles', 'user_roles.user_id', 'users.id')
-      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
-      .where('users.is_deleted', false)
-      .where('roles.slug', IRole.Slugs.ROOT)
-      .countDistinct('users.id as total')
-      .first()
+    const activeRoots = await this.usersRepository.countActiveWithRole(IRole.Slugs.ROOT, client)
 
-    if (Number(row?.total ?? 0) <= 1) {
+    if (activeRoots <= 1) {
       throw new BadRequestException('The last active root user cannot be deleted')
     }
   }

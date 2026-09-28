@@ -4,6 +4,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import IRole from '#modules/roles/interfaces/role_interface'
+import UsersRepository from '#modules/users/repositories/users_repository'
 import ActiveRootGuardService from '#modules/users/services/active_root_guard_service'
 
 type LoadedRoles = {
@@ -14,7 +15,10 @@ type LoadedRoles = {
 /** Enforces the canonical platform-role hierarchy after actor and target are locked. */
 @inject()
 export default class UserAdministrationPolicyService {
-  constructor(private activeRootGuardService: ActiveRootGuardService) {}
+  constructor(
+    private activeRootGuardService: ActiveRootGuardService,
+    private usersRepository: UsersRepository
+  ) {}
 
   /**
    * Administrative profile/password updates may target the acting account.
@@ -105,21 +109,15 @@ export default class UserAdministrationPolicyService {
     targetUserId: number,
     client: TransactionClientContract
   ): Promise<LoadedRoles> {
-    const rows = await client
-      .from('user_roles')
-      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
-      .whereIn('user_roles.user_id', [...new Set([actorUserId, targetUserId])])
-      .orderBy('user_roles.user_id', 'asc')
-      .orderBy('roles.id', 'asc')
-      .select('user_roles.user_id', 'roles.slug')
+    const rows = await this.usersRepository.listRoleSlugs(
+      [...new Set([actorUserId, targetUserId])],
+      client,
+      'id'
+    )
 
     return {
-      actorRoles: rows
-        .filter((row) => Number(row.user_id) === actorUserId)
-        .map((row) => String(row.slug)),
-      targetRoles: rows
-        .filter((row) => Number(row.user_id) === targetUserId)
-        .map((row) => String(row.slug)),
+      actorRoles: rows.filter((row) => row.userId === actorUserId).map((row) => row.slug),
+      targetRoles: rows.filter((row) => row.userId === targetUserId).map((row) => row.slug),
     }
   }
 

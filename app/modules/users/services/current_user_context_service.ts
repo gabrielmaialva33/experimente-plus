@@ -5,6 +5,7 @@ import type ICurrentUserContext from '#modules/users/interfaces/current_user_con
 import OrganizationResourceAuthorizationService, {
   type OrganizationActorAuthorizationContext,
 } from '#modules/organizations/services/organization_resource_authorization_service'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import type User from '#modules/users/models/user'
 
 export function projectCurrentUser(user: User): ICurrentUserContext.UserProjection {
@@ -48,14 +49,13 @@ export function projectMobileCapabilities(
  */
 @inject()
 export default class CurrentUserContextService {
-  constructor(private resourceAuthorization: OrganizationResourceAuthorizationService) {}
+  constructor(
+    private resourceAuthorization: OrganizationResourceAuthorizationService,
+    private tenantRepository: TenantRepository
+  ) {}
 
   async run(actor: User, activeOperationId: number): Promise<ICurrentUserContext.Projection> {
-    const operationRecords = await actor
-      .related('tenants')
-      .query()
-      .where('tenants.is_active', true)
-      .orderBy('tenants.id', 'asc')
+    const operationRecords = await this.tenantRepository.listActiveForUser(actor)
 
     const activeOperation = operationRecords.find((operation) => operation.id === activeOperationId)
     if (!activeOperation) {

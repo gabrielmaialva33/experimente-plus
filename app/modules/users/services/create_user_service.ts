@@ -4,7 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import BadRequestException from '#exceptions/bad_request_exception'
 import IRole from '#modules/roles/interfaces/role_interface'
 import RolesRepository from '#modules/roles/repositories/roles_repository'
-import Tenant from '#modules/tenants/models/tenant'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import CreateTenantService from '#modules/tenants/services/create_tenant_service'
 import type IUser from '#modules/users/interfaces/user_interface'
 import UsersRepository from '#modules/users/repositories/users_repository'
@@ -20,7 +20,8 @@ export default class CreateUserService {
   constructor(
     private usersRepository: UsersRepository,
     private rolesRepository: RolesRepository,
-    private createTenantService: CreateTenantService
+    private createTenantService: CreateTenantService,
+    private tenantRepository: TenantRepository
   ) {}
 
   async run(payload: IUser.CreatePayload, options: CreateUserOptions = {}) {
@@ -43,7 +44,7 @@ export default class CreateUserService {
         const defaultRole = await this.rolesRepository.findBy('slug', IRole.Slugs.USER, { client })
 
         if (defaultRole) {
-          await user.related('roles').attach([defaultRole.id], client)
+          await this.usersRepository.insertRoleAssignments(user, [defaultRole.id], client)
         }
 
         if (options.createPersonalWorkspace) {
@@ -58,23 +59,13 @@ export default class CreateUserService {
         }
 
         if (options.attachTenantId) {
-          const tenant = await Tenant.query({ client })
-            .where('id', options.attachTenantId)
-            .where('is_active', true)
-            .first()
+          const tenant = await this.tenantRepository.findActiveById(options.attachTenantId, client)
 
           if (!tenant) {
             throw new BadRequestException('Public operation is inactive or unavailable')
           }
 
-          const now = new Date()
-          await client.table('user_tenants').insert({
-            user_id: user.id,
-            tenant_id: tenant.id,
-            role: 'member',
-            created_at: now,
-            updated_at: now,
-          })
+          await this.tenantRepository.insertMember(tenant.id, user.id, 'member', client)
         }
 
         return user

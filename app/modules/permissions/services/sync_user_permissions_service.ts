@@ -10,9 +10,10 @@ import {
   PERMISSION_MUTATION_MAX_ITEMS,
   POSTGRES_INTEGER_MAX,
 } from '#modules/permissions/permission_limits'
-import Permission from '#modules/permissions/models/permission'
+import PermissionRepository from '#modules/permissions/repositories/permission_repository'
 import PermissionAdministrationPolicyService from '#modules/permissions/services/permission_administration_policy_service'
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 interface UserPermissionData {
   permission_id: number
@@ -38,7 +39,9 @@ type SingleUserPermissionMutation = {
 export default class SyncUserPermissionsService {
   constructor(
     private permissionCacheService: PermissionCacheService,
-    private permissionAdministrationPolicyService: PermissionAdministrationPolicyService
+    private permissionAdministrationPolicyService: PermissionAdministrationPolicyService,
+    private permissionRepository: PermissionRepository,
+    private usersRepository: UsersRepository
   ) {}
 
   async handle(input: UserPermissionMutation): Promise<void> {
@@ -55,7 +58,7 @@ export default class SyncUserPermissionsService {
         input.permissions.map((permission) => permission.permission_id),
         client
       )
-      await user.related('permissions').sync(syncData, undefined, client)
+      await this.usersRepository.syncPermissions(user, syncData, client)
     })
 
     await this.permissionCacheService.bumpEpochAfterCommittedMutation()
@@ -75,7 +78,11 @@ export default class SyncUserPermissionsService {
         client
       )
       await this.assertPermissionsExist([input.permissionId], client)
-      await user.related('permissions').sync({ [input.permissionId]: pivotData }, false, client)
+      await this.usersRepository.attachPermissions(
+        user,
+        { [input.permissionId]: pivotData },
+        client
+      )
     })
 
     await this.permissionCacheService.bumpEpochAfterCommittedMutation()
@@ -91,7 +98,7 @@ export default class SyncUserPermissionsService {
         client
       )
       await this.assertPermissionsExist([input.permissionId], client)
-      await user.related('permissions').detach([input.permissionId], client)
+      await this.usersRepository.detachPermissions(user, [input.permissionId], client)
     })
 
     await this.permissionCacheService.bumpEpochAfterCommittedMutation()
@@ -150,12 +157,9 @@ export default class SyncUserPermissionsService {
       return
     }
 
-    const rows = await Permission.query({ client })
-      .whereIn('id', permissionIds)
-      .orderBy('id', 'asc')
-      .select('id')
+    const existingIds = await this.permissionRepository.findExistingIds(permissionIds, client)
 
-    if (rows.length !== permissionIds.length) {
+    if (existingIds.length !== permissionIds.length) {
       throw new NotFoundException('Permission not found')
     }
   }

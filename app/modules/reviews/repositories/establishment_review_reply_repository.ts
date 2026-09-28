@@ -35,4 +35,25 @@ export default class EstablishmentReviewReplyRepository extends LucidRepository<
       .where('id', id)
       .first()
   }
+
+  /** Hide the reply. Only the status changes. */
+  async hide(tenantId: number, id: number, client: TransactionClientContract): Promise<void> {
+    await EstablishmentReviewReply.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .update({ status: 'hidden' })
+  }
+
+  /** Publish the reply again if it is hidden. */
+  async republishHidden(
+    tenantId: number,
+    id: number,
+    client: TransactionClientContract
+  ): Promise<void> {
+    await EstablishmentReviewReply.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .where('status', 'hidden')
+      .update({ status: 'published', updated_at: new Date() })
+  }
 }

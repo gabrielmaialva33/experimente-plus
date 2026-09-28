@@ -8,11 +8,14 @@ import env from '#start/env'
 import { PurchaseConflictException } from '#modules/purchases/exceptions'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import BenefitEdition from '#modules/benefits/models/benefit_edition'
-import BenefitOffer from '#modules/benefits/models/benefit_offer'
-import BenefitAccess from '#modules/benefits/models/benefit_access'
-import User from '#modules/users/models/user'
-import Tenant from '#modules/tenants/models/tenant'
+import type BenefitEdition from '#modules/benefits/models/benefit_edition'
+import BenefitAccessRepository from '#modules/benefits/repositories/benefit_access_repository'
+import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
+import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
+import BenefitRedemptionRepository from '#modules/benefits/repositories/benefit_redemption_repository'
+import type User from '#modules/users/models/user'
+import UsersRepository from '#modules/users/repositories/users_repository'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import PaymentMethodsService from '#modules/purchases/services/payment_methods_service'
@@ -40,28 +43,19 @@ export default class PurchaseService {
     private providers: PaymentProviderService,
     private policy: OrganizationPolicyService,
     private resolver: PublicOperationResolver,
-    private paymentMethods: PaymentMethodsService
+    private paymentMethods: PaymentMethodsService,
+    private editionRepository: BenefitEditionRepository,
+    private offerRepository: BenefitOfferRepository,
+    private accessRepository: BenefitAccessRepository,
+    private redemptionRepository: BenefitRedemptionRepository,
+    private tenantRepository: TenantRepository,
+    private usersRepository: UsersRepository
   ) {}
 
   async catalog(hostname: string | null) {
     const tenant = await this.resolver.resolve(hostname)
     const now = DateTime.utc()
-    const editions = await BenefitEdition.query()
-      .where('tenant_id', tenant.id)
-      .where('status', 'published')
-      .where('usage_ends_at', '>', now.toJSDate())
-      .where('sales_starts_at', '<=', now.toJSDate())
-      .where('sales_ends_at', '>', now.toJSDate())
-      .whereColumn('sales_ends_at', '<=', 'usage_ends_at')
-      .where('currency', 'BRL')
-      .where((q) =>
-        q
-          .where('price_cents', '>', 0)
-          .orWhereHas('offers', (o) => o.where('standalone_price_cents', '>', 0))
-      )
-      .preload('city')
-      .orderBy('id')
-      .limit(100)
+    const editions = await this.editionRepository.listOnSaleForTenant(tenant.id, now.toJSDate())
     const packages = []
     const singles = []
     for (const edition of editions) {
@@ -136,21 +130,12 @@ export default class PurchaseService {
     client?: TransactionClientContract,
     offerId: number | null = null
   ): Promise<PurchaseSnapshot> {
-    const query = BenefitOffer.query({ client })
-      .where('tenant_id', edition.tenant_id)
-      .where('edition_id', edition.id)
-      .where('status', 'active')
-      .whereHas('establishment', (q) =>
-        q
-          .where('lifecycle_status', 'active')
-          .whereNotNull('published_revision_id')
-          .whereNot('business_status', 'permanently_closed')
-      )
-      .where((q) => q.whereNull('ends_at').orWhere('ends_at', '>', DateTime.utc().toJSDate()))
-      .preload('establishment', (q) => q.preload('published_revision'))
-      .orderBy('id')
-    if (offerId !== null) query.where('id', offerId)
-    const offers = await query
+    const offers = await this.offerRepository.listSellableForEdition(
+      edition.tenant_id,
+      edition.id,
+      client,
+      offerId
+    )
     const selected = offerId === null ? null : offers[0]
     const amount = offerId === null ? edition.price_cents : (selected?.standalone_price_cents ?? 0)
     const usageStart = selected?.starts_at
@@ -221,31 +206,18 @@ export default class PurchaseService {
     ])
     return db.transaction(async (client) => {
       // Serialize the user's purchase intentions, including different keys from two devices.
-      await User.query({ client }).where('id', actor.id).forUpdate().firstOrFail()
-      const prior = (await this.repository
-        .purchases(client)
-        .where({ tenant_id: tenantId, user_id: actor.id, key_hash: keyHash })
-        .first()) as Purchase | undefined
+      await this.usersRepository.lockByIdOrFail(actor.id, client)
+      const prior = await this.repository.findByKey(tenantId, actor.id, keyHash, client)
       if (prior) {
         if (prior.request_hash !== requestHash)
           throw new PurchaseConflictException('Idempotency key conflicts with original purchase')
         return { id: prior.id }
       }
       const provider = this.providers.get()
-      const tenant = await Tenant.query({ client })
-        .where('id', tenantId)
-        .where('is_active', true)
-        .first()
-      const member = await client
-        .from('user_tenants')
-        .where({ tenant_id: tenantId, user_id: actor.id })
-        .first()
+      const tenant = await this.tenantRepository.findActiveById(tenantId, client)
+      const member = await this.tenantRepository.hasMember(tenantId, actor.id, client)
       if (!tenant || !member) throw new NotFoundException('Operation not found')
-      const edition = await BenefitEdition.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', input.edition_id)
-        .forUpdate()
-        .first()
+      const edition = await this.editionRepository.findLocked(tenantId, input.edition_id, client)
       if (!edition) throw new BadRequestException('Edition is not available for purchase')
       const snapshot = await this.snapshot(edition, client, input.offer_id ?? null)
       if (!this.sellable(edition, snapshot))
@@ -263,20 +235,24 @@ export default class PurchaseService {
       if (input.method === 'card' && (!input.card_token || !input.payment_method_id))
         throw new BadRequestException('Tokenized card and method are required')
       if (
-        await BenefitAccess.query({ client })
-          .where({ tenant_id: tenantId, edition_id: edition.id, user_id: actor.id })
-          .whereRaw('COALESCE(offer_id, 0) = ?', [input.offer_id ?? 0])
-          .first()
+        await this.accessRepository.findForHolderProduct(
+          tenantId,
+          edition.id,
+          actor.id,
+          input.offer_id ?? null,
+          client
+        )
       )
         throw new BadRequestException(
           'Existing access must be managed through the wallet or support'
         )
-      const pending = await this.repository
-        .purchases(client)
-        .where({ tenant_id: tenantId, edition_id: edition.id, user_id: actor.id })
-        .whereRaw('COALESCE(offer_id, 0) = ?', [input.offer_id ?? 0])
-        .whereIn('status', ['pending', 'paid', 'review'])
-        .first()
+      const pending = await this.repository.findOpenForHolderProduct(
+        tenantId,
+        edition.id,
+        actor.id,
+        input.offer_id ?? null,
+        client
+      )
       if (pending)
         throw new BadRequestException('A purchase already exists; resume it from your purchases')
       const id = randomUUID()
@@ -286,8 +262,7 @@ export default class PurchaseService {
       const expires = new Date(
         Math.min(Date.now() + minutes * 60000, DateTime.fromISO(snapshot.sales_ends_at).toMillis())
       )
-      await this.repository.insert(
-        'purchases',
+      await this.repository.insertPurchase(
         {
           id,
           tenant_id: tenantId,
@@ -334,11 +309,7 @@ export default class PurchaseService {
     })
   }
   async list(tenantId: number, actor: User) {
-    const rows = (await this.repository
-      .purchases()
-      .where({ tenant_id: tenantId, user_id: actor.id })
-      .orderBy('created_at', 'desc')
-      .limit(100)) as Purchase[]
+    const rows = await this.repository.listForHolder(tenantId, actor.id)
     return { purchases: await Promise.all(rows.map((p) => this.project(p))) }
   }
   async get(tenantId: number, actor: User, id: string) {
@@ -357,12 +328,8 @@ export default class PurchaseService {
     return p
   }
   private async project(p: Purchase) {
-    const holds = await this.repository
-      .holds()
-      .where('purchase_id', p.id)
-      .whereNull('released_at')
-      .first()
-    const refunds = await this.repository.refunds().where('purchase_id', p.id).orderBy('created_at')
+    const financiallyBlocked = await this.repository.hasActiveHold(p.id)
+    const refunds = await this.repository.listRefunds(p.id)
     return {
       id: p.id,
       edition_id: p.edition_id,
@@ -374,7 +341,7 @@ export default class PurchaseService {
       method: p.method,
       snapshot: p.snapshot,
       access_id: p.access_id,
-      financially_blocked: Boolean(holds),
+      financially_blocked: financiallyBlocked,
       expires_at: p.expires_at.toISOString(),
       paid_at: p.paid_at?.toISOString() ?? null,
       refunded_cents: p.refunded_cents,
@@ -405,10 +372,7 @@ export default class PurchaseService {
     const keyHash = purchaseKey(key)
     return db.transaction(async (client) => {
       const p = await this.owned(tenantId, actor, id, client, true)
-      const prior = await this.repository
-        .refunds(client)
-        .where({ purchase_id: id, key_hash: keyHash })
-        .first()
+      const prior = await this.repository.findRefundByKey(id, keyHash, client)
       if (prior) {
         if (prior.request_hash !== purchaseHash(reason))
           throw new PurchaseConflictException('Idempotency key conflicts with original refund')
@@ -416,32 +380,16 @@ export default class PurchaseService {
       }
       if (!p.paid_at || p.refunded_cents >= p.amount_cents)
         throw new BadRequestException('No refundable payment')
-      if (
-        await this.repository
-          .refunds(client)
-          .where('purchase_id', id)
-          .whereIn('status', ['review', 'approved', 'processing'])
-          .first()
-      )
+      if (await this.repository.findRefundInProgress(id, client))
         throw new BadRequestException('A refund is already being handled')
       // Same mutex as redeem; read the uses only AFTER acquiring it.
-      if (p.access_id)
-        await BenefitAccess.query({ client })
-          .where('tenant_id', tenantId)
-          .where('id', p.access_id)
-          .forUpdate()
-          .firstOrFail()
+      if (p.access_id) await this.accessRepository.lockOrFail(p.access_id, client, tenantId)
       const uses = p.access_id
-        ? await client
-            .from('benefit_redemptions')
-            .where({ tenant_id: tenantId, access_id: p.access_id })
-            .count('* as total')
-            .first()
-        : { total: 0 }
+        ? await this.redemptionRepository.countForAccess(tenantId, p.access_id, client)
+        : 0
       const refundId = randomUUID()
-      const auto = Number(uses?.total) === 0 && env.get('PURCHASE_AUTO_REFUND_UNUSED', false)
-      await this.repository.insert(
-        'purchase_refunds',
+      const auto = uses === 0 && env.get('PURCHASE_AUTO_REFUND_UNUSED', false)
+      await this.repository.insertRefund(
         {
           id: refundId,
           purchase_id: id,
@@ -461,7 +409,7 @@ export default class PurchaseService {
       await this.repository.audit(
         p,
         'refund_requested',
-        { refund_id: refundId, uses: Number(uses?.total), automatic: auto },
+        { refund_id: refundId, uses, automatic: auto },
         client,
         actor.id
       )
@@ -493,25 +441,21 @@ export default class PurchaseService {
           return { id: r.id, purchase_id: p.id }
         throw new BadRequestException('Refund already decided')
       }
-      if (p.access_id)
-        await BenefitAccess.query({ client })
-          .where('id', p.access_id)
-          .where('tenant_id', tenantId)
-          .forUpdate()
-          .firstOrFail()
+      if (p.access_id) await this.accessRepository.lockOrFail(p.access_id, client, tenantId)
       const amount = input.amount_cents ?? r.amount_cents
       if (!Number.isInteger(amount) || amount <= 0 || amount > p.amount_cents - p.refunded_cents)
         throw new BadRequestException('Invalid refund amount')
-      await this.repository
-        .refunds(client)
-        .where('id', r.id)
-        .update({
+      await this.repository.updateRefund(
+        r.id,
+        {
           status: input.approve ? 'approved' : 'rejected',
           amount_cents: amount,
           decided_by: actor.id,
           decision_reason: input.reason,
           updated_at: new Date(),
-        })
+        },
+        client
+      )
       if (input.approve)
         await this.repository.enqueue(p.id, 'refund', `refund:${r.id}`, client, r.id)
       else await this.repository.release(p.id, `refund:${r.id}`, client)
@@ -527,11 +471,7 @@ export default class PurchaseService {
   }
   async operations(tenantId: number, actor: User) {
     await this.policy.requirePlatformAdmin(actor)
-    const rows = await this.repository
-      .purchases()
-      .where('tenant_id', tenantId)
-      .orderBy('created_at', 'desc')
-      .limit(100)
+    const rows = await this.repository.listForTenant(tenantId)
     return { purchases: await Promise.all(rows.map((p) => this.project(p))) }
   }
 }

@@ -1,12 +1,13 @@
 import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { DateTime } from 'luxon'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
-import Establishment from '#modules/establishments/models/establishment'
+import BenefitRedemptionRepository from '#modules/benefits/repositories/benefit_redemption_repository'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type IReview from '#modules/reviews/interfaces/review_interface'
 import type EstablishmentReview from '#modules/reviews/models/establishment_review'
@@ -23,7 +24,9 @@ export default class EstablishmentReviewService {
     private policyRepository: ReviewPolicyRepository,
     private organizationPolicy: OrganizationPolicyService,
     private userBans: UserBanRepository,
-    private automod: AutomaticModerationService
+    private automod: AutomaticModerationService,
+    private establishments: EstablishmentRepository,
+    private redemptions: BenefitRedemptionRepository
   ) {}
 
   async create(
@@ -34,10 +37,11 @@ export default class EstablishmentReviewService {
     return db.transaction(async (client) => {
       const policy = await this.policyRepository.getForTenant(tenantId, client)
 
-      const establishment = await Establishment.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', payload.establishment_id)
-        .first()
+      const establishment = await this.establishments.findByIdForTenant(
+        tenantId,
+        payload.establishment_id,
+        client
+      )
 
       if (!establishment || establishment.lifecycle_status !== 'active') {
         throw new NotFoundException('Establishment not found or inactive')
@@ -259,12 +263,9 @@ export default class EstablishmentReviewService {
     redemptionId: number,
     userId: number,
     establishmentId: number,
-    client: any
+    client: TransactionClientContract
   ): Promise<void> {
-    const redemption = await BenefitRedemption.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', redemptionId)
-      .first()
+    const redemption = await this.redemptions.findByIdForTenant(tenantId, redemptionId, client)
 
     if (
       !redemption ||

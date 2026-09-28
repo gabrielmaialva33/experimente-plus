@@ -45,6 +45,13 @@ export default class ReviewPhotoRepository {
       .first()
   }
 
+  async create(
+    data: Partial<EstablishmentReviewPhoto>,
+    client: TransactionClientContract
+  ): Promise<EstablishmentReviewPhoto> {
+    return EstablishmentReviewPhoto.create(data, { client })
+  }
+
   async findWithAsset(tenantId: number, photoId: number): Promise<EstablishmentReviewPhoto> {
     return EstablishmentReviewPhoto.query()
       .where('tenant_id', tenantId)

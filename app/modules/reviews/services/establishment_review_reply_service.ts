@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import Establishment from '#modules/establishments/models/establishment'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type IReview from '#modules/reviews/interfaces/review_interface'
 import type EstablishmentReviewReply from '#modules/reviews/models/establishment_review_reply'
@@ -20,7 +20,8 @@ export default class EstablishmentReviewReplyService {
     private replyRepository: EstablishmentReviewReplyRepository,
     private reviewRepository: EstablishmentReviewRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private automod: AutomaticModerationService
+    private automod: AutomaticModerationService,
+    private establishments: EstablishmentRepository
   ) {}
 
   async reply(
@@ -35,10 +36,11 @@ export default class EstablishmentReviewReplyService {
         throw new NotFoundException('Review not found')
       }
 
-      const establishment = await Establishment.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', review.establishment_id)
-        .first()
+      const establishment = await this.establishments.findByIdForTenant(
+        tenantId,
+        review.establishment_id,
+        client
+      )
 
       if (!establishment) {
         throw new NotFoundException('Establishment not found')

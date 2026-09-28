@@ -47,6 +47,27 @@ export default class EstablishmentReviewRepository extends LucidRepository<
     return query.first()
   }
 
+  /** Hide the review. Only the status changes. */
+  async hide(tenantId: number, id: number, client: TransactionClientContract): Promise<void> {
+    await EstablishmentReview.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .update({ status: 'hidden' })
+  }
+
+  /** Publish the review again if it is hidden. */
+  async republishHidden(
+    tenantId: number,
+    id: number,
+    client: TransactionClientContract
+  ): Promise<void> {
+    await EstablishmentReview.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .where('status', 'hidden')
+      .update({ status: 'published', updated_at: new Date() })
+  }
+
   /** Whether the establishment is publicly discoverable right now. */
   async isEstablishmentDiscoverable(tenantId: number, establishmentId: number): Promise<boolean> {
     const result = await db.rawQuery(

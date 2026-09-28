@@ -3,8 +3,8 @@ import db from '@adonisjs/lucid/services/db'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import Tenant from '#modules/tenants/models/tenant'
-import User from '#modules/users/models/user'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 export type OperationLink = {
   id: number
@@ -23,9 +23,14 @@ export type OperationLink = {
  */
 @inject()
 export default class AttachUserToOperationService {
+  constructor(
+    private usersRepository: UsersRepository,
+    private tenantRepository: TenantRepository
+  ) {}
+
   /** The active operation by id, as the back office names it. */
   async operation(tenantId: number): Promise<{ id: number; name: string } | null> {
-    const tenant = await Tenant.query().where('id', tenantId).where('is_active', true).first()
+    const tenant = await this.tenantRepository.findActiveById(tenantId)
     return tenant ? { id: tenant.id, name: tenant.name } : null
   }
 
@@ -35,48 +40,31 @@ export default class AttachUserToOperationService {
       return null
     }
 
-    const link = await db
-      .from('user_tenants')
-      .where('user_id', userId)
-      .where('tenant_id', operation.id)
-      .first()
+    const linked = await this.tenantRepository.hasMember(operation.id, userId)
 
-    return { ...operation, linked: Boolean(link) }
+    return { ...operation, linked }
   }
 
   async run(userId: number, tenantId: number): Promise<{ created: boolean; operation: string }> {
     return db.transaction(async (client) => {
-      const user = await User.query({ client })
-        .where('id', userId)
-        .where('is_deleted', false)
-        .first()
+      const user = await this.usersRepository.findActiveById(userId, client)
       if (!user) {
         throw new NotFoundException('User not found')
       }
 
-      const tenant = await Tenant.query({ client })
-        .where('id', tenantId)
-        .where('is_active', true)
-        .first()
+      const tenant = await this.tenantRepository.findActiveById(tenantId, client)
       if (!tenant) {
         throw new BadRequestException('Operation is inactive or unavailable')
       }
 
-      const now = new Date()
-      const inserted = await client
-        .table('user_tenants')
-        .insert({
-          user_id: user.id,
-          tenant_id: tenant.id,
-          role: 'member',
-          created_at: now,
-          updated_at: now,
-        })
-        .onConflict(['user_id', 'tenant_id'])
-        .ignore()
-        .returning('user_id')
+      const created = await this.tenantRepository.insertMemberIfAbsent(
+        tenant.id,
+        user.id,
+        'member',
+        client
+      )
 
-      return { created: inserted.length > 0, operation: tenant.name }
+      return { created, operation: tenant.name }
     })
   }
 }

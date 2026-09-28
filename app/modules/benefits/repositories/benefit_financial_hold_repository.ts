@@ -1,8 +1,11 @@
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
-/** A financial hold does not change BenefitAccess lifecycle or redemption counters. */
-export default class BenefitFinancialHoldService {
+/**
+ * Reads the purchase financial holds that block an access. A financial hold
+ * does not change BenefitAccess lifecycle or redemption counters.
+ */
+export default class BenefitFinancialHoldRepository {
   async blocked(
     tenantId: number,
     accessId: number,

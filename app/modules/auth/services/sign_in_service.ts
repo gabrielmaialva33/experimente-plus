@@ -8,6 +8,7 @@ import JwtAuthTokensService, {
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import IRole from '#modules/roles/interfaces/role_interface'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 
 export type SignInRequest = {
   uid: string
@@ -29,7 +30,8 @@ export type SignInResult = {
 export default class SignInService {
   constructor(
     private usersRepository: UsersRepository,
-    private jwtAuthTokensService: JwtAuthTokensService
+    private jwtAuthTokensService: JwtAuthTokensService,
+    private tenantRepository: TenantRepository
   ) {}
 
   async run(
@@ -43,12 +45,7 @@ export default class SignInService {
       const expectedPasswordHash = user.password
       await user.load('roles')
 
-      const tenant = await user
-        .related('tenants')
-        .query()
-        .where('tenants.is_active', true)
-        .orderBy('tenants.id', 'asc')
-        .first()
+      const tenant = await this.tenantRepository.findFirstActiveForUser(user)
 
       const auth =
         options.issueApiTokens === false

@@ -40,6 +40,11 @@ namespace IRole {
     )
   }
 
+  /** Whether any of the roles is Root or Admin, canonical or not. */
+  export function includesAdministrator(roleSlugs: readonly string[]): boolean {
+    return roleSlugs.some((slug) => slug === Slugs.ROOT || slug === Slugs.ADMIN)
+  }
+
   export function dominates(actorRole: string, targetRole: string): boolean {
     if (!isCanonicalSlug(actorRole) || !isCanonicalSlug(targetRole)) {
       return false
