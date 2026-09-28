@@ -8,10 +8,10 @@ import {
   PERMISSION_MUTATION_MAX_ITEMS,
   POSTGRES_INTEGER_MAX,
 } from '#modules/permissions/permission_limits'
-import Permission from '#modules/permissions/models/permission'
+import PermissionRepository from '#modules/permissions/repositories/permission_repository'
 import PermissionAdministrationPolicyService from '#modules/permissions/services/permission_administration_policy_service'
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
-import Role from '#modules/roles/models/role'
+import type Role from '#modules/roles/models/role'
 import RolesRepository from '#modules/roles/repositories/roles_repository'
 
 type RolePermissionMutation = {
@@ -27,7 +27,8 @@ export default class SyncRolePermissionsService {
   constructor(
     private rolesRepository: RolesRepository,
     private permissionCacheService: PermissionCacheService,
-    private permissionAdministrationPolicyService: PermissionAdministrationPolicyService
+    private permissionAdministrationPolicyService: PermissionAdministrationPolicyService,
+    private permissionRepository: PermissionRepository
   ) {}
 
   async handle(input: RolePermissionMutation): Promise<void> {
@@ -107,12 +108,9 @@ export default class SyncRolePermissionsService {
       return
     }
 
-    const rows = await Permission.query({ client })
-      .whereIn('id', permissionIds)
-      .orderBy('id', 'asc')
-      .select('id')
+    const existingIds = await this.permissionRepository.findExistingIds(permissionIds, client)
 
-    if (rows.length !== permissionIds.length) {
+    if (existingIds.length !== permissionIds.length) {
       throw new NotFoundException('Permission not found')
     }
   }

@@ -5,6 +5,7 @@ import db from '@adonisjs/lucid/services/db'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import Permission from '#modules/permissions/models/permission'
+import PermissionRepository from '#modules/permissions/repositories/permission_repository'
 import FreshPlatformPermissionService from '#modules/permissions/services/fresh_platform_permission_service'
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import IRole from '#modules/roles/interfaces/role_interface'
@@ -42,7 +43,7 @@ async function createUser(label: string, role: Role): Promise<User> {
 }
 
 function createService(usersRepository: UsersRepository): SyncRolesService {
-  const freshPermission = new FreshPlatformPermissionService()
+  const freshPermission = new FreshPlatformPermissionService(new PermissionRepository())
   return new SyncRolesService(
     usersRepository,
     new PermissionCacheService(usersRepository),

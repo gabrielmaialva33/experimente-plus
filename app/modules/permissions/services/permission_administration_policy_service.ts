@@ -6,8 +6,9 @@ import NotFoundException from '#exceptions/not_found_exception'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import FreshPlatformPermissionService from '#modules/permissions/services/fresh_platform_permission_service'
 import IRole from '#modules/roles/interfaces/role_interface'
-import Role from '#modules/roles/models/role'
-import User from '#modules/users/models/user'
+import type Role from '#modules/roles/models/role'
+import RolesRepository from '#modules/roles/repositories/roles_repository'
+import type User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
 
 type LockedRoleContext = {
@@ -27,7 +28,8 @@ type LockedRoleContext = {
 export default class PermissionAdministrationPolicyService {
   constructor(
     private usersRepository: UsersRepository,
-    private freshPlatformPermissionService: FreshPlatformPermissionService
+    private freshPlatformPermissionService: FreshPlatformPermissionService,
+    private rolesRepository: RolesRepository
   ) {}
 
   async lockAndAuthorizePermissionCreation(
@@ -158,20 +160,10 @@ export default class PermissionAdministrationPolicyService {
     userIds: number[],
     client: TransactionClientContract
   ): Promise<Array<{ userId: number; roleId: number }>> {
-    const rows = await client
-      .from('user_roles')
-      .whereIn(
-        'user_id',
-        [...new Set(userIds)].sort((left, right) => left - right)
-      )
-      .orderBy('user_id', 'asc')
-      .orderBy('role_id', 'asc')
-      .select('user_id', 'role_id')
-
-    return rows.map((row) => ({
-      userId: Number(row.user_id),
-      roleId: Number(row.role_id),
-    }))
+    return this.usersRepository.listRoleAssignments(
+      [...new Set(userIds)].sort((left, right) => left - right),
+      client
+    )
   }
 
   private async lockRoles(roleIds: number[], client: TransactionClientContract): Promise<Role[]> {
@@ -180,7 +172,7 @@ export default class PermissionAdministrationPolicyService {
       return []
     }
 
-    return Role.query({ client }).whereIn('id', uniqueRoleIds).orderBy('id', 'asc').forUpdate()
+    return this.rolesRepository.lockByIds(uniqueRoleIds, client)
   }
 
   private resolveCanonicalRoles(
