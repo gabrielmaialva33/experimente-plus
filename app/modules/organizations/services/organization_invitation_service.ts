@@ -8,8 +8,8 @@ import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import type { OrganizationInvitationAcceptPageProps } from '#modules/organizations/interfaces/organization_team_pages'
-import Organization from '#modules/organizations/models/organization'
-import OrganizationInvitation from '#modules/organizations/models/organization_invitation'
+import type Organization from '#modules/organizations/models/organization'
+import type OrganizationInvitation from '#modules/organizations/models/organization_invitation'
 import OrganizationInvitationRepository from '#modules/organizations/repositories/organization_invitation_repository'
 import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
@@ -20,7 +20,8 @@ import OrganizationMembershipService from '#modules/organizations/services/organ
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import { maskEmail } from '#modules/organizations/utils/organization_team_messages'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
-import User from '#modules/users/models/user'
+import type User from '#modules/users/models/user'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 @inject()
 export default class OrganizationInvitationService {
@@ -31,7 +32,8 @@ export default class OrganizationInvitationService {
     private membershipService: OrganizationMembershipService,
     private tokenService: OrganizationInvitationTokenService,
     private policy: OrganizationPolicyService,
-    private audit: OrganizationAuditService
+    private audit: OrganizationAuditService,
+    private usersRepository: UsersRepository
   ) {}
 
   async list(
@@ -362,7 +364,7 @@ export default class OrganizationInvitationService {
     organizationId: number,
     email: string
   ): Promise<void> {
-    const user = await User.findBy('email', email)
+    const user = await this.usersRepository.findBy('email', email)
     if (!user) {
       return
     }

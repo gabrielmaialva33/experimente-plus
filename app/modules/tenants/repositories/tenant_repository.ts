@@ -2,6 +2,7 @@ import LucidRepository from '#shared/lucid/lucid_repository'
 import Tenant from '#modules/tenants/models/tenant'
 import type ITenant from '#modules/tenants/interfaces/tenant_interface'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import type User from '#modules/users/models/user'
 
 export default class TenantRepository
   extends LucidRepository<typeof Tenant>
@@ -45,5 +46,24 @@ export default class TenantRepository
       tenant,
       role: String(tenant.$extras.membership_role),
     }
+  }
+
+  /** The user's active operations, in id order. */
+  async listActiveForUser(user: User): Promise<Tenant[]> {
+    return user
+      .related('tenants')
+      .query()
+      .where('tenants.is_active', true)
+      .orderBy('tenants.id', 'asc')
+  }
+
+  /** One active operation of the user, or null when it is not theirs or not active. */
+  async findActiveForUser(user: User, tenantId: number): Promise<Tenant | null> {
+    return user
+      .related('tenants')
+      .query()
+      .where('tenants.id', tenantId)
+      .where('tenants.is_active', true)
+      .first()
   }
 }

@@ -3,7 +3,7 @@ import { inject } from '@adonisjs/core'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import IGeography from '#modules/geography/interfaces/geography_interface'
-import Region from '#modules/geography/models/region'
+import type Region from '#modules/geography/models/region'
 import RegionRepository from '#modules/geography/repositories/region_repository'
 import { normalizeSlug, resolveUniqueSlug } from '#shared/utils/slug'
 

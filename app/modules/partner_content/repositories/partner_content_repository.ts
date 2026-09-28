@@ -50,6 +50,16 @@ export default class PartnerContentRepository {
     return MODELS[kind]
   }
 
+  async create(
+    kind: IPartnerContent.ContentKind,
+    attributes: Record<string, unknown>,
+    client: TransactionClientContract
+  ): Promise<IPartnerContent.ContentRow> {
+    return this.model(kind).create(attributes as never, {
+      client,
+    }) as Promise<IPartnerContent.ContentRow>
+  }
+
   async findById(
     kind: IPartnerContent.ContentKind,
     tenantId: number,
@@ -126,6 +136,38 @@ export default class PartnerContentRepository {
     }
     const result = await rows.count('* as total')
     return Number(result[0].$extras.total)
+  }
+
+  /**
+   * Items of every kind on these establishments, counted by lifecycle status:
+   * one row per kind and status found.
+   */
+  async countByStatusForEstablishments(
+    tenantId: number,
+    establishmentIds: readonly number[],
+    statuses: readonly IPartnerContent.ContentStatus[]
+  ): Promise<Array<{ status: string; total: number }>> {
+    const counts: Array<{ status: string; total: number }> = []
+
+    // Sequential on purpose: one query per table, never concurrent on a client.
+    for (const table of [
+      'establishment_experiences',
+      'establishment_events',
+      'establishment_showcase_items',
+    ]) {
+      const rows = await db
+        .from(table)
+        .where('tenant_id', tenantId)
+        .whereIn('establishment_id', [...establishmentIds])
+        .whereIn('status', [...statuses])
+        .groupBy('status')
+        .select('status')
+        .count('* as total')
+      for (const row of rows) {
+        counts.push({ status: String(row.status), total: Number(row.total) })
+      }
+    }
+    return counts
   }
 
   /**

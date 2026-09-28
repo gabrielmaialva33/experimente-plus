@@ -1,7 +1,6 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 
-import City from '#modules/geography/models/city'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
 import PartnerContentService from '#modules/partner_content/services/partner_content_service'
@@ -81,7 +80,7 @@ export default class PartnerContentPagesController {
           ),
         },
       },
-      establishments: await this.portalEstablishments(tenantId, overview),
+      establishments: await this.contentService.portalEstablishments(tenantId, overview),
       requires_approval: await this.contentService.approvalRequirements(tenantId),
       tenant_id: tenantId,
     })
@@ -275,60 +274,6 @@ export default class PartnerContentPagesController {
     await this.contentService.updatePolicy(tenant!.id, auth.getUserOrFail(), payload)
     session.flash('success', 'Política de conteúdo do parceiro atualizada.')
     return response.redirect().back()
-  }
-
-  private async portalEstablishments(
-    tenantId: number,
-    overview: Awaited<ReturnType<PartnerPortalService['overview']>>
-  ) {
-    const cityIds = Array.from(
-      new Set(
-        overview.organizations.flatMap((organization) =>
-          organization.establishments.flatMap((establishment) => {
-            const revision = establishment.revision ?? establishment.published_revision
-            const cityId = Number(revision?.city_id ?? 0)
-            return cityId > 0 ? [cityId] : []
-          })
-        )
-      )
-    )
-    const cities =
-      cityIds.length > 0
-        ? await City.query()
-            .where('tenant_id', tenantId)
-            .whereIn('id', cityIds)
-            .select(['id', 'name', 'state_code', 'timezone'])
-        : []
-    const cityById = new Map(cities.map((city) => [city.id, city]))
-
-    return overview.organizations.flatMap((organization) =>
-      organization.establishments.map((establishment) => {
-        const revision = establishment.revision ?? establishment.published_revision
-        const cityId = Number(revision?.city_id ?? 0)
-        const city = cityById.get(cityId)
-
-        return {
-          id: establishment.id,
-          organization_id: organization.id,
-          organization_name: organization.trade_name,
-          public_name: establishment.public_name,
-          city:
-            city === undefined
-              ? null
-              : {
-                  id: city.id,
-                  name: city.name,
-                  state_code: city.state_code,
-                  timezone: city.timezone,
-                },
-          allowed_actions: {
-            update: organization.allowed_actions.establishments.update,
-            submit: organization.allowed_actions.establishments.submit,
-            archive: organization.allowed_actions.establishments.archive,
-          },
-        }
-      })
-    )
   }
 
   private setPrivateHeaders(response: HttpContext['response']): void {

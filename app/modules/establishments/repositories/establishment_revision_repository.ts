@@ -214,6 +214,20 @@ export default class EstablishmentRevisionRepository extends LucidRepository<
       .first()
   }
 
+  async findLatestRejectedLocked(
+    tenantId: number,
+    establishmentId: number,
+    client: TransactionClientContract
+  ): Promise<EstablishmentRevision | null> {
+    return EstablishmentRevision.query({ client })
+      .where('tenant_id', tenantId)
+      .where('establishment_id', establishmentId)
+      .where('status', 'rejected')
+      .orderBy('version', 'desc')
+      .forUpdate()
+      .first()
+  }
+
   async nextVersion(establishmentId: number, client: TransactionClientContract): Promise<number> {
     const row = await EstablishmentRevision.query({ client })
       .where('establishment_id', establishmentId)

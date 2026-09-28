@@ -1,3 +1,4 @@
+import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import Establishment from '#modules/establishments/models/establishment'
@@ -99,8 +100,46 @@ export default class EstablishmentRepository extends LucidRepository<typeof Esta
     return establishment
   }
 
-  async findByIdForTenant(tenantId: number, id: number): Promise<Establishment | null> {
-    return Establishment.query().where('tenant_id', tenantId).where('id', id).first()
+  /**
+   * A place the public media route may answer for: active, not permanently
+   * closed and with an approved published revision. Looked up by id alone,
+   * since the route carries no operation.
+   */
+  async findPublishedById(id: number): Promise<Establishment | null> {
+    return Establishment.query()
+      .where('id', id)
+      .where('lifecycle_status', 'active')
+      .whereNot('business_status', 'permanently_closed')
+      .whereNotNull('published_revision_id')
+      .whereHas('published_revision', (revisionQuery) => {
+        revisionQuery.where('status', 'approved')
+      })
+      .first()
+  }
+
+  async findByIdForTenant(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract
+  ): Promise<Establishment | null> {
+    return Establishment.query({ client }).where('tenant_id', tenantId).where('id', id).first()
+  }
+
+  /** Ids of the establishments whose organization has the user as an active member. */
+  async listIdsForActiveMember(tenantId: number, userId: number): Promise<number[]> {
+    const rows = await db
+      .from('establishments')
+      .join('organization_members', (join) => {
+        join
+          .on('organization_members.organization_id', 'establishments.organization_id')
+          .andOn('organization_members.tenant_id', 'establishments.tenant_id')
+      })
+      .where('establishments.tenant_id', tenantId)
+      .where('organization_members.user_id', userId)
+      .where('organization_members.status', 'active')
+      .select('establishments.id')
+
+    return rows.map((row) => Number(row.id))
   }
 
   async findByIdForTenantWithDetails(tenantId: number, id: number): Promise<Establishment | null> {

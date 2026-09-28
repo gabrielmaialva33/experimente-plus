@@ -4,7 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import Organization from '#modules/organizations/models/organization'
+import type Organization from '#modules/organizations/models/organization'
 import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
 import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import CnpjService from '#modules/organizations/services/cnpj_service'
@@ -245,9 +245,7 @@ export default class OrganizationService {
   }
 
   private async loadPrivateRelations(organization: Organization): Promise<void> {
-    await organization.load('members', (query) => {
-      query.preload('user').orderBy('id', 'asc')
-    })
+    await this.organizationRepository.loadMembersWithUsers(organization)
   }
 
   private async validateExplicitSlug(

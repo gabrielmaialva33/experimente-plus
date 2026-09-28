@@ -1,8 +1,9 @@
+import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
 import type { Authenticators } from '@adonisjs/auth/types'
 
-import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
+import ResolveAuthenticatedLandingService from '#modules/web/services/resolve_authenticated_landing_service'
 import { preventCredentialResponseCaching } from '#modules/web/utils/credential_response'
 
 /**
@@ -12,7 +13,10 @@ import { preventCredentialResponseCaching } from '#modules/web/utils/credential_
  * For example, the login page should not be accessible if the user
  * is already logged-in
  */
+@inject()
 export default class GuestMiddleware {
+  constructor(private landing: ResolveAuthenticatedLandingService) {}
+
   async handle(
     ctx: HttpContext,
     next: NextFn,
@@ -27,10 +31,7 @@ export default class GuestMiddleware {
         if (!user) return next()
         const claimedTenantId =
           guard === 'jwt' ? ctx.auth.use('jwt').tokenPayload?.tenantId : undefined
-        return ctx.response.redirect(
-          await resolveAuthenticatedLandingPath(user, claimedTenantId),
-          true
-        )
+        return ctx.response.redirect(await this.landing.run(user, claimedTenantId), true)
       }
     }
 

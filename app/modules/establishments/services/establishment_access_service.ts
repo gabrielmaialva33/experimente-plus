@@ -3,12 +3,12 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import Establishment from '#modules/establishments/models/establishment'
-import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import type Establishment from '#modules/establishments/models/establishment'
+import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
-import User from '#modules/users/models/user'
+import type User from '#modules/users/models/user'
 
 @inject()
 export default class EstablishmentAccessService {

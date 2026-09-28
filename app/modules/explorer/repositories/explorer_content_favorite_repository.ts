@@ -1,4 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import { discoverableEstablishmentsForTenantSql } from '#modules/catalog/repositories/catalog_discoverability'
 import type IExplorer from '#modules/explorer/interfaces/explorer_interface'
@@ -205,7 +206,7 @@ export default class ExplorerContentFavoriteRepository {
       .delete()
   }
 
-  async purgeForUser(userId: number, client: any): Promise<void> {
+  async purgeForUser(userId: number, client: TransactionClientContract): Promise<void> {
     await client.from(TABLE).where('user_id', userId).delete()
   }
 }

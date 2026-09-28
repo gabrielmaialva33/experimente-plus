@@ -1,5 +1,5 @@
+import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
-import app from '@adonisjs/core/services/app'
 
 import AuthEventService from '#modules/auth/services/auth_event_service'
 import DeleteOwnAccountService from '#modules/users/services/delete_own_account_service'
@@ -7,7 +7,13 @@ import { deleteOwnAccountValidator } from '#modules/users/validators/account_val
 import UpdateProfileService from '#modules/users/services/update_profile_service'
 import { updateProfileValidator } from '#modules/users/validators/profile_validator'
 
+@inject()
 export default class InertiaSettingsController {
+  constructor(
+    private updateProfileService: UpdateProfileService,
+    private deleteOwnAccountService: DeleteOwnAccountService
+  ) {}
+
   async index({ inertia, auth }: HttpContext) {
     const user = auth.getUserOrFail()
 
@@ -29,8 +35,7 @@ export default class InertiaSettingsController {
       meta: { userId: user.id },
     })
 
-    const updateProfile = await app.container.make(UpdateProfileService)
-    await updateProfile.run(user.id, payload)
+    await this.updateProfileService.run(user.id, payload)
 
     session.flash('success', 'Dados pessoais atualizados.')
 
@@ -48,9 +53,7 @@ export default class InertiaSettingsController {
           data: request.body(),
         }
       )
-      const deleteOwnAccount = await app.container.make(DeleteOwnAccountService)
-
-      await deleteOwnAccount.run(user.id, { currentPassword, confirmation })
+      await this.deleteOwnAccountService.run(user.id, { currentPassword, confirmation })
       auth.use('jwt').clearCookie()
       AuthEventService.emitLogout(user, ctx)
 

@@ -7,12 +7,15 @@ import BadRequestException from '#exceptions/bad_request_exception'
 import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import CatalogProjectionRepository from '#modules/catalog/repositories/catalog_projection_repository'
-import Establishment from '#modules/establishments/models/establishment'
+import type Establishment from '#modules/establishments/models/establishment'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
+import CityRepository from '#modules/geography/repositories/city_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import IPartnerContent from '#modules/partner_content/interfaces/partner_content_interface'
 import PartnerContentEventRepository from '#modules/partner_content/repositories/partner_content_event_repository'
 import PartnerContentPolicyRepository from '#modules/partner_content/repositories/partner_content_policy_repository'
 import PartnerContentRepository from '#modules/partner_content/repositories/partner_content_repository'
+import type IPortal from '#modules/portal/interfaces/portal_interface'
 import AutomaticModerationService from '#modules/reviews/services/automatic_moderation_service'
 import type User from '#modules/users/models/user'
 
@@ -41,7 +44,9 @@ export default class PartnerContentService {
     private organizationPolicy: OrganizationPolicyService,
     private projectionRepository: CatalogProjectionRepository,
     private events: PartnerContentEventRepository,
-    private automod: AutomaticModerationService
+    private automod: AutomaticModerationService,
+    private establishmentRepository: EstablishmentRepository,
+    private cityRepository: CityRepository
   ) {}
 
   async create(
@@ -60,15 +65,16 @@ export default class PartnerContentService {
 
       const attributes = this.attributesFor(kind, payload, {})
 
-      const content = await this.contentRepository.model(kind).create(
+      const content = await this.contentRepository.create(
+        kind,
         {
           tenant_id: tenantId,
           establishment_id: establishment.id,
           created_by: actor.id,
           status: 'draft',
           ...attributes,
-        } as never,
-        { client }
+        },
+        client
       )
 
       await this.record(client, kind, content, actor, 'created', null, 'draft', {
@@ -439,7 +445,10 @@ export default class PartnerContentService {
     actor: User,
     query: IPartnerContent.ListQuery
   ) {
-    const establishmentIds = await this.establishmentsOfActor(tenantId, actor)
+    const establishmentIds = await this.establishmentRepository.listIdsForActiveMember(
+      tenantId,
+      actor.id
+    )
 
     if (establishmentIds.length === 0) {
       throw new ForbiddenException('An active organization membership is required')
@@ -478,6 +487,59 @@ export default class PartnerContentService {
       )
     }
     return counts
+  }
+
+  /**
+   * The places the partner content screen offers, one per establishment the
+   * Portal overview already authorized, with the city each one's current
+   * revision points to and the content actions its organization allows.
+   */
+  async portalEstablishments(tenantId: number, overview: IPortal.Overview) {
+    const cityIds = Array.from(
+      new Set(
+        overview.organizations.flatMap((organization) =>
+          organization.establishments.flatMap((establishment) => {
+            const revision = establishment.revision ?? establishment.published_revision
+            const cityId = Number(revision?.city_id ?? 0)
+            return cityId > 0 ? [cityId] : []
+          })
+        )
+      )
+    )
+    const cities =
+      cityIds.length > 0
+        ? await this.cityRepository.listSummariesByIdsForTenant(tenantId, cityIds)
+        : []
+    const cityById = new Map(cities.map((city) => [city.id, city]))
+
+    return overview.organizations.flatMap((organization) =>
+      organization.establishments.map((establishment) => {
+        const revision = establishment.revision ?? establishment.published_revision
+        const cityId = Number(revision?.city_id ?? 0)
+        const city = cityById.get(cityId)
+
+        return {
+          id: establishment.id,
+          organization_id: organization.id,
+          organization_name: organization.trade_name,
+          public_name: establishment.public_name,
+          city:
+            city === undefined
+              ? null
+              : {
+                  id: city.id,
+                  name: city.name,
+                  state_code: city.state_code,
+                  timezone: city.timezone,
+                },
+          allowed_actions: {
+            update: organization.allowed_actions.establishments.update,
+            submit: organization.allowed_actions.establishments.submit,
+            archive: organization.allowed_actions.establishments.archive,
+          },
+        }
+      })
+    )
   }
 
   /** Public discovery: no session, no membership (ADR-0003). */
@@ -714,10 +776,11 @@ export default class PartnerContentService {
     establishmentId: number,
     client: Parameters<typeof this.contentRepository.findById>[3]
   ): Promise<Establishment> {
-    const establishment = await Establishment.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', establishmentId)
-      .first()
+    const establishment = await this.establishmentRepository.findByIdForTenant(
+      tenantId,
+      establishmentId,
+      client
+    )
 
     if (!establishment) {
       throw new NotFoundException('Establishment not found')
@@ -737,21 +800,5 @@ export default class PartnerContentService {
     }
 
     return establishment
-  }
-
-  private async establishmentsOfActor(tenantId: number, actor: User): Promise<number[]> {
-    const rows = await db
-      .from('establishments')
-      .join('organization_members', (join) => {
-        join
-          .on('organization_members.organization_id', 'establishments.organization_id')
-          .andOn('organization_members.tenant_id', 'establishments.tenant_id')
-      })
-      .where('establishments.tenant_id', tenantId)
-      .where('organization_members.user_id', actor.id)
-      .where('organization_members.status', 'active')
-      .select('establishments.id')
-
-    return rows.map((row) => Number(row.id))
   }
 }

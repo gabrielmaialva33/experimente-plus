@@ -8,15 +8,16 @@ import NotFoundException from '#exceptions/not_found_exception'
 import IEstablishment, {
   ESTABLISHMENT_COMPLETENESS_RULES_VERSION,
 } from '#modules/establishments/interfaces/establishment_interface'
-import Establishment from '#modules/establishments/models/establishment'
-import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import type Establishment from '#modules/establishments/models/establishment'
+import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
 import EstablishmentRevisionEventService from '#modules/establishments/services/establishment_revision_event_service'
-import City from '#modules/geography/models/city'
-import Organization from '#modules/organizations/models/organization'
+import CityRepository from '#modules/geography/repositories/city_repository'
+import type Organization from '#modules/organizations/models/organization'
+import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type User from '#modules/users/models/user'
 import { resolveUniqueSlug } from '#shared/utils/slug'
@@ -29,14 +30,16 @@ export default class EstablishmentService {
     private accessService: EstablishmentAccessService,
     private organizationPolicy: OrganizationPolicyService,
     private eventService: EstablishmentRevisionEventService,
-    private auditService: EstablishmentAuditService
+    private auditService: EstablishmentAuditService,
+    private organizationRepository: OrganizationRepository,
+    private cityRepository: CityRepository
   ) {}
 
   async list(tenantId: number, organizationId: number, actor: User) {
-    const organization = await Organization.query()
-      .where('tenant_id', tenantId)
-      .where('id', organizationId)
-      .first()
+    const organization = await this.organizationRepository.findByIdForTenant(
+      tenantId,
+      organizationId
+    )
     if (!organization) {
       throw new NotFoundException('Organization not found')
     }
@@ -167,11 +170,12 @@ export default class EstablishmentService {
     actor: User,
     client?: TransactionClientContract
   ): Promise<Organization> {
-    const organization = await Organization.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', organizationId)
-      .if(Boolean(client), (query) => query.forUpdate())
-      .first()
+    const organization = await this.organizationRepository.findByIdForTenant(
+      tenantId,
+      organizationId,
+      client,
+      Boolean(client)
+    )
     if (!organization) {
       throw new NotFoundException('Organization not found')
     }
@@ -363,11 +367,7 @@ export default class EstablishmentService {
   ): Promise<void> {
     if (cityId === null) return
 
-    const city = await City.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', cityId)
-      .where('is_active', true)
-      .first()
+    const city = await this.cityRepository.findActiveByIdForTenant(tenantId, cityId, client)
     if (!city) {
       throw new BadRequestException('City is inactive or does not belong to the active operation')
     }

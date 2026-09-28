@@ -1,8 +1,8 @@
 import { inject } from '@adonisjs/core'
 
 import NotFoundException from '#exceptions/not_found_exception'
-import City from '#modules/geography/models/city'
-import Region from '#modules/geography/models/region'
+import type City from '#modules/geography/models/city'
+import type Region from '#modules/geography/models/region'
 import CityRepository from '#modules/geography/repositories/city_repository'
 import RegionRepository from '#modules/geography/repositories/region_repository'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'

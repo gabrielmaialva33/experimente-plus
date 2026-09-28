@@ -1,9 +1,12 @@
+import { inject } from '@adonisjs/core'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
-import Category from '#modules/taxonomy/models/category'
-import CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
+import type Category from '#modules/taxonomy/models/category'
+import type CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
+import CategoryAttributeDefinitionRepository from '#modules/taxonomy/repositories/category_attribute_definition_repository'
+import CategoryRepository from '#modules/taxonomy/repositories/category_repository'
 
 export type EffectiveAttributeDefinition = {
   definition: CategoryAttributeDefinition
@@ -16,7 +19,13 @@ export type EffectiveCategoryContext = {
   allows_always_open: boolean
 }
 
+@inject()
 export default class EffectiveCategoryAttributesService {
+  constructor(
+    private categoryRepository: CategoryRepository,
+    private definitionRepository: CategoryAttributeDefinitionRepository
+  ) {}
+
   async resolve(
     tenantId: number,
     categoryId: number,
@@ -24,15 +33,11 @@ export default class EffectiveCategoryAttributesService {
   ): Promise<EffectiveAttributeDefinition[]> {
     const lineage = await this.getLineage(tenantId, categoryId, client)
     const lineageIds = lineage.map((category) => category.id)
-    const definitions = await CategoryAttributeDefinition.query({ client })
-      .where('tenant_id', tenantId)
-      .whereIn('category_id', lineageIds)
-      .where('is_active', true)
-      .preload('options', (query) => {
-        query.where('is_active', true).orderBy('sort_order', 'asc').orderBy('label', 'asc')
-      })
-      .orderBy('sort_order', 'asc')
-      .orderBy('id', 'asc')
+    const definitions = await this.definitionRepository.listActiveForCategories(
+      tenantId,
+      lineageIds,
+      client
+    )
 
     return this.resolveFromLineage(categoryId, lineage, definitions)
   }
@@ -52,10 +57,7 @@ export default class EffectiveCategoryAttributesService {
       return new Map()
     }
 
-    const categories = await Category.query({ client })
-      .where('tenant_id', tenantId)
-      .where('is_active', true)
-      .orderBy('id', 'asc')
+    const categories = await this.categoryRepository.listActiveById(tenantId, client)
     const categoryById = new Map(categories.map((category) => [category.id, category]))
     const lineageByCategory = new Map<number, Category[]>()
     const lineageIds = new Set<number>()
@@ -68,15 +70,11 @@ export default class EffectiveCategoryAttributesService {
       }
     }
 
-    const definitions = await CategoryAttributeDefinition.query({ client })
-      .where('tenant_id', tenantId)
-      .whereIn('category_id', [...lineageIds])
-      .where('is_active', true)
-      .preload('options', (query) => {
-        query.where('is_active', true).orderBy('sort_order', 'asc').orderBy('label', 'asc')
-      })
-      .orderBy('sort_order', 'asc')
-      .orderBy('id', 'asc')
+    const definitions = await this.definitionRepository.listActiveForCategories(
+      tenantId,
+      [...lineageIds],
+      client
+    )
 
     const contexts = new Map<number, EffectiveCategoryContext>()
     for (const categoryId of requestedIds) {
@@ -108,20 +106,16 @@ export default class EffectiveCategoryAttributesService {
     categoryId: number,
     client?: TransactionClientContract
   ): Promise<Category> {
-    const category = await Category.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', categoryId)
-      .where('is_active', true)
-      .first()
+    const category = await this.categoryRepository.findActiveByIdForTenant(
+      tenantId,
+      categoryId,
+      client
+    )
     if (!category) {
       throw new NotFoundException('Category not found')
     }
 
-    const activeChild = await Category.query({ client })
-      .where('tenant_id', tenantId)
-      .where('parent_id', category.id)
-      .where('is_active', true)
-      .first()
+    const activeChild = await this.categoryRepository.findActiveChild(tenantId, category.id, client)
     if (activeChild) {
       throw new BadRequestException('Only leaf categories may classify an establishment')
     }
@@ -153,11 +147,11 @@ export default class EffectiveCategoryAttributesService {
       }
       visited.add(currentId)
 
-      const category = await Category.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', currentId)
-        .where('is_active', true)
-        .first()
+      const category = await this.categoryRepository.findActiveByIdForTenant(
+        tenantId,
+        currentId,
+        client
+      )
       if (!category) {
         throw new NotFoundException('Category not found')
       }

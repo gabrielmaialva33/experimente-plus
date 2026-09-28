@@ -1,3 +1,5 @@
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
 import type { CategoryAttributeType } from '#modules/taxonomy/interfaces/taxonomy_interface'
 import Category from '#modules/taxonomy/models/category'
 import CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
@@ -44,6 +46,26 @@ export default class CategoryAttributeDefinitionRepository {
 
     await this.loadRelations(tenantId, [definition])
     return definition
+  }
+
+  /**
+   * The active definitions declared on any of the given categories, with their
+   * active options, in declaration order.
+   */
+  async listActiveForCategories(
+    tenantId: number,
+    categoryIds: readonly number[],
+    client?: TransactionClientContract
+  ): Promise<CategoryAttributeDefinition[]> {
+    return CategoryAttributeDefinition.query({ client })
+      .where('tenant_id', tenantId)
+      .whereIn('category_id', [...categoryIds])
+      .where('is_active', true)
+      .preload('options', (query) => {
+        query.where('is_active', true).orderBy('sort_order', 'asc').orderBy('label', 'asc')
+      })
+      .orderBy('sort_order', 'asc')
+      .orderBy('id', 'asc')
   }
 
   async isKeyTaken(

@@ -57,6 +57,13 @@ export default class OrganizationRepository {
     return query.first()
   }
 
+  /** Loads the members with their user accounts, in membership id order. */
+  async loadMembersWithUsers(organization: Organization): Promise<void> {
+    await organization.load('members', (query) => {
+      query.preload('user').orderBy('id', 'asc')
+    })
+  }
+
   async isSlugTaken(
     tenantId: number,
     slug: string,

@@ -1,4 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import { discoverableEstablishmentsForTenantSql } from '#modules/catalog/repositories/catalog_discoverability'
 import type IExplorer from '#modules/explorer/interfaces/explorer_interface'
@@ -129,7 +130,7 @@ export default class ExplorerSavedRepository {
    * keeps only a tombstone on the user row. A preference is not something that
    * needs a tombstone.
    */
-  async purgeForUser(userId: number, client: any): Promise<void> {
+  async purgeForUser(userId: number, client: TransactionClientContract): Promise<void> {
     for (const table of Object.values(TABLE)) {
       await client.from(table).where('user_id', userId).delete()
     }

@@ -4,9 +4,8 @@ import { DateTime } from 'luxon'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
-import EstablishmentRevisionHour from '#modules/establishments/models/establishment_revision_hour'
-import EstablishmentRevisionSpecialDay from '#modules/establishments/models/establishment_revision_special_day'
-import EstablishmentRevisionSpecialHour from '#modules/establishments/models/establishment_revision_special_hour'
+import EstablishmentRevisionHourRepository from '#modules/establishments/repositories/establishment_revision_hour_repository'
+import EstablishmentRevisionSpecialDayRepository from '#modules/establishments/repositories/establishment_revision_special_day_repository'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
 import type User from '#modules/users/models/user'
@@ -24,7 +23,9 @@ type NormalizedInterval = {
 export default class EstablishmentHoursService {
   constructor(
     private accessService: EstablishmentAccessService,
-    private auditService: EstablishmentAuditService
+    private auditService: EstablishmentAuditService,
+    private hourRepository: EstablishmentRevisionHourRepository,
+    private specialDayRepository: EstablishmentRevisionSpecialDayRepository
   ) {}
 
   async replaceWeekly(
@@ -50,13 +51,10 @@ export default class EstablishmentHoursService {
         client
       )
 
-      await EstablishmentRevisionHour.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .delete()
+      await this.hourRepository.deleteForRevision(tenantId, revision.id, client)
 
       if (normalized.length > 0) {
-        await EstablishmentRevisionHour.createMany(
+        await this.hourRepository.createManyForRevision(
           normalized.map((item) => ({
             tenant_id: tenantId,
             revision_id: revision.id,
@@ -66,15 +64,11 @@ export default class EstablishmentHoursService {
             spans_next_day: item.spans_next_day,
             sort_order: item.sort_order,
           })),
-          { client }
+          client
         )
       }
 
-      return EstablishmentRevisionHour.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .orderBy('weekday', 'asc')
-        .orderBy('sort_order', 'asc')
+      return this.hourRepository.listForRevision(tenantId, revision.id, client)
     })
 
     await this.auditService.log({
@@ -128,13 +122,10 @@ export default class EstablishmentHoursService {
         client
       )
 
-      await EstablishmentRevisionSpecialDay.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .delete()
+      await this.specialDayRepository.deleteForRevision(tenantId, revision.id, client)
 
       for (const item of normalized) {
-        const day = await EstablishmentRevisionSpecialDay.create(
+        const day = await this.specialDayRepository.create(
           {
             tenant_id: tenantId,
             revision_id: revision.id,
@@ -146,7 +137,7 @@ export default class EstablishmentHoursService {
         )
 
         if (item.intervals.length > 0) {
-          await EstablishmentRevisionSpecialHour.createMany(
+          await this.specialDayRepository.createIntervals(
             item.intervals.map((interval) => ({
               tenant_id: tenantId,
               special_day_id: day.id,
@@ -156,16 +147,12 @@ export default class EstablishmentHoursService {
               spans_next_day: interval.spans_next_day,
               sort_order: interval.sort_order,
             })),
-            { client }
+            client
           )
         }
       }
 
-      return EstablishmentRevisionSpecialDay.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .preload('intervals', (query) => query.orderBy('sort_order', 'asc'))
-        .orderBy('date', 'asc')
+      return this.specialDayRepository.listForRevision(tenantId, revision.id, client)
     })
 
     await this.auditService.log({

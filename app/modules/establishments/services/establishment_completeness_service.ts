@@ -4,7 +4,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import NotFoundException from '#exceptions/not_found_exception'
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
-import Establishment from '#modules/establishments/models/establishment'
+import type Establishment from '#modules/establishments/models/establishment'
 import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import {
@@ -14,8 +14,9 @@ import {
 } from '#modules/establishments/services/establishment_completeness_evaluator'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
-import City from '#modules/geography/models/city'
-import Organization from '#modules/organizations/models/organization'
+import CityRepository from '#modules/geography/repositories/city_repository'
+import type Organization from '#modules/organizations/models/organization'
+import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
 import type User from '#modules/users/models/user'
 
 @inject()
@@ -23,7 +24,9 @@ export default class EstablishmentCompletenessService {
   constructor(
     private accessService: EstablishmentAccessService,
     private revisionRepository: EstablishmentRevisionRepository,
-    private effectiveAttributesService: EffectiveCategoryAttributesService
+    private effectiveAttributesService: EffectiveCategoryAttributesService,
+    private organizationRepository: OrganizationRepository,
+    private cityRepository: CityRepository
   ) {}
 
   async check(
@@ -53,19 +56,14 @@ export default class EstablishmentCompletenessService {
       throw new NotFoundException('Establishment revision not found')
     }
 
-    const organizationQuery = client ? Organization.query({ client }) : Organization.query()
-    organizationQuery.where('tenant_id', tenantId).where('id', establishment.organization_id)
-    if (client) {
-      organizationQuery.forUpdate()
-    }
-    const organization = await organizationQuery.first()
-    const cityQuery = client ? City.query({ client }) : City.query()
+    const organization = await this.organizationRepository.findByIdForTenant(
+      tenantId,
+      establishment.organization_id,
+      client,
+      Boolean(client)
+    )
     const city = revision.city_id
-      ? await cityQuery
-          .where('tenant_id', tenantId)
-          .where('id', revision.city_id)
-          .where('is_active', true)
-          .first()
+      ? await this.cityRepository.findActiveByIdForTenant(tenantId, revision.city_id, client)
       : null
 
     const primaryCategory = revision.categories.find((category) => category.is_primary)
@@ -157,10 +155,7 @@ export default class EstablishmentCompletenessService {
 
     const activeCityIds = new Set<number>()
     if (cityIds.size > 0) {
-      const cities = await City.query()
-        .where('tenant_id', tenantId)
-        .whereIn('id', [...cityIds])
-        .where('is_active', true)
+      const cities = await this.cityRepository.listActiveByIdsForTenant(tenantId, [...cityIds])
       for (const city of cities) {
         activeCityIds.add(city.id)
       }

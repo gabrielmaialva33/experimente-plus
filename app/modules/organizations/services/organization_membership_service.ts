@@ -6,7 +6,7 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import OrganizationMember from '#modules/organizations/models/organization_member'
+import type OrganizationMember from '#modules/organizations/models/organization_member'
 import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
 import OrganizationAuditService from '#modules/organizations/services/organization_audit_service'
@@ -89,7 +89,7 @@ export default class OrganizationMembershipService {
     })
 
     const member = await this.getMemberOrFail(tenantId, organizationId, memberId)
-    await member.load('user')
+    await this.memberRepository.loadUser(member)
     await this.audit.log({
       actorId: actor.id,
       resource: IPermission.Resources.ORGANIZATION_MEMBERS,

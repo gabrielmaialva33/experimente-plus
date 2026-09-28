@@ -4,6 +4,19 @@ import type IMedia from '#modules/media/interfaces/media_interface'
 import EstablishmentRevisionMedia from '#modules/media/models/establishment_revision_media'
 import LucidRepository from '#shared/lucid/lucid_repository'
 
+export interface RevisionMediaCopySource {
+  media_asset_id: number
+  purpose: string
+  is_cover: boolean
+  sort_order: number
+  alt_text: string | null
+  caption: string | null
+  moderation_status: string
+  reviewed_by: number | null
+  reviewed_at: Date | string | null
+  review_notes: string | null
+}
+
 export default class EstablishmentRevisionMediaRepository extends LucidRepository<
   typeof EstablishmentRevisionMedia
 > {
@@ -141,6 +154,28 @@ export default class EstablishmentRevisionMediaRepository extends LucidRepositor
     }
 
     await query.update({ is_cover: false })
+  }
+
+  /** The media rows of a revision, as stored, in the order a clone copies them. */
+  async listRowsForCopy(
+    tenantId: number,
+    establishmentId: number,
+    revisionId: number,
+    client: TransactionClientContract
+  ): Promise<RevisionMediaCopySource[]> {
+    return client
+      .from('establishment_revision_media')
+      .where('tenant_id', tenantId)
+      .where('establishment_id', establishmentId)
+      .where('revision_id', revisionId)
+      .orderBy('sort_order', 'asc')
+  }
+
+  async insertRows(
+    rows: Record<string, unknown>[],
+    client: TransactionClientContract
+  ): Promise<void> {
+    await client.table('establishment_revision_media').insert(rows)
   }
 
   async listForModeration(query: IMedia.ModerationQuery) {

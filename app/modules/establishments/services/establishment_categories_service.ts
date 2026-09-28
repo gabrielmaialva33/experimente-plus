@@ -3,8 +3,8 @@ import db from '@adonisjs/lucid/services/db'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
-import EstablishmentRevisionAttributeValue from '#modules/establishments/models/establishment_revision_attribute_value'
-import EstablishmentRevisionCategory from '#modules/establishments/models/establishment_revision_category'
+import EstablishmentRevisionAttributeValueRepository from '#modules/establishments/repositories/establishment_revision_attribute_value_repository'
+import EstablishmentRevisionCategoryRepository from '#modules/establishments/repositories/establishment_revision_category_repository'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
@@ -15,7 +15,9 @@ export default class EstablishmentCategoriesService {
   constructor(
     private accessService: EstablishmentAccessService,
     private effectiveAttributesService: EffectiveCategoryAttributesService,
-    private auditService: EstablishmentAuditService
+    private auditService: EstablishmentAuditService,
+    private categoryRepository: EstablishmentRevisionCategoryRepository,
+    private attributeValueRepository: EstablishmentRevisionAttributeValueRepository
   ) {}
 
   async replace(
@@ -42,13 +44,10 @@ export default class EstablishmentCategoriesService {
         )
       }
 
-      await EstablishmentRevisionCategory.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .delete()
+      await this.categoryRepository.deleteForRevision(tenantId, revision.id, client)
 
       if (payload.length > 0) {
-        await EstablishmentRevisionCategory.createMany(
+        await this.categoryRepository.createManyForRevision(
           payload.map((item, index) => ({
             tenant_id: tenantId,
             revision_id: revision.id,
@@ -56,7 +55,7 @@ export default class EstablishmentCategoriesService {
             is_primary: item.is_primary ?? false,
             sort_order: item.sort_order ?? index,
           })),
-          { client }
+          client
         )
       }
 
@@ -65,20 +64,14 @@ export default class EstablishmentCategoriesService {
         ? await this.effectiveAttributesService.resolve(tenantId, primaryCategoryId, client)
         : []
       const effectiveDefinitionIds = effectiveDefinitions.map(({ definition }) => definition.id)
-      const staleValues = EstablishmentRevisionAttributeValue.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-      if (effectiveDefinitionIds.length > 0) {
-        staleValues.whereNotIn('attribute_definition_id', effectiveDefinitionIds)
-      }
-      await staleValues.delete()
+      await this.attributeValueRepository.deleteOutsideDefinitions(
+        tenantId,
+        revision.id,
+        effectiveDefinitionIds,
+        client
+      )
 
-      return EstablishmentRevisionCategory.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .preload('category')
-        .orderBy('is_primary', 'desc')
-        .orderBy('sort_order', 'asc')
+      return this.categoryRepository.listForRevision(tenantId, revision.id, client)
     })
 
     await this.auditService.log({

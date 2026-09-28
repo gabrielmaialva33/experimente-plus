@@ -1,5 +1,4 @@
 import { inject } from '@adonisjs/core'
-import db from '@adonisjs/lucid/services/db'
 import type { DateTime } from 'luxon'
 
 import NotFoundException from '#exceptions/not_found_exception'
@@ -13,17 +12,15 @@ import type {
   OrganizationReviewQueuePageProps,
 } from '#modules/organizations/interfaces/organization_review_pages'
 import type Organization from '#modules/organizations/models/organization'
-import OrganizationMember from '#modules/organizations/models/organization_member'
+import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
+import OrganizationReviewRepository from '#modules/organizations/repositories/organization_review_repository'
 import OrganizationClaimService from '#modules/organizations/services/organization_claim_service'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import OrganizationWorkflowService from '#modules/organizations/services/organization_workflow_service'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import PermissionService from '#modules/permissions/services/permission_service'
-import User from '#modules/users/models/user'
-
-/** The reason `OrganizationAuditService` writes on every completed domain operation. */
-const DOMAIN_AUDIT_REASON = 'Domain operation completed'
+import type User from '#modules/users/models/user'
 
 const permissionName = (resource: IPermission.Resources, action: IPermission.Actions) =>
   `${resource}.${action}`
@@ -53,7 +50,9 @@ export default class OrganizationReviewPageService {
     private claimService: OrganizationClaimService,
     private policy: OrganizationPolicyService,
     private organizationRepository: OrganizationRepository,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private reviewRepository: OrganizationReviewRepository,
+    private memberRepository: OrganizationMemberRepository
   ) {}
 
   async queue(
@@ -151,12 +150,10 @@ export default class OrganizationReviewPageService {
     const inReview = organization.status === 'pending_review'
     const people = await this.users([organization.created_by, organization.reviewed_by])
     const submitters = await this.submitters([organization.id])
-    const members = await OrganizationMember.query()
-      .where('tenant_id', tenantId)
-      .where('organization_id', organization.id)
-      .preload('user')
-      .orderBy('created_at', 'asc')
-      .orderBy('id', 'asc')
+    const members = await this.memberRepository.listByOrganizationInJoinOrder(
+      tenantId,
+      organization.id
+    )
 
     return {
       organization: {
@@ -210,14 +207,11 @@ export default class OrganizationReviewPageService {
     const counts = new Map<number, number>()
     if (organizationIds.length === 0) return counts
 
-    const rows = await db
-      .from('establishments')
-      .where('tenant_id', tenantId)
-      .whereIn('organization_id', organizationIds)
-      .groupBy('organization_id')
-      .select('organization_id')
-      .count('* as total')
-    for (const row of rows) counts.set(Number(row.organization_id), Number(row.total))
+    const rows = await this.reviewRepository.countEstablishmentsByOrganization(
+      tenantId,
+      organizationIds
+    )
+    for (const row of rows) counts.set(row.organization_id, row.total)
     return counts
   }
 
@@ -226,17 +220,7 @@ export default class OrganizationReviewPageService {
     const submitters = new Map<number, OrganizationReviewPerson>()
     if (organizationIds.length === 0) return submitters
 
-    const rows = await db
-      .from('audit_logs')
-      .join('users', 'users.id', 'audit_logs.user_id')
-      .where('audit_logs.resource', IPermission.Resources.ORGANIZATIONS)
-      .where('audit_logs.action', IPermission.Actions.SUBMIT)
-      .where('audit_logs.result', 'granted')
-      .where('audit_logs.reason', DOMAIN_AUDIT_REASON)
-      .whereIn('audit_logs.resource_id', organizationIds)
-      .orderBy('audit_logs.created_at', 'desc')
-      .orderBy('audit_logs.id', 'desc')
-      .select('audit_logs.resource_id', 'users.id', 'users.full_name', 'users.email')
+    const rows = await this.reviewRepository.listSubmissions(organizationIds)
     for (const row of rows) {
       const organizationId = Number(row.resource_id)
       if (submitters.has(organizationId)) continue
@@ -251,38 +235,18 @@ export default class OrganizationReviewPageService {
 
   private async users(ids: Array<number | null>) {
     const scoped = [...new Set(ids.filter((id): id is number => typeof id === 'number'))]
-    const users = scoped.length ? await User.query().whereIn('id', scoped) : []
+    const users = scoped.length ? await this.reviewRepository.listUsersByIds(scoped) : []
     return new Map(users.map((user) => [user.id, user]))
   }
 
   /** Every place of the organization with its latest version, published or not. */
   private async establishments(tenantId: number, organizationId: number) {
-    const result = await db.rawQuery<{
-      rows: Array<{
-        id: number
-        published_revision_id: number | null
-        public_name: string | null
-        revision_status: string | null
-        city_name: string | null
-      }>
-    }>(
-      `SELECT e.id, e.published_revision_id, r.public_name, r.status AS revision_status,
-              c.name AS city_name
-         FROM establishments e
-         LEFT JOIN LATERAL (
-           SELECT public_name, status, city_id
-             FROM establishment_revisions
-            WHERE establishment_id = e.id AND tenant_id = e.tenant_id
-            ORDER BY version DESC
-            LIMIT 1
-         ) r ON TRUE
-         LEFT JOIN cities c ON c.id = r.city_id AND c.tenant_id = e.tenant_id
-        WHERE e.tenant_id = ? AND e.organization_id = ?
-        ORDER BY e.created_at ASC, e.id ASC`,
-      [tenantId, organizationId]
+    const rows = await this.reviewRepository.listEstablishmentsWithLatestRevision(
+      tenantId,
+      organizationId
     )
 
-    return result.rows.map((row) => ({
+    return rows.map((row) => ({
       id: Number(row.id),
       public_name: row.public_name?.trim() || null,
       city_name: row.city_name,
@@ -297,24 +261,7 @@ export default class OrganizationReviewPageService {
    * services write. A decision carries its reason.
    */
   private async history(organizationId: number): Promise<OrganizationReviewHistoryEntry[]> {
-    const rows = await db
-      .from('audit_logs')
-      .leftJoin('users', 'users.id', 'audit_logs.user_id')
-      .where('audit_logs.resource', IPermission.Resources.ORGANIZATIONS)
-      .where('audit_logs.resource_id', organizationId)
-      .where('audit_logs.result', 'granted')
-      .where('audit_logs.reason', DOMAIN_AUDIT_REASON)
-      .orderBy('audit_logs.created_at', 'desc')
-      .orderBy('audit_logs.id', 'desc')
-      .limit(50)
-      .select(
-        'audit_logs.id',
-        'audit_logs.action',
-        'audit_logs.metadata',
-        'audit_logs.request_data',
-        'audit_logs.created_at',
-        'users.full_name'
-      )
+    const rows = await this.reviewRepository.listHistory(organizationId)
 
     return rows.map((row) => {
       const metadata = (row.metadata ?? {}) as Record<string, unknown>

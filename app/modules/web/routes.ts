@@ -12,7 +12,7 @@ import {
   signInThrottle,
   signUpThrottle,
 } from '#start/limiter'
-import { resolveAuthenticatedLandingPath } from '#modules/web/utils/authenticated_landing'
+import ResolveAuthenticatedLandingService from '#modules/web/services/resolve_authenticated_landing_service'
 
 const InertiaAuthController = () => import('#modules/web/controllers/auth_controller')
 const InertiaLegalController = () => import('#modules/web/controllers/legal_controller')
@@ -89,13 +89,12 @@ router.get('/app', [InertiaAppDownloadController, 'show']).as('app.download')
 router.get('/manual', [InertiaManualController, 'show']).as('manual')
 
 router
-  .get('/', async ({ auth, response, inertia }) => {
+  .get('/', async ({ auth, containerResolver, response, inertia }) => {
     try {
       const guard = auth.use('jwt')
       const user = await guard.authenticate()
-      return response.redirect(
-        await resolveAuthenticatedLandingPath(user, guard.tokenPayload?.tenantId)
-      )
+      const landing = await containerResolver.make(ResolveAuthenticatedLandingService)
+      return response.redirect(await landing.run(user, guard.tokenPayload?.tenantId))
     } catch {
       return inertia.render('home', {})
     }

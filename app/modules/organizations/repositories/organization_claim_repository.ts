@@ -37,6 +37,12 @@ export default class OrganizationClaimRepository {
     return query.first()
   }
 
+  /** Loads the claimed organization and the claimant, one after the other. */
+  async loadOrganizationAndClaimant(claim: OrganizationClaim): Promise<void> {
+    await claim.load('organization')
+    await claim.load('claimant')
+  }
+
   async findPendingByClaimant(
     tenantId: number,
     organizationId: number,

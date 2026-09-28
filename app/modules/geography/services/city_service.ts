@@ -3,7 +3,7 @@ import { inject } from '@adonisjs/core'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import IGeography from '#modules/geography/interfaces/geography_interface'
-import City from '#modules/geography/models/city'
+import type City from '#modules/geography/models/city'
 import CityRepository from '#modules/geography/repositories/city_repository'
 import RegionRepository from '#modules/geography/repositories/region_repository'
 import { normalizeSlug, resolveUniqueSlug } from '#shared/utils/slug'
@@ -110,7 +110,7 @@ export default class CityService {
     }
 
     await city.save()
-    await city.load('region')
+    await this.cityRepository.loadRegion(city)
     return city
   }
 
