@@ -1,8 +1,10 @@
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import { discoverableEstablishmentsForTenantSql } from '#modules/catalog/repositories/catalog_discoverability'
 import type IExplorer from '#modules/explorer/interfaces/explorer_interface'
 import ExplorerItinerary from '#modules/explorer/models/explorer_itinerary'
+import ExplorerItineraryItem from '#modules/explorer/models/explorer_itinerary_item'
 import {
   cardOf,
   ESTABLISHMENT_CARD_COLUMNS,
@@ -46,6 +48,38 @@ export default class ExplorerItineraryRepository {
       created_at: instant(row.created_at),
       updated_at: instant(row.updated_at),
     }))
+  }
+
+  async create(data: {
+    tenant_id: number
+    user_id: number
+    name: string
+    notes: string | null
+  }): Promise<ExplorerItinerary> {
+    return ExplorerItinerary.create(data)
+  }
+
+  async createStop(data: {
+    tenant_id: number
+    itinerary_id: number
+    establishment_id: number
+    position: number
+    note: string | null
+  }): Promise<ExplorerItineraryItem> {
+    return ExplorerItineraryItem.create(data)
+  }
+
+  /** Throws Lucid's row-not-found error when the stop is not in the itinerary. */
+  async findStopOrFail(
+    tenantId: number,
+    itineraryId: number,
+    stopId: number
+  ): Promise<ExplorerItineraryItem> {
+    return ExplorerItineraryItem.query()
+      .where('tenant_id', tenantId)
+      .where('itinerary_id', itineraryId)
+      .where('id', stopId)
+      .firstOrFail()
   }
 
   async findOwned(
@@ -138,21 +172,24 @@ export default class ExplorerItineraryRepository {
     return rows.map((row) => Number(row.id))
   }
 
-  /** Writes the order the person chose, as one transaction. */
-  async applyOrder(tenantId: number, itineraryId: number, stopIds: number[]): Promise<void> {
-    await db.transaction(async (client) => {
-      for (const [index, stopId] of stopIds.entries()) {
-        await client
-          .from('explorer_itinerary_items')
-          .where('tenant_id', tenantId)
-          .where('itinerary_id', itineraryId)
-          .where('id', stopId)
-          .update({ position: index, updated_at: new Date() })
-      }
-    })
+  /** Writes the order the person chose, inside the caller's transaction. */
+  async applyOrder(
+    tenantId: number,
+    itineraryId: number,
+    stopIds: number[],
+    client: TransactionClientContract
+  ): Promise<void> {
+    for (const [index, stopId] of stopIds.entries()) {
+      await client
+        .from('explorer_itinerary_items')
+        .where('tenant_id', tenantId)
+        .where('itinerary_id', itineraryId)
+        .where('id', stopId)
+        .update({ position: index, updated_at: new Date() })
+    }
   }
 
-  async purgeForUser(userId: number, client: any): Promise<void> {
+  async purgeForUser(userId: number, client: TransactionClientContract): Promise<void> {
     // Stops go with their itinerary through the schema's own cascade.
     await client.from('explorer_itineraries').where('user_id', userId).delete()
   }

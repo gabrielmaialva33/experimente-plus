@@ -1,11 +1,11 @@
 import { inject } from '@adonisjs/core'
+import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import CatalogService from '#modules/catalog/services/catalog_service'
 import IExplorer from '#modules/explorer/interfaces/explorer_interface'
-import ExplorerItinerary from '#modules/explorer/models/explorer_itinerary'
-import ExplorerItineraryItem from '#modules/explorer/models/explorer_itinerary_item'
 import ExplorerCatalogRepository from '#modules/explorer/repositories/explorer_catalog_repository'
 import ExplorerContentFavoriteRepository from '#modules/explorer/repositories/explorer_content_favorite_repository'
 import ExplorerInterestRepository from '#modules/explorer/repositories/explorer_interest_repository'
@@ -129,7 +129,10 @@ export default class ExplorerService {
       throw new NotFoundException('Category not found')
     }
 
-    await this.interests.replace(tenantId, userId, [...resolved.values()])
+    // One transaction: the set is replaced whole or not at all.
+    await db.transaction((client) =>
+      this.interests.replace(tenantId, userId, [...resolved.values()], client)
+    )
     return this.interests.list(tenantId, userId)
   }
 
@@ -148,7 +151,7 @@ export default class ExplorerService {
     userId: number,
     payload: IExplorer.ItineraryPayload
   ): Promise<IExplorer.ItineraryProjection> {
-    const itinerary = await ExplorerItinerary.create({
+    const itinerary = await this.itineraries.create({
       tenant_id: tenantId,
       user_id: userId,
       name: payload.name.trim(),
@@ -186,7 +189,7 @@ export default class ExplorerService {
     await this.requireOwnedItinerary(tenantId, userId, itineraryId)
     await this.requireDiscoverable(tenantId, payload.establishment_id)
 
-    await ExplorerItineraryItem.create({
+    await this.itineraries.createStop({
       tenant_id: tenantId,
       itinerary_id: itineraryId,
       establishment_id: payload.establishment_id,
@@ -207,11 +210,7 @@ export default class ExplorerService {
     const exists = await this.itineraries.stopExists(tenantId, itineraryId, stopId)
     if (!exists) throw new NotFoundException('Itinerary stop not found')
 
-    const stop = await ExplorerItineraryItem.query()
-      .where('tenant_id', tenantId)
-      .where('itinerary_id', itineraryId)
-      .where('id', stopId)
-      .firstOrFail()
+    const stop = await this.itineraries.findStopOrFail(tenantId, itineraryId, stopId)
     await stop.delete()
 
     return this.showItinerary(tenantId, userId, itineraryId)
@@ -243,7 +242,9 @@ export default class ExplorerService {
       throw new BadRequestException('A nova ordem precisa conter exatamente as paradas do roteiro')
     }
 
-    await this.itineraries.applyOrder(tenantId, itineraryId, given)
+    await db.transaction((client) =>
+      this.itineraries.applyOrder(tenantId, itineraryId, given, client)
+    )
     return this.showItinerary(tenantId, userId, itineraryId)
   }
 
@@ -254,7 +255,7 @@ export default class ExplorerService {
    * and a deletion that tombstoned the user and then failed halfway through the
    * preferences would leave exactly the data the person asked to be rid of.
    */
-  async purgeForUser(userId: number, client: any): Promise<void> {
+  async purgeForUser(userId: number, client: TransactionClientContract): Promise<void> {
     await this.saved.purgeForUser(userId, client)
     await this.contentFavorites.purgeForUser(userId, client)
     await this.interests.purgeForUser(userId, client)

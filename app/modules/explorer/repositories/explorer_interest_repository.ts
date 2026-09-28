@@ -1,4 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import type IExplorer from '#modules/explorer/interfaces/explorer_interface'
 import { instant } from '#modules/explorer/repositories/explorer_cards'
@@ -85,41 +86,44 @@ export default class ExplorerInterestRepository {
   }
 
   /**
-   * Replaces the whole set in one transaction.
+   * Replaces the whole set, inside the caller's transaction.
    *
    * A category that was deactivated after the person chose it stays chosen: the
    * preference was theirs and the deactivation is the operation's, so dropping
    * it here would quietly rewrite someone's profile because of an unrelated
    * administrative act. It is simply not offered again.
    */
-  async replace(tenantId: number, userId: number, categoryIds: number[]): Promise<void> {
-    await db.transaction(async (client) => {
-      await client
-        .from('explorer_interests')
-        .where('tenant_id', tenantId)
-        .where('user_id', userId)
-        .whereNotIn('category_id', categoryIds.length > 0 ? categoryIds : [-1])
-        .delete()
+  async replace(
+    tenantId: number,
+    userId: number,
+    categoryIds: number[],
+    client: TransactionClientContract
+  ): Promise<void> {
+    await client
+      .from('explorer_interests')
+      .where('tenant_id', tenantId)
+      .where('user_id', userId)
+      .whereNotIn('category_id', categoryIds.length > 0 ? categoryIds : [-1])
+      .delete()
 
-      if (categoryIds.length === 0) return
+    if (categoryIds.length === 0) return
 
-      const values = categoryIds.map((categoryId) => ({
-        tenant_id: tenantId,
-        user_id: userId,
-        category_id: categoryId,
-        created_at: new Date(),
-        updated_at: new Date(),
-      }))
+    const values = categoryIds.map((categoryId) => ({
+      tenant_id: tenantId,
+      user_id: userId,
+      category_id: categoryId,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }))
 
-      await client
-        .table('explorer_interests')
-        .multiInsert(values)
-        .onConflict(['tenant_id', 'user_id', 'category_id'])
-        .ignore()
-    })
+    await client
+      .table('explorer_interests')
+      .multiInsert(values)
+      .onConflict(['tenant_id', 'user_id', 'category_id'])
+      .ignore()
   }
 
-  async purgeForUser(userId: number, client: any): Promise<void> {
+  async purgeForUser(userId: number, client: TransactionClientContract): Promise<void> {
     await client.from('explorer_interests').where('user_id', userId).delete()
   }
 }
