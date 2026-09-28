@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import type OrganizationMember from '#modules/organizations/models/organization_member'
 import type OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
+import type PlatformAccessRepository from '#modules/organizations/repositories/platform_access_repository'
 import OrganizationPolicyService, {
   canManageOrganizationMember,
   grantableOrganizationRoles,
@@ -114,7 +115,8 @@ class PolicyWithPlatformAccess extends OrganizationPolicyService {
     repository: OrganizationMemberRepository,
     private platformAccess: PlatformAccess | null
   ) {
-    super(repository)
+    // The override below answers the platform role; its repository is never read.
+    super(repository, {} as PlatformAccessRepository)
   }
 
   override async resolvePlatformAccess(_actor: User): Promise<PlatformAccess | null> {

@@ -26,6 +26,19 @@ export default class OrganizationMemberRepository {
       .orderBy('id', 'asc')
   }
 
+  /** Every member of the organization, whatever the status, in the order they joined. */
+  async listByOrganizationInJoinOrder(
+    tenantId: number,
+    organizationId: number
+  ): Promise<OrganizationMember[]> {
+    return OrganizationMember.query()
+      .where('tenant_id', tenantId)
+      .where('organization_id', organizationId)
+      .preload('user')
+      .orderBy('created_at', 'asc')
+      .orderBy('id', 'asc')
+  }
+
   async findActiveByUser(
     tenantId: number,
     organizationId: number,
@@ -76,6 +89,10 @@ export default class OrganizationMemberRepository {
     }
 
     return query.first()
+  }
+
+  async loadUser(member: OrganizationMember): Promise<void> {
+    await member.load('user')
   }
 
   async lockAllForOrganization(

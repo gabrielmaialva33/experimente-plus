@@ -5,8 +5,9 @@ import ForbiddenException from '#exceptions/forbidden_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
 import { ORGANIZATION_ROLES } from '#modules/organizations/interfaces/organization_interface'
-import OrganizationMember from '#modules/organizations/models/organization_member'
+import type OrganizationMember from '#modules/organizations/models/organization_member'
 import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
+import PlatformAccessRepository from '#modules/organizations/repositories/platform_access_repository'
 import IRole from '#modules/roles/interfaces/role_interface'
 import type User from '#modules/users/models/user'
 
@@ -164,7 +165,10 @@ export function organizationActorAccessSnapshot(
 
 @inject()
 export default class OrganizationPolicyService {
-  constructor(private memberRepository: OrganizationMemberRepository) {}
+  constructor(
+    private memberRepository: OrganizationMemberRepository,
+    private platformAccessRepository: PlatformAccessRepository
+  ) {}
 
   async isPlatformStaff(actor: User): Promise<boolean> {
     return (await this.resolvePlatformAccess(actor)) !== null
@@ -175,12 +179,9 @@ export default class OrganizationPolicyService {
   }
 
   async resolvePlatformAccess(actor: User): Promise<PlatformAccess | null> {
-    const roles = await actor
-      .related('roles')
-      .query()
-      .whereIn('roles.slug', PLATFORM_STAFF_ROLES)
-      .select('roles.slug')
-    const slugs = new Set(roles.map((role) => role.slug))
+    const slugs = new Set(
+      await this.platformAccessRepository.listRoleSlugs(actor, PLATFORM_STAFF_ROLES)
+    )
 
     if (slugs.has(IRole.Slugs.ROOT) || slugs.has(IRole.Slugs.ADMIN)) {
       return 'platform_admin'

@@ -5,8 +5,8 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import Organization from '#modules/organizations/models/organization'
-import OrganizationClaim from '#modules/organizations/models/organization_claim'
+import type Organization from '#modules/organizations/models/organization'
+import type OrganizationClaim from '#modules/organizations/models/organization_claim'
 import OrganizationClaimRepository from '#modules/organizations/repositories/organization_claim_repository'
 import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
 import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
@@ -227,8 +227,7 @@ export default class OrganizationClaimService {
     if (!claim) {
       throw new NotFoundException('Organization claim not found')
     }
-    await claim.load('organization')
-    await claim.load('claimant')
+    await this.claimRepository.loadOrganizationAndClaimant(claim)
     return claim
   }
 
