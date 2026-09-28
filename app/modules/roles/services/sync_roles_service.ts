@@ -7,7 +7,7 @@ import NotFoundException from '#exceptions/not_found_exception'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import FreshPlatformPermissionService from '#modules/permissions/services/fresh_platform_permission_service'
-import Role from '#modules/roles/models/role'
+import RolesRepository from '#modules/roles/repositories/roles_repository'
 import { POSTGRES_ROLE_INTEGER_MAX, ROLE_ASSIGNMENT_MAX_ITEMS } from '#modules/roles/role_limits'
 import UsersRepository from '#modules/users/repositories/users_repository'
 import UserAdministrationPolicyService from '#modules/users/services/user_administration_policy_service'
@@ -29,7 +29,8 @@ export default class SyncRolesService {
     private usersRepository: UsersRepository,
     private permissionCacheService: PermissionCacheService,
     private userAdministrationPolicyService: UserAdministrationPolicyService,
-    private freshPlatformPermissionService: FreshPlatformPermissionService
+    private freshPlatformPermissionService: FreshPlatformPermissionService,
+    private rolesRepository: RolesRepository
   ) {}
 
   async run(input: AttachRolesRequest): Promise<void> {
@@ -50,25 +51,14 @@ export default class SyncRolesService {
         throw new NotFoundException('User not found')
       }
 
-      const assignments = await client
-        .from('user_roles')
-        .whereIn(
-          'user_id',
-          [...new Set([input.actorUserId, input.userId])].sort((a, b) => a - b)
-        )
-        .orderBy('user_id', 'asc')
-        .orderBy('role_id', 'asc')
-        .select('user_id', 'role_id')
+      const assignments = await this.usersRepository.listRoleAssignments(
+        [...new Set([input.actorUserId, input.userId])].sort((a, b) => a - b),
+        client
+      )
       const lockedRoleIds = [
-        ...new Set([
-          ...input.roleIds,
-          ...assignments.map((assignment) => Number(assignment.role_id)),
-        ]),
+        ...new Set([...input.roleIds, ...assignments.map((assignment) => assignment.roleId)]),
       ].sort((a, b) => a - b)
-      const roles = await Role.query({ client })
-        .whereIn('id', lockedRoleIds)
-        .orderBy('id', 'asc')
-        .forUpdate()
+      const roles = await this.rolesRepository.lockByIds(lockedRoleIds, client)
       const roleById = new Map(roles.map((role) => [role.id, role]))
       const assignedRoles = input.roleIds.map((roleId) => roleById.get(roleId))
 
@@ -77,8 +67,8 @@ export default class SyncRolesService {
       }
 
       const actorRoles = assignments
-        .filter((assignment) => Number(assignment.user_id) === input.actorUserId)
-        .map((assignment) => roleById.get(Number(assignment.role_id))?.slug ?? '')
+        .filter((assignment) => assignment.userId === input.actorUserId)
+        .map((assignment) => roleById.get(assignment.roleId)?.slug ?? '')
 
       await this.userAdministrationPolicyService.assertCanAssignRoles(
         input.actorUserId,
@@ -96,7 +86,7 @@ export default class SyncRolesService {
         client
       )
 
-      await user.related('roles').sync(input.roleIds, false, client)
+      await this.usersRepository.attachRoles(user, input.roleIds, client)
     })
 
     await this.permissionCacheService.bumpEpochAfterCommittedMutation()

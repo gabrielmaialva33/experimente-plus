@@ -1,5 +1,5 @@
 import LucidRepository from '#shared/lucid/lucid_repository'
-import IRole from '#modules/roles/interfaces/role_interface'
+import type IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
 import { type TransactionClientContract } from '@adonisjs/lucid/types/database'
 
@@ -9,12 +9,6 @@ export default class RolesRepository
 {
   constructor() {
     super(Role)
-  }
-
-  isAdmin(roles: Role[]): boolean {
-    const { ROOT, ADMIN } = IRole.Slugs
-
-    return roles.some((role) => [ROOT, ADMIN].includes(role.slug))
   }
 
   /**
@@ -63,6 +57,11 @@ export default class RolesRepository
     trx?: TransactionClientContract
   ): Promise<void> {
     await role.related('permissions').detach(permissionIds, trx)
+  }
+
+  /** Lock the given role rows in primary-key order. */
+  async lockByIds(roleIds: number[], client: TransactionClientContract): Promise<Role[]> {
+    return this.model.query({ client }).whereIn('id', roleIds).orderBy('id', 'asc').forUpdate()
   }
 
   /** Lock one role row, reading only its id. */

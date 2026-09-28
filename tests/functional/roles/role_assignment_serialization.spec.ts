@@ -50,7 +50,8 @@ function createService(usersRepository: UsersRepository): SyncRolesService {
       new ActiveRootGuardService(usersRepository, new RolesRepository()),
       usersRepository
     ),
-    freshPermission
+    freshPermission,
+    new RolesRepository()
   )
 }
 

@@ -2,7 +2,7 @@ import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 
 import UsersRepository from '#modules/users/repositories/users_repository'
-import RolesRepository from '#modules/roles/repositories/roles_repository'
+import IRole from '#modules/roles/interfaces/role_interface'
 
 import JwtAuthTokensService from '#modules/auth/services/jwt_auth_tokens_service'
 import AuthEventService from '#modules/auth/services/auth_event_service'
@@ -19,7 +19,6 @@ type SignInRequest = {
 export default class AdminSignInService {
   constructor(
     private usersRepository: UsersRepository,
-    private rolesRepository: RolesRepository,
     private jwtAuthTokensService: JwtAuthTokensService
   ) {}
 
@@ -36,7 +35,7 @@ export default class AdminSignInService {
 
       await user.load('roles')
 
-      const isAdmin = this.rolesRepository.isAdmin(user.roles)
+      const isAdmin = IRole.includesAdministrator(user.roles.map((role) => role.slug))
 
       if (!isAdmin) {
         // Emit login failed event for non-admin attempting admin login

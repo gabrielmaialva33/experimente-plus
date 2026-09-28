@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 
 import type FreshPlatformPermissionService from '#modules/permissions/services/fresh_platform_permission_service'
 import type PermissionCacheService from '#modules/permissions/services/permission_cache_service'
+import type RolesRepository from '#modules/roles/repositories/roles_repository'
 import SyncRolesService from '#modules/roles/services/sync_roles_service'
 import type UsersRepository from '#modules/users/repositories/users_repository'
 import type UserAdministrationPolicyService from '#modules/users/services/user_administration_policy_service'
@@ -11,7 +12,8 @@ function serviceWithoutDatabase(): SyncRolesService {
     {} as UsersRepository,
     {} as PermissionCacheService,
     {} as UserAdministrationPolicyService,
-    {} as FreshPlatformPermissionService
+    {} as FreshPlatformPermissionService,
+    {} as RolesRepository
   )
 }
 

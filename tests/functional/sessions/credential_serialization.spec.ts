@@ -83,7 +83,7 @@ function createServices() {
       credentialInvalidationService
     ),
     signIn: new SignInService(usersRepository, jwtTokens),
-    adminSignIn: new AdminSignInService(usersRepository, new RolesRepository(), jwtTokens),
+    adminSignIn: new AdminSignInService(usersRepository, jwtTokens),
     deleteOwnAccount: new DeleteOwnAccountService(
       usersRepository,
       credentialInvalidationService,
