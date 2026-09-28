@@ -1,3 +1,5 @@
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
 import Category from '#modules/taxonomy/models/category'
 import CategoryAttributeDefinition from '#modules/taxonomy/models/category_attribute_definition'
 import CategoryAttributeOption from '#modules/taxonomy/models/category_attribute_option'
@@ -83,6 +85,38 @@ export default class CategoryRepository {
     category.$setRelated('attribute_definitions', definitions)
 
     return category
+  }
+
+  async findActiveByIdForTenant(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract
+  ): Promise<Category | null> {
+    return Category.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .where('is_active', true)
+      .first()
+  }
+
+  async findActiveChild(
+    tenantId: number,
+    parentId: number,
+    client?: TransactionClientContract
+  ): Promise<Category | null> {
+    return Category.query({ client })
+      .where('tenant_id', tenantId)
+      .where('parent_id', parentId)
+      .where('is_active', true)
+      .first()
+  }
+
+  /** Every active category of the operation, by id, to resolve lineages in memory. */
+  async listActiveById(tenantId: number, client?: TransactionClientContract): Promise<Category[]> {
+    return Category.query({ client })
+      .where('tenant_id', tenantId)
+      .where('is_active', true)
+      .orderBy('id', 'asc')
   }
 
   async isSlugTaken(tenantId: number, slug: string, excludeId?: number): Promise<boolean> {

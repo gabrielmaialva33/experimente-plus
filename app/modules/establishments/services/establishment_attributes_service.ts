@@ -3,9 +3,8 @@ import db from '@adonisjs/lucid/services/db'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
-import EstablishmentRevisionAttributeValue from '#modules/establishments/models/establishment_revision_attribute_value'
-import EstablishmentRevisionAttributeValueOption from '#modules/establishments/models/establishment_revision_attribute_value_option'
-import EstablishmentRevisionCategory from '#modules/establishments/models/establishment_revision_category'
+import EstablishmentRevisionAttributeValueRepository from '#modules/establishments/repositories/establishment_revision_attribute_value_repository'
+import EstablishmentRevisionCategoryRepository from '#modules/establishments/repositories/establishment_revision_category_repository'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
@@ -17,7 +16,9 @@ export default class EstablishmentAttributesService {
   constructor(
     private accessService: EstablishmentAccessService,
     private effectiveAttributesService: EffectiveCategoryAttributesService,
-    private auditService: EstablishmentAuditService
+    private auditService: EstablishmentAuditService,
+    private categoryRepository: EstablishmentRevisionCategoryRepository,
+    private attributeValueRepository: EstablishmentRevisionAttributeValueRepository
   ) {}
 
   async effective(tenantId: number, categoryId: number) {
@@ -43,11 +44,11 @@ export default class EstablishmentAttributesService {
         actor,
         client
       )
-      const primaryCategory = await EstablishmentRevisionCategory.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .where('is_primary', true)
-        .first()
+      const primaryCategory = await this.categoryRepository.findPrimaryForRevision(
+        tenantId,
+        revision.id,
+        client
+      )
 
       if (!primaryCategory && payload.length > 0) {
         throw new BadRequestException('A primary category is required before setting attributes')
@@ -64,10 +65,7 @@ export default class EstablishmentAttributesService {
         effective.map(({ definition }) => [definition.id, definition] as const)
       )
 
-      await EstablishmentRevisionAttributeValue.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .delete()
+      await this.attributeValueRepository.deleteForRevision(tenantId, revision.id, client)
 
       for (const item of payload) {
         const definition = effectiveById.get(item.attribute_definition_id)
@@ -80,7 +78,7 @@ export default class EstablishmentAttributesService {
         const normalized = this.normalizeValue(definition, item)
         if (!normalized) continue
 
-        const value = await EstablishmentRevisionAttributeValue.create(
+        const value = await this.attributeValueRepository.create(
           {
             tenant_id: tenantId,
             revision_id: revision.id,
@@ -95,24 +93,19 @@ export default class EstablishmentAttributesService {
         )
 
         if (normalized.option_ids.length > 0) {
-          await EstablishmentRevisionAttributeValueOption.createMany(
+          await this.attributeValueRepository.createSelectedOptions(
             normalized.option_ids.map((optionId) => ({
               tenant_id: tenantId,
               attribute_value_id: value.id,
               attribute_definition_id: definition.id,
               attribute_option_id: optionId,
             })),
-            { client }
+            client
           )
         }
       }
 
-      return EstablishmentRevisionAttributeValue.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .preload('definition')
-        .preload('selected_options', (query) => query.preload('option'))
-        .orderBy('attribute_definition_id', 'asc')
+      return this.attributeValueRepository.listForRevision(tenantId, revision.id, client)
     })
 
     await this.auditService.log({

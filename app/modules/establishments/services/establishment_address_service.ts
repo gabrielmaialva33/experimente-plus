@@ -4,7 +4,8 @@ import { DateTime } from 'luxon'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import type IEstablishment from '#modules/establishments/interfaces/establishment_interface'
-import EstablishmentRevisionAddress from '#modules/establishments/models/establishment_revision_address'
+import type EstablishmentRevisionAddress from '#modules/establishments/models/establishment_revision_address'
+import EstablishmentRevisionAddressRepository from '#modules/establishments/repositories/establishment_revision_address_repository'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
 import type User from '#modules/users/models/user'
@@ -13,7 +14,8 @@ import type User from '#modules/users/models/user'
 export default class EstablishmentAddressService {
   constructor(
     private accessService: EstablishmentAccessService,
-    private auditService: EstablishmentAuditService
+    private auditService: EstablishmentAuditService,
+    private addressRepository: EstablishmentRevisionAddressRepository
   ) {}
 
   async replace(
@@ -30,11 +32,11 @@ export default class EstablishmentAddressService {
         client
       )
 
-      const existing = await EstablishmentRevisionAddress.query({ client })
-        .where('tenant_id', tenantId)
-        .where('revision_id', revision.id)
-        .forUpdate()
-        .first()
+      const existing = await this.addressRepository.findLockedForRevision(
+        tenantId,
+        revision.id,
+        client
+      )
       const hasLatitude = typeof payload.latitude === 'number'
       const hasLongitude = typeof payload.longitude === 'number'
       if (hasLatitude !== hasLongitude) {
@@ -65,7 +67,7 @@ export default class EstablishmentAddressService {
         return existing
       }
 
-      return EstablishmentRevisionAddress.create(values, { client })
+      return this.addressRepository.create(values, { client })
     })
 
     await this.auditService.log({

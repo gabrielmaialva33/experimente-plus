@@ -1,3 +1,5 @@
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
 import City from '#modules/geography/models/city'
 
 export default class CityRepository {
@@ -34,6 +36,25 @@ export default class CityRepository {
 
   async findByIdForTenant(tenantId: number, id: number): Promise<City | null> {
     return City.query().where('tenant_id', tenantId).where('id', id).preload('region').first()
+  }
+
+  async findActiveByIdForTenant(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract
+  ): Promise<City | null> {
+    return City.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .where('is_active', true)
+      .first()
+  }
+
+  async listActiveByIdsForTenant(tenantId: number, ids: readonly number[]): Promise<City[]> {
+    return City.query()
+      .where('tenant_id', tenantId)
+      .whereIn('id', [...ids])
+      .where('is_active', true)
   }
 
   async findBySlugForTenant(tenantId: number, slug: string): Promise<City | null> {

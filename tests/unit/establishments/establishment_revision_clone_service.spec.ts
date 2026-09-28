@@ -1,24 +1,10 @@
 import { test } from '@japa/runner'
 
-import EstablishmentRevisionCloneService from '#modules/establishments/services/establishment_revision_clone_service'
+import EstablishmentRevisionAttributeValueRepository from '#modules/establishments/repositories/establishment_revision_attribute_value_repository'
+import EstablishmentRevisionSpecialDayRepository from '#modules/establishments/repositories/establishment_revision_special_day_repository'
 
 type Row = Record<string, unknown>
 type Operation = { kind: 'read' | 'insert'; table: string; rows?: Row[] }
-
-type CloneBatchMethods = {
-  copyAttributeValues(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: never
-  ): Promise<void>
-  copySpecialDays(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: never
-  ): Promise<void>
-}
 
 class FakeReadQuery implements PromiseLike<Row[]> {
   constructor(private readonly rows: Row[]) {}
@@ -107,7 +93,10 @@ class FakeClient {
   }
 }
 
-const cloneService = Object.create(EstablishmentRevisionCloneService.prototype) as CloneBatchMethods
+// The revision clone copies each section through its repository; these are the
+// two batches whose statement count must not grow with the size of the section.
+const attributeValues = new EstablishmentRevisionAttributeValueRepository()
+const specialDays = new EstablishmentRevisionSpecialDayRepository()
 
 test.group('Establishment revision clone batches', () => {
   test('copies attribute values and options with a constant operation count', async ({
@@ -116,8 +105,8 @@ test.group('Establishment revision clone batches', () => {
     const small = attributeClient(1)
     const large = attributeClient(25)
 
-    await cloneService.copyAttributeValues(1, 2, 7, small as never)
-    await cloneService.copyAttributeValues(1, 2, 7, large as never)
+    await attributeValues.copyToRevision(1, 2, 7, small as never)
+    await attributeValues.copyToRevision(1, 2, 7, large as never)
 
     const operationShape = (client: FakeClient) =>
       client.operations.map(({ kind, table }) => `${kind}:${table}`)
@@ -146,9 +135,9 @@ test.group('Establishment revision clone batches', () => {
     const large = specialDayClient(20)
     const annualMaximum = specialDayClient(366, 24)
 
-    await cloneService.copySpecialDays(1, 2, 7, small as never)
-    await cloneService.copySpecialDays(1, 2, 7, large as never)
-    await cloneService.copySpecialDays(1, 2, 7, annualMaximum as never)
+    await specialDays.copyToRevision(1, 2, 7, small as never)
+    await specialDays.copyToRevision(1, 2, 7, large as never)
+    await specialDays.copyToRevision(1, 2, 7, annualMaximum as never)
 
     const operationShape = (client: FakeClient) =>
       client.operations.map(({ kind, table }) => `${kind}:${table}`)

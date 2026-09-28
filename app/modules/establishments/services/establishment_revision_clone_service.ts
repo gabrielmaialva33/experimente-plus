@@ -1,20 +1,23 @@
 import { inject } from '@adonisjs/core'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IEstablishmentReview from '#modules/establishments/interfaces/establishment_review_interface'
-import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
+import EstablishmentRevisionAddressRepository from '#modules/establishments/repositories/establishment_revision_address_repository'
+import EstablishmentRevisionAttributeValueRepository from '#modules/establishments/repositories/establishment_revision_attribute_value_repository'
+import EstablishmentRevisionCategoryRepository from '#modules/establishments/repositories/establishment_revision_category_repository'
+import EstablishmentRevisionHourRepository from '#modules/establishments/repositories/establishment_revision_hour_repository'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
+import EstablishmentRevisionSpecialDayRepository from '#modules/establishments/repositories/establishment_revision_special_day_repository'
 import EstablishmentAccessService from '#modules/establishments/services/establishment_access_service'
 import EstablishmentAuditService from '#modules/establishments/services/establishment_audit_service'
 import EstablishmentRevisionEventService from '#modules/establishments/services/establishment_revision_event_service'
-import Organization from '#modules/organizations/models/organization'
+import EstablishmentRevisionMediaRepository from '#modules/media/repositories/establishment_revision_media_repository'
+import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
 import type User from '#modules/users/models/user'
-
-// Each special-hour row binds 9 values. A 1,000-row chunk uses at most 9,000 of
-// PostgreSQL's 65,535 bind parameters, leaving a conservative safety margin.
-const SPECIAL_HOUR_INSERT_CHUNK_SIZE = 1_000
 
 @inject()
 export default class EstablishmentRevisionCloneService {
@@ -22,7 +25,14 @@ export default class EstablishmentRevisionCloneService {
     private accessService: EstablishmentAccessService,
     private revisionRepository: EstablishmentRevisionRepository,
     private eventService: EstablishmentRevisionEventService,
-    private auditService: EstablishmentAuditService
+    private auditService: EstablishmentAuditService,
+    private organizationRepository: OrganizationRepository,
+    private addressRepository: EstablishmentRevisionAddressRepository,
+    private categoryRepository: EstablishmentRevisionCategoryRepository,
+    private attributeValueRepository: EstablishmentRevisionAttributeValueRepository,
+    private hourRepository: EstablishmentRevisionHourRepository,
+    private specialDayRepository: EstablishmentRevisionSpecialDayRepository,
+    private mediaRepository: EstablishmentRevisionMediaRepository
   ) {}
 
   async create(
@@ -43,11 +53,12 @@ export default class EstablishmentRevisionCloneService {
         throw new BadRequestException('Archived establishments cannot receive new revisions')
       }
 
-      const organization = await Organization.query({ client })
-        .where('tenant_id', tenantId)
-        .where('id', establishment.organization_id)
-        .forUpdate()
-        .first()
+      const organization = await this.organizationRepository.findByIdForTenant(
+        tenantId,
+        establishment.organization_id,
+        client,
+        true
+      )
       if (!organization) {
         throw new NotFoundException('Organization not found')
       }
@@ -76,7 +87,7 @@ export default class EstablishmentRevisionCloneService {
         client
       )
       const version = await this.revisionRepository.nextVersion(establishmentId, client)
-      const revision = await EstablishmentRevision.create(
+      const revision = await this.revisionRepository.create(
         {
           tenant_id: tenantId,
           establishment_id: establishmentId,
@@ -105,11 +116,11 @@ export default class EstablishmentRevisionCloneService {
         { client }
       )
 
-      await this.copyAddress(source.id, revision.id, tenantId, client)
-      await this.copyCategories(source.id, revision.id, tenantId, client)
-      await this.copyAttributeValues(source.id, revision.id, tenantId, client)
-      await this.copyHours(source.id, revision.id, tenantId, client)
-      await this.copySpecialDays(source.id, revision.id, tenantId, client)
+      await this.addressRepository.copyToRevision(source.id, revision.id, tenantId, client)
+      await this.categoryRepository.copyToRevision(source.id, revision.id, tenantId, client)
+      await this.attributeValueRepository.copyToRevision(source.id, revision.id, tenantId, client)
+      await this.hourRepository.copyToRevision(source.id, revision.id, tenantId, client)
+      await this.specialDayRepository.copyToRevision(source.id, revision.id, tenantId, client)
       await this.copyMedia(source.id, revision.id, tenantId, establishmentId, actor.id, client)
 
       await this.eventService.record(
@@ -157,7 +168,7 @@ export default class EstablishmentRevisionCloneService {
     establishmentId: number,
     publishedRevisionId: number | null,
     sourceMode: NonNullable<IEstablishmentReview.CreateRevisionPayload['source']>,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
+    client: TransactionClientContract
   ): Promise<EstablishmentRevision> {
     if (publishedRevisionId && sourceMode !== 'published') {
       throw new BadRequestException(
@@ -185,254 +196,16 @@ export default class EstablishmentRevisionCloneService {
       return published
     }
 
-    const terminal = await EstablishmentRevision.query({ client })
-      .where('tenant_id', tenantId)
-      .where('establishment_id', establishmentId)
-      .where('status', 'rejected')
-      .orderBy('version', 'desc')
-      .forUpdate()
-      .first()
+    const terminal = await this.revisionRepository.findLatestRejectedLocked(
+      tenantId,
+      establishmentId,
+      client
+    )
 
     if (!terminal) {
       throw new NotFoundException('No rejected revision is available to clone')
     }
     return terminal
-  }
-
-  private async copyAddress(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
-  ): Promise<void> {
-    const source = await client
-      .from('establishment_revision_addresses')
-      .where('tenant_id', tenantId)
-      .where('revision_id', sourceRevisionId)
-      .first()
-    if (!source) return
-
-    await client.table('establishment_revision_addresses').insert({
-      tenant_id: tenantId,
-      revision_id: targetRevisionId,
-      postal_code: source.postal_code,
-      street: source.street,
-      number: source.number,
-      without_number: source.without_number,
-      complement: source.complement,
-      district: source.district,
-      reference: source.reference,
-      latitude: source.latitude,
-      longitude: source.longitude,
-      coordinate_source: source.coordinate_source,
-      geocoded_at: source.geocoded_at,
-      created_at: new Date(),
-      updated_at: new Date(),
-    })
-  }
-
-  private async copyCategories(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
-  ): Promise<void> {
-    const rows = await client
-      .from('establishment_revision_categories')
-      .where('tenant_id', tenantId)
-      .where('revision_id', sourceRevisionId)
-      .orderBy('sort_order', 'asc')
-
-    if (rows.length === 0) return
-    await client.table('establishment_revision_categories').insert(
-      rows.map((row) => ({
-        tenant_id: tenantId,
-        revision_id: targetRevisionId,
-        category_id: row.category_id,
-        is_primary: row.is_primary,
-        sort_order: row.sort_order,
-        created_at: new Date(),
-        updated_at: new Date(),
-      }))
-    )
-  }
-
-  private async copyAttributeValues(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
-  ): Promise<void> {
-    const values = await client
-      .from('establishment_revision_attribute_values')
-      .where('tenant_id', tenantId)
-      .where('revision_id', sourceRevisionId)
-      .orderBy('id', 'asc')
-
-    if (values.length === 0) return
-
-    const options = await client
-      .from('establishment_revision_attribute_value_options')
-      .where('tenant_id', tenantId)
-      .whereIn(
-        'attribute_value_id',
-        values.map((value) => value.id)
-      )
-      .orderBy('id', 'asc')
-    const now = new Date()
-    const createdValues = await client
-      .table('establishment_revision_attribute_values')
-      .insert(
-        values.map((value) => ({
-          tenant_id: tenantId,
-          revision_id: targetRevisionId,
-          attribute_definition_id: value.attribute_definition_id,
-          value_text: value.value_text,
-          value_boolean: value.value_boolean,
-          value_integer: value.value_integer,
-          value_decimal: value.value_decimal,
-          value_url: value.value_url,
-          created_at: now,
-          updated_at: now,
-        }))
-      )
-      .returning(['id', 'attribute_definition_id'])
-
-    if (options.length === 0) return
-
-    const targetValueIdsByDefinition = new Map(
-      createdValues.map((value) => [Number(value.attribute_definition_id), Number(value.id)])
-    )
-    const copiedOptions = options.map((option) => {
-      const targetValueId = targetValueIdsByDefinition.get(Number(option.attribute_definition_id))
-      if (!targetValueId) {
-        throw new BadRequestException('Attribute option source is inconsistent')
-      }
-
-      return {
-        tenant_id: tenantId,
-        attribute_value_id: targetValueId,
-        attribute_definition_id: option.attribute_definition_id,
-        attribute_option_id: option.attribute_option_id,
-        created_at: now,
-      }
-    })
-
-    // The domain caps a revision at 5,000 selected options: 25,000 bind values here.
-    await client.table('establishment_revision_attribute_value_options').insert(copiedOptions)
-  }
-
-  private async copyHours(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
-  ): Promise<void> {
-    const rows = await client
-      .from('establishment_revision_hours')
-      .where('tenant_id', tenantId)
-      .where('revision_id', sourceRevisionId)
-      .orderBy('weekday', 'asc')
-      .orderBy('sort_order', 'asc')
-
-    if (rows.length === 0) return
-    await client.table('establishment_revision_hours').insert(
-      rows.map((row) => ({
-        tenant_id: tenantId,
-        revision_id: targetRevisionId,
-        weekday: row.weekday,
-        opens_at: row.opens_at,
-        closes_at: row.closes_at,
-        spans_next_day: row.spans_next_day,
-        sort_order: row.sort_order,
-        created_at: new Date(),
-        updated_at: new Date(),
-      }))
-    )
-  }
-
-  private async copySpecialDays(
-    sourceRevisionId: number,
-    targetRevisionId: number,
-    tenantId: number,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
-  ): Promise<void> {
-    const days = await client
-      .from('establishment_revision_special_days')
-      .where('tenant_id', tenantId)
-      .where('revision_id', sourceRevisionId)
-      .orderBy('date', 'asc')
-
-    if (days.length === 0) return
-
-    const intervals = await client
-      .from('establishment_revision_special_hours')
-      .where('tenant_id', tenantId)
-      .where('revision_id', sourceRevisionId)
-      .whereIn(
-        'special_day_id',
-        days.map((day) => day.id)
-      )
-      .orderBy('special_day_id', 'asc')
-      .orderBy('sort_order', 'asc')
-    const now = new Date()
-    const createdDays = await client
-      .table('establishment_revision_special_days')
-      .insert(
-        days.map((day) => ({
-          tenant_id: tenantId,
-          revision_id: targetRevisionId,
-          date: day.date,
-          status: day.status,
-          note: day.note,
-          created_at: now,
-          updated_at: now,
-        }))
-      )
-      .returning(['id', 'date'])
-
-    if (intervals.length === 0) return
-
-    const sourceDatesById = new Map(
-      days.map((day) => [Number(day.id), this.normalizedDateKey(day.date)])
-    )
-    const targetDayIdsByDate = new Map(
-      createdDays.map((day) => [this.normalizedDateKey(day.date), Number(day.id)])
-    )
-    const copiedIntervals = intervals.map((interval) => {
-      const sourceDate = sourceDatesById.get(Number(interval.special_day_id))
-      const targetDayId = sourceDate ? targetDayIdsByDate.get(sourceDate) : undefined
-      if (!targetDayId) {
-        throw new BadRequestException('Special-hour source is inconsistent')
-      }
-
-      return {
-        tenant_id: tenantId,
-        special_day_id: targetDayId,
-        revision_id: targetRevisionId,
-        opens_at: interval.opens_at,
-        closes_at: interval.closes_at,
-        spans_next_day: interval.spans_next_day,
-        sort_order: interval.sort_order,
-        created_at: now,
-        updated_at: now,
-      }
-    })
-
-    for (
-      let offset = 0;
-      offset < copiedIntervals.length;
-      offset += SPECIAL_HOUR_INSERT_CHUNK_SIZE
-    ) {
-      await client
-        .table('establishment_revision_special_hours')
-        .insert(copiedIntervals.slice(offset, offset + SPECIAL_HOUR_INSERT_CHUNK_SIZE))
-    }
-  }
-
-  private normalizedDateKey(value: unknown): string {
-    if (value instanceof Date) return value.toISOString().slice(0, 10)
-    return String(value).slice(0, 10)
   }
 
   private async copyMedia(
@@ -441,17 +214,17 @@ export default class EstablishmentRevisionCloneService {
     tenantId: number,
     establishmentId: number,
     actorId: number,
-    client: Parameters<EstablishmentRevisionRepository['findLocked']>[2]
+    client: TransactionClientContract
   ): Promise<void> {
-    const rows = await client
-      .from('establishment_revision_media')
-      .where('tenant_id', tenantId)
-      .where('establishment_id', establishmentId)
-      .where('revision_id', sourceRevisionId)
-      .orderBy('sort_order', 'asc')
+    const rows = await this.mediaRepository.listRowsForCopy(
+      tenantId,
+      establishmentId,
+      sourceRevisionId,
+      client
+    )
 
     if (rows.length === 0) return
-    await client.table('establishment_revision_media').insert(
+    await this.mediaRepository.insertRows(
       rows.map((row) => {
         const approved = row.moderation_status === 'approved'
         return {
@@ -472,7 +245,8 @@ export default class EstablishmentRevisionCloneService {
           created_at: new Date(),
           updated_at: new Date(),
         }
-      })
+      }),
+      client
     )
   }
 }
