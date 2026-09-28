@@ -4,6 +4,9 @@ import { DateTime } from 'luxon'
 import EstablishmentEvent from '#modules/partner_content/models/establishment_event'
 import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
 import EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
+import PartnerContentMedia from '#modules/partner_content/models/partner_content_media'
+import PartnerContentPolicy from '#modules/partner_content/models/partner_content_policy'
+import PartnerContentMediaRepository from '#modules/partner_content/repositories/partner_content_media_repository'
 
 /**
  * Partner content rows (ADR-0028). Drafts by default; `published` takes the
@@ -115,5 +118,99 @@ export const EstablishmentShowcaseItemFactory = factory
       description: item.description,
       informational_price_cents: item.informational_price_cents,
     }
+  })
+  .build()
+
+/**
+ * An image of a piece of partner content, pending moderation. It belongs to
+ * an experience by default; merge `experience_id: null` with `event_id` or
+ * `showcase_item_id` to attach it elsewhere (the table takes exactly one
+ * target, of the same establishment as the asset). Without an explicit
+ * `sort_order` it goes after the target's other images, as
+ * `PartnerContentMediaService` appends.
+ */
+export const PartnerContentMediaFactory = factory
+  .define(PartnerContentMedia, () => ({
+    tenant_id: 1,
+    establishment_id: 1,
+    experience_id: 1,
+    event_id: null,
+    showcase_item_id: null,
+    media_asset_id: 1,
+    is_cover: false,
+    alt_text: 'Ilustração original de uma experiência fictícia',
+    caption: null,
+    moderation_status: 'pending' as const,
+    created_by: 1,
+    reviewed_by: null,
+    reviewed_at: null,
+    review_notes: null,
+  }))
+  .state('cover', (media) => {
+    media.is_cover = true
+  })
+  .state('approved', (media) => {
+    media.moderation_status = 'approved'
+    media.reviewed_by ??= media.created_by
+    media.reviewed_at = DateTime.utc()
+  })
+  .state('rejected', (media) => {
+    media.moderation_status = 'rejected'
+    media.is_cover = false
+    media.reviewed_by ??= media.created_by
+    media.reviewed_at = DateTime.utc()
+    media.review_notes = 'A imagem não corresponde ao conteúdo publicado.'
+  })
+  .state('quarantined', (media) => {
+    media.moderation_status = 'quarantined'
+    media.is_cover = false
+    media.reviewed_by ??= media.created_by
+    media.reviewed_at = DateTime.utc()
+    media.review_notes = 'Imagem retida pelo cenário de teste.'
+  })
+  .before('create', async (_builder, media, { $trx }) => {
+    if (media.sort_order !== undefined) return
+    const [kind, contentId] =
+      media.experience_id !== null
+        ? (['experience', media.experience_id] as const)
+        : media.event_id !== null
+          ? (['event', media.event_id] as const)
+          : (['showcase_item', media.showcase_item_id!] as const)
+    media.sort_order = await new PartnerContentMediaRepository().nextSortOrder(
+      kind,
+      media.tenant_id,
+      contentId,
+      $trx!
+    )
+  })
+  .build()
+
+/**
+ * The partner-content rules of an operation, one row per tenant. The
+ * defaults live in the table (ADR-0028), so the factory inserts only what a
+ * state sets and reads the row back, as `PartnerContentPolicyRepository`
+ * does.
+ */
+export const PartnerContentPolicyFactory = factory
+  .define(PartnerContentPolicy, () => ({
+    tenant_id: 1,
+  }))
+  .state('approvalRequired', (policy) => {
+    policy.require_experience_approval = true
+    policy.require_event_approval = true
+    policy.require_showcase_item_approval = true
+  })
+  .state('noApproval', (policy) => {
+    policy.require_experience_approval = false
+    policy.require_event_approval = false
+    policy.require_showcase_item_approval = false
+  })
+  .state('eventNotice', (policy) => {
+    // A day ahead: an event starting sooner is refused.
+    policy.min_event_notice_minutes = 24 * 60
+  })
+  .after('create', async (_builder, policy, { $trx }) => {
+    if ($trx) policy.useTransaction($trx)
+    await policy.refresh()
   })
   .build()
