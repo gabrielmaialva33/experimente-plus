@@ -50,6 +50,16 @@ export default class PartnerContentRepository {
     return MODELS[kind]
   }
 
+  async create(
+    kind: IPartnerContent.ContentKind,
+    attributes: Record<string, unknown>,
+    client: TransactionClientContract
+  ): Promise<IPartnerContent.ContentRow> {
+    return this.model(kind).create(attributes as never, {
+      client,
+    }) as Promise<IPartnerContent.ContentRow>
+  }
+
   async findById(
     kind: IPartnerContent.ContentKind,
     tenantId: number,

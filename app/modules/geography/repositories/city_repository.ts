@@ -57,6 +57,14 @@ export default class CityRepository {
       .where('is_active', true)
   }
 
+  /** Only id, name, state and timezone: what a form needs to label a place's city. */
+  async listSummariesByIdsForTenant(tenantId: number, ids: readonly number[]): Promise<City[]> {
+    return City.query()
+      .where('tenant_id', tenantId)
+      .whereIn('id', [...ids])
+      .select(['id', 'name', 'state_code', 'timezone'])
+  }
+
   async findBySlugForTenant(tenantId: number, slug: string): Promise<City | null> {
     return City.query().where('tenant_id', tenantId).where('slug', slug).preload('region').first()
   }
