@@ -80,8 +80,8 @@ export default class DeleteOwnAccountService {
       await user.save()
 
       await this.credentialInvalidationService.run(userId, client, now)
-      await client.from('user_roles').where('user_id', userId).delete()
-      await client.from('user_permissions').where('user_id', userId).delete()
+      await this.usersRepository.detachAllRoles(userId, client)
+      await this.usersRepository.detachAllPermissions(userId, client)
       // The user row stays as a tombstone because published content still points
       // at it. Favourites, follows, interests and itineraries are preferences,
       // not content, so they go entirely — ADR-0030. A schema cascade from

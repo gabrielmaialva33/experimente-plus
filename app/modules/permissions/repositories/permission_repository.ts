@@ -1,3 +1,4 @@
+import db from '@adonisjs/lucid/services/db'
 import LucidRepository from '#shared/lucid/lucid_repository'
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import Permission from '#modules/permissions/models/permission'
@@ -220,5 +221,50 @@ export default class PermissionRepository
         query.whereIn('slug', slugs)
       })
       .distinct()
+  }
+
+  /**
+   * The user's granted, unexpired direct permissions with their pivot data,
+   * ordered by resource then action.
+   */
+  async listGrantedDirectForUser(userId: number) {
+    return db
+      .from('user_permissions')
+      .join('permissions', 'user_permissions.permission_id', 'permissions.id')
+      .where('user_permissions.user_id', userId)
+      .where('user_permissions.granted', true)
+      .where(function (query) {
+        query.whereNull('user_permissions.expires_at')
+        query.orWhere('user_permissions.expires_at', '>', new Date())
+      })
+      .select(
+        'permissions.id',
+        'permissions.name',
+        'permissions.resource',
+        'permissions.action',
+        'permissions.description',
+        'user_permissions.expires_at',
+        'user_permissions.granted'
+      )
+      .orderBy('permissions.resource')
+      .orderBy('permissions.action')
+  }
+
+  /** Permissions the user holds through their roles, ordered by resource then action. */
+  async listThroughRolesForUser(userId: number) {
+    return db
+      .from('user_roles')
+      .join('role_permissions', 'user_roles.role_id', 'role_permissions.role_id')
+      .join('permissions', 'role_permissions.permission_id', 'permissions.id')
+      .where('user_roles.user_id', userId)
+      .select(
+        'permissions.id',
+        'permissions.name',
+        'permissions.resource',
+        'permissions.action',
+        'permissions.description'
+      )
+      .orderBy('permissions.resource')
+      .orderBy('permissions.action')
   }
 }

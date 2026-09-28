@@ -9,6 +9,7 @@ import FreshPlatformPermissionService from '#modules/permissions/services/fresh_
 import PermissionCacheService from '#modules/permissions/services/permission_cache_service'
 import IRole from '#modules/roles/interfaces/role_interface'
 import Role from '#modules/roles/models/role'
+import RolesRepository from '#modules/roles/repositories/roles_repository'
 import SyncRolesService from '#modules/roles/services/sync_roles_service'
 import User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
@@ -45,7 +46,10 @@ function createService(usersRepository: UsersRepository): SyncRolesService {
   return new SyncRolesService(
     usersRepository,
     new PermissionCacheService(usersRepository),
-    new UserAdministrationPolicyService(new ActiveRootGuardService()),
+    new UserAdministrationPolicyService(
+      new ActiveRootGuardService(usersRepository, new RolesRepository()),
+      usersRepository
+    ),
     freshPermission
   )
 }

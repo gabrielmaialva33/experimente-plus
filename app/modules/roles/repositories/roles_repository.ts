@@ -64,4 +64,9 @@ export default class RolesRepository
   ): Promise<void> {
     await role.related('permissions').detach(permissionIds, trx)
   }
+
+  /** Lock one role row, reading only its id. */
+  async lockRowById(roleId: number, client: TransactionClientContract): Promise<void> {
+    await client.from('roles').where('id', roleId).select('id').forUpdate().first()
+  }
 }

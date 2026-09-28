@@ -6,6 +6,7 @@ import db from '@adonisjs/lucid/services/db'
 import { errors } from '@vinejs/vine'
 
 import RolesRepository from '#modules/roles/repositories/roles_repository'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import CreateTenantService from '#modules/tenants/services/create_tenant_service'
 import CreateUserService from '#modules/users/services/create_user_service'
 import UsersRepository from '#modules/users/repositories/users_repository'
@@ -49,7 +50,8 @@ async function createServiceAtInsertBarrier(barrier: Barrier): Promise<CreateUse
   return new CreateUserService(
     new BarrierUsersRepository(barrier),
     await app.container.make(RolesRepository),
-    await app.container.make(CreateTenantService)
+    await app.container.make(CreateTenantService),
+    await app.container.make(TenantRepository)
   )
 }
 

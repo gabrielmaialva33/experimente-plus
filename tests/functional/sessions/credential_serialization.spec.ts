@@ -70,7 +70,7 @@ function createServices() {
     async assertCanUpdate() {},
     async assertCanDelete() {},
   } as unknown as UserAdministrationPolicyService
-  const activeRootGuardService = new ActiveRootGuardService()
+  const activeRootGuardService = new ActiveRootGuardService(usersRepository, new RolesRepository())
 
   return {
     usersRepository,
@@ -425,7 +425,10 @@ test.group('Credential mutation serialization', () => {
     await actorAccount.user.related('roles').attach([adminRole.id])
     await targetAccount.user.related('roles').attach([userRole.id])
 
-    const policy = new UserAdministrationPolicyService(new ActiveRootGuardService())
+    const policy = new UserAdministrationPolicyService(
+      new ActiveRootGuardService(services.usersRepository, new RolesRepository()),
+      services.usersRepository
+    )
     const editUser = new EditUserService(
       services.usersRepository,
       services.credentialInvalidationService,
@@ -509,7 +512,10 @@ test.group('Credential mutation serialization', () => {
       await actorAccount.user.related('roles').attach([adminRole.id])
       await targetAccount.user.related('roles').attach([targetRole.id])
 
-      const policy = new UserAdministrationPolicyService(new ActiveRootGuardService())
+      const policy = new UserAdministrationPolicyService(
+        new ActiveRootGuardService(services.usersRepository, new RolesRepository()),
+        services.usersRepository
+      )
       const editUser = new EditUserService(
         services.usersRepository,
         services.credentialInvalidationService,

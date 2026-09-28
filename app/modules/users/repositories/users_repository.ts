@@ -162,4 +162,207 @@ export default class UsersRepository
 
     return user?.id ?? null
   }
+
+  async findActiveById(userId: number, client?: TransactionClientContract): Promise<User | null> {
+    return this.model.query({ client }).where('id', userId).where('is_deleted', false).first()
+  }
+
+  /**
+   * Lock the active user row, failing with Lucid's row-not-found error when it
+   * does not exist.
+   */
+  async lockByIdOrFail(userId: number, client: TransactionClientContract): Promise<User> {
+    return this.model.query({ client }).where('id', userId).forUpdate().firstOrFail()
+  }
+
+  /** The active user, only while they belong to the operation. */
+  async findMemberOfTenant(
+    userId: number,
+    tenantId: number,
+    client?: TransactionClientContract
+  ): Promise<User | null> {
+    return this.model
+      .query({ client })
+      .where('id', userId)
+      .whereHas('tenants', (query) => query.where('tenants.id', tenantId))
+      .first()
+  }
+
+  /** The active user with this (already lowercased) email, only while they belong to the operation. */
+  async findMemberOfTenantByEmail(
+    email: string,
+    tenantId: number,
+    client?: TransactionClientContract
+  ): Promise<User | null> {
+    return this.model
+      .query({ client })
+      .whereRaw('LOWER(email) = ?', [email])
+      .whereHas('tenants', (query) => query.where('tenants.id', tenantId))
+      .first()
+  }
+
+  /** Load the user's roles by name, with the pivot timestamps as `$extras`. */
+  async loadRolesOrderedByName(user: User): Promise<void> {
+    await user.load('roles', (query) => {
+      query.select('id', 'name', 'description', 'slug', 'created_at', 'updated_at')
+      query.orderBy('name')
+    })
+  }
+
+  /**
+   * Advance the credential generation unless it reached the ceiling. Returns
+   * whether the row advanced; the generation is never wrapped around.
+   */
+  async advanceCredentialVersion(
+    userId: number,
+    ceiling: number,
+    client: TransactionClientContract
+  ): Promise<boolean> {
+    const advanced = await client.rawQuery<{ rows: Array<{ credential_version: number }> }>(
+      `UPDATE users
+       SET credential_version = credential_version + 1
+       WHERE id = ? AND credential_version < ?
+       RETURNING credential_version`,
+      [userId, ceiling]
+    )
+
+    return advanced.rows.length === 1
+  }
+
+  /**
+   * Lock the given user rows in primary-key order, soft-deleted ones included,
+   * and read their stored password hashes.
+   */
+  async lockPasswordHashesByIds(
+    userIds: number[],
+    client: TransactionClientContract
+  ): Promise<Array<{ id: number; password: string }>> {
+    return client
+      .from('users')
+      .whereIn('id', userIds)
+      .orderBy('id', 'asc')
+      .forUpdate()
+      .select('id', 'password')
+  }
+
+  /** Role assignments of the given users, by user and then role id. */
+  async listRoleAssignments(
+    userIds: number[],
+    client: TransactionClientContract
+  ): Promise<Array<{ userId: number; roleId: number }>> {
+    const rows = await client
+      .from('user_roles')
+      .whereIn('user_id', userIds)
+      .orderBy('user_id', 'asc')
+      .orderBy('role_id', 'asc')
+      .select('user_id', 'role_id')
+
+    return rows.map((row) => ({
+      userId: Number(row.user_id),
+      roleId: Number(row.role_id),
+    }))
+  }
+
+  /** Role slugs held by the given users, by user and then by role id or slug. */
+  async listRoleSlugs(
+    userIds: number[],
+    client: TransactionClientContract,
+    roleOrder: 'id' | 'slug'
+  ): Promise<Array<{ userId: number; slug: string }>> {
+    const rows = await client
+      .from('user_roles')
+      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
+      .whereIn('user_roles.user_id', userIds)
+      .orderBy('user_roles.user_id', 'asc')
+      .orderBy(roleOrder === 'id' ? 'roles.id' : 'roles.slug', 'asc')
+      .select('user_roles.user_id', 'roles.slug')
+
+    return rows.map((row) => ({
+      userId: Number(row.user_id),
+      slug: String(row.slug),
+    }))
+  }
+
+  /** Id of the role with this slug when the user holds it. */
+  async findAssignedRoleId(
+    userId: number,
+    slug: string,
+    client: TransactionClientContract
+  ): Promise<number | null> {
+    const role = await client
+      .from('user_roles')
+      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
+      .where('user_roles.user_id', userId)
+      .where('roles.slug', slug)
+      .select('roles.id')
+      .first()
+
+    return role ? Number(role.id) : null
+  }
+
+  /** Number of distinct active users holding the role with this slug. */
+  async countActiveWithRole(slug: string, client: TransactionClientContract): Promise<number> {
+    const row = await client
+      .from('users')
+      .innerJoin('user_roles', 'user_roles.user_id', 'users.id')
+      .innerJoin('roles', 'roles.id', 'user_roles.role_id')
+      .where('users.is_deleted', false)
+      .where('roles.slug', slug)
+      .countDistinct('users.id as total')
+      .first()
+
+    return Number(row?.total ?? 0)
+  }
+
+  /** Insert role assignments for a user that holds none of them yet (plain pivot insert). */
+  async insertRoleAssignments(
+    user: User,
+    roleIds: number[],
+    client: TransactionClientContract
+  ): Promise<void> {
+    await user.related('roles').attach(roleIds, client)
+  }
+
+  /** Attach roles without detaching the ones the user already holds. */
+  async attachRoles(
+    user: User,
+    roleIds: number[],
+    client: TransactionClientContract
+  ): Promise<void> {
+    await user.related('roles').sync(roleIds, false, client)
+  }
+
+  /** Replace the user's direct permissions with the given pivot map. */
+  async syncPermissions(
+    user: User,
+    permissions: IUser.PermissionPivotMap,
+    client: TransactionClientContract
+  ): Promise<void> {
+    await user.related('permissions').sync(permissions, undefined, client)
+  }
+
+  /** Attach or update direct permissions without detaching the others. */
+  async attachPermissions(
+    user: User,
+    permissions: IUser.PermissionPivotMap,
+    client: TransactionClientContract
+  ): Promise<void> {
+    await user.related('permissions').sync(permissions, false, client)
+  }
+
+  async detachPermissions(
+    user: User,
+    permissionIds: number[],
+    client: TransactionClientContract
+  ): Promise<void> {
+    await user.related('permissions').detach(permissionIds, client)
+  }
+
+  async detachAllRoles(userId: number, client: TransactionClientContract): Promise<void> {
+    await client.from('user_roles').where('user_id', userId).delete()
+  }
+
+  async detachAllPermissions(userId: number, client: TransactionClientContract): Promise<void> {
+    await client.from('user_permissions').where('user_id', userId).delete()
+  }
 }

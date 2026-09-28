@@ -20,10 +20,7 @@ export default class GetUserRolesService {
       )
     }
 
-    await user.load('roles', (query) => {
-      query.select('id', 'name', 'description', 'slug', 'created_at', 'updated_at')
-      query.orderBy('name')
-    })
+    await this.usersRepository.loadRolesOrderedByName(user)
 
     const roles = user.roles.map((role) => ({
       id: role.id,
