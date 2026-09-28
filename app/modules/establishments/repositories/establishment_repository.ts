@@ -99,6 +99,23 @@ export default class EstablishmentRepository extends LucidRepository<typeof Esta
     return establishment
   }
 
+  /**
+   * A place the public media route may answer for: active, not permanently
+   * closed and with an approved published revision. Looked up by id alone,
+   * since the route carries no operation.
+   */
+  async findPublishedById(id: number): Promise<Establishment | null> {
+    return Establishment.query()
+      .where('id', id)
+      .where('lifecycle_status', 'active')
+      .whereNot('business_status', 'permanently_closed')
+      .whereNotNull('published_revision_id')
+      .whereHas('published_revision', (revisionQuery) => {
+        revisionQuery.where('status', 'approved')
+      })
+      .first()
+  }
+
   async findByIdForTenant(tenantId: number, id: number): Promise<Establishment | null> {
     return Establishment.query().where('tenant_id', tenantId).where('id', id).first()
   }
