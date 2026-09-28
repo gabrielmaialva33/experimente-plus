@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 
 import { refreshTokenFromRawBody } from '#modules/auth/utils/refresh_token_input'
+import ListUserTenantsService from '#modules/tenants/services/list_user_tenants_service'
 import TenantSessionService from '#modules/tenants/services/tenant_session_service'
 import {
   createTenantValidator,
@@ -10,19 +11,13 @@ import {
 
 @inject()
 export default class TenantsController {
-  constructor(private tenantSessionService: TenantSessionService) {}
+  constructor(
+    private tenantSessionService: TenantSessionService,
+    private listUserTenantsService: ListUserTenantsService
+  ) {}
 
   async me({ auth, response }: HttpContext) {
-    const user = auth.getUserOrFail()
-    const tenants = await user.related('tenants').query().orderBy('tenants.id', 'asc')
-
-    const data = tenants.map((tenant) => ({
-      id: tenant.id,
-      name: tenant.name,
-      slug: tenant.slug,
-      is_active: tenant.is_active,
-      role: tenant.$extras.pivot_role as string,
-    }))
+    const data = await this.listUserTenantsService.run(auth.getUserOrFail())
 
     return response.ok({ data })
   }

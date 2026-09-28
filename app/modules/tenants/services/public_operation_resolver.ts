@@ -1,17 +1,20 @@
+import { inject } from '@adonisjs/core'
+
 import env from '#start/env'
 import NotFoundException from '#exceptions/not_found_exception'
-import Tenant from '#modules/tenants/models/tenant'
+import type Tenant from '#modules/tenants/models/tenant'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 
+@inject()
 export default class PublicOperationResolver {
+  constructor(private tenantRepository: TenantRepository) {}
+
   async resolve(hostname?: string | null): Promise<Tenant> {
     const configuredSlug = env.get('PUBLIC_TENANT_SLUG')?.trim().toLowerCase()
     const resolvedSlug = this.resolveHostnameSlug(hostname) ?? configuredSlug
 
     if (resolvedSlug) {
-      const tenant = await Tenant.query()
-        .where('slug', resolvedSlug)
-        .where('is_active', true)
-        .first()
+      const tenant = await this.tenantRepository.findActiveBySlug(resolvedSlug)
 
       if (!tenant) {
         throw new NotFoundException('Public operation not found')
@@ -20,7 +23,7 @@ export default class PublicOperationResolver {
       return tenant
     }
 
-    const tenants = await Tenant.query().where('is_active', true).orderBy('id', 'asc').limit(2)
+    const tenants = await this.tenantRepository.listFirstActive(2)
 
     if (tenants.length !== 1) {
       throw new NotFoundException('Public operation could not be resolved')

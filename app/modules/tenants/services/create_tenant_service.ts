@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { inject } from '@adonisjs/core'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
-import Tenant from '#modules/tenants/models/tenant'
+import type Tenant from '#modules/tenants/models/tenant'
 import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 
 export type CreateTenantPayload = {
@@ -30,7 +30,7 @@ export default class CreateTenantService {
       client ? { client } : undefined
     )
 
-    await tenant.related('users').attach({ [userId]: { role: 'owner' } }, client)
+    await this.tenantRepository.attachMember(tenant, userId, 'owner', client)
 
     return tenant
   }
@@ -40,7 +40,7 @@ export default class CreateTenantService {
     client?: TransactionClientContract
   ): Promise<string> {
     const base = this.slugify(value) || 'workspace'
-    const existing = await Tenant.query({ client }).where('slug', base).first()
+    const existing = await this.tenantRepository.findBy('slug', base, { client })
 
     if (!existing) {
       return base
@@ -48,7 +48,7 @@ export default class CreateTenantService {
 
     for (let attempt = 0; attempt < 5; attempt++) {
       const candidate = `${base}-${randomUUID().slice(0, 8)}`
-      const collision = await Tenant.query({ client }).where('slug', candidate).first()
+      const collision = await this.tenantRepository.findBy('slug', candidate, { client })
       if (!collision) {
         return candidate
       }
