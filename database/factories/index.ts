@@ -1,3 +1,8 @@
+export {
+  AnalyticsDailyMetricFactory,
+  AnalyticsDailySearchTermFactory,
+  AnalyticsEventFactory,
+} from '#database/factories/analytics_factory'
 export { AuditLogFactory } from '#database/factories/audit_factory'
 export { PasswordResetTokenFactory, RefreshTokenFactory } from '#database/factories/auth_factory'
 export {
@@ -6,6 +11,7 @@ export {
   BenefitOfferFactory,
   BenefitRedemptionFactory,
 } from '#database/factories/benefit_factory'
+export { ConciergePolicyFactory } from '#database/factories/concierge_factory'
 export {
   EstablishmentFactory,
   EstablishmentRevisionAddressFactory,
@@ -19,6 +25,13 @@ export {
   EstablishmentRevisionSpecialDayFactory,
   EstablishmentRevisionSpecialHourFactory,
 } from '#database/factories/establishment_factory'
+export {
+  ExplorerFavoriteFactory,
+  ExplorerFollowFactory,
+  ExplorerInterestFactory,
+  ExplorerItineraryFactory,
+  ExplorerItineraryItemFactory,
+} from '#database/factories/explorer_factory'
 export { CityFactory, RegionFactory } from '#database/factories/geography_factory'
 export {
   EstablishmentRevisionMediaFactory,
@@ -40,6 +53,7 @@ export {
   PartnerContentPolicyFactory,
 } from '#database/factories/partner_content_factory'
 export { PermissionFactory } from '#database/factories/permission_factory'
+export { PilotFeedbackFactory } from '#database/factories/pilot_feedback_factory'
 export {
   AutomaticModerationPolicyFactory,
   ContentReportFactory,
