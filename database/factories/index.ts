@@ -21,7 +21,9 @@ export {
   StoredFileFactory,
 } from '#database/factories/media_factory'
 export {
+  OrganizationClaimFactory,
   OrganizationFactory,
+  OrganizationInvitationFactory,
   OrganizationMemberFactory,
 } from '#database/factories/organization_factory'
 export {
