@@ -1,3 +1,5 @@
+export { AuditLogFactory } from '#database/factories/audit_factory'
+export { PasswordResetTokenFactory, RefreshTokenFactory } from '#database/factories/auth_factory'
 export {
   BenefitAccessFactory,
   BenefitEditionFactory,
@@ -27,10 +29,12 @@ export {
   EstablishmentExperienceFactory,
   EstablishmentShowcaseItemFactory,
 } from '#database/factories/partner_content_factory'
+export { PermissionFactory } from '#database/factories/permission_factory'
 export {
   EstablishmentReviewFactory,
   EstablishmentReviewReplyFactory,
 } from '#database/factories/review_factory'
+export { RoleFactory } from '#database/factories/role_factory'
 export {
   CategoryAttributeDefinitionFactory,
   CategoryAttributeOptionFactory,
