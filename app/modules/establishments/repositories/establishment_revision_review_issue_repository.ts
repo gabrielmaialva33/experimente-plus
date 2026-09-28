@@ -51,6 +51,21 @@ export default class EstablishmentRevisionReviewIssueRepository extends LucidRep
       .orderBy('id', 'asc')
   }
 
+  /** Open issues, most severe first, in the order the moderator raised them. */
+  async listOpenBySeverity(
+    tenantId: number,
+    establishmentId: number,
+    revisionId: number
+  ): Promise<EstablishmentRevisionReviewIssue[]> {
+    return EstablishmentRevisionReviewIssue.query()
+      .where('tenant_id', tenantId)
+      .where('establishment_id', establishmentId)
+      .where('revision_id', revisionId)
+      .whereNull('resolved_at')
+      .orderBy('severity', 'asc')
+      .orderBy('id', 'asc')
+  }
+
   async countOpenBlocking(
     tenantId: number,
     establishmentId: number,

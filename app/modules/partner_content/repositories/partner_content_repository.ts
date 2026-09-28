@@ -139,6 +139,38 @@ export default class PartnerContentRepository {
   }
 
   /**
+   * Items of every kind on these establishments, counted by lifecycle status:
+   * one row per kind and status found.
+   */
+  async countByStatusForEstablishments(
+    tenantId: number,
+    establishmentIds: readonly number[],
+    statuses: readonly IPartnerContent.ContentStatus[]
+  ): Promise<Array<{ status: string; total: number }>> {
+    const counts: Array<{ status: string; total: number }> = []
+
+    // Sequential on purpose: one query per table, never concurrent on a client.
+    for (const table of [
+      'establishment_experiences',
+      'establishment_events',
+      'establishment_showcase_items',
+    ]) {
+      const rows = await db
+        .from(table)
+        .where('tenant_id', tenantId)
+        .whereIn('establishment_id', [...establishmentIds])
+        .whereIn('status', [...statuses])
+        .groupBy('status')
+        .select('status')
+        .count('* as total')
+      for (const row of rows) {
+        counts.push({ status: String(row.status), total: Number(row.total) })
+      }
+    }
+    return counts
+  }
+
+  /**
    * Public reading.
    *
    * What the public sees is the approved snapshot, never the live columns. That

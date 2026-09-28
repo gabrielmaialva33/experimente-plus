@@ -38,6 +38,15 @@ export default class CategoryRepository {
     return categories
   }
 
+  /** Active categories in display order, without relations, for form choices. */
+  async listActiveForTenant(tenantId: number): Promise<Category[]> {
+    return Category.query()
+      .where('tenant_id', tenantId)
+      .where('is_active', true)
+      .orderBy('sort_order', 'asc')
+      .orderBy('name', 'asc')
+  }
+
   async findRecordByIdForTenant(tenantId: number, id: number): Promise<Category | null> {
     return Category.query().where('tenant_id', tenantId).where('id', id).first()
   }

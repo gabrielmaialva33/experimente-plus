@@ -24,6 +24,15 @@ export default class CityRepository {
     return query
   }
 
+  /** Active cities in display order, without relations, for form choices. */
+  async listActiveForTenant(tenantId: number): Promise<City[]> {
+    return City.query()
+      .where('tenant_id', tenantId)
+      .where('is_active', true)
+      .orderBy('sort_order', 'asc')
+      .orderBy('name', 'asc')
+  }
+
   async listPublic(tenantId: number): Promise<City[]> {
     return City.query()
       .where('cities.tenant_id', tenantId)

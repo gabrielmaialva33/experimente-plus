@@ -1,16 +1,15 @@
 import { inject } from '@adonisjs/core'
-import db from '@adonisjs/lucid/services/db'
 
 import NotFoundException from '#exceptions/not_found_exception'
-import EstablishmentRevisionReviewIssue from '#modules/establishments/models/establishment_revision_review_issue'
 import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
+import EstablishmentRevisionReviewIssueRepository from '#modules/establishments/repositories/establishment_revision_review_issue_repository'
 import EffectiveCategoryAttributesService from '#modules/establishments/services/effective_category_attributes_service'
 import EstablishmentCompletenessService from '#modules/establishments/services/establishment_completeness_service'
-import City from '#modules/geography/models/city'
+import CityRepository from '#modules/geography/repositories/city_repository'
 import type IOrganization from '#modules/organizations/interfaces/organization_interface'
-import Organization from '#modules/organizations/models/organization'
+import type Organization from '#modules/organizations/models/organization'
 import OrganizationService from '#modules/organizations/services/organization_service'
 import OrganizationResourceAuthorizationService, {
   projectEstablishmentRevisionAllowedActions,
@@ -27,8 +26,9 @@ import {
   feedbackTargetsFromOverview,
   readablePlacesFromOverview,
 } from '#modules/portal/services/portal_overview_projection'
+import PartnerContentRepository from '#modules/partner_content/repositories/partner_content_repository'
 import PartnerReviewService from '#modules/reviews/services/partner_review_service'
-import Category from '#modules/taxonomy/models/category'
+import CategoryRepository from '#modules/taxonomy/repositories/category_repository'
 import type User from '#modules/users/models/user'
 
 /** States in which the Portal shows the business the reason the operation wrote. */
@@ -47,7 +47,11 @@ export default class PartnerPortalService {
     private effectiveAttributesService: EffectiveCategoryAttributesService,
     private resourceAuthorization: OrganizationResourceAuthorizationService,
     private revisionRepository: EstablishmentRevisionRepository,
-    private partnerReviews: PartnerReviewService
+    private partnerReviews: PartnerReviewService,
+    private reviewIssueRepository: EstablishmentRevisionReviewIssueRepository,
+    private cityRepository: CityRepository,
+    private categoryRepository: CategoryRepository,
+    private contentRepository: PartnerContentRepository
   ) {}
 
   /**
@@ -105,23 +109,13 @@ export default class PartnerPortalService {
     const counts: PortalTasks['content'] = { pending_review: 0, draft: 0, published: 0 }
     if (placeIds.length === 0) return counts
 
-    // Sequential on purpose: one query per table, never concurrent on a client.
-    for (const table of [
-      'establishment_experiences',
-      'establishment_events',
-      'establishment_showcase_items',
-    ]) {
-      const rows = await db
-        .from(table)
-        .where('tenant_id', tenantId)
-        .whereIn('establishment_id', placeIds)
-        .whereIn('status', ['pending_review', 'draft', 'published'])
-        .groupBy('status')
-        .select('status')
-        .count('* as total')
-      for (const row of rows) {
-        counts[row.status as keyof PortalTasks['content']] += Number(row.total)
-      }
+    const rows = await this.contentRepository.countByStatusForEstablishments(tenantId, placeIds, [
+      'pending_review',
+      'draft',
+      'published',
+    ])
+    for (const row of rows) {
+      counts[row.status as keyof PortalTasks['content']] += row.total
     }
     return counts
   }
@@ -248,16 +242,8 @@ export default class PartnerPortalService {
       organization,
       establishment
     )
-    const cities = await City.query()
-      .where('tenant_id', tenantId)
-      .where('is_active', true)
-      .orderBy('sort_order', 'asc')
-      .orderBy('name', 'asc')
-    const categories = await Category.query()
-      .where('tenant_id', tenantId)
-      .where('is_active', true)
-      .orderBy('sort_order', 'asc')
-      .orderBy('name', 'asc')
+    const cities = await this.cityRepository.listActiveForTenant(tenantId)
+    const categories = await this.categoryRepository.listActiveForTenant(tenantId)
     const establishmentRecord = {
       id: establishment.id,
       tenant_id: establishment.tenant_id,
@@ -273,13 +259,7 @@ export default class PartnerPortalService {
     const revisionStatus = revision.status
     const reviewIssues =
       revisionId && revisionStatus === 'changes_requested'
-        ? await EstablishmentRevisionReviewIssue.query()
-            .where('tenant_id', tenantId)
-            .where('establishment_id', establishmentId)
-            .where('revision_id', revisionId)
-            .whereNull('resolved_at')
-            .orderBy('severity', 'asc')
-            .orderBy('id', 'asc')
+        ? await this.reviewIssueRepository.listOpenBySeverity(tenantId, establishmentId, revisionId)
         : []
 
     const organizationActions = projectOrganizationStateAllowedActions(
@@ -336,16 +316,8 @@ export default class PartnerPortalService {
   }
 
   async creationOptions(tenantId: number) {
-    const cities = await City.query()
-      .where('tenant_id', tenantId)
-      .where('is_active', true)
-      .orderBy('sort_order', 'asc')
-      .orderBy('name', 'asc')
-    const categories = await Category.query()
-      .where('tenant_id', tenantId)
-      .where('is_active', true)
-      .orderBy('sort_order', 'asc')
-      .orderBy('name', 'asc')
+    const cities = await this.cityRepository.listActiveForTenant(tenantId)
+    const categories = await this.categoryRepository.listActiveForTenant(tenantId)
 
     return {
       cities: cities.map((city) => city.serialize()),
