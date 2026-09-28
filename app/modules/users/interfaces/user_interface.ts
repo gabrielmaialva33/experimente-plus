@@ -33,6 +33,8 @@ namespace IUser {
 
     findOwnerByEmailVerificationTokenHash(tokenHash: string): Promise<number | null>
 
+    findById(userId: number, client?: TransactionClientContract): Promise<User | null>
+
     findActiveById(userId: number, client?: TransactionClientContract): Promise<User | null>
 
     lockByIdOrFail(userId: number, client: TransactionClientContract): Promise<User>

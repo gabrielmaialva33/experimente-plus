@@ -1,3 +1,5 @@
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
 import City from '#modules/geography/models/city'
 
 export default class CityRepository {
@@ -34,6 +36,34 @@ export default class CityRepository {
 
   async findByIdForTenant(tenantId: number, id: number): Promise<City | null> {
     return City.query().where('tenant_id', tenantId).where('id', id).preload('region').first()
+  }
+
+  /**
+   * The city by id within the operation, without its region. `activeOnly`
+   * ignores inactive cities; `client` reads inside a transaction.
+   */
+  async findScopedById(
+    tenantId: number,
+    id: number,
+    options: { activeOnly?: boolean; client?: TransactionClientContract } = {}
+  ): Promise<City | null> {
+    const query = City.query({ client: options.client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+    if (options.activeOnly) {
+      query.where('is_active', true)
+    }
+
+    return query.first()
+  }
+
+  /** Active cities of the operation, without their region, in display order. */
+  async listActiveForTenant(tenantId: number): Promise<City[]> {
+    return City.query()
+      .where('tenant_id', tenantId)
+      .where('is_active', true)
+      .orderBy('sort_order', 'asc')
+      .orderBy('name', 'asc')
   }
 
   async findBySlugForTenant(tenantId: number, slug: string): Promise<City | null> {

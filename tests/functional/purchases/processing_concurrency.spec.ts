@@ -11,14 +11,22 @@ import PurchaseProcessingService from '#modules/purchases/services/purchase_proc
 import PurchaseOperationsService from '#modules/purchases/services/purchase_operations_service'
 import PurchaseService from '#modules/purchases/services/purchase_service'
 import FakePaymentAdapter from '#modules/purchases/adapters/fake_payment_adapter'
+import BenefitAccessRepository from '#modules/benefits/repositories/benefit_access_repository'
+import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
+import BenefitFinancialHoldRepository from '#modules/benefits/repositories/benefit_financial_hold_repository'
+import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
 import BenefitRedemptionRepository from '#modules/benefits/repositories/benefit_redemption_repository'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 import BenefitPresentationTokenService from '#modules/benefits/services/benefit_presentation_token_service'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
+import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
+import CityRepository from '#modules/geography/repositories/city_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
 import PaymentMethodsService from '#modules/purchases/services/payment_methods_service'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 // Like create_concurrency.spec.ts, repositories synchronize real independent transactions.
 // This two-phase barrier also lets the test inspect the database while the worker is paused.
@@ -112,7 +120,15 @@ async function redemptionService(repo: BenefitRedemptionRepository) {
     await app.container.make(BenefitPresentationTokenService),
     await app.container.make(OrganizationPolicyService),
     await app.container.make(OrganizationResourceAuthorizationService),
-    await app.container.make(BenefitAuditService)
+    await app.container.make(BenefitAuditService),
+    await app.container.make(BenefitAccessRepository),
+    await app.container.make(BenefitOfferRepository),
+    await app.container.make(BenefitEditionRepository),
+    await app.container.make(EstablishmentRepository),
+    await app.container.make(EstablishmentRevisionRepository),
+    await app.container.make(CityRepository),
+    await app.container.make(UsersRepository),
+    await app.container.make(BenefitFinancialHoldRepository)
   )
 }
 

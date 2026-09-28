@@ -1,3 +1,4 @@
+import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BenefitRedemption from '#modules/benefits/models/benefit_redemption'
@@ -46,6 +47,29 @@ export default class BenefitRedemptionRepository {
       .first()
 
     return Number(row?.$extras.total ?? 0)
+  }
+
+  /** Every use of the access, across its offers. */
+  async countForAccess(
+    tenantId: number,
+    accessId: number,
+    client: TransactionClientContract
+  ): Promise<number> {
+    const uses = await client
+      .from('benefit_redemptions')
+      .where({ tenant_id: tenantId, access_id: accessId })
+      .count('* as total')
+      .first()
+
+    return Number(uses?.total)
+  }
+
+  /** The receipts of the access as plain rows: id, receipt code and redemption time. */
+  async listReceiptsForAccess(tenantId: number, accessId: number) {
+    return db
+      .from('benefit_redemptions')
+      .select('id', 'receipt_code', 'redeemed_at')
+      .where({ tenant_id: tenantId, access_id: accessId })
   }
 
   async listForHolder(tenantId: number, userId: number): Promise<BenefitRedemption[]> {

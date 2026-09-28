@@ -6,12 +6,11 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IBenefit from '#modules/benefits/interfaces/benefit_interface'
-import BenefitEdition from '#modules/benefits/models/benefit_edition'
-import BenefitOffer from '#modules/benefits/models/benefit_offer'
+import type BenefitEdition from '#modules/benefits/models/benefit_edition'
 import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
 import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
-import City from '#modules/geography/models/city'
+import CityRepository from '#modules/geography/repositories/city_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type User from '#modules/users/models/user'
 import { normalizeSlug, resolveUniqueSlug } from '#shared/utils/slug'
@@ -22,7 +21,8 @@ export default class BenefitEditionService {
     private editionRepository: BenefitEditionRepository,
     private offerRepository: BenefitOfferRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private audit: BenefitAuditService
+    private audit: BenefitAuditService,
+    private cities: CityRepository
   ) {}
 
   async list(tenantId: number, actor: User): Promise<BenefitEdition[]> {
@@ -132,11 +132,7 @@ export default class BenefitEditionService {
       }
 
       if (payload.city_id !== undefined && payload.city_id !== edition.city_id) {
-        const offer = await BenefitOffer.query({ client })
-          .where('tenant_id', tenantId)
-          .where('edition_id', edition.id)
-          .first()
-        if (offer) {
+        if (await this.offerRepository.existsForEdition(tenantId, edition.id, client)) {
           throw new BadRequestException('Edition city cannot change after offers are created')
         }
         await this.validateCity(tenantId, payload.city_id, client)
@@ -297,11 +293,7 @@ export default class BenefitEditionService {
     cityId: number,
     client?: TransactionClientContract
   ): Promise<void> {
-    const city = await City.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', cityId)
-      .where('is_active', true)
-      .first()
+    const city = await this.cities.findScopedById(tenantId, cityId, { activeOnly: true, client })
     if (!city) {
       throw new BadRequestException('Edition city must be active in this operation')
     }

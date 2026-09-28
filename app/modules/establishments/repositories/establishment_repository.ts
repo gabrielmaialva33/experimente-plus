@@ -143,6 +143,34 @@ export default class EstablishmentRepository extends LucidRepository<typeof Esta
     return this.findLocked(tenantId, id, client)
   }
 
+  /** With its organization and published revision; optionally locked for update. */
+  async findWithOrganizationAndPublishedRevision(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract,
+    forUpdate = false
+  ): Promise<Establishment | null> {
+    const query = Establishment.query({ client })
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .preload('organization')
+      .preload('published_revision')
+    if (forUpdate) {
+      query.forUpdate()
+    }
+
+    return query.first()
+  }
+
+  /** With its published revision, failing with Lucid's row-not-found error when missing. */
+  async findWithPublishedRevisionOrFail(tenantId: number, id: number): Promise<Establishment> {
+    return Establishment.query()
+      .where('tenant_id', tenantId)
+      .where('id', id)
+      .preload('published_revision')
+      .firstOrFail()
+  }
+
   private preloadRevisionAggregate(query: any): void {
     query
       .preload('city')

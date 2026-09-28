@@ -3,36 +3,27 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import BenefitEditionService from '#modules/benefits/services/benefit_edition_service'
 import BenefitOfferService from '#modules/benefits/services/benefit_offer_service'
+import BenefitPagesService from '#modules/benefits/services/benefit_pages_service'
 import {
   createBenefitEditionValidator,
   createBenefitOfferValidator,
   updateBenefitEditionValidator,
   updateBenefitOfferValidator,
 } from '#modules/benefits/validators/benefit_validator'
-import Establishment from '#modules/establishments/models/establishment'
-import City from '#modules/geography/models/city'
-import OrganizationResourceAuthorizationService, {
-  projectEstablishmentBenefitAllowedActions,
-} from '#modules/organizations/services/organization_resource_authorization_service'
 
 @inject()
 export default class BenefitPagesController {
   constructor(
     private editionService: BenefitEditionService,
     private offerService: BenefitOfferService,
-    private resourceAuthorization: OrganizationResourceAuthorizationService
+    private pagesService: BenefitPagesService
   ) {}
 
   async backoffice({ auth, inertia, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
-    const editions = await this.editionService.list(tenant!.id, auth.getUserOrFail())
-    const cities = await City.query()
-      .where('tenant_id', tenant!.id)
-      .where('is_active', true)
-      .orderBy('sort_order', 'asc')
-      .orderBy('name', 'asc')
+    const page = await this.pagesService.backoffice(tenant!.id, auth.getUserOrFail())
 
-    return inertia.render('backoffice/benefits/index', { editions, cities })
+    return inertia.render('backoffice/benefits/index', page)
   }
 
   async createEdition({ auth, request, response, session, tenant }: HttpContext) {
@@ -74,44 +65,13 @@ export default class BenefitPagesController {
 
   async establishment({ auth, inertia, params, response, tenant }: HttpContext) {
     this.setPrivateHeaders(response)
-    const establishmentId = Number(params.establishmentId)
-    const actor = auth.getUserOrFail()
-    const offers = await this.offerService.listForPortalEstablishment(
+    const page = await this.pagesService.establishment(
       tenant!.id,
-      establishmentId,
-      actor
+      Number(params.establishmentId),
+      auth.getUserOrFail()
     )
-    const establishment = await Establishment.query()
-      .where('tenant_id', tenant!.id)
-      .where('id', establishmentId)
-      .preload('published_revision')
-      .firstOrFail()
-    const cityId = establishment.published_revision?.city_id ?? null
-    const availableEditions = await this.editionService.listAvailable(tenant!.id)
-    const editions = availableEditions.filter((edition) => edition.city_id === cityId)
-    const organizationActions = await this.resourceAuthorization.forOrganization(
-      tenant!.id,
-      establishment.organization_id,
-      actor
-    )
-    const allowedActions = projectEstablishmentBenefitAllowedActions(organizationActions, {
-      lifecycle_status: establishment.lifecycle_status,
-      business_status: establishment.business_status,
-      published_revision_id: establishment.published_revision_id,
-    })
 
-    return inertia.render('portal/establishments/benefits', {
-      establishment: {
-        id: establishment.id,
-        organization_id: establishment.organization_id,
-        public_name: establishment.published_revision?.public_name ?? 'Unidade sem publicação',
-        city_id: cityId,
-        published: Boolean(establishment.published_revision_id),
-      },
-      editions,
-      offers,
-      allowed_actions: allowedActions,
-    })
+    return inertia.render('portal/establishments/benefits', page)
   }
 
   async createOffer({ auth, params, request, response, session, tenant }: HttpContext) {

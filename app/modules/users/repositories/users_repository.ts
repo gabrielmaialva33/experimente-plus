@@ -163,6 +163,10 @@ export default class UsersRepository
     return user?.id ?? null
   }
 
+  async findById(userId: number, client?: TransactionClientContract): Promise<User | null> {
+    return this.model.query({ client }).where('id', userId).first()
+  }
+
   async findActiveById(userId: number, client?: TransactionClientContract): Promise<User | null> {
     return this.model.query({ client }).where('id', userId).where('is_deleted', false).first()
   }

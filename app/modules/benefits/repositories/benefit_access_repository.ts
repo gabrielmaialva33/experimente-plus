@@ -39,6 +39,45 @@ export default class BenefitAccessRepository {
       .first()
   }
 
+  async findById(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract,
+    lock = false
+  ): Promise<BenefitAccess | null> {
+    const query = BenefitAccess.query({ client }).where('tenant_id', tenantId).where('id', id)
+    if (lock) query.forUpdate()
+    return query.first()
+  }
+
+  /**
+   * Lock the access row, failing with Lucid's row-not-found error when it is
+   * missing. Without a tenant the lookup is by id alone.
+   */
+  async lockOrFail(
+    id: number,
+    client: TransactionClientContract,
+    tenantId?: number
+  ): Promise<BenefitAccess> {
+    const query = BenefitAccess.query({ client }).where('id', id)
+    if (tenantId !== undefined) query.where('tenant_id', tenantId)
+    return query.forUpdate().firstOrFail()
+  }
+
+  /** The holder's access to the product (the edition, or one offer of it), in any status. */
+  async findForHolderProduct(
+    tenantId: number,
+    editionId: number,
+    userId: number,
+    offerId: number | null,
+    client?: TransactionClientContract
+  ): Promise<BenefitAccess | null> {
+    return BenefitAccess.query({ client })
+      .where({ tenant_id: tenantId, edition_id: editionId, user_id: userId })
+      .whereRaw('COALESCE(offer_id, 0) = ?', [offerId ?? 0])
+      .first()
+  }
+
   async findActive(
     tenantId: number,
     editionId: number,

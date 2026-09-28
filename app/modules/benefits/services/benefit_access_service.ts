@@ -6,14 +6,17 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import type IBenefitAccess from '#modules/benefits/interfaces/benefit_access_interface'
-import BenefitAccess from '#modules/benefits/models/benefit_access'
-import BenefitEdition from '#modules/benefits/models/benefit_edition'
-import BenefitOffer from '#modules/benefits/models/benefit_offer'
+import type BenefitAccess from '#modules/benefits/models/benefit_access'
+import type BenefitEdition from '#modules/benefits/models/benefit_edition'
+import type BenefitOffer from '#modules/benefits/models/benefit_offer'
 import BenefitAccessRepository from '#modules/benefits/repositories/benefit_access_repository'
+import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
+import BenefitFinancialHoldRepository from '#modules/benefits/repositories/benefit_financial_hold_repository'
+import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
-import BenefitFinancialHoldService from '#modules/benefits/services/benefit_financial_hold_service'
-import User from '#modules/users/models/user'
+import type User from '#modules/users/models/user'
+import UsersRepository from '#modules/users/repositories/users_repository'
 
 type DatabaseError = Error & { code?: string; constraint?: string }
 
@@ -22,7 +25,11 @@ export default class BenefitAccessService {
   constructor(
     private accessRepository: BenefitAccessRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private audit: BenefitAuditService
+    private audit: BenefitAuditService,
+    private editionRepository: BenefitEditionRepository,
+    private offerRepository: BenefitOfferRepository,
+    private usersRepository: UsersRepository,
+    private financialHolds: BenefitFinancialHoldRepository
   ) {}
 
   async list(tenantId: number, actor: User): Promise<BenefitAccess[]> {
@@ -52,13 +59,12 @@ export default class BenefitAccessService {
         const edition = await this.getGrantableEdition(tenantId, payload.edition_id, client)
         const holder = await this.findHolderForTenant(tenantId, email, client)
         if (payload.offer_id !== null && payload.offer_id !== undefined) {
-          const offer = await BenefitOffer.query({ client })
-            .where({
-              id: payload.offer_id,
-              tenant_id: tenantId,
-              edition_id: edition.id,
-            })
-            .first()
+          const offer = await this.offerRepository.findInEdition(
+            tenantId,
+            edition.id,
+            payload.offer_id,
+            client
+          )
           if (
             !offer ||
             !['active', 'paused'].includes(offer.status) ||
@@ -187,7 +193,7 @@ export default class BenefitAccessService {
       }
     }
 
-    const blocked = await new BenefitFinancialHoldService().blockedIds(
+    const blocked = await this.financialHolds.blockedIds(
       tenantId,
       accesses.map((access) => access.id)
     )
@@ -284,11 +290,7 @@ export default class BenefitAccessService {
     editionId: number,
     client: TransactionClientContract
   ): Promise<BenefitEdition> {
-    const edition = await BenefitEdition.query({ client })
-      .where('tenant_id', tenantId)
-      .where('id', editionId)
-      .forUpdate()
-      .first()
+    const edition = await this.editionRepository.findLocked(tenantId, editionId, client)
 
     if (!edition) {
       throw new NotFoundException('Benefit edition not found')
@@ -308,10 +310,7 @@ export default class BenefitAccessService {
     email: string,
     client: TransactionClientContract
   ): Promise<User> {
-    const holder = await User.query({ client })
-      .whereRaw('LOWER(email) = ?', [email])
-      .whereHas('tenants', (query) => query.where('tenants.id', tenantId))
-      .first()
+    const holder = await this.usersRepository.findMemberOfTenantByEmail(email, tenantId, client)
 
     if (!holder) {
       throw new BadRequestException('User must already belong to this operation')
