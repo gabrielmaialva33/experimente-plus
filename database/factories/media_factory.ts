@@ -4,6 +4,7 @@ import { DateTime } from 'luxon'
 import StoredFile from '#modules/files/models/file'
 import EstablishmentRevisionMedia from '#modules/media/models/establishment_revision_media'
 import MediaAsset from '#modules/media/models/media_asset'
+import MediaModerationEvent from '#modules/media/models/media_moderation_event'
 
 /**
  * Media rows for tests. They describe an image without storing bytes: the URL
@@ -77,5 +78,49 @@ export const EstablishmentRevisionMediaFactory = factory
     media.reviewed_by ??= media.created_by
     media.reviewed_at = DateTime.utc()
     media.review_notes = 'Imagem retida pelo cenário de teste.'
+  })
+  .build()
+
+/**
+ * An entry of the append-only moderation history of one image in a revision
+ * (never updated or deleted): the upload by default, then one state per
+ * decision `MediaModerationService` records. Merge the identifiers from the
+ * `EstablishmentRevisionMedia` row it describes and the acting user; a
+ * rejection or quarantine carries its reason, as the table requires.
+ */
+export const MediaModerationEventFactory = factory
+  .define(MediaModerationEvent, () => ({
+    tenant_id: 1,
+    establishment_id: 1,
+    revision_id: 1,
+    media_asset_id: 1,
+    revision_media_id: 1,
+    from_status: null,
+    to_status: 'pending' as const,
+    actor_id: 1,
+    reason: null,
+    metadata: { action: 'uploaded' },
+  }))
+  .state('approved', (event) => {
+    event.from_status = 'pending'
+    event.to_status = 'approved'
+    event.metadata = { action: 'moderation_decision' }
+  })
+  .state('rejected', (event) => {
+    event.from_status = 'pending'
+    event.to_status = 'rejected'
+    event.reason = 'A imagem não mostra o estabelecimento.'
+    event.metadata = { action: 'moderation_decision' }
+  })
+  .state('quarantined', (event) => {
+    event.from_status = 'pending'
+    event.to_status = 'quarantined'
+    event.reason = 'Imagem retida pelo cenário de teste.'
+    event.metadata = { action: 'moderation_decision' }
+  })
+  .state('removed', (event) => {
+    event.from_status = 'approved'
+    event.to_status = 'removed'
+    event.metadata = { action: 'removed_from_revision' }
   })
   .build()

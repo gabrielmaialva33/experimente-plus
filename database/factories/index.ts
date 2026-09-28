@@ -9,15 +9,21 @@ export {
 export {
   EstablishmentFactory,
   EstablishmentRevisionAddressFactory,
+  EstablishmentRevisionAttributeValueFactory,
+  EstablishmentRevisionAttributeValueOptionFactory,
   EstablishmentRevisionCategoryFactory,
+  EstablishmentRevisionEventFactory,
   EstablishmentRevisionFactory,
   EstablishmentRevisionHourFactory,
+  EstablishmentRevisionReviewIssueFactory,
   EstablishmentRevisionSpecialDayFactory,
+  EstablishmentRevisionSpecialHourFactory,
 } from '#database/factories/establishment_factory'
 export { CityFactory, RegionFactory } from '#database/factories/geography_factory'
 export {
   EstablishmentRevisionMediaFactory,
   MediaAssetFactory,
+  MediaModerationEventFactory,
   StoredFileFactory,
 } from '#database/factories/media_factory'
 export {
