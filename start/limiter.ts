@@ -50,6 +50,25 @@ export const throttle = limiter.define('global', async (ctx) => {
 })
 
 /**
+ * Public catalog reads — the discovery routes that need no session.
+ *
+ * Clients compose one screen from several of these: a place is its detail plus
+ * reviews, experiences, events, showcase and benefits, fetched together, so a
+ * person opening three places in a minute already makes about twenty requests.
+ * The app also sends them without a token, so a signed-in person counts as a
+ * guest here, and a mobile carrier puts many phones behind one address. The
+ * global guest limit therefore blocked ordinary browsing; this one still stops
+ * a runaway script. Routes that cost more than a read, such as the Concierge,
+ * keep the global limit.
+ */
+export const catalogReadThrottle = limiter.define('catalog-read', (ctx) => {
+  return limiter
+    .allowRequests(300)
+    .every('1 minute')
+    .usingKey(`catalog_read_${throttleIdentifierDigest(ctx.request.ip())}`)
+})
+
+/**
  * Strict throttle for authentication endpoints
  * - 5 attempts per 15 minutes by IP + email combination
  * - Blocks for 30 minutes after exhausting attempts

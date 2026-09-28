@@ -1,6 +1,6 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
-import { anonymousReportThrottle, apiThrottle, throttle } from '#start/limiter'
+import { anonymousReportThrottle, apiThrottle, catalogReadThrottle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const ReviewsController = () => import('#modules/reviews/controllers/reviews_controller')
@@ -16,9 +16,11 @@ router
     ReviewsController,
     'catalogReviews',
   ])
-  .use(throttle)
+  .use(catalogReadThrottle)
 
-router.get('/api/v1/catalog/reviews/:id', [ReviewsController, 'showPublic']).use(throttle)
+router
+  .get('/api/v1/catalog/reviews/:id', [ReviewsController, 'showPublic'])
+  .use(catalogReadThrottle)
 
 router
   .group(() => {

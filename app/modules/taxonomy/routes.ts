@@ -2,7 +2,7 @@ import router from '@adonisjs/core/services/router'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import { middleware } from '#start/kernel'
-import { throttle } from '#start/limiter'
+import { catalogReadThrottle } from '#start/limiter'
 
 const CategoryFamiliesController = () =>
   import('#modules/taxonomy/controllers/category_families_controller')
@@ -99,4 +99,6 @@ router
   .use(middleware.auth())
   .use(middleware.tenant({ required: true }))
 
-router.get('/api/v1/catalog/categories', [PublicTaxonomyController, 'tree']).use(throttle)
+router
+  .get('/api/v1/catalog/categories', [PublicTaxonomyController, 'tree'])
+  .use(catalogReadThrottle)

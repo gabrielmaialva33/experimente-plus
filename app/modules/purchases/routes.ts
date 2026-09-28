@@ -1,13 +1,15 @@
 import purchaseTransport from '#modules/purchases/middleware/purchase_transport'
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
-import { apiThrottle, throttle } from '#start/limiter'
+import { apiThrottle, catalogReadThrottle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const PurchasesController = () => import('#modules/purchases/controllers/purchases_controller')
 const PurchasePagesController = () =>
   import('#modules/purchases/controllers/purchase_pages_controller')
-router.get('/api/v1/catalog/benefit-editions', [PurchasesController, 'catalog']).use(throttle)
+router
+  .get('/api/v1/catalog/benefit-editions', [PurchasesController, 'catalog'])
+  .use(catalogReadThrottle)
 router
   .post('/api/v1/payments/webhooks/:provider', [PurchasesController, 'webhook'])
   .use([privateResponseHeadersMiddleware, purchaseTransport, apiThrottle])

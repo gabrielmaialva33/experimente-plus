@@ -2,7 +2,7 @@ import router from '@adonisjs/core/services/router'
 
 import IPermission from '#modules/permissions/interfaces/permission_interface'
 import { middleware } from '#start/kernel'
-import { throttle } from '#start/limiter'
+import { catalogReadThrottle } from '#start/limiter'
 
 const RegionsController = () => import('#modules/geography/controllers/regions_controller')
 const CitiesController = () => import('#modules/geography/controllers/cities_controller')
@@ -63,4 +63,4 @@ router
     router.get('/cities/:citySlug', [PublicGeographyController, 'city'])
   })
   .prefix('/api/v1/catalog')
-  .use(throttle)
+  .use(catalogReadThrottle)

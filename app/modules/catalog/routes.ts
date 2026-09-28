@@ -1,6 +1,6 @@
 import router from '@adonisjs/core/services/router'
 
-import { throttle } from '#start/limiter'
+import { catalogReadThrottle } from '#start/limiter'
 
 const CatalogController = () => import('#modules/catalog/controllers/catalog_controller')
 
@@ -21,7 +21,7 @@ router
       .as('catalog.establishment.show')
   })
   .prefix('/api/v1/catalog')
-  .use(throttle)
+  .use(catalogReadThrottle)
 
 const CatalogPagesController = () => import('#modules/catalog/controllers/catalog_pages_controller')
 

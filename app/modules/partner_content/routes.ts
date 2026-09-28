@@ -1,7 +1,7 @@
 import router from '@adonisjs/core/services/router'
 
 import { middleware } from '#start/kernel'
-import { apiThrottle, throttle } from '#start/limiter'
+import { apiThrottle, catalogReadThrottle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const PartnerContentController = () =>
@@ -24,7 +24,7 @@ router
     'publicList',
   ])
   .where('kind', /^(experiences|events|showcase-items)$/)
-  .use(throttle)
+  .use(catalogReadThrottle)
 
 /**
  * The agenda of a city.
@@ -37,7 +37,7 @@ router
 router
   .get('/api/v1/catalog/cities/:citySlug/agenda', [PartnerContentController, 'cityAgenda'])
   .as('catalog.city.agenda')
-  .use(throttle)
+  .use(catalogReadThrottle)
 
 router
   .group(() => {

@@ -90,6 +90,32 @@ test.group('Rate Limiting', (group) => {
     assert.equal(authResponse.header('x-ratelimit-limit'), '60')
   })
 
+  test('should let a guest browse the public catalog past the global guest limit', async ({
+    client,
+    assert,
+  }) => {
+    // Opening a place fans out to about six reads; thirty requests is five
+    // places in a minute, which the global guest limit used to cut at twenty.
+    // No operation answers this host, so the reads end in the catalog's own
+    // refusal; what matters is that none of them is the limiter's.
+    for (let i = 0; i < 30; i++) {
+      const response = await client.get('/api/v1/catalog/cities')
+      assert.notEqual(response.status(), 429)
+      assert.equal(response.header('x-ratelimit-limit'), '300')
+    }
+
+    const agenda = await client.get('/api/v1/catalog/cities/londrina/agenda')
+    assert.notEqual(agenda.status(), 429)
+    assert.equal(agenda.header('x-ratelimit-limit'), '300')
+
+    const benefits = await client.get('/api/v1/catalog/benefit-editions')
+    assert.equal(benefits.header('x-ratelimit-limit'), '300')
+
+    // The global limit still guards what is not a plain catalog read.
+    const version = await client.get('/version')
+    assert.equal(version.header('x-ratelimit-limit'), '20')
+  })
+
   test('should block user after exceeding auth attempts', async ({ client, assert }) => {
     // Make 5 failed attempts
     for (let i = 0; i < 5; i++) {
