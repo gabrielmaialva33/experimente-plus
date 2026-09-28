@@ -6,9 +6,9 @@ import { DateTime } from 'luxon'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import AuditService from '#modules/audits/services/audit_service'
-import Establishment from '#modules/establishments/models/establishment'
-import Organization from '#modules/organizations/models/organization'
-import OrganizationMember from '#modules/organizations/models/organization_member'
+import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
+import OrganizationMemberRepository from '#modules/organizations/repositories/organization_member_repository'
+import OrganizationRepository from '#modules/organizations/repositories/organization_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type IPilotFeedback from '#modules/pilot_feedback/interfaces/pilot_feedback_interface'
 import PilotFeedbackRepository from '#modules/pilot_feedback/repositories/pilot_feedback_repository'
@@ -24,7 +24,10 @@ export default class PilotFeedbackService {
   constructor(
     private feedbackRepository: PilotFeedbackRepository,
     private organizationPolicy: OrganizationPolicyService,
-    private auditService: AuditService
+    private auditService: AuditService,
+    private establishmentRepository: EstablishmentRepository,
+    private organizationRepository: OrganizationRepository,
+    private memberRepository: OrganizationMemberRepository
   ) {}
 
   async create(tenantId: number, actor: User, payload: IPilotFeedback.CreatePayload) {
@@ -116,10 +119,10 @@ export default class PilotFeedbackService {
     const establishmentId = payload.establishment_id ?? null
 
     if (establishmentId !== null) {
-      const establishment = await Establishment.query()
-        .where('tenant_id', tenantId)
-        .where('id', establishmentId)
-        .first()
+      const establishment = await this.establishmentRepository.findByIdForTenant(
+        tenantId,
+        establishmentId
+      )
 
       if (!establishment) {
         throw new NotFoundException('Feedback target not found')
@@ -133,22 +136,21 @@ export default class PilotFeedbackService {
     }
 
     if (organizationId !== null) {
-      const organization = await Organization.query()
-        .where('tenant_id', tenantId)
-        .where('id', organizationId)
-        .first()
+      const organization = await this.organizationRepository.findByIdForTenant(
+        tenantId,
+        organizationId
+      )
 
       if (!organization) {
         throw new NotFoundException('Feedback target not found')
       }
 
       if (!(await this.organizationPolicy.isPlatformAdmin(actor))) {
-        const membership = await OrganizationMember.query()
-          .where('tenant_id', tenantId)
-          .where('organization_id', organizationId)
-          .where('user_id', actor.id)
-          .where('status', 'active')
-          .first()
+        const membership = await this.memberRepository.findActiveByUser(
+          tenantId,
+          organizationId,
+          actor.id
+        )
 
         if (!membership) {
           throw new NotFoundException('Feedback target not found')
