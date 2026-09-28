@@ -191,11 +191,11 @@ export default class LucidRepository<
     value?: ModelAttributes<InstanceType<T>>[K]
     opts?: DefaultOptions<T>
   }): ModelQueryBuilderContract<T, InstanceType<T>> {
-    const query = this.model.query()
-
-    if (opts?.client) {
-      query.useTransaction(opts.client)
-    }
+    // Built on the client rather than joined to it with the query builder's
+    // `useTransaction`: that only makes the SELECT run in the transaction, and
+    // the rows come back bound to the default connection, so a later save() or
+    // preload on them would run outside it.
+    const query = this.model.query(opts?.client ? { client: opts.client } : undefined)
 
     if (field !== undefined) {
       query.where({ [field]: value })

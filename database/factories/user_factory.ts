@@ -25,12 +25,9 @@ export const UserFactory = factory
     user.is_deleted = true
   })
   .after('create', async (_builder, user, context) => {
-    const query = Role.query()
-    if (context.$trx) {
-      query.useTransaction(context.$trx)
-    }
-
-    const defaultRole = await query.where('slug', IRole.Slugs.USER).first()
+    const defaultRole = await Role.query(context.$trx ? { client: context.$trx } : undefined)
+      .where('slug', IRole.Slugs.USER)
+      .first()
     if (defaultRole) {
       await user.related('roles').attach([defaultRole.id], context.$trx)
     }
