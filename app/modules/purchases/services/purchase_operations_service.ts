@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 import { randomUUID } from 'node:crypto'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
+import BenefitRedemptionRepository from '#modules/benefits/repositories/benefit_redemption_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type User from '#modules/users/models/user'
 import PurchaseRepository from '#modules/purchases/repositories/purchase_repository'
@@ -26,7 +27,8 @@ export default class PurchaseOperationsService {
   constructor(
     private repository: PurchaseRepository,
     private policy: OrganizationPolicyService,
-    private providers: PaymentProviderService
+    private providers: PaymentProviderService,
+    private redemptionRepository: BenefitRedemptionRepository
   ) {}
   async detail(tenantId: number, actor: User, id: string) {
     await this.policy.requirePlatformAdmin(actor)
@@ -37,25 +39,11 @@ export default class PurchaseOperationsService {
       provider: p.provider,
       provider_id: p.provider_id,
       issue: p.issue,
-      events: await this.repository
-        .events()
-        .select('id', 'action', 'actor_id', 'data', 'created_at')
-        .where('purchase_id', id)
-        .orderBy('id'),
-      commands: await this.repository
-        .commands()
-        .select('id', 'kind', 'status', 'attempts', 'last_error', 'created_at')
-        .where('purchase_id', id)
-        .orderBy('created_at'),
-      holds: await this.repository
-        .holds()
-        .select('reason', 'created_at', 'released_at')
-        .where('purchase_id', id),
+      events: await this.repository.listEventsForOperations(id),
+      commands: await this.repository.listCommandsForOperations(id),
+      holds: await this.repository.listHoldsForOperations(id),
       redemptions: p.access_id
-        ? await db
-            .from('benefit_redemptions')
-            .select('id', 'receipt_code', 'redeemed_at')
-            .where({ tenant_id: tenantId, access_id: p.access_id })
+        ? await this.redemptionRepository.listReceiptsForAccess(tenantId, p.access_id)
         : [],
     }
   }
@@ -71,35 +59,20 @@ export default class PurchaseOperationsService {
     return db.transaction(async (client) => {
       const p = await this.repository.get(id, client, true)
       if (!p || p.tenant_id !== tenantId) throw new NotFoundException('Purchase not found')
-      const prior = await this.repository
-        .events(client)
-        .where({ purchase_id: id, action: 'operator_reconciliation' })
-        .whereRaw("data->>'key_hash' = ?", [hash])
-        .first()
+      const prior = await this.repository.findOperatorReconciliation(id, hash, client)
       if (prior) {
         if (prior.data.request_hash !== purchaseHash(input))
           throw new BadRequestException('Conflicting reconciliation request')
         return { id }
       }
-      if (
-        await this.repository
-          .commands(client)
-          .where('purchase_id', id)
-          .where('status', 'processing')
-          .where('lease_until', '>', new Date())
-          .first()
-      )
+      if (await this.repository.findActiveCommand(id, client))
         throw new BadRequestException('Wait for the active payment command')
       if (input.provider_id && p.provider_id && p.provider_id !== input.provider_id)
         throw new BadRequestException('Provider identity cannot change')
       // An operator can supply a missing correlation, never declare money paid or grant access.
       if (input.provider_id)
         await this.repository.update(id, { provider_id: input.provider_id }, client)
-      await this.repository
-        .commands(client)
-        .where('purchase_id', id)
-        .whereIn('status', ['review', 'pending'])
-        .update({ status: 'pending', available_at: new Date() })
+      await this.repository.rescheduleCommands(id, client)
       await this.repository.enqueue(id, 'reconcile', 'operator:' + id + ':' + hash, client)
       await this.repository.audit(
         p,
@@ -125,36 +98,30 @@ export default class PurchaseOperationsService {
         line_reference: input.line_reference,
       }
       const hash = purchaseHash(input)
-      await client.rawQuery('SELECT pg_advisory_xact_lock(1788814801)')
-      const existing = await client.from('purchase_settlements').where(identity).first()
+      await this.repository.lockSettlements(client)
+      const existing = await this.repository.findSettlement(identity, client)
       if (existing) {
         if (existing.tenant_id !== tenantId || existing.request_hash !== hash)
           throw new BadRequestException('Statement line conflicts with original evidence')
         return { id: existing.id }
       }
-      const p = await this.repository
-        .purchases(client)
-        .where({
-          provider: provider.name,
-          provider_account: provider.account,
-          provider_environment: provider.environment,
-          provider_id: input.provider_id,
-        })
-        .forUpdate()
-        .first()
+      const p = await this.repository.findByProviderId(provider, input.provider_id, client, true)
       if (p && p.tenant_id !== tenantId)
         throw new NotFoundException('Payment not found in operation')
       const id = randomUUID()
-      await client.table('purchase_settlements').insert({
-        id,
-        ...identity,
-        ...input,
-        settled_at: new Date(input.settled_at),
-        purchase_id: p?.id ?? null,
-        tenant_id: tenantId,
-        request_hash: hash,
-        recorded_by: actor.id,
-      })
+      await this.repository.insertSettlement(
+        {
+          id,
+          ...identity,
+          ...input,
+          settled_at: new Date(input.settled_at),
+          purchase_id: p?.id ?? null,
+          tenant_id: tenantId,
+          request_hash: hash,
+          recorded_by: actor.id,
+        },
+        client
+      )
       if (p)
         await this.repository.audit(
           p,
@@ -168,25 +135,7 @@ export default class PurchaseOperationsService {
   }
   async reconciliation(tenantId: number, actor: User) {
     await this.policy.requirePlatformAdmin(actor)
-    const rows = await db
-      .from('purchase_settlements as s')
-      .leftJoin('purchases as p', 'p.id', 's.purchase_id')
-      .where('s.tenant_id', tenantId)
-      .select(
-        's.id',
-        's.purchase_id',
-        's.gross_cents',
-        's.fee_cents',
-        's.net_cents',
-        's.refunded_cents',
-        's.currency',
-        'p.amount_cents',
-        'p.refunded_cents as local_refunded_cents',
-        'p.paid_at',
-        'p.access_id'
-      )
-      .orderBy('s.created_at', 'desc')
-      .limit(100)
+    const rows = await this.repository.listSettlementsForReconciliation(tenantId)
     const issues = rows.flatMap((r) => {
       const reasons = []
       if (!r.purchase_id) reasons.push('orphan_payment')
@@ -198,20 +147,8 @@ export default class PurchaseOperationsService {
       if (r.purchase_id && !r.paid_at) reasons.push('payment_unconfirmed_locally')
       return reasons.length ? [{ settlement_id: r.id, purchase_id: r.purchase_id, reasons }] : []
     })
-    const paidWithoutAccess = await this.repository
-      .purchases()
-      .select('id', 'issue')
-      .where('tenant_id', tenantId)
-      .whereNotNull('paid_at')
-      .whereNull('access_id')
-      .whereNot('status', 'refunded')
-    const unlinkedAccesses = await db
-      .from('benefit_accesses as a')
-      .leftJoin('purchases as p', 'p.access_id', 'a.id')
-      .where('a.tenant_id', tenantId)
-      .where('a.source', 'payment')
-      .whereNull('p.id')
-      .select('a.id')
+    const paidWithoutAccess = await this.repository.listPaidWithoutAccess(tenantId)
+    const unlinkedAccesses = await this.repository.listUnlinkedPaymentAccesses(tenantId)
     return {
       settlements_checked: rows.length,
       issues,

@@ -13,10 +13,30 @@ import PurchaseOperationsService from '#modules/purchases/services/purchase_oper
 import PurchaseRepository from '#modules/purchases/repositories/purchase_repository'
 import FakePaymentAdapter from '#modules/purchases/adapters/fake_payment_adapter'
 import BenefitAccess from '#modules/benefits/models/benefit_access'
+import BenefitAccessRepository from '#modules/benefits/repositories/benefit_access_repository'
+import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edition_repository'
+import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
+import UsersRepository from '#modules/users/repositories/users_repository'
 import BenefitAccessService from '#modules/benefits/services/benefit_access_service'
 import BenefitRedemptionService from '#modules/benefits/services/benefit_redemption_service'
 
 const fixture = () => createPurchaseFixture()
+// A worker over the given purchase repository and payment provider; the other
+// repositories it reads through are stateless.
+const processingWith = (
+  repository: PurchaseRepository,
+  providers: ConstructorParameters<typeof PurchaseProcessingService>[1]
+) =>
+  new PurchaseProcessingService(
+    repository,
+    providers,
+    new BenefitAccessRepository(),
+    new BenefitEditionRepository(),
+    new BenefitOfferRepository(),
+    new TenantRepository(),
+    new UsersRepository()
+  )
 
 test.group('Purchases EP-14', (group) => {
   group.each.setup(() => useFakePayments({ autoRefundUnused: true }))
@@ -420,7 +440,7 @@ test.group('Purchases EP-14', (group) => {
         throw new Error('Simulated response loss')
       }
     }
-    const processing = new PurchaseProcessingService(f.repo, {
+    const processing = processingWith(f.repo, {
       get: () => new TimeoutAfterCreate(),
     })
     const resolved36 = await processing.drain()
@@ -454,7 +474,7 @@ test.group('Purchases EP-14', (group) => {
         return super.audit(...args)
       }
     }
-    const processing = new PurchaseProcessingService(new BrokenAudit(), { get: () => f.fake })
+    const processing = processingWith(new BrokenAudit(), { get: () => f.fake })
     const resolved39 = await processing.drain()
     assert.isAbove(resolved39.deferred, 0)
     const resolved40 = await f.repo.get(p.id)
@@ -491,7 +511,7 @@ test.group('Purchases EP-14', (group) => {
         }
       }
     }
-    const processing = new PurchaseProcessingService(f.repo, { get: () => new WrongAmount() })
+    const processing = processingWith(f.repo, { get: () => new WrongAmount() })
     await processing.drain()
     const resolved43 = await f.repo.get(p.id)
     assert.isNull(resolved43!.access_id)
@@ -518,7 +538,7 @@ test.group('Purchases EP-14', (group) => {
         throw new Error('Simulated lost refund response')
       }
     }
-    const processing = new PurchaseProcessingService(f.repo, { get: () => new RefundTimeout() })
+    const processing = processingWith(f.repo, { get: () => new RefundTimeout() })
     const resolved46 = await processing.drain()
     assert.equal(resolved46.deferred, 1)
     const resolved47 = await f.service.get(f.s.tenant.id, f.s.users.holder, p.id)
@@ -684,7 +704,7 @@ test.group('Purchases independent PostgreSQL mutexes', (group) => {
             return super.refund(...args)
           }
         }
-        const worker = new PurchaseProcessingService(f.repo, {
+        const worker = processingWith(f.repo, {
           get: () => new LockCheckingProvider(),
         })
         const resolved51 = await worker.drain()

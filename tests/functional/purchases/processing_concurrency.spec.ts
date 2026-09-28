@@ -22,6 +22,7 @@ import BenefitAuditService from '#modules/benefits/services/benefit_audit_servic
 import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
 import EstablishmentRevisionRepository from '#modules/establishments/repositories/establishment_revision_repository'
 import CityRepository from '#modules/geography/repositories/city_repository'
+import TenantRepository from '#modules/tenants/repositories/tenant_repository'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import OrganizationResourceAuthorizationService from '#modules/organizations/services/organization_resource_authorization_service'
 import PublicOperationResolver from '#modules/tenants/services/public_operation_resolver'
@@ -69,7 +70,15 @@ class PausedWorkerRepository extends ScopedRepository {
 }
 
 function worker(repo: PurchaseRepository, adapter = new FakePaymentAdapter()) {
-  return new PurchaseProcessingService(repo, { get: () => adapter })
+  return new PurchaseProcessingService(
+    repo,
+    { get: () => adapter },
+    new BenefitAccessRepository(),
+    new BenefitEditionRepository(),
+    new BenefitOfferRepository(),
+    new TenantRepository(),
+    new UsersRepository()
+  )
 }
 
 async function enqueue(repo: ScopedRepository, key = randomUUID()) {
@@ -110,7 +119,13 @@ async function purchaseService(repo: PurchaseRepository) {
     { get: () => new FakePaymentAdapter() },
     await app.container.make(OrganizationPolicyService),
     await app.container.make(PublicOperationResolver),
-    await app.container.make(PaymentMethodsService)
+    await app.container.make(PaymentMethodsService),
+    new BenefitEditionRepository(),
+    new BenefitOfferRepository(),
+    new BenefitAccessRepository(),
+    new BenefitRedemptionRepository(),
+    new TenantRepository(),
+    new UsersRepository()
   )
 }
 
@@ -503,7 +518,8 @@ test.group('Purchase command concurrency and fencing (independent transactions)'
     const operations = new PurchaseOperationsService(
       f.repo,
       await app.container.make(OrganizationPolicyService),
-      { get: () => f.fake }
+      { get: () => f.fake },
+      new BenefitRedemptionRepository()
     )
     const key = randomUUID()
     const retry = () =>
