@@ -99,8 +99,12 @@ export default class EstablishmentRepository extends LucidRepository<typeof Esta
     return establishment
   }
 
-  async findByIdForTenant(tenantId: number, id: number): Promise<Establishment | null> {
-    return Establishment.query().where('tenant_id', tenantId).where('id', id).first()
+  async findByIdForTenant(
+    tenantId: number,
+    id: number,
+    client?: TransactionClientContract
+  ): Promise<Establishment | null> {
+    return Establishment.query({ client }).where('tenant_id', tenantId).where('id', id).first()
   }
 
   async findByIdForTenantWithDetails(tenantId: number, id: number): Promise<Establishment | null> {

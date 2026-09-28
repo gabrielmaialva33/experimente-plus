@@ -5,8 +5,9 @@ import { DateTime } from 'luxon'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import IReview from '#modules/reviews/interfaces/review_interface'
 import AutomaticModerationPolicy from '#modules/reviews/models/automatic_moderation_policy'
-import ContentReport from '#modules/reviews/models/content_report'
+import type ContentReport from '#modules/reviews/models/content_report'
 import AutomaticModerationPolicyRepository from '#modules/reviews/repositories/automatic_moderation_policy_repository'
+import ContentReportRepository from '#modules/reviews/repositories/content_report_repository'
 import ReviewPolicyRepository from '#modules/reviews/repositories/review_policy_repository'
 import {
   runDetectors,
@@ -59,7 +60,8 @@ export default class AutomaticModerationService {
   constructor(
     private policies: AutomaticModerationPolicyRepository,
     private reviewPolicies: ReviewPolicyRepository,
-    private organizationPolicy: OrganizationPolicyService
+    private organizationPolicy: OrganizationPolicyService,
+    private reports: ContentReportRepository
   ) {}
 
   async assess(
@@ -107,14 +109,12 @@ export default class AutomaticModerationService {
         .join('; ') +
       '.'
 
-    const existing = await ContentReport.query({ client })
-      .where('tenant_id', tenantId)
-      .where('target_type', targetType)
-      .where('target_id', targetId)
-      .where('origin', 'automatic')
-      .whereIn('status', ['pending', 'under_review'])
-      .forUpdate()
-      .first()
+    const existing = await this.reports.findOpenAutomaticForUpdate(
+      tenantId,
+      targetType,
+      targetId,
+      client
+    )
 
     if (existing) {
       existing.useTransaction(client)
@@ -128,7 +128,7 @@ export default class AutomaticModerationService {
     }
 
     const reviewPolicy = await this.reviewPolicies.getForTenant(tenantId, client)
-    return ContentReport.create(
+    return this.reports.create(
       {
         tenant_id: tenantId,
         protocol_number: buildProtocolNumber(),

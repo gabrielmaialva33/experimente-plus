@@ -47,6 +47,46 @@ export default class ContentReportRepository extends LucidRepository<typeof Cont
       .first()
   }
 
+  /**
+   * The open automatic report of a target, locked for the caller's
+   * transaction. There is at most one per target.
+   */
+  async findOpenAutomaticForUpdate(
+    tenantId: number,
+    targetType: IReview.ReportTargetType,
+    targetId: number,
+    client: TransactionClientContract
+  ): Promise<ContentReport | null> {
+    return ContentReport.query({ client })
+      .where('tenant_id', tenantId)
+      .where('target_type', targetType)
+      .where('target_id', targetId)
+      .where('origin', 'automatic')
+      .whereIn('status', ['pending', 'under_review'])
+      .forUpdate()
+      .first()
+  }
+
+  /** Whether another report of the target was resolved by hiding the content. */
+  async hasOtherHiddenResolution(
+    tenantId: number,
+    targetType: IReview.ReportTargetType,
+    targetId: number,
+    excludeReportId: number,
+    client: TransactionClientContract
+  ): Promise<boolean> {
+    const hiddenByPerson = await client
+      .from('content_reports')
+      .where('tenant_id', tenantId)
+      .where('target_type', targetType)
+      .where('target_id', targetId)
+      .whereNot('id', excludeReportId)
+      .where('resolution_action', 'content_hidden')
+      .first()
+
+    return Boolean(hiddenByPerson)
+  }
+
   async paginateForTenant(tenantId: number, query: IReview.ListReportsQuery) {
     const rows = ContentReport.query()
       .where('tenant_id', tenantId)
