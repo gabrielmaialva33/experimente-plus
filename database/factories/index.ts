@@ -36,11 +36,17 @@ export {
   EstablishmentEventFactory,
   EstablishmentExperienceFactory,
   EstablishmentShowcaseItemFactory,
+  PartnerContentMediaFactory,
+  PartnerContentPolicyFactory,
 } from '#database/factories/partner_content_factory'
 export { PermissionFactory } from '#database/factories/permission_factory'
 export {
+  AutomaticModerationPolicyFactory,
+  ContentReportFactory,
   EstablishmentReviewFactory,
+  EstablishmentReviewPhotoFactory,
   EstablishmentReviewReplyFactory,
+  ReviewPolicyFactory,
 } from '#database/factories/review_factory'
 export { RoleFactory } from '#database/factories/role_factory'
 export {
