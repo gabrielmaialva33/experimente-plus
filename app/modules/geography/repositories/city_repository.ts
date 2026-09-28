@@ -78,6 +78,10 @@ export default class CityRepository {
     return City.query().where('tenant_id', tenantId).where('slug', slug).preload('region').first()
   }
 
+  async loadRegion(city: City): Promise<void> {
+    await city.load('region')
+  }
+
   async isSlugTaken(tenantId: number, slug: string, excludeId?: number): Promise<boolean> {
     const query = City.query().where('tenant_id', tenantId).where('slug', slug)
 
