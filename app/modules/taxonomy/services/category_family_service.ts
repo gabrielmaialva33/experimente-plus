@@ -3,7 +3,7 @@ import { inject } from '@adonisjs/core'
 import BadRequestException from '#exceptions/bad_request_exception'
 import NotFoundException from '#exceptions/not_found_exception'
 import ITaxonomy from '#modules/taxonomy/interfaces/taxonomy_interface'
-import CategoryFamily from '#modules/taxonomy/models/category_family'
+import type CategoryFamily from '#modules/taxonomy/models/category_family'
 import CategoryFamilyRepository from '#modules/taxonomy/repositories/category_family_repository'
 import { normalizeSlug, resolveUniqueSlug } from '#shared/utils/slug'
 
