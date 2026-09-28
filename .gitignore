@@ -37,6 +37,9 @@ storage/seed-media/*
 # The local drive's media, uploaded at run time — the functional suite writes
 # review photos here. Runtime data never belongs in the repository.
 storage/media/
+# Demo images the homologation provisioner uploads when the disk is `fs`; its
+# functional tests write them here and clean up only when they finish.
+storage/homologation/
 
 # Lucid v7 auto-generated schema classes
 database/schema.ts
