@@ -1511,7 +1511,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           steps(
             'No menu da esquerda, toque em **Dados do lugar**. Aparecem todos os lugares dos seus negócios, com a situação de cada um.',
-            'Toque em **Editar dados** (dados públicos) ou **Benefícios** (ofertas) no lugar. **Desempenho**, ao lado do nome de cada organização, abre os números dela.',
+            'Toque em **Editar dados** (dados públicos), **Benefícios** (ofertas) ou **Desempenho** (números do lugar) no lugar. **Desempenho**, ao lado do nome de cada organização, abre os números dela.',
             'Para ver uma organização e todos os lugares dela, toque em **Abrir**, na Visão geral.'
           ),
           figures(
@@ -1763,6 +1763,68 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           'Não aparece **Desempenho** no menu: o seu papel é Editor. O desempenho fica com Proprietários, Administradores e Analistas.',
         ],
         keywords: ['desempenho', 'números', 'visitas', 'contatos', 'relatório', 'estatísticas'],
+      },
+      {
+        id: 'parceiro-desempenho-negocio',
+        title: 'Como acompanhar o desempenho do seu negócio',
+        intro:
+          'Para ver, lugar por lugar, o movimento e as vendas que o Experimente+ trouxe, comparados com o período anterior.',
+        needs: ['papel Proprietário, Administrador ou Analista'],
+        blocks: [
+          steps(
+            'No menu da esquerda, toque em **Desempenho**. Com um lugar só, ele abre direto. Com mais de um, toque em **Desempenho** no lugar, na lista **Dados do lugar**, ou no nome do lugar no [desempenho da organização](#parceiro-desempenho).',
+            'No alto, escolha o período: **Este mês**, **Mês passado**, **Últimos 90 dias** ou, enquanto o lugar participa de uma edição, **Edição atual**.',
+            'Embaixo de cada número aparece quanto ele mudou e quanto era no período anterior.'
+          ),
+          table(
+            'O que cada número conta',
+            ['Número', 'O que conta'],
+            ['**Benefícios utilizados**', 'Utilizações confirmadas no balcão.'],
+            [
+              '**Venda estimada**',
+              'Benefícios utilizados × o **Ticket médio** do lugar. É uma estimativa, não o faturamento real.',
+            ],
+            ['**Avaliações recebidas**', 'Avaliações publicadas no período e a nota média delas.'],
+            [
+              '**Aparições na busca**',
+              'Vezes que o lugar apareceu nas buscas e nas listas do app e do site.',
+            ],
+            ['**Visitas à página do lugar**', 'Vezes que alguém abriu a página do lugar.'],
+            [
+              '**Novos seguidores** e **Novos favoritos**',
+              'Pessoas que começaram a seguir ou salvaram o lugar no período e continuam.',
+            ],
+            [
+              '**Cliques em rota**, **no WhatsApp**, **no telefone** e **no site**',
+              'Toques nos botões de contato da página do lugar.',
+            ]
+          ),
+          info(
+            'A venda é estimada',
+            'O Experimente+ não vê a conta do cliente. A venda estimada multiplica os benefícios utilizados pelo **Ticket médio** que o lugar informa em **Dados do lugar**, na etapa **Características**. Sem ele, a página mostra **Preencher o ticket médio** no lugar do valor.'
+          ),
+          tip(
+            'Com o que cada período é comparado',
+            '**Este mês** é comparado com os mesmos dias do mês anterior; **Mês passado**, com o mês inteiro antes dele; **Últimos 90 dias** e **Edição atual**, com o mesmo número de dias logo antes.'
+          ),
+        ],
+        result:
+          'você vê os números do lugar no período e quanto mudaram. Ninguém é identificado: tudo é somado.',
+        troubleshooting: [
+          'Aparece **Preencher o ticket médio**: preencha o **Ticket médio** em **Dados do lugar** e envie para análise. O valor passa a contar quando a equipe aprovar. Se a categoria não tiver esse campo, fale com a equipe do Experimente+.',
+          'Está tudo zerado: o lugar ainda não está publicado ou não teve movimento no período. Escolha **Últimos 90 dias** para ver um tempo maior.',
+          'Não aparece **Desempenho** no menu: o seu papel é Editor. O desempenho fica com Proprietários, Administradores e Analistas.',
+        ],
+        keywords: [
+          'desempenho',
+          'renovação',
+          'venda estimada',
+          'ticket médio',
+          'benefícios utilizados',
+          'seguidores',
+          'favoritos',
+          'comparação',
+        ],
       },
       {
         id: 'parceiro-equipe-convidar',

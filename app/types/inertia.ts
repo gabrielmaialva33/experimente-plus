@@ -13,6 +13,7 @@ import type { DashboardStats } from '#modules/web/services/get_dashboard_stats_s
 import type { WebRole } from '#modules/web/services/list_roles_with_permissions_service'
 import type { WebPermission } from '#modules/web/services/list_all_permissions_service'
 import type { PartnerPlacesPageProps } from '#modules/portal/interfaces/portal_pages'
+import type { EstablishmentPerformancePageProps } from '#modules/analytics/interfaces/establishment_performance_page'
 import type {
   OrganizationInvitationAcceptPageProps,
   OrganizationTeamChooserProps,
@@ -96,6 +97,7 @@ declare module '@adonisjs/inertia/types' {
     'portal/reviews/index': PartnerReviewsPageProps
     'portal/establishments/edit': Record<string, any>
     'portal/establishments/benefits': Record<string, any>
+    'portal/establishments/performance': EstablishmentPerformancePageProps
     'portal/redemptions/index': Record<string, any>
     'portal/redemptions/validate': Record<string, any>
     'portal/redemptions/receipt': Record<string, any>

@@ -308,6 +308,9 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
         <Card className="rounded-card border-border-subtle">
           <CardHeader>
             <CardTitle className="font-display text-lg font-bold">Desempenho por lugar</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Toque no nome do lugar para ver benefícios utilizados, venda estimada e avaliações.
+            </p>
           </CardHeader>
           <CardContent>
             {dashboard.establishments.length > 0 ? (
@@ -321,7 +324,14 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                       key={establishment.establishment_id}
                       className="rounded-2xl bg-background px-4 py-3"
                     >
-                      <p className="font-display font-bold">{establishment.public_name}</p>
+                      <p className="font-display font-bold">
+                        <Link
+                          href={`/portal/establishments/${establishment.establishment_id}/performance`}
+                          className="underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {establishment.public_name}
+                        </Link>
+                      </p>
                       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                         {(
                           [
@@ -378,7 +388,12 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                           className="border-b border-border-subtle last:border-0"
                         >
                           <th scope="row" className="px-3 py-4 text-left font-display font-bold">
-                            {establishment.public_name}
+                            <Link
+                              href={`/portal/establishments/${establishment.establishment_id}/performance`}
+                              className="underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {establishment.public_name}
+                            </Link>
                           </th>
                           <td className="px-3 py-4 text-right tabular-nums">
                             {compactNumber(establishment.impressions)}

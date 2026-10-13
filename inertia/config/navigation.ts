@@ -331,6 +331,19 @@ export const ROUTE_METADATA: readonly RouteMetadata[] = [
     ],
   },
   {
+    id: 'portal-establishment-performance',
+    pattern: '/portal/establishments/:establishmentId/performance',
+    surface: 'portal',
+    title: 'Desempenho do lugar',
+    description: 'Benefícios utilizados, venda estimada, avaliações, alcance e contatos do lugar.',
+    capability: 'analytics.read',
+    breadcrumbs: [
+      { label: 'Portal', href: '/portal' },
+      { label: 'Desempenho', href: '/portal/performance' },
+      { label: 'Lugar' },
+    ],
+  },
+  {
     id: 'portal-establishment-new',
     pattern: '/portal/organizations/:organizationId/establishments/new',
     surface: 'portal',
@@ -786,7 +799,10 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'analytics.read',
     organizationAction: 'analytics.read',
     requiresActiveTenant: true,
-    activePatterns: ['/organizations/:organizationId/analytics'],
+    activePatterns: [
+      '/organizations/:organizationId/analytics',
+      '/portal/establishments/:establishmentId/performance',
+    ],
   },
   {
     id: 'portal-team',

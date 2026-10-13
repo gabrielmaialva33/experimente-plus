@@ -921,6 +921,12 @@ Cookie: experimente-plus-session=replace-with-browser-session
 x-tenant-id: {{tenantId}}
 Accept: text/html
 
+### Read Establishment Performance Page
+GET {{baseUrl}}/portal/establishments/{{establishmentId}}/performance?period=current_month
+Cookie: experimente-plus-session=replace-with-browser-session
+x-tenant-id: {{tenantId}}
+Accept: text/html
+
 ### List Searches Without Results
 GET {{baseUrl}}/api/v1/admin/analytics/searches/no-results?from=2026-08-01&to=2026-08-31&page=1&per_page=20
 Authorization: Bearer {{adminToken}}

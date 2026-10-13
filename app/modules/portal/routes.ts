@@ -23,6 +23,8 @@ const TaxonomyPagesController = () =>
   import('#modules/taxonomy/controllers/taxonomy_pages_controller')
 const GeographyPagesController = () =>
   import('#modules/geography/controllers/geography_pages_controller')
+const EstablishmentPerformancePagesController = () =>
+  import('#modules/analytics/controllers/establishment_performance_pages_controller')
 
 const permission = (resource: IPermission.Resources, action: IPermission.Actions) =>
   middleware.permission({ permissions: `${resource}.${action}` })
@@ -65,6 +67,18 @@ router
     router
       .get('/performance', [PartnerPortalController, 'performance'])
       .as('portal.performance')
+      .use(permission(IPermission.Resources.ANALYTICS, IPermission.Actions.READ))
+    /**
+     * "Desempenho" of one place: the analytics policy of its organization
+     * decides inside the service, as on the organization's page.
+     */
+    router
+      .get('/establishments/:establishmentId/performance', [
+        EstablishmentPerformancePagesController,
+        'show',
+      ])
+      .where('establishmentId', router.matchers.number())
+      .as('portal.establishments.performance')
       .use(permission(IPermission.Resources.ANALYTICS, IPermission.Actions.READ))
 
     router
