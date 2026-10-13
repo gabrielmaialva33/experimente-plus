@@ -29,9 +29,111 @@ type ContentKind = keyof typeof CONTENT_TABLES
 /** How many withheld names are worth carrying into the prose check. */
 const WITHHELD_LIMIT = 200
 
+type Binding = string | number | Date | number[] | string[]
+
 export interface GroundingQuery {
   sql: string
-  bindings: (string | number | Date | number[])[]
+  bindings: Binding[]
+}
+
+/**
+ * The shortcuts of a question as SQL predicates over one discoverable place —
+ * the `place` row of the queries below.
+ *
+ * They narrow the set before the ceiling cuts it and before the model sees
+ * it, so a filtered question never offers what the filter excluded, and an
+ * empty result is the catalogue's answer rather than the model's. Every value
+ * is a binding from a closed vocabulary; nothing the person typed reaches the
+ * SQL text. Without filters the list is empty and the queries are the ones
+ * without them.
+ *
+ * `openNow` says what "open now" means for the row: a place, or the place that
+ * hosts an experience, is open by the catalogue's own opening-hours function
+ * in its city's timezone — the same `catalog_is_open_now` behind the public
+ * operating status. An event has its own approved window instead, and is
+ * "open now" while that window holds the instant: the host's regular hours say
+ * nothing about a show it put on.
+ */
+export function groundingFilterPredicates(params: {
+  filters?: IConcierge.Filters | null
+  now: Date
+  openNow: 'place' | 'event_window'
+}): { sql: string[]; bindings: Binding[] } {
+  const filters = params.filters ?? {}
+  const sql: string[] = []
+  const bindings: Binding[] = []
+
+  if (filters.open_now === true) {
+    if (params.openNow === 'event_window') {
+      // The event queries already require `ends_at > now`.
+      sql.push(`(content.published_snapshot->>'starts_at')::timestamptz <= ?`)
+    } else {
+      sql.push(`catalog_is_open_now(
+          place.availability_type,
+          place.business_status,
+          place.city_timezone,
+          place.weekly_hours,
+          place.special_days,
+          ?::timestamptz
+        )`)
+    }
+    bindings.push(params.now)
+  }
+
+  const families = [
+    ...new Set((filters.kind ?? []).flatMap((kind) => IConcierge.KIND_FAMILY_SLUGS[kind] ?? [])),
+  ]
+  if (families.length > 0) {
+    sql.push(`EXISTS (
+          SELECT 1
+          FROM catalog_establishment_categories family_match
+          WHERE family_match.tenant_id = place.tenant_id
+            AND family_match.establishment_id = place.establishment_id
+            AND family_match.family_slug = ANY(?::text[])
+        )`)
+    bindings.push(families)
+  }
+
+  if (typeof filters.min_rating === 'number') {
+    // A place without published reviews has no average, and NULL never passes.
+    sql.push('place.reviews_average >= ?')
+    bindings.push(filters.min_rating)
+  }
+
+  const buckets = [...new Set(filters.price ?? [])].filter(
+    (bucket) => IConcierge.PRICE_BUCKET_BOUNDS[bucket] !== undefined
+  )
+  if (buckets.length > 0) {
+    const bounds: number[] = []
+    const ranges = buckets.map((bucket) => {
+      const { above, upTo } = IConcierge.PRICE_BUCKET_BOUNDS[bucket]
+      const range: string[] = []
+      if (above !== null) {
+        range.push(`(ticket->>'value')::numeric > ?`)
+        bounds.push(above)
+      }
+      if (upTo !== null) {
+        range.push(`(ticket->>'value')::numeric <= ?`)
+        bounds.push(upTo)
+      }
+      return `(${range.join(' AND ')})`
+    })
+    sql.push(`EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(
+            CASE
+              WHEN jsonb_typeof(place.public_attributes) = 'array' THEN place.public_attributes
+              ELSE '[]'::jsonb
+            END
+          ) ticket
+          WHERE ticket->>'key' = ?
+            AND jsonb_typeof(ticket->'value') = 'number'
+            AND (${ranges.join(' OR ')})
+        )`)
+    bindings.push(IConcierge.AVERAGE_TICKET_ATTRIBUTE_KEY, ...bounds)
+  }
+
+  return { sql, bindings }
 }
 
 /**
@@ -74,9 +176,17 @@ export function establishmentGroundingQuery(params: {
   citySlug: string | null
   limit: number
   preferredCategoryIds?: readonly number[]
+  filters?: IConcierge.Filters | null
+  now?: Date
 }): GroundingQuery {
   const { tenantId, citySlug, limit } = params
   const preferred = preferenceOrder(params.preferredCategoryIds)
+  const filtered = groundingFilterPredicates({
+    filters: params.filters,
+    now: params.now ?? new Date(),
+    openNow: 'place',
+  })
+  const conditions = [...(citySlug ? ['place.city_slug = ?'] : []), ...filtered.sql]
 
   return {
     sql: `
@@ -91,11 +201,17 @@ export function establishmentGroundingQuery(params: {
         place.address,
         place.categories
       FROM discoverable place
-      ${citySlug ? 'WHERE place.city_slug = ?' : ''}
+      ${conditions.length > 0 ? `WHERE ${conditions.join('\n        AND ')}` : ''}
       ORDER BY ${preferred.sql}place.public_name ASC, place.establishment_slug ASC, place.establishment_id ASC
       LIMIT ?
     `,
-    bindings: [tenantId, ...(citySlug ? [citySlug] : []), ...preferred.bindings, limit],
+    bindings: [
+      tenantId,
+      ...(citySlug ? [citySlug] : []),
+      ...filtered.bindings,
+      ...preferred.bindings,
+      limit,
+    ],
   }
 }
 
@@ -137,10 +253,18 @@ export function contentGroundingQuery(params: {
   limit: number
   now: Date
   preferredCategoryIds?: readonly number[]
+  filters?: IConcierge.Filters | null
 }): GroundingQuery {
   const { kind, tenantId, citySlug, limit, now } = params
   const preferred = preferenceOrder(params.preferredCategoryIds)
   const isEvent = kind === 'event'
+  // Content is filtered by the place that hosts it, except "open now" for an
+  // event, which is the event's own window.
+  const filtered = groundingFilterPredicates({
+    filters: params.filters,
+    now,
+    openNow: isEvent ? 'event_window' : 'place',
+  })
 
   const window = isEvent
     ? `content.published_snapshot->>'starts_at' AS starts_at,
@@ -177,6 +301,7 @@ export function contentGroundingQuery(params: {
         AND coalesce(content.published_snapshot->>'title', '') <> ''
         ${isEvent ? `AND (content.published_snapshot->>'ends_at')::timestamptz > ?` : ''}
         ${citySlug ? 'AND place.city_slug = ?' : ''}
+        ${filtered.sql.map((predicate) => `AND ${predicate}`).join('\n        ')}
       ORDER BY ${preferred.sql}${order}, place.establishment_slug ASC, content.id ASC
       LIMIT ?
     `,
@@ -185,6 +310,7 @@ export function contentGroundingQuery(params: {
       tenantId,
       ...(isEvent ? [now] : []),
       ...(citySlug ? [citySlug] : []),
+      ...filtered.bindings,
       ...preferred.bindings,
       limit,
     ],
@@ -252,6 +378,15 @@ interface OfferedRow {
   establishmentId: number
 }
 
+/** What every species of one question is read under. */
+interface GroundingScope {
+  tenantId: number
+  citySlug: string | null
+  now: Date
+  preferred: readonly number[]
+  filters: IConcierge.Filters | null
+}
+
 export default class CatalogGroundingRepository {
   /**
    * One query per species, each with its own ceiling — never one query per item.
@@ -264,28 +399,20 @@ export default class CatalogGroundingRepository {
     citySlug: string | null,
     limit: number,
     now: Date = new Date(),
-    preferredCategoryIds: readonly number[] = []
+    preferredCategoryIds: readonly number[] = [],
+    filters: IConcierge.Filters | null = null
   ): Promise<{ offered: IConcierge.GroundingItem[]; withheld: string[] }> {
     const budget = splitGroundingBudget(limit)
-    const preferred = preferredCategoryIds
+    const scope = { tenantId, citySlug, now, preferred: preferredCategoryIds, filters }
 
-    const events = await this.content('event', tenantId, citySlug, budget.event, now, preferred)
-    const experiences = await this.content(
-      'experience',
-      tenantId,
-      citySlug,
-      budget.experience,
-      now,
-      preferred
-    )
+    const events = await this.content('event', scope, budget.event)
+    const experiences = await this.content('experience', scope, budget.experience)
 
     // Reserved content slots nobody used belong to establishments, so a
     // catalogue with no partner content still fills the prompt.
     const establishments = await this.establishments(
-      tenantId,
-      citySlug,
-      budget.total - events.length - experiences.length,
-      preferred
+      scope,
+      budget.total - events.length - experiences.length
     )
 
     const rows = [...establishments, ...experiences, ...events]
@@ -296,15 +423,17 @@ export default class CatalogGroundingRepository {
     }
   }
 
-  private async establishments(
-    tenantId: number,
-    citySlug: string | null,
-    limit: number,
-    preferredCategoryIds: readonly number[]
-  ): Promise<OfferedRow[]> {
+  private async establishments(scope: GroundingScope, limit: number): Promise<OfferedRow[]> {
     if (limit <= 0) return []
 
-    const query = establishmentGroundingQuery({ tenantId, citySlug, limit, preferredCategoryIds })
+    const query = establishmentGroundingQuery({
+      tenantId: scope.tenantId,
+      citySlug: scope.citySlug,
+      limit,
+      preferredCategoryIds: scope.preferred,
+      filters: scope.filters,
+      now: scope.now,
+    })
     const result = await db.rawQuery<{ rows: PlaceColumns[] }>(query.sql, query.bindings)
 
     return result.rows.map((row) => {
@@ -326,21 +455,19 @@ export default class CatalogGroundingRepository {
 
   private async content(
     kind: ContentKind,
-    tenantId: number,
-    citySlug: string | null,
-    limit: number,
-    now: Date,
-    preferredCategoryIds: readonly number[]
+    scope: GroundingScope,
+    limit: number
   ): Promise<OfferedRow[]> {
     if (limit <= 0) return []
 
     const query = contentGroundingQuery({
       kind,
-      tenantId,
-      citySlug,
+      tenantId: scope.tenantId,
+      citySlug: scope.citySlug,
       limit,
-      now,
-      preferredCategoryIds,
+      now: scope.now,
+      preferredCategoryIds: scope.preferred,
+      filters: scope.filters,
     })
     const result = await db.rawQuery<{ rows: ContentColumns[] }>(query.sql, query.bindings)
 

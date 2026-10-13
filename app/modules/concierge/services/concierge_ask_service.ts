@@ -7,7 +7,11 @@ import ConciergeQuotaService from '#modules/concierge/services/concierge_quota_s
 import ConciergeService from '#modules/concierge/services/concierge_service'
 import ExplorerInterestRepository from '#modules/explorer/repositories/explorer_interest_repository'
 
-type Question = { question: string; city?: string | null }
+type Question = {
+  question: string
+  city?: string | null
+  filters?: IConcierge.Filters | null
+}
 
 /**
  * One question to the Concierge, from either route — ADR-0029.
@@ -55,6 +59,12 @@ export default class ConciergeAskService {
    * the daily quota, or with the assistant switched off, the reply is the same
    * degraded one an unconfigured deployment gives — the catalogue, no model —
    * so the outcomes the app knows stay the only ones it can receive.
+   *
+   * The shortcuts only narrow what the grounding reads, before the policy's
+   * ceiling cuts it and before any model sees it. The topic refusal, the
+   * switch and the quota decide exactly as they would without them. A filter
+   * that leaves nothing is the degraded reply with no items, never a question
+   * put to the model about an empty list.
    */
   private async reply(
     tenantId: number,
@@ -68,7 +78,8 @@ export default class ConciergeAskService {
       payload.city ?? null,
       policy.max_catalog_items,
       new Date(),
-      preferredCategoryIds
+      preferredCategoryIds,
+      payload.filters ?? null
     )
 
     const reply = await this.concierge.answer(payload.question, offered, withheld, {

@@ -52,6 +52,66 @@ namespace IConcierge {
     ends_at: string | null
   }
 
+  /**
+   * The shortcuts a person may tick next to the question ("Concierge talvez ter
+   * alguns checkbox para facilitar sugestões"). Each one narrows the grounding
+   * set in SQL before the model sees it, so a filter is a fact about the
+   * catalogue and never an instruction the model could ignore. The question
+   * stays free text; with no filter the grounding is the one without them.
+   */
+  export const FILTER_KINDS = ['food', 'leisure', 'services'] as const
+  export type FilterKind = (typeof FILTER_KINDS)[number]
+
+  /**
+   * The one place a kind becomes taxonomy: the slugs of the operation's
+   * category families. A place matches when any of its categories belongs to
+   * one of the families. The taxonomy has five families for three kinds, so
+   * two of them share a kind: outdoors and sports are leisure, and well-being
+   * and style (beauty, tattoo, barbers, yoga) are services, as the home page
+   * already groups them. A family not listed here matches no kind.
+   */
+  export const KIND_FAMILY_SLUGS: Record<FilterKind, readonly string[]> = {
+    food: ['comer-e-beber'],
+    leisure: ['cultura-e-lazer', 'ar-livre-e-esportes'],
+    services: ['bem-estar-e-estilo', 'servicos-locais'],
+  }
+
+  /**
+   * Price buckets over the place's public "Ticket médio" attribute, in reais
+   * per person. `above` is exclusive and `upTo` inclusive, so a ticket of
+   * exactly 50 is "up to 50" and nothing falls between two buckets. A place
+   * that does not publish the attribute matches no bucket: the filter cannot
+   * vouch for a price nobody stated.
+   */
+  export const PRICE_BUCKETS = ['up_to_50', '50_100', 'over_100'] as const
+  export type PriceBucket = (typeof PRICE_BUCKETS)[number]
+
+  export const PRICE_BUCKET_BOUNDS: Record<
+    PriceBucket,
+    { above: number | null; upTo: number | null }
+  > = {
+    'up_to_50': { above: null, upTo: 50 },
+    '50_100': { above: 50, upTo: 100 },
+    'over_100': { above: 100, upTo: null },
+  }
+
+  /** The attribute key behind "Ticket médio" in the operation's attribute forms. */
+  export const AVERAGE_TICKET_ATTRIBUTE_KEY = 'average_ticket'
+
+  /** The scale of the public review average (one to five stars). */
+  export const MIN_RATING_RANGE = { min: 1, max: 5 } as const
+
+  export interface Filters {
+    /** Places open now in their city's timezone; events on now. */
+    open_now?: boolean
+    /** Any of these kinds; empty or absent means every kind. */
+    kind?: FilterKind[]
+    /** Public review average at least this; a place without reviews has none. */
+    min_rating?: number
+    /** Any of these buckets; empty or absent means any price, stated or not. */
+    price?: PriceBucket[]
+  }
+
   /** The shape the model is required to answer in, so citations are checkable. */
   export interface ModelAnswer {
     intro: string
