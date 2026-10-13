@@ -8,6 +8,7 @@ import AnalyticsEventService from '#modules/analytics/services/analytics_event_s
 import AnalyticsRedirectService from '#modules/analytics/services/analytics_redirect_service'
 import AnalyticsSessionService from '#modules/analytics/services/analytics_session_service'
 import AnalyticsTrackingPreferenceService from '#modules/analytics/services/analytics_tracking_preference_service'
+import { isCrawlerUserAgent } from '#shared/utils/crawler_user_agent'
 
 @inject()
 export default class AnalyticsRedirectController {
@@ -26,10 +27,13 @@ export default class AnalyticsRedirectController {
 
     const hostname = context.request.hostname()
     const tenantId = await this.eventService.resolveTenant(hostname)
-    const trackingAllowed = this.trackingPreference.allows(
-      context.request.header('dnt'),
-      context.request.header('sec-gpc')
-    )
+    // A crawler following the link still reaches the destination, but the
+    // click is not recorded: automated visits must not count as conversions.
+    const trackingAllowed =
+      this.trackingPreference.allows(
+        context.request.header('dnt'),
+        context.request.header('sec-gpc')
+      ) && !isCrawlerUserAgent(context.request.header('user-agent'))
     const anonymousSessionHash = trackingAllowed
       ? this.sessionService.resolve(context, tenantId)
       : null

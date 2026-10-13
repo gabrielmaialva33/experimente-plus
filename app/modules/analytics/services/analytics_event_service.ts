@@ -35,17 +35,39 @@ export default class AnalyticsEventService {
     return this.recordBatchForTenant(tenantId, events, anonymousSessionHash, source)
   }
 
+  /**
+   * Validates a batch exactly as `recordBatchForTenant` does, so an unknown
+   * target fails the same way, but stores nothing and answers as if every
+   * event had been recorded. For crawlers: their traffic must not reach the
+   * metrics, and a distinct answer would only tell a scraper to disguise itself.
+   */
+  async acknowledgeBatchForTenant(
+    tenantId: number,
+    events: IAnalytics.PublicEventInput[],
+    source: IAnalytics.Source = 'web'
+  ): Promise<IAnalytics.BatchResult> {
+    await this.resolveEvents(tenantId, events, source)
+
+    return {
+      accepted: events.length,
+      recorded: events.length,
+      deduplicated: 0,
+      suppressed: 0,
+      events: events.map((event) => ({
+        event_id: event.event_id,
+        recorded: true,
+        deduplicated: false,
+      })),
+    }
+  }
+
   async recordBatchForTenant(
     tenantId: number,
     events: IAnalytics.PublicEventInput[],
     anonymousSessionHash: string,
     source: IAnalytics.Source = 'web'
   ): Promise<IAnalytics.BatchResult> {
-    const resolvedEvents: IAnalytics.ResolvedEvent[] = []
-
-    for (const event of events) {
-      resolvedEvents.push(await this.targetService.resolveEvent(tenantId, event, source))
-    }
+    const resolvedEvents = await this.resolveEvents(tenantId, events, source)
 
     const occurredAt = DateTime.utc()
     const rawExpiresAt = occurredAt.plus({
@@ -131,5 +153,19 @@ export default class AnalyticsEventService {
       suppressed: 0,
       events: results,
     }
+  }
+
+  private async resolveEvents(
+    tenantId: number,
+    events: IAnalytics.PublicEventInput[],
+    source: IAnalytics.Source
+  ): Promise<IAnalytics.ResolvedEvent[]> {
+    const resolvedEvents: IAnalytics.ResolvedEvent[] = []
+
+    for (const event of events) {
+      resolvedEvents.push(await this.targetService.resolveEvent(tenantId, event, source))
+    }
+
+    return resolvedEvents
   }
 }

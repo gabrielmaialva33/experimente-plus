@@ -22,6 +22,11 @@ import {
 } from '#tests/functional/establishments/helpers'
 import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
 
+const GPTBOT =
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot'
+const ANDROID_CHROME =
+  'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36'
+
 const fixture = (name: string) => join(process.cwd(), 'tests', 'fixtures', 'media', name)
 const tenantHeader = (tenantId: number) => ({ 'x-tenant-id': String(tenantId) })
 const publicHeaders = (scenario: EstablishmentScenario) => ({
@@ -516,6 +521,90 @@ test.group('Discovery analytics', (group) => {
       .where('tenant_id', scenario.tenant.id)
       .whereIn('event_type', ['route_click', 'phone_click', 'website_click'])
     assert.lengthOf(clicks, 3)
+  })
+
+  test('redirects crawlers without recording them and answers their batches as recorded', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('analytics-crawlers')
+    const published = await completeAndPublish(client, scenario, 'Robôs Analytics Regionais')
+    const crawler = { ...publicHeaders(scenario), 'user-agent': GPTBOT }
+    const person = { ...publicHeaders(scenario), 'user-agent': ANDROID_CHROME }
+    const recorded = () =>
+      AnalyticsEvent.query()
+        .where('tenant_id', scenario.tenant.id)
+        .count('* as total')
+        .then((rows) => Number(rows[0].$extras.total))
+
+    for (const action of ['route', 'whatsapp', 'phone', 'website']) {
+      const crawled = await client
+        .get(`/go/${published.city_slug}/${published.establishment_slug}/${action}`)
+        .headers(crawler)
+        .redirects(0)
+      crawled.assertStatus(302)
+      assert.isNotEmpty(crawled.header('location'))
+      assert.notInclude(String(crawled.header('set-cookie') ?? ''), ANALYTICS_SESSION_COOKIE)
+    }
+    assert.equal(await recorded(), 0)
+
+    // The same batch from a crawler and from a person: same status, same
+    // answer, but only the person's events reach the raw table and aggregates.
+    const batch = () => [
+      analyticsEvent('establishment_view', published),
+      analyticsEvent('route_click', published),
+    ]
+    const crawledBatch = batch()
+    const crawledIngestion = await client
+      .post('/api/v1/analytics/events')
+      .headers(crawler)
+      .json({ events: crawledBatch })
+    crawledIngestion.assertStatus(202)
+    assert.notInclude(String(crawledIngestion.header('set-cookie') ?? ''), ANALYTICS_SESSION_COOKIE)
+    assert.equal(await recorded(), 0)
+    assert.equal(
+      await AnalyticsDailyMetric.query()
+        .where('tenant_id', scenario.tenant.id)
+        .count('* as total')
+        .then((rows) => Number(rows[0].$extras.total)),
+      0
+    )
+
+    const personBatch = batch()
+    const personIngestion = await client
+      .post('/api/v1/analytics/events')
+      .headers(person)
+      .json({ events: personBatch })
+    personIngestion.assertStatus(202)
+    assert.equal(await recorded(), 2)
+
+    const withoutIds = (body: { events: Array<{ event_id: string }> }) => ({
+      ...body,
+      events: body.events.map(({ event_id: _eventId, ...event }) => event),
+    })
+    assert.deepEqual(withoutIds(crawledIngestion.body()), withoutIds(personIngestion.body()))
+    assert.deepEqual(
+      crawledIngestion.body().events.map((event: { event_id: string }) => event.event_id),
+      crawledBatch.map((event) => event.event_id)
+    )
+
+    // Targets are checked as for anyone: a crawler cannot tell its batches apart.
+    const unknown = await client
+      .post('/api/v1/analytics/events')
+      .headers(crawler)
+      .json({
+        events: [
+          analyticsEvent('establishment_view', { ...published, establishment_slug: 'nada' }),
+        ],
+      })
+    unknown.assertStatus(404)
+
+    const clicked = await client
+      .get(`/go/${published.city_slug}/${published.establishment_slug}/route`)
+      .headers(person)
+      .redirects(0)
+    clicked.assertStatus(302)
+    assert.equal(await recorded(), 3)
   })
 
   test('keeps raw events append-only and prunes only expired analytics data', async ({
