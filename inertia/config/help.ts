@@ -20,6 +20,7 @@ export const PAGE_HELP_ANCHORS: Readonly<Record<string, string>> = {
   'portal/establishments/new': 'parceiro-editar-lugar',
   'portal/establishments/edit': 'parceiro-editar-lugar',
   'portal/establishments/benefits': 'parceiro-beneficios',
+  'portal/establishments/performance': 'parceiro-desempenho-negocio',
   'portal/content/index': 'parceiro-conteudo',
   'portal/reviews/index': 'parceiro-avaliacoes',
   'portal/redemptions/validate': 'parceiro-validar',
