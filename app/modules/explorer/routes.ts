@@ -42,6 +42,8 @@ router
       .where('contentId', router.matchers.number())
 
     router.get('/follows', [ExplorerController, 'listFollows'])
+    // What the followed places published, for the app's "Novidades" tab.
+    router.get('/following/updates', [ExplorerDiscoveryController, 'followingUpdates'])
     router
       .put('/follows/:establishmentId', [ExplorerController, 'follow'])
       .where('establishmentId', router.matchers.number())

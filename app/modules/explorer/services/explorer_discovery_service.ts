@@ -3,15 +3,16 @@ import { DateTime } from 'luxon'
 
 import NotFoundException from '#exceptions/not_found_exception'
 import IExplorer from '#modules/explorer/interfaces/explorer_interface'
+import ExplorerFollowingRepository from '#modules/explorer/repositories/explorer_following_repository'
 import ExplorerItineraryRepository from '#modules/explorer/repositories/explorer_itinerary_repository'
 import ExplorerSuggestionRepository from '#modules/explorer/repositories/explorer_suggestion_repository'
 import CityRepository from '#modules/geography/repositories/city_repository'
 
 /**
  * What the Explorer's own layer suggests from the person's choices: places to
- * add to an itinerary.
+ * add to an itinerary and what the followed places published.
  *
- * It reads only the caller's itinerary and the public catalogue.
+ * Both read only the caller's itinerary or follows and the public catalogue.
  * Nothing here reads, counts or returns anyone else's preferences.
  */
 @inject()
@@ -19,6 +20,7 @@ export default class ExplorerDiscoveryService {
   constructor(
     private itineraries: ExplorerItineraryRepository,
     private suggestions: ExplorerSuggestionRepository,
+    private following: ExplorerFollowingRepository,
     private cities: CityRepository
   ) {}
 
@@ -68,6 +70,36 @@ export default class ExplorerDiscoveryService {
     })
 
     return { basis: centroid ? 'nearby' : 'popular', data }
+  }
+
+  /** "Dos lugares que você segue": what the followed places published, newest first. */
+  async followingUpdates(
+    tenantId: number,
+    userId: number,
+    query: IExplorer.PageQuery
+  ): Promise<IExplorer.FollowingUpdates> {
+    const perPage = query.per_page ?? IExplorer.FOLLOWING_UPDATES_PER_PAGE
+    const page = query.page ?? 1
+    const now = new Date()
+
+    // Serial on purpose: the reads may share one transaction-bound connection.
+    const hasFollows = await this.following.hasFollows(tenantId, userId)
+    const total = hasFollows ? await this.following.countUpdates(tenantId, userId, now) : 0
+    const data =
+      total > (page - 1) * perPage
+        ? await this.following.listUpdates(tenantId, userId, now, page, perPage)
+        : []
+
+    return {
+      data,
+      has_follows: hasFollows,
+      meta: {
+        total,
+        per_page: perPage,
+        current_page: page,
+        last_page: Math.max(1, Math.ceil(total / perPage)),
+      },
+    }
   }
 
   private async requireCityId(tenantId: number, citySlug: string): Promise<number> {

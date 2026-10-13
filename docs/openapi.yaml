@@ -6742,6 +6742,102 @@ components:
           type: [number, 'null']
           minimum: 0
 
+    ExplorerFollowingUpdate:
+      description: >-
+        One public item of a followed establishment, from the approved
+        snapshot. An event is listed until it ends; a showcase price is
+        displayed, never charged.
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - id
+        - title
+        - description
+        - published_at
+        - starts_at
+        - ends_at
+        - informational_price_cents
+        - cover
+        - establishment
+      properties:
+        kind:
+          type: string
+          enum: [experience, event, showcase_item]
+        id:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        description:
+          type: [string, 'null']
+        published_at:
+          type: string
+          format: date-time
+        starts_at:
+          description: Events only.
+          type: [string, 'null']
+          format: date-time
+        ends_at:
+          description: Events only.
+          type: [string, 'null']
+          format: date-time
+        informational_price_cents:
+          description: Showcase items only. Displayed, never charged.
+          type: [integer, 'null']
+          minimum: 0
+        cover:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [url, alt_text]
+              properties:
+                url:
+                  type: string
+                alt_text:
+                  type: string
+            - type: 'null'
+        establishment:
+          $ref: '#/components/schemas/ExplorerEstablishmentCard'
+
+    ExplorerPageMeta:
+      type: object
+      additionalProperties: false
+      required: [total, per_page, current_page, last_page]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 50
+        current_page:
+          type: integer
+          minimum: 1
+        last_page:
+          type: integer
+          minimum: 1
+
+    ExplorerFollowingUpdates:
+      description: >-
+        What the caller's followed places published, most recent first.
+        `has_follows` says whether the caller follows any place that is public
+        now, separating "follow places to see this" from "nothing new".
+      type: object
+      additionalProperties: false
+      required: [data, has_follows, meta]
+      properties:
+        data:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/ExplorerFollowingUpdate'
+        has_follows:
+          type: boolean
+        meta:
+          $ref: '#/components/schemas/ExplorerPageMeta'
+
   parameters:
     TenantHeader:
       name: x-tenant-id
@@ -15794,6 +15890,48 @@ paths:
           description: Authentication required
         '404':
           description: Itinerary or city not found
+        '422':
+          description: Validation failed
+
+  /api/v1/me/following/updates:
+    get:
+      operationId: listMyFollowingUpdates
+      summary: What the places the caller follows published
+      description: >-
+        Published experiences, events that have not ended and showcase items of
+        the establishments the caller follows and the public catalogue still
+        shows, most recently published first. A withdrawn place stops
+        contributing without its follow being deleted.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: One page of updates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerFollowingUpdates'
+        '401':
+          description: Authentication required
         '422':
           description: Validation failed
 

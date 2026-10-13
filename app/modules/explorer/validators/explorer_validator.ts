@@ -83,3 +83,10 @@ export const suggestionsQueryValidator = vine.compile(
     city: vine.string().trim().minLength(1).maxLength(120).optional(),
   })
 )
+
+export const followingUpdatesQueryValidator = vine.compile(
+  vine.object({
+    page: vine.number().withoutDecimals().min(1).max(2147483647).optional(),
+    per_page: vine.number().withoutDecimals().min(1).max(50).optional(),
+  })
+)

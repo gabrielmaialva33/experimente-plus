@@ -798,7 +798,8 @@ test.group('Documentation', () => {
    */
   test('documents every Explorer route, and only private ones', async ({ assert }) => {
     const specification = await readOpenApi()
-    const explorerPath = /^\/api\/v1\/me\/(favorites|follows|saved|interests|itineraries|for-you)/
+    const explorerPath =
+      /^\/api\/v1\/me\/(favorites|follows|following|saved|interests|itineraries|for-you)/
 
     const runtime = Object.values(router.toJSON())
       .flatMap((routes) => routes)
