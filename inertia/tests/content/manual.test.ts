@@ -83,6 +83,8 @@ const APP_HELP_ANCHORS = [
 const SHOWN_ELSEWHERE: Record<string, string> = {
   'app-carteira': 'consumidor-apresentar',
   'app-validar': 'parceiro-validar',
+  // The place's own numbers have no picture yet; the task links to the organization's.
+  'parceiro-desempenho-negocio': 'parceiro-desempenho',
 }
 
 describe('manual content', () => {
