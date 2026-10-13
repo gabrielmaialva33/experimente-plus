@@ -2595,7 +2595,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'Em **Ordenar**, escolha **Relevância**, **Mais bem avaliados**, **Mais perto** ou **Menor preço**; o filtro **Vale hoje** mostra só os lugares com benefício para hoje. As ordens funcionam como no site (veja [Como ordenar a lista e ver o que vale hoje](#visitante-ordenar)), e a lista e o mapa usam as mesmas escolhas.'
           ),
           p(
-            'Em **Mais perto**, o app pede a localização só naquela hora e só enquanto ele está aberto. Se você negar, a lista continua por relevância; se negou de vez, o app oferece **Abrir configurações**.'
+            'Em **Mais perto**, o app pede a localização só naquela hora e só enquanto ele está aberto. Se você negar, a lista continua por relevância; se negou de vez, o app oferece **Abrir configurações**. Com a ordem ativa, cada lugar mostra a que distância está de você, como **a 350 m** ou **a 1,2 km**; a conta é feita no próprio aparelho.'
           ),
           p(
             'Mais abaixo na aba ficam **Para você** (sugestões pelos seus interesses, quando você tem conta), a agenda, as novidades e o Concierge.'
@@ -2787,7 +2787,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'Na página do lugar, toque no coração (**Favoritar**) para guardar o lugar. A lista fica em **Conta > Favoritos**.',
             'Toque no sino (**Seguir**) para acompanhar as novidades do lugar. A lista fica em **Conta > Seguindo**.',
             'Toque em **Adicionar a um roteiro** para pôr o lugar numa lista sua. Em **Conta > Roteiros**, **Novo roteiro** cria uma lista (ex.: "Sábado no centro") com **Criar roteiro**.',
-            'Em **Conta > Interesses**, escolha o que você gosta e toque em **Salvar interesses**. **Marcar todos** marca todas as categorias da cidade de uma vez (e **Desmarcar todos** limpa). As sugestões aparecem em **Para você**, nas abas Explorar e Novidades.'
+            'Em **Conta > Interesses**, escolha o que você gosta e toque em **Salvar interesses**. **Marcar todos** marca todas as categorias da cidade de uma vez (e **Desmarcar todos** limpa). Se voltar sem salvar, o app pergunta: **Salvar**, **Descartar** ou **Continuar editando**. As sugestões aparecem em **Para você**, nas abas Explorar e Novidades.'
           ),
           p(
             'Dentro de um roteiro, **Sugestões para o roteiro** mostra lugares perto das suas paradas (ou os mais visitados da cidade, se o roteiro ainda não tem parada no mapa). Toque em **Adicionar** para pôr um deles no fim do roteiro.'
