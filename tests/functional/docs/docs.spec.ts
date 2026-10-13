@@ -837,6 +837,14 @@ test.group('Documentation', () => {
       'cover_url',
       'category',
     ])
+    // Suggestions are ordered by views but never carry them: a place's audience
+    // is its partner's analytics, not something a consumer reads.
+    const suggestion = specification.components!.schemas!.ExplorerItinerarySuggestion
+    assert.sameMembers(Object.keys(suggestion.properties!), ['establishment', 'distance_km'])
+    assert.sameMembers(
+      Object.keys(specification.components!.schemas!.ExplorerStopAddress.properties!),
+      ['street', 'number', 'without_number', 'complement', 'district']
+    )
     for (const schemaName of Object.keys(specification.components!.schemas!)) {
       if (!schemaName.startsWith('Explorer')) continue
       const serialised = JSON.stringify(specification.components!.schemas![schemaName])

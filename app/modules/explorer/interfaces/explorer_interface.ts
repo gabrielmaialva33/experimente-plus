@@ -127,6 +127,48 @@ namespace IExplorer {
     position: number
     note: string | null
     establishment: EstablishmentCard | null
+    /**
+     * The public street address of the stop's place, from the same projection
+     * as its card, so the person can share the route with where each place is.
+     * Null with the card, when the place left the catalogue.
+     */
+    address: StopAddress | null
+  }
+
+  /** The public address fields a route needs: the street line and the district. */
+  export interface StopAddress {
+    street: string | null
+    number: string | null
+    without_number: boolean
+    complement: string | null
+    district: string | null
+  }
+
+  /** How many places "Sugestões para o roteiro" carries at most. */
+  export const SUGGESTIONS_LIMIT = 6
+
+  /** The window of establishment views that breaks ties between suggestions. */
+  export const SUGGESTIONS_POPULARITY_DAYS = 30
+
+  /**
+   * Places to add to an itinerary — discoverable, not in it yet.
+   *
+   * `nearby` when at least one stop has coordinates: the places closest to the
+   * stops' centroid, in steps of 100 m, ties broken by views. `popular` when no
+   * stop can be located: the most viewed places of the itinerary's city (its
+   * first stop's, or the city the app asked about), or of the operation. Views
+   * only order the list; no count is published, since a place's audience is
+   * its partner's analytics.
+   */
+  export interface ItinerarySuggestions {
+    basis: 'nearby' | 'popular'
+    data: ItinerarySuggestion[]
+  }
+
+  export interface ItinerarySuggestion {
+    establishment: EstablishmentCard
+    /** From the stops' centroid, in kilometres to one decimal; null when `popular`. */
+    distance_km: number | null
   }
 
   export interface ItineraryProjection {

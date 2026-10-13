@@ -4,6 +4,8 @@ import { apiThrottle } from '#start/limiter'
 import { privateResponseHeadersMiddleware } from '#shared/utils/private_response_headers'
 
 const ExplorerController = () => import('#modules/explorer/controllers/explorer_controller')
+const ExplorerDiscoveryController = () =>
+  import('#modules/explorer/controllers/explorer_discovery_controller')
 
 /**
  * The Explorer's own layer — ADR-0030, Anexo I item 10.
@@ -68,6 +70,10 @@ router
       .where('id', router.matchers.number())
     router
       .delete('/itineraries/:id', [ExplorerController, 'destroyItinerary'])
+      .where('id', router.matchers.number())
+    // Places to add next; computed from this itinerary only, never shared.
+    router
+      .get('/itineraries/:id/suggestions', [ExplorerDiscoveryController, 'itinerarySuggestions'])
       .where('id', router.matchers.number())
     router
       .post('/itineraries/:id/stops', [ExplorerController, 'addStop'])

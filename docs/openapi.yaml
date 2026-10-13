@@ -6569,7 +6569,7 @@ components:
     ExplorerItineraryStop:
       type: object
       additionalProperties: false
-      required: [id, position, note, establishment]
+      required: [id, position, note, establishment, address]
       properties:
         id:
           type: integer
@@ -6587,6 +6587,30 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ExplorerEstablishmentCard'
             - type: 'null'
+        address:
+          description: >-
+            The public address of the stop's place, from the same projection as
+            its card, so the route can be shared with where each place is. Null
+            together with `establishment`.
+          oneOf:
+            - $ref: '#/components/schemas/ExplorerStopAddress'
+            - type: 'null'
+
+    ExplorerStopAddress:
+      type: object
+      additionalProperties: false
+      required: [street, number, without_number, complement, district]
+      properties:
+        street:
+          type: [string, 'null']
+        number:
+          type: [string, 'null']
+        without_number:
+          type: boolean
+        complement:
+          type: [string, 'null']
+        district:
+          type: [string, 'null']
 
     ExplorerItinerary:
       type: object
@@ -6683,6 +6707,40 @@ components:
           items:
             type: integer
             minimum: 1
+
+    ExplorerItinerarySuggestions:
+      description: >-
+        Places to add to an itinerary: discoverable, open, not in it yet, at
+        most six. `nearby` when a stop has coordinates — nearest to the stops'
+        centroid (haversine over the public coordinates, in steps of 100 m),
+        ties broken by establishment views of the last 30 days. `popular` when
+        no stop can be located — most viewed of the first stop's city, of the
+        `city` asked for, or of the operation. Views only order the list and are
+        never returned.
+      type: object
+      additionalProperties: false
+      required: [basis, data]
+      properties:
+        basis:
+          type: string
+          enum: [nearby, popular]
+        data:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/ExplorerItinerarySuggestion'
+
+    ExplorerItinerarySuggestion:
+      type: object
+      additionalProperties: false
+      required: [establishment, distance_km]
+      properties:
+        establishment:
+          $ref: '#/components/schemas/ExplorerEstablishmentCard'
+        distance_km:
+          description: From the stops' centroid, to one decimal. Null when the basis is `popular` or the place has no coordinates.
+          type: [number, 'null']
+          minimum: 0
 
   parameters:
     TenantHeader:
@@ -15696,6 +15754,48 @@ paths:
           description: Authentication required
         '404':
           description: Itinerary or stop not found
+
+  /api/v1/me/itineraries/{id}/suggestions:
+    get:
+      operationId: listMyItinerarySuggestions
+      summary: Suggest places to add to an itinerary
+      description: >-
+        Owner only: another person's itinerary answers 404. Reads the public
+        catalogue and the operation's aggregate views, never anyone's saves or
+        follows. `city` is the city the app is showing, used only while no stop
+        can be located; an unknown, foreign, inactive or malformed city is
+        refused as the public catalogue refuses it.
+      tags: [Explorer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        '200':
+          description: The suggestions, possibly empty
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplorerItinerarySuggestions'
+        '401':
+          description: Authentication required
+        '404':
+          description: Itinerary or city not found
+        '422':
+          description: Validation failed
 
   /api/v1/me/concierge:
     post:
