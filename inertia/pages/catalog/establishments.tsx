@@ -6,6 +6,7 @@ import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
 import { CityAgendaSection } from '~/components/catalog/city_agenda'
 import EstablishmentGrid from '~/components/catalog/establishment_grid'
 import { useCatalogSearchAnalytics } from '~/components/catalog/use_catalog_analytics'
+import { useNearbyCatalog } from '~/components/catalog/use_nearby_catalog'
 import { catalogCategories, catalogSearch } from '~/lib/catalog'
 
 interface CatalogEstablishmentsProps {
@@ -25,11 +26,15 @@ export default function CatalogEstablishments({
   filter_categories: filterCategories,
   city_agenda: cityAgenda,
 }: CatalogEstablishmentsProps) {
-  const result = catalogSearch(catalog)
+  const pageResult = catalogSearch(catalog)
   const categoryListing = catalogCategories(filterCategories)
   const categories = categoryListing.categories
-  const resolvedCitySlug = result.context.city.slug
-  const cityName = result.context.city.name
+  const resolvedCitySlug = pageResult.context.city.slug
+  const cityName = pageResult.context.city.name
+  // "Mais perto" answers from the API, with the position in that request alone;
+  // every other order is the page's own, addressed by its URL.
+  const nearby = useNearbyCatalog(resolvedCitySlug)
+  const result = nearby.result ?? pageResult
   const hasSponsoredResults = result.sponsored.length > 0
   const pagePath = `/cidades/${encodeURIComponent(resolvedCitySlug)}`
 
@@ -51,6 +56,7 @@ export default function CatalogEstablishments({
         perPage={result.meta.perPage}
         sponsoredCount={result.sponsored.length}
         categories={categories}
+        nearby={nearby}
       />
 
       <CatalogConcierge citySlug={resolvedCitySlug} cityName={cityName} />
@@ -105,7 +111,12 @@ export default function CatalogEstablishments({
         </section>
       </div>
 
-      <CatalogPagination path={pagePath} query={result.query} meta={result.meta} />
+      <CatalogPagination
+        path={pagePath}
+        query={result.query}
+        meta={result.meta}
+        onNavigate={nearby.result ? (page) => void nearby.goToPage(page) : undefined}
+      />
     </CatalogShell>
   )
 }

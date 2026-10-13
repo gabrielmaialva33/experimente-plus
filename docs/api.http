@@ -870,6 +870,16 @@ GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?open_no
 Host: {{publicHost}}
 Accept: application/json
 
+### Best Rated Establishments with a Benefit Valid Today ("Vale hoje")
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?sort=rating&benefit_today=true
+Host: {{publicHost}}
+Accept: application/json
+
+### Nearest Establishments (the position is read for this request only)
+GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments?sort=distance&lat=-23.3105&lng=-51.1628
+Host: {{publicHost}}
+Accept: application/json
+
 ### Read a Published Establishment by Slugs
 GET {{baseUrl}}/api/v1/catalog/cities/{{catalogCitySlug}}/establishments/{{catalogEstablishmentSlug}}
 Host: {{publicHost}}

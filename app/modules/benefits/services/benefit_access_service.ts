@@ -14,6 +14,7 @@ import BenefitEditionRepository from '#modules/benefits/repositories/benefit_edi
 import BenefitFinancialHoldRepository from '#modules/benefits/repositories/benefit_financial_hold_repository'
 import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
+import { weekdayBit } from '#modules/benefits/utils/benefit_offer_schedule'
 import OrganizationPolicyService from '#modules/organizations/services/organization_policy_service'
 import type User from '#modules/users/models/user'
 import UsersRepository from '#modules/users/repositories/users_repository'
@@ -386,8 +387,7 @@ export default class BenefitAccessService {
 
     const timezone = access.edition.city.timezone || 'America/Sao_Paulo'
     const localNow = now.setZone(timezone)
-    const weekdayBit = localNow.weekday === 7 ? 1 : 1 << localNow.weekday
-    if ((offer.available_weekdays_mask & weekdayBit) === 0) {
+    if ((offer.available_weekdays_mask & weekdayBit(localNow)) === 0) {
       return 'outside_schedule'
     }
 

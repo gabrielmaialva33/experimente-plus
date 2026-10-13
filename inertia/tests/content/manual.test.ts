@@ -85,6 +85,7 @@ const SHOWN_ELSEWHERE: Record<string, string> = {
   'app-validar': 'parceiro-validar',
   // The place's own numbers have no picture yet; the task links to the organization's.
   'parceiro-desempenho-negocio': 'parceiro-desempenho',
+  'visitante-ordenar': 'visitante-buscar',
 }
 
 describe('manual content', () => {

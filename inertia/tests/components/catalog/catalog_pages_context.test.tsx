@@ -165,6 +165,7 @@ describe('catalog page canonical context', () => {
           q: 'café & chá',
           category: null,
           openNow: true,
+          benefitToday: false,
           sort: 'recent',
         },
         meta: { total: 27, page: 2, perPage: 12, lastPage: 3 },

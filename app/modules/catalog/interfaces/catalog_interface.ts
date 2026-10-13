@@ -1,4 +1,10 @@
-export const CATALOG_SORTS = ['relevance', 'name', 'recent'] as const
+export const CATALOG_SORTS = ['relevance', 'name', 'recent', 'rating', 'distance', 'price'] as const
+/**
+ * The public attribute the "Menor preço" order reads: "Ticket médio", the
+ * average spend per person in reais. It is a taxonomy key, so a category that
+ * does not declare it simply leaves its places at the end of that order.
+ */
+export const CATALOG_PRICE_ATTRIBUTE_KEY = 'average_ticket'
 export const CATALOG_MAX_PAGE_SIZE = 50
 export const CATALOG_MAX_ATTRIBUTE_FILTERS = 12
 export const CATALOG_DEFAULT_PAGE_SIZE = 20
@@ -9,14 +15,27 @@ export namespace ICatalog {
   export type BusinessStatus = 'open' | 'temporarily_closed' | 'permanently_closed'
   export type AvailabilityType = 'regular_hours' | 'appointment_only' | 'always_open'
 
+  /**
+   * Where the visitor is, for `sort=distance` only. It lives for one request:
+   * never cached, logged, stored, echoed or sent to analytics.
+   */
+  export interface Origin {
+    latitude: number
+    longitude: number
+  }
+
   export interface SearchQuery {
     q: string
     category?: string
     open_now: boolean
+    /** "Vale hoje": only places with a benefit offer still usable today. */
+    benefit_today?: boolean
     attributes: string[]
     page: number
     per_page: number
     sort: Sort
+    /** Required by, and only read for, `sort=distance`. */
+    origin?: Origin | null
   }
 
   export interface CityRow {
@@ -238,6 +257,8 @@ export namespace ICatalog {
     published_at: string
     public_updated_at: string
     is_open_now: boolean
+    /** Whether the place has a benefit offer still usable today ("Vale hoje"). */
+    benefit_today: boolean
     relevance_score: number
     total_count: number
   }
@@ -273,6 +294,11 @@ export namespace ICatalog {
     cover: MediaItem
     is_sponsored: boolean
     reviews: ReviewSummary
+    /**
+     * "Vale hoje": a benefit offer of this place can still be used today, in the
+     * edition city's timezone, by the rules redemption applies.
+     */
+    benefit_today: boolean
     published_at: string
     updated_at: string
   }
@@ -297,6 +323,7 @@ export namespace ICatalog {
       q: string | null
       category: string | null
       open_now: boolean
+      benefit_today: boolean
       attributes: string[]
       sort: Sort
     }

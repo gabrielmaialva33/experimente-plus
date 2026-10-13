@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { cn } from '~/lib/utils'
 import { pageHref, type CatalogSearchMeta, type CatalogSearchQuery } from '~/lib/catalog'
@@ -8,6 +9,11 @@ interface CatalogPaginationProps {
   path: string
   query: CatalogSearchQuery
   meta: CatalogSearchMeta
+  /**
+   * Turns the pages in place instead of by URL: the nearest-first results come
+   * from the API with the visitor's position, which a page URL never carries.
+   */
+  onNavigate?: (page: number) => void
 }
 
 /**
@@ -36,7 +42,7 @@ const directionClassName =
 const pageClassName =
   'inline-flex size-11 items-center justify-center rounded-full border text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none'
 
-export function CatalogPagination({ path, query, meta }: CatalogPaginationProps) {
+export function CatalogPagination({ path, query, meta, onNavigate }: CatalogPaginationProps) {
   const lastPage = positiveInteger(meta.lastPage, 1)
   const currentPage = Math.min(positiveInteger(meta.page, 1), lastPage)
   const perPage = positiveInteger(meta.perPage, 20)
@@ -44,6 +50,27 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
     `${pageHref(path, query, page, perPage)}#${CATALOG_RESULTS_ANCHOR}`
 
   if (lastPage <= 1) return null
+
+  /** A link to another page, or a button that turns it in place. */
+  const pageControl = (page: number, label: string, className: string, children: ReactNode) =>
+    onNavigate ? (
+      <button
+        key={page}
+        type="button"
+        aria-label={label}
+        className={className}
+        onClick={() => {
+          onNavigate(page)
+          document.getElementById(CATALOG_RESULTS_ANCHOR)?.scrollIntoView()
+        }}
+      >
+        {children}
+      </button>
+    ) : (
+      <Link key={page} href={hrefFor(page)} aria-label={label} className={className}>
+        {children}
+      </Link>
+    )
 
   const pages = visiblePages(currentPage, lastPage)
   const previousAvailable = currentPage > 1
@@ -55,13 +82,14 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
       className="mt-8 flex items-center justify-between gap-2 sm:justify-center"
     >
       {previousAvailable ? (
-        <Link
-          href={hrefFor(currentPage - 1)}
-          aria-label="Página anterior"
-          className={cn(directionClassName, 'hover:border-primary hover:text-primary')}
-        >
-          <ChevronLeft aria-hidden="true" className="size-4" /> Anterior
-        </Link>
+        pageControl(
+          currentPage - 1,
+          'Página anterior',
+          cn(directionClassName, 'hover:border-primary hover:text-primary'),
+          <>
+            <ChevronLeft aria-hidden="true" className="size-4" /> Anterior
+          </>
+        )
       ) : (
         <span
           aria-disabled="true"
@@ -94,14 +122,12 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
               {page}
             </span>
           ) : (
-            <Link
-              key={page}
-              href={hrefFor(page)}
-              aria-label={`Ir para a página ${page}`}
-              className={cn(pageClassName, 'bg-card hover:border-primary hover:text-primary')}
-            >
-              {page}
-            </Link>
+            pageControl(
+              page,
+              `Ir para a página ${page}`,
+              cn(pageClassName, 'bg-card hover:border-primary hover:text-primary'),
+              page
+            )
           )
         )}
 
@@ -113,13 +139,14 @@ export function CatalogPagination({ path, query, meta }: CatalogPaginationProps)
       </div>
 
       {nextAvailable ? (
-        <Link
-          href={hrefFor(currentPage + 1)}
-          aria-label="Próxima página"
-          className={cn(directionClassName, 'hover:border-primary hover:text-primary')}
-        >
-          Próxima <ChevronRight aria-hidden="true" className="size-4" />
-        </Link>
+        pageControl(
+          currentPage + 1,
+          'Próxima página',
+          cn(directionClassName, 'hover:border-primary hover:text-primary'),
+          <>
+            Próxima <ChevronRight aria-hidden="true" className="size-4" />
+          </>
+        )
       ) : (
         <span
           aria-disabled="true"

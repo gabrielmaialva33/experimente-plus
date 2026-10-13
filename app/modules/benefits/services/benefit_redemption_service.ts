@@ -22,6 +22,7 @@ import BenefitOfferRepository from '#modules/benefits/repositories/benefit_offer
 import BenefitRedemptionRepository from '#modules/benefits/repositories/benefit_redemption_repository'
 import BenefitAuditService from '#modules/benefits/services/benefit_audit_service'
 import BenefitPresentationTokenService from '#modules/benefits/services/benefit_presentation_token_service'
+import { weekdayBit } from '#modules/benefits/utils/benefit_offer_schedule'
 import type Establishment from '#modules/establishments/models/establishment'
 import type EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import EstablishmentRepository from '#modules/establishments/repositories/establishment_repository'
@@ -460,8 +461,7 @@ export default class BenefitRedemptionService {
     }
 
     const localNow = now.setZone(context.city.timezone)
-    const weekdayBit = 1 << (localNow.weekday % 7)
-    if ((context.offer.available_weekdays_mask & weekdayBit) === 0) {
+    if ((context.offer.available_weekdays_mask & weekdayBit(localNow)) === 0) {
       throw new BenefitRedemptionUnavailableException(
         'outside_window',
         'Benefit offer is unavailable today'

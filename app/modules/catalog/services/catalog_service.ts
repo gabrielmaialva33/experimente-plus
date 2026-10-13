@@ -1,6 +1,7 @@
 import { inject } from '@adonisjs/core'
 
 import NotFoundException from '#exceptions/not_found_exception'
+import BenefitAvailabilityService from '#modules/benefits/services/benefit_availability_service'
 import type ICatalog from '#modules/catalog/interfaces/catalog_interface'
 import CatalogSearchRepository from '#modules/catalog/repositories/catalog_search_repository'
 import CatalogCacheService from '#modules/catalog/services/catalog_cache_service'
@@ -13,7 +14,8 @@ export default class CatalogService {
     private operationResolver: PublicOperationResolver,
     private cityRepository: CityRepository,
     private catalogRepository: CatalogSearchRepository,
-    private cacheService: CatalogCacheService
+    private cacheService: CatalogCacheService,
+    private benefitAvailability: BenefitAvailabilityService
   ) {}
 
   async cities(hostname: string | null): Promise<ICatalog.CityProjection[]> {
@@ -93,30 +95,20 @@ export default class CatalogService {
   ): Promise<ICatalog.SearchResult> {
     const { tenantId, city } = await this.resolveCity(hostname, citySlug)
     const projectionVersion = await this.catalogRepository.getProjectionVersion(tenantId)
+    // The visitor's position is read for the nearest-first order and nothing else.
+    const origin = query.sort === 'distance' ? (query.origin ?? null) : null
     const normalizedQuery: ICatalog.SearchQuery = {
       ...query,
       q: query.q.trim(),
       category: query.category ? this.requireSlug(query.category) : undefined,
+      benefit_today: query.benefit_today ?? false,
       attributes: this.normalizeAttributes(query.attributes),
+      // Nearest first needs a position; without one it is the default order.
+      sort: query.sort === 'distance' && !origin ? 'relevance' : query.sort,
+      origin,
     }
-    // The requested page stays in the cache identity, while the repository
-    // canonicalizes the response to the last available page in the same query.
-    const cacheKey = this.cacheService.key([
-      'search',
-      'context-pagination-v3',
-      tenantId,
-      projectionVersion,
-      city.slug,
-      normalizedQuery.q,
-      normalizedQuery.category ?? null,
-      normalizedQuery.open_now,
-      normalizedQuery.attributes.join(','),
-      normalizedQuery.page,
-      normalizedQuery.per_page,
-      normalizedQuery.sort,
-    ])
 
-    return this.cacheService.remember(cacheKey, 60, async () => {
+    const compute = async (): Promise<ICatalog.SearchResult> => {
       // Keep reads sequential because Lucid may bind both repositories to the
       // same transaction connection (for example in tests or a composed use case).
       // node-postgres no longer supports concurrent queries on a busy client.
@@ -150,6 +142,7 @@ export default class CatalogService {
             q: normalizedQuery.q || null,
             category: normalizedQuery.category,
             open_now: normalizedQuery.open_now,
+            benefit_today: normalizedQuery.benefit_today ?? false,
             attributes: normalizedQuery.attributes,
             sort: normalizedQuery.sort,
           },
@@ -158,15 +151,19 @@ export default class CatalogService {
         }
       }
 
+      const benefitEstablishmentIds =
+        await this.benefitAvailability.establishmentsUsableToday(tenantId)
       const organicPage = await this.catalogRepository.searchOrganic(
         tenantId,
         city.id,
-        normalizedQuery
+        normalizedQuery,
+        benefitEstablishmentIds
       )
       const sponsoredRows = await this.catalogRepository.searchSponsored(
         tenantId,
         city.id,
-        normalizedQuery
+        normalizedQuery,
+        benefitEstablishmentIds
       )
       const total = organicPage.total
       const lastPage = Math.max(1, Math.ceil(total / normalizedQuery.per_page))
@@ -214,6 +211,7 @@ export default class CatalogService {
           q: normalizedQuery.q || null,
           category: normalizedQuery.category ?? null,
           open_now: normalizedQuery.open_now,
+          benefit_today: normalizedQuery.benefit_today ?? false,
           attributes: normalizedQuery.attributes,
           sort: normalizedQuery.sort,
         },
@@ -226,7 +224,31 @@ export default class CatalogService {
           return item ? [item] : []
         }),
       }
-    })
+    }
+
+    // A search from somewhere is answered and forgotten: coordinates never become
+    // a cache identity, not even hashed, since a hash of a position can be walked.
+    if (origin) return compute()
+
+    // The requested page stays in the cache identity, while the repository
+    // canonicalizes the response to the last available page in the same query.
+    const cacheKey = this.cacheService.key([
+      'search',
+      'context-pagination-v4',
+      tenantId,
+      projectionVersion,
+      city.slug,
+      normalizedQuery.q,
+      normalizedQuery.category ?? null,
+      normalizedQuery.open_now,
+      normalizedQuery.benefit_today ?? false,
+      normalizedQuery.attributes.join(','),
+      normalizedQuery.page,
+      normalizedQuery.per_page,
+      normalizedQuery.sort,
+    ])
+
+    return this.cacheService.remember(cacheKey, 60, compute)
   }
 
   async show(
@@ -370,11 +392,16 @@ export default class CatalogService {
     limit: number
   ): Promise<ICatalog.SearchItemProjection[]> {
     const city = await this.requireCity(tenantId, citySlug)
+    const benefitEstablishmentIds =
+      categoryIds.length > 0
+        ? await this.benefitAvailability.establishmentsUsableToday(tenantId)
+        : []
     const rows = await this.catalogRepository.listForCategories(
       tenantId,
       city.id,
       categoryIds,
-      limit
+      limit,
+      benefitEstablishmentIds
     )
 
     return rows.flatMap((row) => {
@@ -425,6 +452,7 @@ export default class CatalogService {
       cover: row.cover_media,
       is_sponsored: row.is_sponsored,
       reviews: this.reviewSummary(row),
+      benefit_today: row.benefit_today,
       published_at: row.published_at,
       updated_at: row.public_updated_at,
     }
@@ -459,6 +487,7 @@ export default class CatalogService {
     if (query.q) parameters.set('q', query.q)
     if (query.category) parameters.set('category', query.category)
     if (query.open_now) parameters.set('open_now', 'true')
+    if (query.benefit_today) parameters.set('benefit_today', 'true')
     if (query.attributes.length > 0) parameters.set('attributes', query.attributes.join(','))
     if (query.sort !== 'relevance') parameters.set('sort', query.sort)
     if (query.per_page !== 20) parameters.set('per_page', String(query.per_page))

@@ -45,26 +45,58 @@ const attributeList = (value: unknown) => {
   return normalized.length > 0 ? normalized : undefined
 }
 
+const searchFields = {
+  q: vine.string().trim().maxLength(120).optional(),
+  category: slug().optional(),
+  open_now: vine.boolean().optional(),
+  benefit_today: vine.boolean().optional(),
+  attributes: vine
+    .array(attributeKey())
+    .parse(attributeList)
+    .maxLength(CATALOG_MAX_ATTRIBUTE_FILTERS)
+    .optional(),
+  page: vine.number().withoutDecimals().min(1).optional(),
+  per_page: vine.number().withoutDecimals().min(1).max(CATALOG_MAX_PAGE_SIZE).optional(),
+  sort: vine.enum(CATALOG_SORTS).optional(),
+}
+
+/**
+ * The public search API. `lat` and `lng` exist only for `sort=distance`, which
+ * refuses to run without both; with any other order they are dropped unread.
+ */
 export const catalogSearchValidator = vine.compile(
   vine.object({
-    q: vine.string().trim().maxLength(120).optional(),
-    category: slug().optional(),
-    open_now: vine.boolean().optional(),
-    attributes: vine
-      .array(attributeKey())
-      .parse(attributeList)
-      .maxLength(CATALOG_MAX_ATTRIBUTE_FILTERS)
-      .optional(),
-    page: vine.number().withoutDecimals().min(1).optional(),
-    per_page: vine.number().withoutDecimals().min(1).max(CATALOG_MAX_PAGE_SIZE).optional(),
-    sort: vine.enum(CATALOG_SORTS).optional(),
+    ...searchFields,
+    lat: vine
+      .number()
+      .min(-90)
+      .max(90)
+      .optional()
+      .requiredWhen('sort', '=', 'distance')
+      .requiredIfExists('lng'),
+    lng: vine
+      .number()
+      .min(-180)
+      .max(180)
+      .optional()
+      .requiredWhen('sort', '=', 'distance')
+      .requiredIfExists('lat'),
   })
 )
+
+/**
+ * The catalogue pages. A page URL is shared, bookmarked and kept in history, so
+ * it never carries coordinates: there is no `lat` or `lng` here, and the pages
+ * read `sort=distance` as relevance (the web asks the API for the nearest
+ * places itself, with the visitor's position in that request alone).
+ */
+export const catalogPageSearchValidator = vine.compile(vine.object(searchFields))
 
 export const catalogDefaults = {
   page: 1,
   per_page: CATALOG_DEFAULT_PAGE_SIZE,
   sort: 'relevance' as const,
   open_now: false,
+  benefit_today: false,
   attributes: [] as string[],
 }

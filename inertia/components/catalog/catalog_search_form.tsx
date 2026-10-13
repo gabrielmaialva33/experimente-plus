@@ -2,10 +2,12 @@ import { Link, router } from '@inertiajs/react'
 import { ChevronDown, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
+import type { NearbyCatalog } from '~/components/catalog/use_nearby_catalog'
 import { AppliedFilterChip, FilterChip } from '~/components/ui/choice'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import type { CatalogCategory, CatalogSearchQuery } from '~/lib/catalog'
+import type { CatalogCategory, CatalogSearchQuery, CatalogSort } from '~/lib/catalog'
+import { nearbyFailureMessage } from '~/lib/catalog_nearby'
 import { cn } from '~/lib/utils'
 
 const SELECT_CLASS =
@@ -21,6 +23,37 @@ function SelectChevron() {
   )
 }
 
+/** The orders, in the order the control offers them, with how a chip names each one. */
+const SORT_OPTIONS: ReadonlyArray<{ value: CatalogSort; label: string; applied: string }> = [
+  { value: 'relevance', label: 'Relevância', applied: 'relevância' },
+  { value: 'rating', label: 'Mais bem avaliados', applied: 'mais bem avaliados' },
+  { value: 'distance', label: 'Mais perto', applied: 'mais perto' },
+  { value: 'price', label: 'Menor preço', applied: 'menor preço' },
+  { value: 'name', label: 'Ordem alfabética', applied: 'alfabética' },
+  { value: 'recent', label: 'Publicados recentemente', applied: 'mais recentes' },
+]
+
+export function appliedSortLabel(sort: CatalogSort): string {
+  return SORT_OPTIONS.find((option) => option.value === sort)?.applied ?? 'relevância'
+}
+
+function nearbyMessage(nearby: NearbyCatalog | undefined): string {
+  switch (nearby?.status) {
+    case 'locating':
+      return 'Pedindo sua localização ao navegador…'
+    case 'located':
+      return 'Localização pronta. Use Buscar para ver os lugares mais perto.'
+    case 'loading':
+      return 'Ordenando pelos lugares mais perto…'
+    case 'ready':
+      return 'Ordenado pelos mais perto de você. Sua localização não fica salva.'
+    case 'failed':
+      return nearbyFailureMessage(nearby.failure ?? 'error')
+    default:
+      return ''
+  }
+}
+
 interface CatalogSearchFormProps {
   path: string
   query: CatalogSearchQuery
@@ -30,6 +63,11 @@ interface CatalogSearchFormProps {
   categories?: CatalogCategory[]
   categoryLabel?: string | null
   includeCategoryParam?: boolean
+  /**
+   * "Mais perto". Without it the order is not offered: it needs the page to
+   * show results that the API, not the page URL, answered.
+   */
+  nearby?: NearbyCatalog
 }
 
 export function CatalogSearchForm({
@@ -41,6 +79,7 @@ export function CatalogSearchForm({
   categories = [],
   categoryLabel = null,
   includeCategoryParam = true,
+  nearby,
 }: CatalogSearchFormProps) {
   const showCategoryFilter = includeCategoryParam && categories.length > 0
   const selectedCategory = categories.find((category) => category.slug === query.category)
@@ -49,23 +88,48 @@ export function CatalogSearchForm({
   const [category, setCategory] = useState(query.category ?? '')
   const [sort, setSort] = useState(query.sort)
   const [openNow, setOpenNow] = useState(query.openNow)
+  const [benefitToday, setBenefitToday] = useState(query.benefitToday ?? false)
   const [isNavigating, setIsNavigating] = useState(false)
   const hasActiveFilters = Boolean(
     query.q ||
     query.openNow ||
+    query.benefitToday ||
     query.sort !== 'relevance' ||
     (includeCategoryParam && query.category)
   )
+  const sortOptions = nearby
+    ? SORT_OPTIONS
+    : SORT_OPTIONS.filter((option) => option.value !== 'distance')
+  const nearbyStatus = nearbyMessage(nearby)
+  const busy = isNavigating || nearby?.status === 'locating' || nearby?.status === 'loading'
 
   useEffect(() => {
     setSearch(query.q)
     setCategory(query.category ?? '')
     setSort(query.sort)
     setOpenNow(query.openNow)
+    setBenefitToday(query.benefitToday ?? false)
     setIsNavigating(false)
-  }, [query.category, query.openNow, query.q, query.sort])
+  }, [query.benefitToday, query.category, query.openNow, query.q, query.sort])
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
+  /**
+   * "Mais perto" asks the browser for the position the moment it is picked, so
+   * a refusal shows here, beside the choice, which then goes back to relevance.
+   */
+  function chooseSort(next: CatalogSort) {
+    setSort(next)
+    if (!nearby) return
+    if (next === 'distance') {
+      void nearby.locate().then((located) => {
+        if (!located) setSort((current) => (current === 'distance' ? 'relevance' : current))
+      })
+    } else if (nearby.status !== 'ready') {
+      // Picked and dropped before a search: the position goes with it.
+      nearby.reset()
+    }
+  }
+
+  async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const parameters: Record<string, string> = { per_page: String(perPage) }
@@ -73,8 +137,26 @@ export function CatalogSearchForm({
 
     if (normalizedSearch) parameters.q = normalizedSearch
     if (includeCategoryParam && category) parameters.category = category
-    if (sort !== 'relevance') parameters.sort = sort
     if (openNow) parameters.open_now = 'true'
+    if (benefitToday) parameters.benefit_today = 'true'
+
+    if (sort === 'distance' && nearby) {
+      const sorted = await nearby.search(
+        {
+          q: normalizedSearch,
+          category: includeCategoryParam ? category || null : query.category,
+          openNow,
+          benefitToday,
+        },
+        perPage
+      )
+      if (sorted) return
+      // The same filters in the default order; the message above says why.
+      setSort('relevance')
+    } else {
+      if (sort !== 'relevance') parameters.sort = sort
+      nearby?.reset()
+    }
 
     setIsNavigating(true)
     router.get(path, parameters, {
@@ -117,7 +199,7 @@ export function CatalogSearchForm({
         action={path}
         method="get"
         role="search"
-        aria-busy={isNavigating}
+        aria-busy={busy}
         aria-describedby="catalog-results-summary"
         onSubmit={submitSearch}
         // One row only from 1280 px: at 1024 the four controls beside it left the search
@@ -173,26 +255,39 @@ export function CatalogSearchForm({
           </label>
         ) : null}
 
-        <label className="grid gap-1.5">
-          <span className="text-sm font-medium">Ordenar por</span>
-          <span className="relative block">
-            <select
-              name="sort"
-              value={sort}
-              onChange={(event) => setSort(event.target.value as CatalogSearchQuery['sort'])}
-              className={SELECT_CLASS}
-            >
-              <option value="relevance">Mais relevantes</option>
-              <option value="name">Ordem alfabética</option>
-              <option value="recent">Publicados recentemente</option>
-            </select>
-            <SelectChevron />
-          </span>
-        </label>
-
         <div className="grid gap-1.5">
-          <span className="text-sm font-medium">Disponibilidade</span>
-          <span className="flex h-13 items-center">
+          <label className="grid gap-1.5">
+            <span className="text-sm font-medium">Ordenar por</span>
+            <span className="relative block">
+              <select
+                name="sort"
+                value={sort}
+                onChange={(event) => chooseSort(event.target.value as CatalogSort)}
+                aria-describedby={sort === 'price' ? 'catalog-sort-price-hint' : undefined}
+                className={SELECT_CLASS}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </span>
+          </label>
+          {/* Outside the label, so it describes the order instead of renaming the control. */}
+          {sort === 'price' ? (
+            <span id="catalog-sort-price-hint" className="text-xs text-muted-foreground">
+              Pelo ticket médio informado pelo lugar; quem não informa aparece no fim.
+            </span>
+          ) : null}
+        </div>
+
+        <div role="group" aria-labelledby="catalog-availability-label" className="grid gap-1.5">
+          <span id="catalog-availability-label" className="text-sm font-medium">
+            Disponibilidade
+          </span>
+          <span className="flex min-h-13 flex-wrap items-center gap-2">
             <FilterChip
               name="open_now"
               value="true"
@@ -201,6 +296,15 @@ export function CatalogSearchForm({
               className="h-13 px-5 text-[0.9375rem]"
             >
               Aberto agora
+            </FilterChip>
+            <FilterChip
+              name="benefit_today"
+              value="true"
+              checked={benefitToday}
+              onChange={(event) => setBenefitToday(event.target.checked)}
+              className="h-13 px-5 text-[0.9375rem]"
+            >
+              Vale hoje
             </FilterChip>
           </span>
         </div>
@@ -213,13 +317,28 @@ export function CatalogSearchForm({
           size="2xl"
           shape="pill"
           className="w-full md:w-auto md:justify-self-end xl:justify-self-auto"
-          disabled={isNavigating}
-          aria-busy={isNavigating}
+          disabled={busy}
+          aria-busy={busy}
         >
           <Search aria-hidden="true" className="size-4" />
-          {isNavigating ? 'Buscando…' : 'Buscar'}
+          {busy ? 'Buscando…' : 'Buscar'}
         </Button>
       </form>
+
+      {/* Present from the start, so a screen reader hears what "Mais perto" is doing. */}
+      {nearby ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className={cn(
+            'text-sm',
+            nearbyStatus ? 'mt-4' : 'sr-only',
+            nearby.status === 'failed' ? 'font-medium text-warning-accent' : 'text-muted-foreground'
+          )}
+        >
+          {nearbyStatus}
+        </p>
+      ) : null}
 
       {effectiveCategoryLabel || hasActiveFilters ? (
         <div
@@ -231,14 +350,14 @@ export function CatalogSearchForm({
           ) : null}
           {query.q ? <AppliedFilterChip>Busca: “{query.q}”</AppliedFilterChip> : null}
           {query.openNow ? <AppliedFilterChip>Aberto agora</AppliedFilterChip> : null}
+          {query.benefitToday ? <AppliedFilterChip>Vale hoje</AppliedFilterChip> : null}
           {query.sort !== 'relevance' ? (
-            <AppliedFilterChip>
-              Ordenação: {query.sort === 'name' ? 'alfabética' : 'mais recentes'}
-            </AppliedFilterChip>
+            <AppliedFilterChip>Ordenação: {appliedSortLabel(query.sort)}</AppliedFilterChip>
           ) : null}
           {hasActiveFilters ? (
             <Link
               href={path}
+              onClick={() => nearby?.reset()}
               className="ms-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-primary-accent outline-none hover:bg-primary-soft focus-visible:ring-2 focus-visible:ring-ring"
             >
               <RotateCcw aria-hidden="true" className="size-3.5" /> Limpar filtros

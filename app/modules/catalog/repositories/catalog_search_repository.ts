@@ -1,6 +1,7 @@
 import db from '@adonisjs/lucid/services/db'
 
 import { discoverableEstablishmentsForCitySql } from '#modules/catalog/repositories/catalog_discoverability'
+import { CATALOG_PRICE_ATTRIBUTE_KEY } from '#modules/catalog/interfaces/catalog_interface'
 import type ICatalog from '#modules/catalog/interfaces/catalog_interface'
 
 interface VersionRow {
@@ -11,10 +12,46 @@ interface SearchOptions {
   tenantId: number
   cityId: number
   query: ICatalog.SearchQuery
+  benefitEstablishmentIds: readonly number[]
   sponsoredOnly: boolean
   page: number
   perPage: number
 }
+
+/**
+ * Great-circle distance in metres from the visitor to the place (haversine on
+ * a sphere of the Earth's mean radius), or NULL when either side has no
+ * coordinates. The visitor's position is a binding of this one query.
+ */
+const DISTANCE_SQL = `
+  CASE
+    WHEN input.origin_latitude IS NULL
+      OR input.origin_longitude IS NULL
+      OR projection.latitude IS NULL
+      OR projection.longitude IS NULL
+    THEN NULL
+    ELSE 2 * 6371008.8 * asin(LEAST(1::double precision, sqrt(
+      power(sin(radians(projection.latitude::double precision - input.origin_latitude) / 2), 2)
+      + cos(radians(input.origin_latitude))
+        * cos(radians(projection.latitude::double precision))
+        * power(sin(radians(projection.longitude::double precision - input.origin_longitude) / 2), 2)
+    )))
+  END
+`
+
+/**
+ * The place's "Ticket médio" as a number, read from the public attributes the
+ * projection already carries, or NULL when it declares none.
+ */
+const PRICE_SQL = `
+  (
+    SELECT (attribute->>'value')::numeric
+    FROM jsonb_array_elements(projection.public_attributes) AS attribute
+    WHERE attribute->>'key' = '${CATALOG_PRICE_ATTRIBUTE_KEY}'
+      AND jsonb_typeof(attribute->'value') = 'number'
+    LIMIT 1
+  )
+`
 
 export interface CatalogSearchPage {
   rows: ICatalog.CatalogRow[]
@@ -263,15 +300,21 @@ export default class CatalogSearchRepository {
     return result.rows[0] ?? null
   }
 
+  /**
+   * @param benefitEstablishmentIds Places with a benefit still usable today, as
+   *   the benefits module decides it: the "Vale hoje" filter and card flag.
+   */
   async searchOrganic(
     tenantId: number,
     cityId: number,
-    query: ICatalog.SearchQuery
+    query: ICatalog.SearchQuery,
+    benefitEstablishmentIds: readonly number[] = []
   ): Promise<CatalogSearchPage> {
     return this.runSearch({
       tenantId,
       cityId,
       query,
+      benefitEstablishmentIds,
       sponsoredOnly: false,
       page: query.page,
       perPage: query.per_page,
@@ -281,12 +324,14 @@ export default class CatalogSearchRepository {
   async searchSponsored(
     tenantId: number,
     cityId: number,
-    query: ICatalog.SearchQuery
+    query: ICatalog.SearchQuery,
+    benefitEstablishmentIds: readonly number[] = []
   ): Promise<ICatalog.CatalogRow[]> {
     const page = await this.runSearch({
       tenantId,
       cityId,
       query,
+      benefitEstablishmentIds,
       sponsoredOnly: true,
       page: 1,
       perPage: 3,
@@ -311,6 +356,7 @@ export default class CatalogSearchRepository {
             projection.weekly_hours,
             projection.special_days
           ) AS is_open_now,
+          false AS benefit_today,
           0::double precision AS relevance_score,
           1::integer AS total_count
         FROM catalog_establishments projection
@@ -416,7 +462,8 @@ export default class CatalogSearchRepository {
     tenantId: number,
     cityId: number,
     categoryIds: readonly number[],
-    limit: number
+    limit: number,
+    benefitEstablishmentIds: readonly number[] = []
   ): Promise<ICatalog.CatalogRow[]> {
     if (categoryIds.length === 0) return []
 
@@ -459,6 +506,7 @@ export default class CatalogSearchRepository {
             discoverable.weekly_hours,
             discoverable.special_days
           ) AS is_open_now,
+          discoverable.establishment_id = ANY(?::bigint[]) AS benefit_today,
           0::double precision AS relevance_score
         FROM discoverable
         WHERE discoverable.cover_media IS NOT NULL
@@ -473,7 +521,7 @@ export default class CatalogSearchRepository {
         ORDER BY ${this.orderBy('name', 'discoverable')}
         LIMIT ?
       `,
-      [tenantId, [...categoryIds], tenantId, tenantId, cityId, limit]
+      [tenantId, [...categoryIds], tenantId, tenantId, cityId, [...benefitEstablishmentIds], limit]
     )
 
     return result.rows.map((row) => this.normalizeRow(row))
@@ -501,6 +549,10 @@ export default class CatalogSearchRepository {
     const sponsorshipPredicate = options.sponsoredOnly
       ? 'projection.is_sponsored = true'
       : 'projection.is_sponsored = false'
+    // Distance and price are computed only for the order that reads them.
+    const origin = options.query.sort === 'distance' ? (options.query.origin ?? null) : null
+    const distanceSql = origin ? DISTANCE_SQL : 'NULL::double precision'
+    const priceSql = options.query.sort === 'price' ? PRICE_SQL : 'NULL::numeric'
 
     const result = await db.rawQuery<{ rows: CatalogDatabaseRow[] }>(
       `
@@ -510,7 +562,11 @@ export default class CatalogSearchRepository {
             catalog_normalize_text(?) AS query_text,
             ?::text AS category_slug,
             ?::boolean AS open_now,
-            string_to_array(nullif(?::text, ''), ',') AS attribute_slugs
+            string_to_array(nullif(?::text, ''), ',') AS attribute_slugs,
+            ?::boolean AS benefit_today,
+            ?::bigint[] AS benefit_establishment_ids,
+            ?::double precision AS origin_latitude,
+            ?::double precision AS origin_longitude
         ),
         requested_category AS (
           SELECT category.id
@@ -580,6 +636,9 @@ export default class CatalogSearchRepository {
               projection.weekly_hours,
               projection.special_days
             ) AS is_open_now,
+            projection.establishment_id = ANY(input.benefit_establishment_ids) AS benefit_today,
+            ${distanceSql} AS distance_meters,
+            ${priceSql} AS price_value,
             (
               CASE
                 WHEN input.query_text = '' THEN 0
@@ -638,6 +697,10 @@ export default class CatalogSearchRepository {
               input.attribute_slugs IS NULL
               OR projection.attribute_slugs @> input.attribute_slugs
             )
+            AND (
+              input.benefit_today IS FALSE
+              OR projection.establishment_id = ANY(input.benefit_establishment_ids)
+            )
         ),
         totals AS (
           SELECT count(*)::integer AS total_count
@@ -681,6 +744,10 @@ export default class CatalogSearchRepository {
         options.query.category ?? null,
         options.query.open_now,
         options.query.attributes.join(','),
+        options.query.benefit_today ?? false,
+        [...options.benefitEstablishmentIds],
+        origin?.latitude ?? null,
+        origin?.longitude ?? null,
         options.tenantId,
         options.tenantId,
         options.tenantId,
@@ -721,6 +788,7 @@ export default class CatalogSearchRepository {
       relevance_score: Number(row.relevance_score ?? 0),
       total_count: Number(row.total_count ?? 0),
       is_open_now: Boolean(row.is_open_now),
+      benefit_today: Boolean(row.benefit_today),
       published_at: this.serializeTimestamp(row.published_at, 'published_at'),
       public_updated_at: this.serializeTimestamp(row.public_updated_at, 'public_updated_at'),
     }
@@ -739,7 +807,30 @@ export default class CatalogSearchRepository {
     throw new TypeError(`Catalog projection ${field} must be a valid timestamp`)
   }
 
+  /**
+   * Every order ends on the establishment id, so a page boundary never moves
+   * between two requests for the same criteria. Rating, distance and price put
+   * the places that have no value for them last, after every place that has.
+   */
   private orderBy(sort: ICatalog.Sort, relation: 'ranked' | 'paged' | 'discoverable'): string {
+    if (sort === 'rating') {
+      // The average alone would rank one 5 above twenty 4.9s; the count breaks
+      // the tie, and an average with no published review behind it counts as none.
+      return [
+        `CASE WHEN ${relation}.reviews_count > 0 THEN ${relation}.reviews_average END DESC NULLS LAST`,
+        `${relation}.reviews_count DESC`,
+        `${relation}.establishment_id ASC`,
+      ].join(', ')
+    }
+
+    if (sort === 'distance') {
+      return `${relation}.distance_meters ASC NULLS LAST, ${relation}.establishment_id ASC`
+    }
+
+    if (sort === 'price') {
+      return `${relation}.price_value ASC NULLS LAST, ${relation}.establishment_id ASC`
+    }
+
     if (sort === 'name') {
       return `${relation}.normalized_name ASC, ${relation}.establishment_id ASC`
     }
