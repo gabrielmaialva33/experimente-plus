@@ -15,8 +15,9 @@ import {
 } from '#modules/reviews/interfaces/public_reviews_page'
 import {
   catalogDefaults,
-  catalogSearchValidator,
+  catalogPageSearchValidator,
 } from '#modules/catalog/validators/catalog_validator'
+import type ICatalog from '#modules/catalog/interfaces/catalog_interface'
 
 @inject()
 export default class CatalogPagesController {
@@ -51,17 +52,18 @@ export default class CatalogPagesController {
 
   async index({ inertia, params, request, response }: HttpContext) {
     this.publicCache(response, 60)
-    const payload = await request.validateUsing(catalogSearchValidator)
+    const payload = await request.validateUsing(catalogPageSearchValidator)
     const hostname = request.hostname()
     const citySlug = String(params.citySlug)
     const query = {
       q: payload.q ?? '',
       category: payload.category,
       open_now: payload.open_now ?? catalogDefaults.open_now,
+      benefit_today: payload.benefit_today ?? catalogDefaults.benefit_today,
       attributes: payload.attributes ?? catalogDefaults.attributes,
       page: payload.page ?? catalogDefaults.page,
       per_page: payload.per_page ?? catalogDefaults.per_page,
-      sort: payload.sort ?? catalogDefaults.sort,
+      sort: this.pageSort(payload.sort),
     }
     // These reads can share a transaction-bound connection. Serializing them
     // keeps the request compatible with node-postgres 9 and transactional callers.
@@ -81,16 +83,17 @@ export default class CatalogPagesController {
 
   async indexByCategory({ inertia, params, request, response }: HttpContext) {
     this.publicCache(response, 60)
-    const payload = await request.validateUsing(catalogSearchValidator)
+    const payload = await request.validateUsing(catalogPageSearchValidator)
     const categorySlug = String(params.categorySlug)
     const result = await this.catalogService.search(request.hostname(), String(params.citySlug), {
       q: payload.q ?? '',
       category: categorySlug,
       open_now: payload.open_now ?? catalogDefaults.open_now,
+      benefit_today: payload.benefit_today ?? catalogDefaults.benefit_today,
       attributes: payload.attributes ?? catalogDefaults.attributes,
       page: payload.page ?? catalogDefaults.page,
       per_page: payload.per_page ?? catalogDefaults.per_page,
-      sort: payload.sort ?? catalogDefaults.sort,
+      sort: this.pageSort(payload.sort),
     })
     const category = result.context.category
 
@@ -209,6 +212,7 @@ export default class CatalogPagesController {
     q: string
     category?: string
     open_now: boolean
+    benefit_today: boolean
     attributes: string[]
     page: number
   }): boolean {
@@ -217,8 +221,20 @@ export default class CatalogPagesController {
       query.q.trim() === '' &&
       !query.category &&
       !query.open_now &&
+      !query.benefit_today &&
       query.attributes.length === 0
     )
+  }
+
+  /**
+   * A page is addressed by its URL, which never holds a position, so "nearest
+   * first" cannot be rendered here: a `sort=distance` someone typed or kept
+   * from elsewhere shows the default order instead of an error page. The web
+   * asks the API for the nearest places itself, with the position in that
+   * request alone.
+   */
+  private pageSort(sort: ICatalog.Sort | undefined): ICatalog.Sort {
+    return !sort || sort === 'distance' ? catalogDefaults.sort : sort
   }
 
   private publicCache(response: HttpContext['response'], maxAge: number): void {

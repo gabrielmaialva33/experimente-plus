@@ -3477,7 +3477,7 @@ components:
     CatalogSearchQuery:
       type: object
       additionalProperties: false
-      required: [q, category, open_now, attributes, sort]
+      required: [q, category, open_now, benefit_today, attributes, sort]
       properties:
         q:
           type: [string, 'null']
@@ -3487,6 +3487,8 @@ components:
           maxLength: 180
           pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
         open_now:
+          type: boolean
+        benefit_today:
           type: boolean
         attributes:
           type: array
@@ -3499,7 +3501,8 @@ components:
             pattern: '^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$'
         sort:
           type: string
-          enum: [relevance, name, recent]
+          description: The order applied. The position of a `distance` search is never echoed.
+          enum: [relevance, name, recent, rating, distance, price]
 
     CatalogSearchItem:
       type: object
@@ -3516,6 +3519,7 @@ components:
         - cover
         - is_sponsored
         - reviews
+        - benefit_today
         - published_at
         - updated_at
       properties:
@@ -3551,6 +3555,11 @@ components:
           type: boolean
         reviews:
           $ref: '#/components/schemas/CatalogReviewSummary'
+        benefit_today:
+          description: >-
+            "Vale hoje": an offer of this place can still be used today, by the
+            rules redemption applies, in the edition city's timezone.
+          type: boolean
         published_at:
           type: string
           format: date-time
@@ -8587,6 +8596,25 @@ paths:
         than `last_page`, the response returns the real last page and its rows.
         Searches with no organic results use page 1. The `meta.page` value and all
         pagination URLs always describe that effective page.
+
+        Orders (`sort`): `relevance` (default), `name`, `recent`, `rating` (public
+        average, then review count, places without published reviews last),
+        `distance` (nearest to `lat`/`lng` first, places without coordinates last)
+        and `price` (the public "Ticket médio" attribute, key `average_ticket`,
+        lowest first, places that do not declare it last). Every order ends on the
+        establishment id, so pages never overlap or skip a place.
+
+        `sort=distance` requires both `lat` and `lng` and answers 422 without them.
+        The position is read for that order only: it is never cached, logged,
+        stored, echoed in `query` or in the pagination URLs (append the same `lat`
+        and `lng` to follow them), and any request that carries it is answered
+        with `Cache-Control: private, no-store`.
+
+        `benefit_today=true` ("Vale hoje") keeps only places with an active benefit
+        offer of a published edition that can still be used today: inside the
+        edition and offer usage windows, on a weekday allowed by the offer's
+        weekday mask and within its daily window, in the edition city's timezone.
+        Every item carries the same answer as `benefit_today`, filter or not.
       tags: [Catalog]
       security: []
       parameters:
@@ -8610,6 +8638,12 @@ paths:
             pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
         - name: open_now
           in: query
+          schema:
+            type: boolean
+            default: false
+        - name: benefit_today
+          in: query
+          description: '"Vale hoje": only places with a benefit offer still usable today.'
           schema:
             type: boolean
             default: false
@@ -8640,8 +8674,22 @@ paths:
           in: query
           schema:
             type: string
-            enum: [relevance, name, recent]
+            enum: [relevance, name, recent, rating, distance, price]
             default: relevance
+        - name: lat
+          in: query
+          description: The visitor's latitude. Required with, and only read for, `sort=distance`; requires `lng`.
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+        - name: lng
+          in: query
+          description: The visitor's longitude. Required with, and only read for, `sort=distance`; requires `lat`.
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
       responses:
         '200':
           description: Sponsored and organic catalog results. An unknown or inactive category is represented by `context.category = null` and empty result arrays.

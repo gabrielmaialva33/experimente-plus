@@ -5,6 +5,7 @@ import router from '@adonisjs/core/services/router'
 import { test } from '@japa/runner'
 import { parse } from 'yaml'
 
+import { CATALOG_SORTS } from '#modules/catalog/interfaces/catalog_interface'
 import IConcierge from '#modules/concierge/interfaces/concierge_interface'
 import ConciergePolicy from '#modules/concierge/models/concierge_policy'
 import EstablishmentEvent from '#modules/partner_content/models/establishment_event'
@@ -1506,5 +1507,33 @@ test.group('Documentation', () => {
       resendResponses['429']?.$ref,
       '#/components/responses/PrivateEmailVerificationResendRateLimitError'
     )
+  })
+
+  test('documents every catalog order, "Vale hoje" and the position contract', async ({
+    assert,
+  }) => {
+    const specification = await readOpenApi()
+    const operation = operationAt(
+      specification,
+      '/api/v1/catalog/cities/{citySlug}/establishments',
+      'get'
+    )
+    const parameter = (name: string) =>
+      operation?.parameters?.find((candidate) => candidate.name === name)
+    const schemas = specification.components!.schemas!
+
+    assert.deepEqual(parameter('sort')?.schema?.enum, [...CATALOG_SORTS])
+    assert.deepEqual(schemas.CatalogSearchQuery.properties?.sort?.enum, [...CATALOG_SORTS])
+    assert.equal(parameter('benefit_today')?.schema?.type, 'boolean')
+    assert.deepInclude(parameter('lat')?.schema ?? {}, { minimum: -90, maximum: 90 })
+    assert.deepInclude(parameter('lng')?.schema ?? {}, { minimum: -180, maximum: 180 })
+    assert.include(operation?.description ?? '', 'private, no-store')
+
+    // The position is a request detail: the echoed query never carries it.
+    assert.include(schemas.CatalogSearchQuery.required ?? [], 'benefit_today')
+    assert.notProperty(schemas.CatalogSearchQuery.properties ?? {}, 'lat')
+    assert.notProperty(schemas.CatalogSearchQuery.properties ?? {}, 'lng')
+    assert.include(schemas.CatalogSearchItem.required ?? [], 'benefit_today')
+    assert.equal(schemas.CatalogSearchItem.properties?.benefit_today?.type, 'boolean')
   })
 })

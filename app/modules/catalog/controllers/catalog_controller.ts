@@ -6,6 +6,7 @@ import {
   catalogDefaults,
   catalogSearchValidator,
 } from '#modules/catalog/validators/catalog_validator'
+import { setPrivateResponseHeaders } from '#shared/utils/private_response_headers'
 
 @inject()
 export default class CatalogController {
@@ -28,17 +29,30 @@ export default class CatalogController {
 
   async index({ params, request, response }: HttpContext) {
     const payload = await request.validateUsing(catalogSearchValidator)
+    const sort = payload.sort ?? catalogDefaults.sort
     const result = await this.catalogService.search(request.hostname(), String(params.citySlug), {
       q: payload.q ?? '',
       category: payload.category,
       open_now: payload.open_now ?? catalogDefaults.open_now,
+      benefit_today: payload.benefit_today ?? catalogDefaults.benefit_today,
       attributes: payload.attributes ?? catalogDefaults.attributes,
       page: payload.page ?? catalogDefaults.page,
       per_page: payload.per_page ?? catalogDefaults.per_page,
-      sort: payload.sort ?? catalogDefaults.sort,
+      sort,
+      // The validator demands both for `distance`; any other order never reads them.
+      origin:
+        sort === 'distance' && payload.lat !== undefined && payload.lng !== undefined
+          ? { latitude: payload.lat, longitude: payload.lng }
+          : null,
     })
 
-    this.publicCache(response, 60)
+    // A URL that carries someone's position is answered to them alone: no shared
+    // cache, proxy or CDN may keep it, whatever order it asked for.
+    if (payload.lat !== undefined || payload.lng !== undefined) {
+      setPrivateResponseHeaders(response)
+    } else {
+      this.publicCache(response, 60)
+    }
     return response.ok(result)
   }
 

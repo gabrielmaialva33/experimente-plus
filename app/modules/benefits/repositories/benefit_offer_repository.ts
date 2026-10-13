@@ -108,6 +108,38 @@ export default class BenefitOfferRepository {
     return query
   }
 
+  /**
+   * The operation's active offers of published editions, at deliverable
+   * establishments, whose usage windows (the edition's and the offer's own)
+   * reach into `[from, until]` — the candidates for "Vale hoje", with the
+   * edition and its city for the local schedule. The narrowing here is a
+   * coarse prefilter; the day itself is decided by `usableLaterToday`.
+   */
+  async listActiveInUsageWindow(
+    tenantId: number,
+    from: DateTime,
+    until: DateTime
+  ): Promise<BenefitOffer[]> {
+    const fromDate = from.toJSDate()
+    const untilDate = until.toJSDate()
+
+    return BenefitOffer.query()
+      .where('tenant_id', tenantId)
+      .where('status', 'active')
+      .whereHas('establishment', whereEstablishmentDeliverable)
+      .whereHas('edition', (edition) => {
+        edition
+          .where('tenant_id', tenantId)
+          .where('status', 'published')
+          .where('usage_starts_at', '<=', untilDate)
+          .where('usage_ends_at', '>=', fromDate)
+      })
+      .where((q) => q.whereNull('starts_at').orWhere('starts_at', '<=', untilDate))
+      .where((q) => q.whereNull('ends_at').orWhere('ends_at', '>=', fromDate))
+      .preload('edition', (edition) => edition.preload('city'))
+      .orderBy('id')
+  }
+
   /** The offer, active or paused, at a deliverable establishment. */
   async findDeliverable(
     tenantId: number,
