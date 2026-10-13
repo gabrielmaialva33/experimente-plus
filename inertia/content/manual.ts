@@ -1389,6 +1389,31 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         keywords: ['comprovante', 'utilizações', 'histórico'],
       },
       {
+        id: 'consumidor-economia',
+        title: 'Sua economia: lugares visitados e quanto você economizou',
+        intro: 'Para ver quanto os benefícios renderam nesta edição e nas anteriores.',
+        needs: ['ter usado um benefício'],
+        blocks: [
+          p(
+            'Na **Carteira**, a parte **Sua economia** mostra os lugares que você visitou, quantos benefícios usou e quanto economizou nesta edição. No app, ela fica abaixo dos benefícios, e **Ver sua economia** abre o resumo completo.'
+          ),
+          list(
+            'Desconto em reais entra pelo valor do desconto.',
+            'Desconto em porcentagem é uma estimativa: a porcentagem do **ticket médio** do lugar, o valor médio por pessoa que ele informa. Por isso o valor aparece como **cerca de**.',
+            'Lugar sem ticket médio não entra na estimativa; o uso continua contado.',
+            'Cortesias e “compre um, ganhe outro” contam como uso, sem valor em reais.'
+          ),
+          p(
+            'Quando uma edição termina, o resumo dela fica guardado em **Edições anteriores**, por exemplo: “Em 2026 você visitou 8 lugares e economizou cerca de R$ 150,00”. Ele continua lá quando você compra a edição seguinte.'
+          ),
+          info(
+            'Usos de um pacote estornado continuam contados',
+            'O estorno encerra o que faltava usar, mas os benefícios já usados aconteceram e continuam no resumo e em **Utilizações**.'
+          ),
+        ],
+        keywords: ['economia', 'economizei', 'quanto economizei', 'ticket médio', 'resumo do ano'],
+      },
+      {
         id: 'consumidor-explorador',
         title: 'Favoritos, seguindo, roteiros e avaliações',
         intro: 'As listas pessoais e as avaliações ficam no app.',
@@ -2684,6 +2709,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
           p(
             'As telas são as mesmas do site: veja as imagens em [Como usar um benefício no lugar](#consumidor-apresentar).'
+          ),
+          p(
+            'Abaixo dos benefícios, **Sua economia** conta os lugares visitados e quanto você economizou (veja [Sua economia](#consumidor-economia)).'
           ),
         ],
         result: 'o uso aparece em **Meus usos**, com o comprovante.',
