@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CatalogConcierge } from '~/components/catalog/catalog_concierge'
@@ -237,6 +237,102 @@ describe('CatalogConcierge', () => {
     expect(await screen.findByText(/Só consigo ajudar a descobrir lugares/)).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Referências no catálogo' })).toBeNull()
     expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  it('offers the shortcuts as optional checkboxes above the question', async () => {
+    const { user } = render(<CatalogConcierge citySlug="londrina" cityName="Londrina" />)
+
+    const group = screen.getByRole('group', { name: 'Atalhos (opcional)' })
+    expect(group).toHaveAccessibleDescription(
+      'Os valores seguem o ticket médio por pessoa informado pelo lugar.'
+    )
+    const boxes = within(group).getAllByRole('checkbox')
+    expect(boxes.map((box) => box.getAttribute('value'))).toEqual([
+      'open_now',
+      'food',
+      'leisure',
+      'services',
+      'well_rated',
+      'up_to_50',
+      '50_100',
+      'over_100',
+    ])
+    for (const name of [
+      'Aberto agora',
+      'Comida',
+      'Lazer',
+      'Serviços',
+      'Bem avaliados (4+)',
+      'Até R$ 50',
+      'R$ 50 a 100',
+      'Acima de R$ 100',
+    ]) {
+      expect(within(group).getByRole('checkbox', { name })).not.toBeChecked()
+    }
+
+    // The chips sit before the question in the reading order.
+    const question = screen.getByLabelText('Pergunta para o Concierge')
+    expect(group.compareDocumentPosition(question) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    const openNow = screen.getByRole('checkbox', { name: 'Aberto agora' })
+    await user.click(openNow)
+    expect(openNow).toBeChecked()
+    await user.click(openNow)
+    expect(openNow).not.toBeChecked()
+
+    // A shortcut is not a question: the free text stays required.
+    await user.click(screen.getByRole('checkbox', { name: 'Comida' }))
+    expect(screen.getByRole('button', { name: 'Perguntar' })).toBeDisabled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('sends the ticked shortcuts with the question', async () => {
+    fetchMock.mockResolvedValue(
+      jsonReply({ outcome: 'grounded', text: 'Uma sugestão.', items: [], model: 'modelo-teste' })
+    )
+    const { user } = render(<CatalogConcierge citySlug="londrina" cityName="Londrina" />)
+
+    for (const name of ['Serviços', 'Aberto agora', 'Lazer', 'Bem avaliados (4+)', 'Até R$ 50']) {
+      await user.click(screen.getByRole('checkbox', { name }))
+    }
+    await user.type(screen.getByLabelText('Pergunta para o Concierge'), 'algo para hoje')
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }))
+
+    expect(await screen.findByText('Uma sugestão.')).toBeInTheDocument()
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(String(options.body))).toEqual({
+      question: 'algo para hoje',
+      city: 'londrina',
+      filters: {
+        open_now: true,
+        kind: ['leisure', 'services'],
+        min_rating: 4,
+        price: ['up_to_50'],
+      },
+    })
+  })
+
+  it('says when nothing matches the shortcuts instead of blaming the assistant', async () => {
+    fetchMock.mockResolvedValue(
+      jsonReply({ outcome: 'degraded', text: null, items: [], model: null })
+    )
+    const { user } = render(<CatalogConcierge citySlug="londrina" cityName="Londrina" />)
+
+    await user.click(screen.getByRole('checkbox', { name: 'Acima de R$ 100' }))
+    await user.type(screen.getByLabelText('Pergunta para o Concierge'), 'um jantar especial')
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }))
+
+    expect(
+      await screen.findByText(
+        'Nenhum lugar publicado combina com esses atalhos agora. Desmarque algum e pergunte de novo.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/O assistente está indisponível agora/)).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Referências no catálogo' })).toBeNull()
+
+    // Unticking afterwards does not rewrite the answer already on screen.
+    await user.click(screen.getByRole('checkbox', { name: 'Acima de R$ 100' }))
+    expect(screen.getByText(/Nenhum lugar publicado combina/)).toBeInTheDocument()
   })
 
   it('renders references without any image, because no media travels in a reply', async () => {

@@ -8,6 +8,7 @@ import { parse } from 'yaml'
 import { CATALOG_SORTS } from '#modules/catalog/interfaces/catalog_interface'
 import IConcierge from '#modules/concierge/interfaces/concierge_interface'
 import ConciergePolicy from '#modules/concierge/models/concierge_policy'
+import { conciergeAskValidator } from '#modules/concierge/validators/concierge_validator'
 import EstablishmentEvent from '#modules/partner_content/models/establishment_event'
 import EstablishmentExperience from '#modules/partner_content/models/establishment_experience'
 import EstablishmentShowcaseItem from '#modules/partner_content/models/establishment_showcase_item'
@@ -919,6 +920,47 @@ test.group('Documentation', () => {
         assert.equal(property.maximum, range.max, `${schema}.${field} maximum`)
       }
     }
+  })
+
+  /**
+   * The Concierge shortcuts. The vocabularies, the ranges and the family
+   * mapping are read from the constants the validator and the grounding query
+   * use, and the validator is run on a full payload, so a filter the API
+   * accepts without documentation (or the reverse) fails here.
+   */
+  test('documents the Concierge filters the validator accepts', async ({ assert }) => {
+    const specification = await readOpenApi()
+    const schemas = specification.components!.schemas!
+    const filters = schemas.ConciergeFilters
+    const properties = filters.properties!
+
+    assert.deepEqual(schemas.ConciergeQuestion.properties!.filters, {
+      $ref: '#/components/schemas/ConciergeFilters',
+    })
+    assert.isFalse(filters.additionalProperties)
+    assert.isUndefined(filters.required)
+
+    assert.equal(properties.open_now.type, 'boolean')
+    assert.sameMembers(properties.kind.items!.enum!, [...IConcierge.FILTER_KINDS])
+    assert.equal(properties.kind.maxItems, IConcierge.FILTER_KINDS.length)
+    assert.isTrue(properties.kind.uniqueItems)
+    for (const slug of Object.values(IConcierge.KIND_FAMILY_SLUGS).flat()) {
+      assert.include(properties.kind.description!, `\`${slug}\``)
+    }
+    assert.equal(properties.min_rating.minimum, IConcierge.MIN_RATING_RANGE.min)
+    assert.equal(properties.min_rating.maximum, IConcierge.MIN_RATING_RANGE.max)
+    assert.sameMembers(properties.price.items!.enum!, [...IConcierge.PRICE_BUCKETS])
+    assert.equal(properties.price.maxItems, IConcierge.PRICE_BUCKETS.length)
+    assert.isTrue(properties.price.uniqueItems)
+    assert.include(properties.price.description!, IConcierge.AVERAGE_TICKET_ATTRIBUTE_KEY)
+
+    const validated = await conciergeAskValidator.validate({
+      question: 'Onde ir hoje?',
+      city: 'londrina',
+      filters: { open_now: true, kind: ['food'], min_rating: 4, price: ['up_to_50'] },
+    })
+    assert.sameMembers(Object.keys(validated), Object.keys(schemas.ConciergeQuestion.properties!))
+    assert.sameMembers(Object.keys(validated.filters!), Object.keys(properties))
   })
 
   /**

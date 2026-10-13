@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { establishmentPathOf } from '~/lib/concierge'
+import { conciergeFiltersOf, establishmentPathOf, type ConciergeShortcut } from '~/lib/concierge'
 
 /**
  * The link contract of ADR-0029: a reference resolves to an establishment page
@@ -45,5 +45,33 @@ describe('establishmentPathOf', () => {
     expect(establishmentPathOf({ city_slug: 'londrina' })).toBeNull()
     expect(establishmentPathOf({ city_slug: '  ', establishment_slug: 'cafe-central' })).toBeNull()
     expect(establishmentPathOf({})).toBeNull()
+  })
+})
+
+/**
+ * The shortcuts become the request's `filters`, and only the ticked ones do:
+ * with none ticked the question goes out exactly as it did before them.
+ */
+describe('conciergeFiltersOf', () => {
+  const of = (...ids: ConciergeShortcut[]) => conciergeFiltersOf(new Set(ids))
+
+  it('sends nothing when no shortcut is ticked', () => {
+    expect(of()).toBeNull()
+  })
+
+  it('maps each shortcut onto its filter', () => {
+    expect(of('open_now')).toEqual({ open_now: true })
+    expect(of('food')).toEqual({ kind: ['food'] })
+    expect(of('well_rated')).toEqual({ min_rating: 4 })
+    expect(of('50_100')).toEqual({ price: ['50_100'] })
+  })
+
+  it('keeps kinds and prices in a stable order, whatever order they were ticked in', () => {
+    expect(of('over_100', 'services', 'up_to_50', 'food', 'open_now', 'well_rated')).toEqual({
+      open_now: true,
+      kind: ['food', 'services'],
+      min_rating: 4,
+      price: ['up_to_50', 'over_100'],
+    })
   })
 })

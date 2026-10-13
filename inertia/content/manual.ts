@@ -1163,6 +1163,10 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
               'A pergunta (1) e os lugares sugeridos (2).'
             )
           ),
+          tip(
+            'Atalhos',
+            'Acima da pergunta há atalhos opcionais: **Aberto agora**, **Comida**, **Lazer**, **Serviços**, **Bem avaliados (4+)** e faixas de valor pelo ticket médio por pessoa (**Até R$ 50**, **R$ 50 a 100**, **Acima de R$ 100**). Marque os que quiser antes de tocar em **Perguntar**: o Concierge só sugere o que atende a eles. Dois tipos ou duas faixas marcados valem um ou outro.'
+          ),
           info(
             'O que o Concierge não faz',
             'Ele só cita lugares, experiências e eventos publicados no Experimente+ e não faz reservas nem compras.'
@@ -1170,11 +1174,20 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         ],
         result: 'aparece **Sugestão ancorada no catálogo**, com os lugares citados em cartões.',
         troubleshooting: [
+          '"Nenhum lugar publicado combina com esses atalhos agora": nenhum lugar atende a todos os atalhos marcados. Desmarque algum e pergunte de novo.',
           'Aparece **Sugestões do catálogo** com "O assistente está indisponível agora": o assistente não respondeu, e a página mostra lugares publicados no lugar da resposta. Use essa lista ou tente de novo mais tarde.',
           'Há um limite diário de perguntas por pessoa, definido pela equipe. Passado o limite, também aparece a lista do catálogo.',
           '**Posso ajudar com descoberta local**: a pergunta saiu do assunto. Pergunte sobre lugares, experiências e eventos da cidade.',
         ],
-        keywords: ['concierge', 'ia', 'assistente', 'sugestão', 'pergunta'],
+        keywords: [
+          'concierge',
+          'ia',
+          'assistente',
+          'sugestão',
+          'pergunta',
+          'atalhos',
+          'aberto agora',
+        ],
       },
       {
         id: 'visitante-denunciar',
@@ -2705,6 +2718,10 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'No quadro **Concierge**, escreva a pergunta. Exemplo: "quero um café tranquilo e depois algo para fazer à tarde".',
             'Toque em **Perguntar** e toque nos lugares sugeridos para abri-los.'
           ),
+          tip(
+            'Atalhos',
+            'Antes de perguntar, toque nos atalhos que quiser, como **Aberto agora**, **Comida** ou **Bem avaliados (4+)**. São opcionais e funcionam como no site: o Concierge só sugere o que atende a eles.'
+          ),
           figures(
             image(
               'app-concierge-card',
@@ -2721,8 +2738,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         result: 'aparece **Sugestão ancorada no catálogo** com os lugares citados.',
         troubleshooting: [
           'Aviso de assistente indisponível: o app mostra opções do catálogo no lugar da resposta. Tente de novo mais tarde.',
+          'Nenhum lugar combina com os atalhos marcados: desmarque algum e pergunte de novo.',
         ],
-        keywords: ['concierge', 'pergunta', 'ia', 'sugestão'],
+        keywords: ['concierge', 'pergunta', 'ia', 'sugestão', 'atalhos'],
       },
       {
         id: 'app-conta',

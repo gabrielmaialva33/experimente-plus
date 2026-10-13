@@ -2,12 +2,16 @@ import { Link } from '@inertiajs/react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '~/components/ui/button'
+import { FilterChip } from '~/components/ui/choice'
 import { Textarea } from '~/components/ui/textarea'
 import {
   askCatalogConcierge,
+  CONCIERGE_SHORTCUTS,
+  conciergeFiltersOf,
   establishmentPathOf,
   type ConciergeItem,
   type ConciergeReply,
+  type ConciergeShortcut,
 } from '~/lib/concierge'
 
 const MAX_QUESTION_LENGTH = 300
@@ -26,7 +30,11 @@ interface CatalogConciergeProps {
 
 export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) {
   const [question, setQuestion] = useState('')
+  const [shortcuts, setShortcuts] = useState<ReadonlySet<ConciergeShortcut>>(() => new Set())
   const [reply, setReply] = useState<ConciergeReply | null>(null)
+  // Whether the reply on screen was asked with shortcuts: ticking one after
+  // the answer must not change what the answer says about itself.
+  const [askedWithShortcuts, setAskedWithShortcuts] = useState(false)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
   const request = useRef<AbortController | null>(null)
@@ -51,9 +59,14 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
     setError(false)
     setReply(null)
 
+    const filters = conciergeFiltersOf(shortcuts)
+
     try {
-      const result = await askCatalogConcierge(normalized, citySlug, controller.signal)
-      if (!controller.signal.aborted) setReply(result)
+      const result = await askCatalogConcierge(normalized, citySlug, controller.signal, filters)
+      if (!controller.signal.aborted) {
+        setAskedWithShortcuts(filters !== null)
+        setReply(result)
+      }
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === 'AbortError') return
       if (!controller.signal.aborted) setError(true)
@@ -66,6 +79,19 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
   }
 
   const canSubmit = question.trim().length >= 3 && !loading
+
+  const toggleShortcut = (id: ConciergeShortcut, checked: boolean) =>
+    setShortcuts((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+
+  // The shortcuts narrow the catalogue before any model is asked, so an empty
+  // list is the catalogue's answer, not the assistant's failure.
+  const nothingMatched =
+    reply?.outcome === 'degraded' && reply.items.length === 0 && askedWithShortcuts
 
   return (
     <section
@@ -90,7 +116,27 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
         </div>
 
         <form className="space-y-3" onSubmit={submit}>
-          <label htmlFor="catalog-concierge-question" className="text-sm font-medium">
+          <fieldset aria-describedby="catalog-concierge-shortcuts-hint" className="space-y-2">
+            <legend className="text-sm font-medium">Atalhos (opcional)</legend>
+            <div className="flex flex-wrap gap-2">
+              {CONCIERGE_SHORTCUTS.map((shortcut) => (
+                <FilterChip
+                  key={shortcut.id}
+                  name="concierge_shortcut"
+                  value={shortcut.id}
+                  checked={shortcuts.has(shortcut.id)}
+                  onChange={(event) => toggleShortcut(shortcut.id, event.target.checked)}
+                >
+                  {shortcut.label}
+                </FilterChip>
+              ))}
+            </div>
+            <p id="catalog-concierge-shortcuts-hint" className="text-xs text-muted-foreground">
+              Os valores seguem o ticket médio por pessoa informado pelo lugar.
+            </p>
+          </fieldset>
+
+          <label htmlFor="catalog-concierge-question" className="block text-sm font-medium">
             Sua pergunta
           </label>
           <Textarea
@@ -138,6 +184,11 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
 
           {reply.text ? (
             <p className="mt-2 whitespace-pre-line text-sm leading-6">{reply.text}</p>
+          ) : nothingMatched ? (
+            <p className="mt-2 text-sm leading-6">
+              Nenhum lugar publicado combina com esses atalhos agora. Desmarque algum e pergunte de
+              novo.
+            </p>
           ) : reply.outcome === 'degraded' ? (
             <p className="mt-2 text-sm leading-6">
               O assistente está indisponível agora, então trouxe opções publicadas no catálogo.
