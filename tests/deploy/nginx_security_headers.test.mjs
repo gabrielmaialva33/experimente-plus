@@ -84,3 +84,38 @@ test('Nginx installer validates before reload and retains an automatic rollback 
     'reload must complete before verification'
   )
 })
+
+test('Nginx logs the catalogue search without its query string, where a position may travel', async () => {
+  const maps = await readFile(mapsUrl, 'utf8')
+  const virtualHost = await readFile(virtualHostUrl, 'utf8')
+
+  const routeMap = maps.match(/map \$uri \$experimente_plus_position_request \{([\s\S]*?)\}/)
+  assert.ok(routeMap, 'the catalogue search route must be recognised from $uri')
+  const pattern = routeMap[1].match(/~(\S+)\s+1;/)?.[1]
+  assert.ok(pattern, 'the route map must flag the search with 1')
+  const route = new RegExp(pattern)
+  assert.ok(route.test('/api/v1/catalog/cities/londrina/establishments'))
+  assert.ok(!route.test('/api/v1/catalog/cities/londrina/establishments/cantina'))
+  assert.ok(!route.test('/cidades/londrina'))
+  assert.match(routeMap[1], /default 0;/)
+  assert.match(
+    maps,
+    /map \$experimente_plus_position_request \$experimente_plus_full_request \{\s*1\s+0;\s*default 1;\s*\}/
+  )
+
+  const format = maps.match(/log_format experimente_plus_without_query([\s\S]*?);/)?.[1] ?? ''
+  assert.match(format, /\$request_method \$uri \$server_protocol/)
+  for (const leak of ['$request ', '$request"', '$request_uri', '$args', '$query_string']) {
+    assert.ok(!format.includes(leak), `the private format must not log ${leak.trim()}`)
+  }
+
+  assert.match(
+    virtualHost,
+    /access_log \S+ combined if=\$experimente_plus_full_request;/,
+    'every other request keeps the standard line'
+  )
+  assert.match(
+    virtualHost,
+    /access_log \S+ experimente_plus_without_query if=\$experimente_plus_position_request;/
+  )
+})
