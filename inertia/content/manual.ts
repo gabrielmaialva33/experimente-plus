@@ -2790,7 +2790,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'Em **Conta > Interesses**, escolha o que você gosta e toque em **Salvar interesses**. **Marcar todos** marca todas as categorias da cidade de uma vez (e **Desmarcar todos** limpa). Se voltar sem salvar, o app pergunta: **Salvar**, **Descartar** ou **Continuar editando**. As sugestões aparecem em **Para você**, nas abas Explorar e Novidades.'
           ),
           p(
-            'Dentro de um roteiro, **Sugestões para o roteiro** mostra lugares perto das suas paradas (ou os mais visitados da cidade, se o roteiro ainda não tem parada no mapa). Toque em **Adicionar** para pôr um deles no fim do roteiro.'
+            'Dentro de um roteiro, **Sugestões para o roteiro** mostra lugares perto das suas paradas, com a distância até elas (ou os mais visitados da cidade, se o roteiro ainda não tem parada no mapa). Toque no **+** ao lado de um lugar para pô-lo no fim do roteiro.'
           ),
           p(
             'Para mandar o roteiro a alguém, toque em **Compartilhar**, ao lado de **Paradas**, e escolha o WhatsApp ou outro app. Vai um texto com o nome do roteiro e, em ordem, o nome, o endereço e o link de cada lugar. Suas anotações não vão junto, e o roteiro continua só seu.'
