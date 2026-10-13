@@ -1,18 +1,25 @@
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import { mock } from 'node:test'
 
+import ace from '@adonisjs/core/services/ace'
 import app from '@adonisjs/core/services/app'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 import type { ApiClient } from '@japa/api-client'
 import { test } from '@japa/runner'
-import { DateTime } from 'luxon'
+import { DateTime, Settings } from 'luxon'
 
-import { ANALYTICS_SESSION_COOKIE } from '#modules/analytics/interfaces/analytics_interface'
+import BadRequestException from '#exceptions/bad_request_exception'
+import {
+  ANALYTICS_SESSION_COOKIE,
+  type IAnalytics,
+} from '#modules/analytics/interfaces/analytics_interface'
 import AnalyticsDailyMetric from '#modules/analytics/models/analytics_daily_metric'
 import AnalyticsDailySearchTerm from '#modules/analytics/models/analytics_daily_search_term'
 import AnalyticsEvent from '#modules/analytics/models/analytics_event'
+import AnalyticsEventService from '#modules/analytics/services/analytics_event_service'
 import AnalyticsRetentionService from '#modules/analytics/services/analytics_retention_service'
 import EstablishmentRevision from '#modules/establishments/models/establishment_revision'
 import IRoles from '#modules/roles/interfaces/role_interface'
@@ -21,6 +28,7 @@ import {
   type EstablishmentScenario,
 } from '#tests/functional/establishments/helpers'
 import { addOrganizationMember, createUser } from '#tests/functional/organizations/helpers'
+import DiscardAnalyticsSessions from '../../../commands/discard_analytics_sessions.js'
 
 const GPTBOT =
   'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot'
@@ -701,5 +709,427 @@ test.group('Discovery analytics', (group) => {
     assert.isAtLeast(result.search_terms_deleted, 1)
     assert.isAtLeast(result.search_sessions_deleted, 1)
     assert.isNotNull(await AnalyticsEvent.find(event.id))
+  })
+})
+
+const sessionHash = () => randomBytes(32).toString('hex')
+
+/** Records through the production write path, at a chosen instant. */
+async function recordAt(
+  tenantId: number,
+  at: DateTime,
+  anonymousSessionHash: string,
+  events: IAnalytics.PublicEventInput[],
+  source: IAnalytics.Source = 'web'
+) {
+  const now = Settings.now
+  Settings.now = () => at.toMillis()
+  try {
+    const service = await app.container.make(AnalyticsEventService)
+    const result = await service.recordBatchForTenant(
+      tenantId,
+      events,
+      anonymousSessionHash,
+      source
+    )
+    if (result.recorded !== events.length) {
+      throw new Error(`Fixture deduplicated ${result.deduplicated} event(s)`)
+    }
+  } finally {
+    Settings.now = now
+  }
+}
+
+function establishmentEvent(
+  eventType: IAnalytics.EstablishmentEventType,
+  target: PublishedEstablishment
+) {
+  return analyticsEvent(eventType, target) as IAnalytics.PublicEventInput
+}
+
+function noResultSearch(target: PublishedEstablishment, term: string): IAnalytics.PublicEventInput {
+  return {
+    event_id: randomUUID(),
+    event_type: 'search_without_results',
+    city_slug: target.city_slug,
+    search_term: term,
+  }
+}
+
+/** Every analytics row of one operation, as stored. */
+async function analyticsState(tenantId: number) {
+  const rows = async (sql: string) => {
+    const result = await db.rawQuery(sql, [tenantId])
+    return result.rows
+  }
+  return {
+    events: await rows(
+      'SELECT id, anonymous_session_hash FROM analytics_events WHERE tenant_id = ? ORDER BY id'
+    ),
+    metrics: await rows(`
+      SELECT id, metric_date::text AS metric_date, event_type, establishment_id, source,
+        event_count::int AS event_count, unique_sessions::int AS unique_sessions,
+        first_event_at, last_event_at, updated_at
+      FROM analytics_daily_metrics WHERE tenant_id = ? ORDER BY id
+    `),
+    metricSessions: await rows(
+      'SELECT id, anonymous_session_hash FROM analytics_daily_metric_sessions WHERE tenant_id = ? ORDER BY id'
+    ),
+    searchTerms: await rows(`
+      SELECT id, metric_date::text AS metric_date, city_id, search_term_hash, category_key,
+        event_count::int AS event_count, unique_sessions::int AS unique_sessions,
+        first_event_at, last_event_at, updated_at
+      FROM analytics_daily_search_terms WHERE tenant_id = ? ORDER BY id
+    `),
+    searchSessions: await rows(
+      'SELECT id, anonymous_session_hash FROM analytics_daily_search_sessions WHERE tenant_id = ? ORDER BY id'
+    ),
+  }
+}
+
+/**
+ * The daily aggregates must equal what the raw events produce from scratch:
+ * counts, distinct sessions (also as session rows) and first/last instants,
+ * with no aggregate row lacking raw events and no raw events lacking one.
+ */
+async function assertAggregatesMatchRecomputation(
+  assert: { deepEqual: (actual: unknown, expected: unknown, message?: string) => void },
+  tenantId: number
+) {
+  const rows = async (sql: string) => {
+    const result = await db.rawQuery(sql, [tenantId])
+    return result.rows
+  }
+  const metricKey = 'metric_date::text AS metric_date, event_type, establishment_id, source'
+  const searchKey =
+    "metric_date::text AS metric_date, city_id, search_term_hash, COALESCE(category_slug, '') AS category_key"
+
+  const recomputedMetrics = await rows(`
+    SELECT ${metricKey}, COUNT(*)::int AS event_count,
+      COUNT(DISTINCT anonymous_session_hash)::int AS unique_sessions,
+      MIN(occurred_at) AS first_event_at, MAX(occurred_at) AS last_event_at
+    FROM analytics_events
+    WHERE tenant_id = ? AND establishment_id IS NOT NULL
+    GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4
+  `)
+  const storedMetrics = await rows(`
+    SELECT ${metricKey}, event_count::int AS event_count, unique_sessions::int AS unique_sessions,
+      first_event_at, last_event_at
+    FROM analytics_daily_metrics WHERE tenant_id = ? ORDER BY 1, 2, 3, 4
+  `)
+  const metricSessionRows = await rows(`
+    SELECT ${metricKey}, COUNT(*)::int AS unique_sessions
+    FROM analytics_daily_metric_sessions WHERE tenant_id = ?
+    GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4
+  `)
+  assert.deepEqual(storedMetrics, recomputedMetrics, 'daily metrics')
+  assert.deepEqual(
+    metricSessionRows,
+    recomputedMetrics.map(
+      ({ event_count: _events, first_event_at: _first, last_event_at: _last, ...row }: any) => row
+    ),
+    'daily metric sessions'
+  )
+
+  const recomputedTerms = await rows(`
+    SELECT ${searchKey}, COUNT(*)::int AS event_count,
+      COUNT(DISTINCT anonymous_session_hash)::int AS unique_sessions,
+      MIN(occurred_at) AS first_event_at, MAX(occurred_at) AS last_event_at
+    FROM analytics_events
+    WHERE tenant_id = ? AND event_type = 'search_without_results'
+    GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4
+  `)
+  const storedTerms = await rows(`
+    SELECT metric_date::text AS metric_date, city_id, search_term_hash, category_key,
+      event_count::int AS event_count, unique_sessions::int AS unique_sessions,
+      first_event_at, last_event_at
+    FROM analytics_daily_search_terms WHERE tenant_id = ? ORDER BY 1, 2, 3, 4
+  `)
+  const searchSessionRows = await rows(`
+    SELECT metric_date::text AS metric_date, city_id, search_term_hash, category_key,
+      COUNT(*)::int AS unique_sessions
+    FROM analytics_daily_search_sessions WHERE tenant_id = ?
+    GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4
+  `)
+  assert.deepEqual(storedTerms, recomputedTerms, 'daily search terms')
+  assert.deepEqual(
+    searchSessionRows,
+    recomputedTerms.map(
+      ({ event_count: _events, first_event_at: _first, last_event_at: _last, ...row }: any) => row
+    ),
+    'daily search sessions'
+  )
+}
+
+const without = <Row extends { anonymous_session_hash: string }>(rows: Row[], hashes: string[]) =>
+  rows.filter((row) => !hashes.includes(row.anonymous_session_hash))
+
+test.group('Discarding anonymous analytics sessions', (group) => {
+  group.each.setup(() => testUtils.db().withGlobalTransaction())
+  group.each.teardown(async () => {
+    mock.restoreAll()
+    await rm(app.makePath('storage', 'media'), { recursive: true, force: true })
+  })
+
+  test('removes named sessions in one transaction and leaves aggregates equal to a recomputation', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('analytics-discard')
+    const first = await completeAndPublish(client, scenario, 'Café Descarte Regional')
+    const second = await completeAndPublish(client, scenario, 'Bar Descarte Regional')
+    const tenantId = scenario.tenant.id
+    const [person, otherPerson, bystander, crawler, otherCrawler] = Array.from(
+      { length: 5 },
+      sessionHash
+    )
+    const day = DateTime.utc()
+      .minus({ days: 3 })
+      .set({ hour: 15, minute: 0, second: 0, millisecond: 0 })
+    const at = (minutes: number, seconds = 0) => day.plus({ minutes, seconds })
+
+    await recordAt(tenantId, at(0), person, [
+      establishmentEvent('catalog_impression', first),
+      establishmentEvent('establishment_view', first),
+      establishmentEvent('route_click', first),
+      noResultSearch(first, 'café vegano'),
+    ])
+    await recordAt(tenantId, at(1), otherPerson, [
+      establishmentEvent('establishment_view', first),
+      establishmentEvent('establishment_view', second),
+    ])
+    await recordAt(
+      tenantId,
+      at(1),
+      otherPerson,
+      [establishmentEvent('route_click', first)],
+      'redirect'
+    )
+    await recordAt(
+      tenantId,
+      at(2),
+      bystander,
+      [establishmentEvent('route_click', first)],
+      'redirect'
+    )
+    // A crawler following every outbound link, several times, and searching.
+    for (const seconds of [0, 31, 62]) {
+      await recordAt(
+        tenantId,
+        at(3, seconds),
+        crawler,
+        [establishmentEvent('route_click', first)],
+        'redirect'
+      )
+    }
+    for (const seconds of [0, 31]) {
+      await recordAt(
+        tenantId,
+        at(3, seconds),
+        crawler,
+        [establishmentEvent('website_click', first)],
+        'redirect'
+      )
+    }
+    await recordAt(tenantId, at(3), crawler, [
+      noResultSearch(first, 'café vegano'),
+      noResultSearch(first, 'roteiro automatizado'),
+    ])
+    await recordAt(
+      tenantId,
+      day.plus({ days: 1 }),
+      crawler,
+      [establishmentEvent('route_click', first)],
+      'redirect'
+    )
+    await recordAt(tenantId, at(5), otherCrawler, [
+      establishmentEvent('establishment_view', second),
+    ])
+
+    await assertAggregatesMatchRecomputation(assert, tenantId)
+    const before = await analyticsState(tenantId)
+    const retention = await app.container.make(AnalyticsRetentionService)
+
+    // Repeated and differently written names are one session each.
+    const dryRun = await retention.discardSessions(
+      [crawler, otherCrawler, ` ${crawler.toUpperCase()} `],
+      { apply: false }
+    )
+    assert.deepEqual(dryRun, {
+      applied: false,
+      sessions_requested: 2,
+      sessions_found: 2,
+      raw_events_deleted: 9,
+      raw_events_by_type: {
+        route_click: 4,
+        website_click: 2,
+        search_without_results: 2,
+        establishment_view: 1,
+      },
+      metric_sessions_deleted: 4,
+      metrics_adjusted: 2,
+      metrics_deleted: 2,
+      search_sessions_deleted: 2,
+      search_terms_adjusted: 1,
+      search_terms_deleted: 1,
+      aggregate_sessions_without_raw_events: 0,
+    })
+    assert.deepEqual(await analyticsState(tenantId), before, 'a dry run changes nothing')
+
+    const applied = await retention.discardSessions([crawler, otherCrawler], { apply: true })
+    assert.deepEqual(applied, { ...dryRun, applied: true })
+
+    const after = await analyticsState(tenantId)
+    const discarded = [crawler, otherCrawler]
+    assert.deepEqual(after.events, without(before.events, discarded))
+    assert.deepEqual(after.metricSessions, without(before.metricSessions, discarded))
+    assert.deepEqual(after.searchSessions, without(before.searchSessions, discarded))
+    await assertAggregatesMatchRecomputation(assert, tenantId)
+
+    // Rows only crawlers produced are gone; shared rows keep the people's share.
+    const routeClicks = after.metrics.filter(
+      (row: any) => row.event_type === 'route_click' && row.source === 'redirect'
+    )
+    assert.lengthOf(routeClicks, 1)
+    assert.include(routeClicks[0], { event_count: 2, unique_sessions: 2 })
+    assert.isFalse(after.metrics.some((row: any) => row.event_type === 'website_click'))
+    assert.lengthOf(after.searchTerms, 1)
+    assert.include(after.searchTerms[0], { event_count: 1, unique_sessions: 1 })
+    // Rows the crawlers never contributed to are exactly as they were.
+    const shared = (row: any) =>
+      (row.event_type === 'route_click' && row.source === 'redirect') ||
+      (row.event_type === 'establishment_view' && row.establishment_id === second.id)
+    assert.deepEqual(
+      after.metrics.filter((row: any) => !shared(row)),
+      before.metrics.filter((row: any) => !shared(row) && row.event_type !== 'website_click')
+    )
+
+    // Idempotent: a second run finds nothing and changes nothing.
+    const repeated = await retention.discardSessions([crawler, otherCrawler], { apply: true })
+    assert.deepEqual(repeated, {
+      applied: true,
+      sessions_requested: 2,
+      sessions_found: 0,
+      raw_events_deleted: 0,
+      raw_events_by_type: {},
+      metric_sessions_deleted: 0,
+      metrics_adjusted: 0,
+      metrics_deleted: 0,
+      search_sessions_deleted: 0,
+      search_terms_adjusted: 0,
+      search_terms_deleted: 0,
+      aggregate_sessions_without_raw_events: 0,
+    })
+    assert.deepEqual(await analyticsState(tenantId), after)
+  })
+
+  test('leaves session days past raw retention untouched and reports them', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('analytics-discard-retained')
+    const published = await completeAndPublish(client, scenario, 'Café Retenção Regional')
+    const tenantId = scenario.tenant.id
+    const [person, crawler] = [sessionHash(), sessionHash()]
+    const day = DateTime.utc()
+      .minus({ days: 2 })
+      .set({ hour: 15, minute: 0, second: 0, millisecond: 0 })
+
+    await recordAt(tenantId, day, person, [establishmentEvent('establishment_view', published)])
+    await recordAt(tenantId, day, crawler, [establishmentEvent('establishment_view', published)])
+    // Retention already removed the crawler's raw event; its daily session row remains.
+    await db.transaction(async (transaction) => {
+      await transaction.rawQuery("SELECT set_config('app.analytics_retention', 'on', true)")
+      await transaction
+        .from('analytics_events')
+        .where('tenant_id', tenantId)
+        .where('anonymous_session_hash', crawler)
+        .delete()
+    })
+    const before = await analyticsState(tenantId)
+
+    const retention = await app.container.make(AnalyticsRetentionService)
+    const result = await retention.discardSessions([crawler], { apply: true })
+
+    assert.equal(result.sessions_found, 0)
+    assert.equal(result.raw_events_deleted, 0)
+    assert.equal(result.aggregate_sessions_without_raw_events, 1)
+    assert.deepEqual(await analyticsState(tenantId), before)
+  })
+
+  test('the command refuses partial hashes, dry-runs by default and prints counts only', async ({
+    client,
+    assert,
+  }) => {
+    const scenario = await createEstablishmentScenario('analytics-discard-command')
+    const published = await completeAndPublish(client, scenario, 'Café Comando Regional')
+    const tenantId = scenario.tenant.id
+    const [person, crawler] = [sessionHash(), sessionHash()]
+    const day = DateTime.utc()
+      .minus({ days: 1 })
+      .set({ hour: 15, minute: 0, second: 0, millisecond: 0 })
+    await recordAt(
+      tenantId,
+      day,
+      person,
+      [establishmentEvent('route_click', published)],
+      'redirect'
+    )
+    await recordAt(
+      tenantId,
+      day,
+      crawler,
+      [establishmentEvent('route_click', published)],
+      'redirect'
+    )
+    const before = await analyticsState(tenantId)
+
+    async function run(...argv: string[]) {
+      const command = await ace.create(DiscardAnalyticsSessions, argv)
+      const messages: string[] = []
+      for (const method of ['error', 'warning', 'success', 'info'] as const) {
+        mock.method(command.logger, method, (message: string) => {
+          messages.push(message)
+        })
+      }
+      await command.exec()
+      return { code: command.exitCode ?? 0, output: messages.join('\n') }
+    }
+
+    for (const partial of [
+      crawler.slice(0, 12),
+      crawler.slice(0, 63),
+      `${crawler}0`,
+      'g'.repeat(64),
+      '',
+    ]) {
+      const refused = await run('--session', crawler, '--session', partial, '--apply')
+      assert.equal(refused.code, 1, partial)
+      assert.include(refused.output, 'Session #2 is not a full 64-character hexadecimal hash')
+    }
+    await assert.rejects(
+      () =>
+        app.container
+          .make(AnalyticsRetentionService)
+          .then((s) => s.discardSessions([], { apply: true })),
+      BadRequestException
+    )
+    assert.deepEqual(await analyticsState(tenantId), before, 'refusals change nothing')
+
+    const dryRun = await run('--session', crawler)
+    assert.equal(dryRun.code, 0)
+    assert.include(dryRun.output, 'sessions: 1 named, 1 with raw events')
+    assert.include(dryRun.output, 'raw events: 1 (route_click 1)')
+    assert.include(dryRun.output, 'Dry run: nothing was changed')
+    assert.notMatch(dryRun.output, /[0-9a-f]{64}/i, 'no session hash is ever printed')
+    assert.deepEqual(await analyticsState(tenantId), before)
+
+    const applied = await run(`--session=${crawler}`, '--apply')
+    assert.equal(applied.code, 0)
+    assert.include(applied.output, 'Applied')
+    assert.notMatch(applied.output, /[0-9a-f]{64}/i)
+    const after = await analyticsState(tenantId)
+    assert.deepEqual(after.events, without(before.events, [crawler]))
+    await assertAggregatesMatchRecomputation(assert, tenantId)
   })
 })

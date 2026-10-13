@@ -172,6 +172,23 @@ export namespace IAnalytics {
     search_sessions_deleted: number
     search_terms_deleted: number
   }
+
+  /** Counts only: never a session hash, a search term or a place. */
+  export interface SessionDiscardResult {
+    applied: boolean
+    sessions_requested: number
+    sessions_found: number
+    raw_events_deleted: number
+    raw_events_by_type: Partial<Record<EventType, number>>
+    metric_sessions_deleted: number
+    metrics_adjusted: number
+    metrics_deleted: number
+    search_sessions_deleted: number
+    search_terms_adjusted: number
+    search_terms_deleted: number
+    /** Daily session rows of these sessions whose raw events retention already removed. */
+    aggregate_sessions_without_raw_events: number
+  }
 }
 
 export default IAnalytics
