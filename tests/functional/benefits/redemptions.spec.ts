@@ -1149,7 +1149,13 @@ test.group('Benefit validation page reader', (group) => {
     assert.equal(closedResponse.body().refusal.reason, 'outside_window')
     assert.equal(closedResponse.body().refusal.title, 'Fora do período de uso')
 
-    const tampered = await readAs(paused, `${pausedCode.token.slice(0, -1)}A`)
+    // Swap the last character for one it is not, so the tampering never lands
+    // back on the original token.
+    const lastCharacter = pausedCode.token.slice(-1)
+    const tampered = await readAs(
+      paused,
+      `${pausedCode.token.slice(0, -1)}${lastCharacter === 'A' ? 'B' : 'A'}`
+    )
     tampered.assertStatus(400)
     assert.deepEqual(tampered.body().refusal, {
       reason: 'invalid',
