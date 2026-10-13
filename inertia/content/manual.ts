@@ -25,7 +25,7 @@ import { MANUAL_MEDIA, type ManualMediaId } from '~/content/manual_media'
  * `app-celular`: `#app` is the page's root element, so a link to it would not scroll.
  */
 
-export const MANUAL_UPDATED_AT = '2026-09-27'
+export const MANUAL_UPDATED_AT = '2026-10-13'
 
 export interface ManualImage {
   id: ManualMediaId
