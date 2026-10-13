@@ -1,0 +1,28 @@
+name: Set up the project
+description: pnpm, Node from .nvmrc, frozen dependencies and the test environment file.
+
+runs:
+  using: composite
+  steps:
+    # pnpm 11 is required: pnpm-workspace.yaml uses the `allowBuilds` format
+    # (pnpm 11) to whitelist native build scripts (argon2, better-sqlite3).
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 11.22.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Prepare test environment
+      shell: bash
+      run: |
+        cp .env.test .env
+        mkdir -p tmp

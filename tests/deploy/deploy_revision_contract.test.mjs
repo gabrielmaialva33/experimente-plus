@@ -9,11 +9,22 @@ test('CI checks out and sends the same github.sha through the forced-command pro
     'utf8'
   )
   const workflow = parse(source)
-  const checkout = workflow.jobs.ci.steps.find((step) => step.uses?.startsWith('actions/checkout@'))
+  const checkJobs = Object.keys(workflow.jobs).filter((name) => name !== 'deploy')
   const deploy = workflow.jobs.deploy.steps.find((step) => step.name === 'Deploy')
-  assert.equal(checkout.with.ref, '${{ github.sha }}')
-  assert.equal(workflow.jobs.deploy.needs, 'ci')
-  assert.equal(deploy.env.DEPLOY_REVISION, checkout.with.ref)
+
+  // Every check validates the same commit the deploy sends, and the deploy
+  // waits for every check: a job added later cannot be skipped by accident.
+  assert.ok(checkJobs.length > 0)
+  for (const name of checkJobs) {
+    const checkout = workflow.jobs[name].steps.find((step) =>
+      step.uses?.startsWith('actions/checkout@')
+    )
+    assert.equal(checkout?.with?.ref, '${{ github.sha }}', `${name} checks out github.sha`)
+  }
+  assert.deepEqual([...workflow.jobs.deploy.needs].sort(), [...checkJobs].sort())
+  assert.equal(deploy.env.DEPLOY_REVISION, '${{ github.sha }}')
+  // A deploy already started is never cancelled by a newer push.
+  assert.equal(workflow.jobs.deploy.concurrency['cancel-in-progress'], false)
   assert.ok(deploy.run.includes('[[ "$DEPLOY_REVISION" =~ ^[0-9a-f]{40}$ ]] || exit 1'))
   assert.ok(deploy.run.includes('"deploy $DEPLOY_REVISION"'))
 })

@@ -7,8 +7,71 @@ on:
     branches: [master]
 
 jobs:
-  ci:
+  # The checks run as parallel jobs, and the deploy waits for all of them. A
+  # newer push to the same ref cancels the checks still running for an older
+  # one (that run then never deploys); a deploy already started is never
+  # cancelled, because its own concurrency group does not cancel.
+  checks:
+    name: Lint and type check
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: ./.github/actions/setup
+      - name: Lint
+        run: pnpm lint
+      - name: Type check (backend + frontend)
+        run: pnpm typecheck
+
+  deploy-regressions:
+    name: Deploy regressions (${{ matrix.shard.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-deploy-regressions-${{ matrix.shard.name }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      # deploy.test.mjs and git_integrity.test.mjs simulate whole deploys and
+      # dominate the suite, so each gets a runner of its own.
+      matrix:
+        shard:
+          - name: deploy script
+            files: tests/deploy/deploy.test.mjs
+          - name: git integrity
+            files: tests/deploy/git_integrity.test.mjs
+          - name: contracts
+            files: >-
+              tests/deploy/catalog_migration_snapshot.test.mjs
+              tests/deploy/catalog_smoke.test.mjs
+              tests/deploy/deploy_revision_contract.test.mjs
+              tests/deploy/docker_context_contract.test.mjs
+              tests/deploy/native_dependencies.test.mjs
+              tests/deploy/nginx_security_headers.test.mjs
+              tests/deploy/progressive_web_app.test.mjs
+              tests/deploy/reserved_paths.test.mjs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: ./.github/actions/setup
+      - name: Deploy smoke regression tests (no database)
+        run: node --test ${{ matrix.shard.files }}
+
+  backend:
+    name: Backend tests (Japa)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-backend
+      cancel-in-progress: true
     env:
       DB_PORT: 5432
       REDIS_PORT: 6379
@@ -44,55 +107,52 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-
-      # pnpm 11 is required: pnpm-workspace.yaml uses the `allowBuilds` format
-      # (pnpm 11) to whitelist native build scripts (argon2, better-sqlite3).
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.22.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Prepare test environment
-        run: |
-          cp .env.test .env
-          mkdir -p tmp
+      - uses: ./.github/actions/setup
 
       # Browser suite (tests/browser/**) uses Playwright/Chromium.
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Type check (backend + frontend)
-        run: pnpm typecheck
-
-      - name: Deploy smoke regression tests (no database)
-        run: node --test tests/deploy/*.test.mjs
 
       # Migrations run automatically in the Japa test setup; Postgres + Redis
       # come from the services above (.env.test points at localhost).
       - name: Backend tests (unit + functional + browser)
         run: pnpm test:e2e
 
+  frontend:
+    name: Frontend tests (Vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-frontend
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: ./.github/actions/setup
       - name: Frontend tests (Vitest)
         run: pnpm test:ui
 
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-build
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: ./.github/actions/setup
       - name: Build
         run: pnpm build
 
   deploy:
     name: Deploy to VPS
-    needs: ci
+    needs: [checks, deploy-regressions, backend, frontend, build]
     timeout-minutes: 75
     # Only master, only real pushes: a PR from a fork must never reach the host.
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'

@@ -321,10 +321,13 @@ nesses ambientes. O filtro de runtime do Compose permanece independente dessa po
 
 ## Deploy
 
-A pipeline em [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) roda em todo push:
-instalação frozen, lint, typecheck, suítes Japa, Vitest e build de produção. Em `master`, um job
-`deploy` envia por SSH o mesmo `github.sha` usado no checkout validado e dispara
-[`deploy.sh`](deploy.sh) no host.
+A pipeline em [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) roda em todo push, em
+jobs paralelos sobre o mesmo `github.sha`: lint e typecheck, testes de regressão do deploy (em três
+partes), suítes Japa, Vitest e build de produção. O setup comum fica em
+[`.github/actions/setup`](.github/actions/setup/action.yml). Um push novo na mesma branch cancela as
+verificações ainda em andamento do anterior, que então não publica; um deploy já iniciado nunca é
+cancelado. Em `master`, o job `deploy` espera todas as verificações, envia por SSH o mesmo
+`github.sha` e dispara [`deploy.sh`](deploy.sh) no host.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {
