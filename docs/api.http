@@ -108,6 +108,13 @@ Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}
 x-tenant-id: {{mobileContext.response.body.$.active_operation.id}}
 Accept: application/json
 
+### Consumer savings — places visited and money saved, this edition and past ones
+# @name mobileSavings
+GET {{baseUrl}}/api/v1/me/savings
+Authorization: Bearer {{mobileConsumerRefresh.response.body.$.auth.access_token}}
+x-tenant-id: {{mobileContext.response.body.$.active_operation.id}}
+Accept: application/json
+
 ### Create a five-minute presentation from the first available wallet benefit
 # @name mobilePresentation
 POST {{baseUrl}}/api/v1/me/benefits/presentations

@@ -1,3 +1,4 @@
+import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 import BadRequestException from '#exceptions/bad_request_exception'
@@ -30,6 +31,52 @@ export default class EstablishmentRevisionAttributeValueRepository extends Lucid
       .preload('definition')
       .preload('selected_options', (query) => query.preload('option'))
       .orderBy('attribute_definition_id', 'asc')
+  }
+
+  /**
+   * The value each establishment's published revision gives one numeric
+   * attribute, by key: what the public page shows, so only an active, public
+   * definition counts. A place in two categories that both define the key
+   * answers with the first definition. Values are what the column holds
+   * (`numeric` arrives as text); an establishment without one is absent.
+   */
+  async listPublishedNumericValues(
+    tenantId: number,
+    establishmentIds: readonly number[],
+    key: string
+  ): Promise<Map<number, number>> {
+    const values = new Map<number, number>()
+    if (establishmentIds.length === 0) return values
+
+    const rows = await db
+      .from('establishments as establishment')
+      .join('establishment_revision_attribute_values as value', (join) => {
+        join
+          .on('value.revision_id', 'establishment.published_revision_id')
+          .andOn('value.tenant_id', 'establishment.tenant_id')
+      })
+      .join('category_attribute_definitions as definition', (join) => {
+        join
+          .on('definition.id', 'value.attribute_definition_id')
+          .andOn('definition.tenant_id', 'value.tenant_id')
+      })
+      .where('establishment.tenant_id', tenantId)
+      .whereIn('establishment.id', [...establishmentIds])
+      .where('definition.key', key)
+      .where('definition.is_active', true)
+      .where('definition.is_public', true)
+      .whereIn('definition.data_type', ['decimal', 'integer'])
+      .select('establishment.id as establishment_id', 'value.value_decimal', 'value.value_integer')
+      .orderBy('definition.id', 'asc')
+
+    for (const row of rows) {
+      const establishmentId = Number(row.establishment_id)
+      if (values.has(establishmentId)) continue
+      const value = Number(row.value_decimal ?? row.value_integer ?? Number.NaN)
+      if (Number.isFinite(value)) values.set(establishmentId, value)
+    }
+
+    return values
   }
 
   async deleteForRevision(
