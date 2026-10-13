@@ -2,7 +2,7 @@ import { act, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { MANUAL_CHAPTERS } from '~/content/manual'
+import { MANUAL_CHAPTERS, MANUAL_UPDATED_AT } from '~/content/manual'
 import ManualPage from '~/pages/manual/index'
 import { render, screen } from '~/tests/test_utils'
 
@@ -38,7 +38,25 @@ describe('Manual page', () => {
       'href',
       '/manual-media/manual-experimente-plus.pdf'
     )
-    expect(screen.getAllByText(/Atualizado em 27 de setembro de 2026/)[0]).toBeVisible()
+    // The date follows MANUAL_UPDATED_AT, so dating a new edition of the manual
+    // doesn't break this test; the page must still spell it out in Portuguese.
+    const [year, month, day] = MANUAL_UPDATED_AT.split('-').map(Number)
+    const months = [
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
+    ]
+    const updatedAt = `Atualizado em ${day} de ${months[month - 1]} de ${year}`
+    expect(screen.getAllByText(new RegExp(updatedAt))[0]).toBeVisible()
   })
 
   it('starts from the profiles: each card leads to its part of the manual', () => {
