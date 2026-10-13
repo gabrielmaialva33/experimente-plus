@@ -10,14 +10,17 @@ import {
 } from 'lucide-react'
 
 import { ConsumerFlowShell } from '~/components/consumer/consumer_flow_shell'
+import { WalletSavings } from '~/components/consumer/wallet_savings'
 import { EmptyState } from '~/components/empty_state'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
 import type { BenefitWallet, WalletBenefit } from '~/types/benefit'
+import type { BenefitSavings } from '~/types/benefit_savings'
 
 interface WalletPageProps {
   wallet: BenefitWallet
+  savings?: BenefitSavings
 }
 
 type BadgeVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'destructive'
@@ -78,7 +81,7 @@ function SummaryItem({ label, value }: { label: string; value: number }) {
   )
 }
 
-export default function WalletPage({ wallet }: WalletPageProps) {
+export default function WalletPage({ wallet, savings }: WalletPageProps) {
   const { passes, summary } = wallet
 
   return (
@@ -259,6 +262,8 @@ export default function WalletPage({ wallet }: WalletPageProps) {
           ))}
         </div>
       )}
+
+      {savings ? <WalletSavings savings={savings} /> : null}
     </ConsumerFlowShell>
   )
 }
