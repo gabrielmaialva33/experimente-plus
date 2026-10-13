@@ -19,6 +19,17 @@ const REFUSAL =
   'Só consigo ajudar a descobrir lugares, experiências e eventos cadastrados no Experimente+. ' +
   'Para assuntos jurídicos, de saúde, financeiros ou de emergência, procure um profissional ou o serviço oficial adequado.'
 
+/**
+ * Homologation names every place "<nome> — demonstração", and its baseline
+ * category is "Gastronomia demonstrativa"; the model read the marker as a trait
+ * of the place ("demonstração gastronômica"). The names still travel whole:
+ * grounding matches the published catalogue, so the marker is explained to the
+ * model, never stripped from what it reads.
+ */
+const DEMO_DATA_INSTRUCTION =
+  'O sufixo " — demonstração" nos nomes, e o termo "demonstrativa" nas categorias, só marcam dados fictícios de teste: ' +
+  'não são característica do lugar, então nunca os mencione nem descreva algo como demonstração.'
+
 const SYSTEM_PROMPT = [
   'Você é o concierge do Experimente+, um app de descoberta de lugares, experiências e eventos.',
   'Use EXCLUSIVAMENTE os itens da lista fornecida. Nunca cite item que não esteja nela.',
@@ -28,6 +39,7 @@ const SYSTEM_PROMPT = [
   '{"intro":"uma frase curta","steps":[{"ref":"<ref da lista>","why":"uma frase curta"}]}',
   'O ref é a string exata da lista, como "establishment:12" ou "event:7".',
   'Use no máximo 4 steps. Não invente ref. Não faça reservas, compras nem confirmações.',
+  DEMO_DATA_INSTRUCTION,
 ].join(' ')
 
 /** How each species is named for the model, in the language of the answer. */
