@@ -19,6 +19,7 @@ const InertiaLegalController = () => import('#modules/web/controllers/legal_cont
 const InertiaAppDownloadController = () =>
   import('#modules/web/controllers/app_download_controller')
 const InertiaManualController = () => import('#modules/web/controllers/manual_controller')
+const RobotsController = () => import('#modules/web/controllers/robots_controller')
 const InertiaDashboardController = () => import('#modules/web/controllers/dashboard_controller')
 const InertiaAnalyticsController = () =>
   import('#modules/analytics/controllers/analytics_pages_controller')
@@ -87,6 +88,7 @@ router.get('/termos', [InertiaLegalController, 'terms']).as('legal.terms')
 router.get('/privacidade', [InertiaLegalController, 'privacy']).as('legal.privacy')
 router.get('/app', [InertiaAppDownloadController, 'show']).as('app.download')
 router.get('/manual', [InertiaManualController, 'show']).as('manual')
+router.get('/robots.txt', [RobotsController, 'show']).as('robots')
 
 router
   .get('/', async ({ auth, containerResolver, response, inertia }) => {

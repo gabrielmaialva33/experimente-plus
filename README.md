@@ -294,6 +294,29 @@ nesses ambientes. O filtro de runtime do Compose permanece independente dessa po
 > procura uma operação de slug `experimente-plus` e ignora `PUBLIC_TENANT_SLUG`. O slug do tenant
 > precisa acompanhar o subdomínio em que a operação é servida.
 
+### Robôs, indexação e analytics
+
+- **`/robots.txt`** vem do backend ([`search_indexing.ts`](app/shared/utils/search_indexing.ts)).
+  Fora de produção (`DEPLOYMENT_ENV` development ou homologation) bloqueia tudo; em produção libera
+  a descoberta pública (catálogo, páginas legais, `/app` e `/manual`) e bloqueia `/go/`, `/api/`,
+  portal, back office e as áreas com sessão ou link de uso único. Ainda não existe sitemap, por isso
+  não há linha `Sitemap:`.
+- **Fora de produção**, toda resposta (páginas, arquivos estáticos e erros) leva
+  `X-Robots-Tag: noindex, nofollow`: a homologação mostra lugares fictícios.
+- **Analytics ignoram robôs.** Um detector único
+  ([`crawler_user_agent.ts`](app/shared/utils/crawler_user_agent.ts)) reconhece crawlers, navegadores
+  headless e bibliotecas HTTP pelo user agent, sem nunca casar com navegadores ou com o app. `/go/`
+  redireciona sem registrar e `POST /api/v1/analytics/events` responde 202 como se registrasse, sem
+  gravar nada. Os links `/go/` do site levam `rel="nofollow"`.
+- **Sessões já gravadas** (por exemplo, um crawler anterior ao filtro) saem com
+  `pnpm ace analytics:discard-sessions --session <hash> [--session <hash> …]`. Sem `--apply` é uma
+  simulação que mostra só contagens; com `--apply`, apaga numa única transação os eventos brutos
+  dessas sessões anônimas pelo caminho de retenção e desconta dos agregados diários exatamente o que
+  eles somaram, que voltam a bater com um recálculo a partir dos eventos. Só aceita o hash completo
+  de 64 caracteres de `analytics_events.anonymous_session_hash` (prefixos são recusados) e repetir
+  não altera nada. Linhas diárias cujos eventos brutos já passaram da retenção ficam como estão e
+  são apenas contadas.
+
 ---
 
 ## Deploy

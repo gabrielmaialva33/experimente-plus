@@ -79,6 +79,8 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
     }
   }
 
+  // Every `/go/` link carries `nofollow`: a crawler following one would count
+  // as a contact. The redirect also ignores known crawlers on its own.
   return (
     <section
       aria-labelledby="contact-actions-title"
@@ -108,7 +110,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'route')}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer"
             >
               <MapPinned className="size-4" /> Como chegar
               <span className="sr-only"> (abre em nova aba)</span>
@@ -127,7 +129,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'whatsapp')}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer"
             >
               <MessageCircleMore className="size-4" /> Chamar no WhatsApp
               <span className="sr-only"> (abre em nova aba)</span>
@@ -143,7 +145,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             className="justify-start"
             asChild
           >
-            <a href={trackedActionHref(detail.city.slug, detail.slug, 'phone')}>
+            <a href={trackedActionHref(detail.city.slug, detail.slug, 'phone')} rel="nofollow">
               <Phone className="size-4" /> Ligar para {formatPhoneBR(detail.contacts.phone)}
             </a>
           </Button>
@@ -160,7 +162,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
             <a
               href={trackedActionHref(detail.city.slug, detail.slug, 'website')}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer"
             >
               <Globe2 className="size-4" /> Visitar o site
               <span className="sr-only"> (abre em nova aba)</span>

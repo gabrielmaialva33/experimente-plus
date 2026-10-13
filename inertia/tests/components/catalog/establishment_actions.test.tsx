@@ -67,6 +67,33 @@ describe('establishment action hierarchy', () => {
     }
   })
 
+  it('asks crawlers not to follow any tracked redirect, keeping the other rel values', () => {
+    const { container } = render(
+      <EstablishmentActions
+        detail={detailFor(
+          {
+            whatsapp: '5543999990000',
+            phone: '554333330000',
+            website: 'https://example.com',
+            booking_url: 'https://example.com/agenda',
+            instagram: '@cafe',
+          },
+          { latitude: -23.3, longitude: -51.1 }
+        )}
+      />
+    )
+
+    const tracked = [...container.querySelectorAll<HTMLAnchorElement>('a[href^="/go/"]')]
+    expect(tracked).toHaveLength(4)
+    for (const link of tracked) {
+      const rel = (link.getAttribute('rel') ?? '').split(/\s+/)
+      expect(rel).toContain('nofollow')
+      if (link.target === '_blank') {
+        expect(rel).toEqual(expect.arrayContaining(['noopener', 'noreferrer']))
+      }
+    }
+  })
+
   it('offers no route without published coordinates, which the redirect needs', () => {
     render(
       <EstablishmentActions

@@ -77,6 +77,9 @@ describe('service worker cache policy', () => {
       '/assets/app.js',
       '/sw.js',
       '/manifest.webmanifest',
+      // Answers that differ per deployment or record a visit.
+      '/robots.txt',
+      '/go/londrina/cafe/route',
       '/uploads/establishments/photo.jpg',
       '/favicon.svg',
     ])('refuses %s', (path) => {

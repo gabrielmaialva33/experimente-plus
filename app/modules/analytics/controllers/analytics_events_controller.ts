@@ -5,6 +5,7 @@ import AnalyticsEventService from '#modules/analytics/services/analytics_event_s
 import AnalyticsSessionService from '#modules/analytics/services/analytics_session_service'
 import AnalyticsTrackingPreferenceService from '#modules/analytics/services/analytics_tracking_preference_service'
 import { ingestAnalyticsEventsValidator } from '#modules/analytics/validators/analytics_validator'
+import { isCrawlerUserAgent } from '#shared/utils/crawler_user_agent'
 
 @inject()
 export default class AnalyticsEventsController {
@@ -33,6 +34,15 @@ export default class AnalyticsEventsController {
 
     const hostname = context.request.hostname()
     const tenantId = await this.eventService.resolveTenant(hostname)
+
+    // Crawlers never reach partner metrics. They get the answer a recorded
+    // batch gets, after the same target checks, so a scraper learns nothing.
+    if (isCrawlerUserAgent(context.request.header('user-agent'))) {
+      return context.response.accepted(
+        await this.eventService.acknowledgeBatchForTenant(tenantId, payload.events, 'web')
+      )
+    }
+
     const anonymousSessionHash = this.sessionService.resolve(context, tenantId)
     const result = await this.eventService.recordBatchForTenant(
       tenantId,
