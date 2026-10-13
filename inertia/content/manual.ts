@@ -2419,7 +2419,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           ),
           tip(
             'Ajuda dentro do app',
-            'O app abre este manual na parte certa: **Como usar o app**, na aba **Entrar**; o **?** do mapa; **Ajuda**, no menu **Mais opções** de um lugar; e o link de ajuda da compra.'
+            'O app abre este manual na parte certa: **Como usar o app**, na aba **Entrar**; o **?** do mapa; **Ajuda**, no menu **Mais opções** de um lugar; **Como usar a aba Novidades**, no fim dessa aba; e o link de ajuda da compra.'
           ),
         ],
         result: 'o app abre na aba **Explorar**, sem pedir conta.',
@@ -2522,6 +2522,9 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         title: 'Como ver a agenda, as novidades e "Para viver aqui" no app',
         intro: 'Para saber o que acontece hoje e o que os lugares publicaram.',
         blocks: [
+          p(
+            'A aba **Novidades**, ao lado de **Explorar**, reúne tudo num lugar: **Para você** (pelos seus interesses), **Dos lugares que você segue** (o que eles publicaram por último, com **Ver mais novidades**) e a **Agenda da cidade** escolhida em Explorar. Sem conta, ela mostra a agenda e o botão **Entrar**. Puxe a tela para baixo para atualizar.'
+          ),
           steps(
             'Na aba **Explorar**, role até **Acontecendo hoje** e **Em breve**: os eventos da cidade, por data.',
             'Mais abaixo, **Novidades** ("Publicados recentemente") mostra o que os lugares publicaram.',
@@ -2546,7 +2549,15 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             )
           ),
         ],
-        keywords: ['agenda', 'novidades', 'eventos', 'para viver aqui', 'hoje', 'em breve'],
+        keywords: [
+          'agenda',
+          'novidades',
+          'eventos',
+          'para viver aqui',
+          'hoje',
+          'em breve',
+          'seguindo',
+        ],
       },
       {
         id: 'app-concierge',
@@ -2606,7 +2617,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             )
           ),
           p(
-            'Com a conta, a barra de baixo mostra **Explorar**, **Carteira** e **Conta**. Em **Conta** ficam **Editar perfil** (mude **Nome** e **Usuário** e toque em **Salvar alterações**) e **Excluir conta** (informe a **Senha atual**, escreva a confirmação pedida e toque em **Excluir permanentemente**).'
+            'Com a conta, a barra de baixo mostra **Explorar**, **Novidades**, **Carteira** e **Conta**. Em **Conta** ficam **Editar perfil** (mude **Nome** e **Usuário** e toque em **Salvar alterações**) e **Excluir conta** (informe a **Senha atual**, escreva a confirmação pedida e toque em **Excluir permanentemente**).'
           ),
         ],
         result: 'você entra na conta e a barra de baixo passa a mostrar **Carteira** e **Conta**.',
@@ -2622,7 +2633,13 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'Na página do lugar, toque no coração (**Favoritar**) para guardar o lugar. A lista fica em **Conta > Favoritos**.',
             'Toque no sino (**Seguir**) para acompanhar as novidades do lugar. A lista fica em **Conta > Seguindo**.',
             'Toque em **Adicionar a um roteiro** para pôr o lugar numa lista sua. Em **Conta > Roteiros**, **Novo roteiro** cria uma lista (ex.: "Sábado no centro") com **Criar roteiro**.',
-            'Em **Conta > Interesses**, escolha o que você gosta e toque em **Salvar interesses**. As sugestões aparecem em **Para você**, na aba Explorar.'
+            'Em **Conta > Interesses**, escolha o que você gosta e toque em **Salvar interesses**. **Marcar todos** marca todas as categorias da cidade de uma vez (e **Desmarcar todos** limpa). As sugestões aparecem em **Para você**, nas abas Explorar e Novidades.'
+          ),
+          p(
+            'Dentro de um roteiro, **Sugestões para o roteiro** mostra lugares perto das suas paradas (ou os mais visitados da cidade, se o roteiro ainda não tem parada no mapa). Toque em **Adicionar** para pôr um deles no fim do roteiro.'
+          ),
+          p(
+            'Para mandar o roteiro a alguém, toque em **Compartilhar**, ao lado de **Paradas**, e escolha o WhatsApp ou outro app. Vai um texto com o nome do roteiro e, em ordem, o nome, o endereço e o link de cada lugar. Suas anotações não vão junto, e o roteiro continua só seu.'
           ),
           figures(
             image(
@@ -2636,7 +2653,18 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         troubleshooting: [
           'Sem conta, o app pede para entrar antes de guardar: veja [Como criar a conta no app](#app-conta).',
         ],
-        keywords: ['favoritos', 'seguindo', 'roteiros', 'interesses', 'coração', 'sino'],
+        keywords: [
+          'favoritos',
+          'seguindo',
+          'roteiros',
+          'interesses',
+          'coração',
+          'sino',
+          'marcar todos',
+          'compartilhar roteiro',
+          'whatsapp',
+          'sugestões',
+        ],
       },
       {
         id: 'app-comprar',
