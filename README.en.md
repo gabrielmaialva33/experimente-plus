@@ -268,6 +268,29 @@ Secure cookies and suppress debug details, independently of the Compose runtime 
 > for an operation with slug `experimente-plus` and ignores `PUBLIC_TENANT_SLUG`. The tenant slug
 > has to follow the subdomain the operation is served from.
 
+### Crawlers, indexing and analytics
+
+- **`/robots.txt`** is served by the backend ([`search_indexing.ts`](app/shared/utils/search_indexing.ts)).
+  Outside production (`DEPLOYMENT_ENV` development or homologation) it blocks everything; in
+  production it opens public discovery (catalog, legal pages, `/app`, `/manual`) and blocks `/go/`,
+  `/api/`, the portal, the back office and every session or one-time-link area. There is no sitemap
+  yet, hence no `Sitemap:` line.
+- **Outside production** every response (pages, static files and errors) carries
+  `X-Robots-Tag: noindex, nofollow`: homologation shows fictitious places.
+- **Analytics ignore crawlers.** One detector
+  ([`crawler_user_agent.ts`](app/shared/utils/crawler_user_agent.ts)) recognises crawlers, headless
+  browsers and HTTP libraries by user agent and never matches browsers or the app. `/go/` still
+  redirects without recording, and `POST /api/v1/analytics/events` answers 202 as if it recorded,
+  storing nothing. The site's `/go/` links carry `rel="nofollow"`.
+- **Already recorded sessions** (such as a crawler from before the filter) are removed with
+  `pnpm ace analytics:discard-sessions --session <hash> [--session <hash> …]`. Without `--apply` it
+  is a dry run that prints counts only; with `--apply` it deletes those anonymous sessions' raw
+  events through the retention path and subtracts exactly what they added from the daily
+  aggregates, in one transaction, so the aggregates match a recomputation from the raw events. It
+  takes full 64-character `analytics_events.anonymous_session_hash` values only (prefixes are
+  refused) and is idempotent. Daily rows whose raw events are past retention are left as they are
+  and only counted.
+
 ---
 
 ## Deploy
