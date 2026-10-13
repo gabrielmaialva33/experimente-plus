@@ -2,7 +2,16 @@ export type JsonRecord = Record<string, unknown>
 
 export type CatalogBusinessStatus = 'open' | 'temporarily_closed' | 'permanently_closed'
 export type CatalogAvailability = 'regular_hours' | 'appointment_only' | 'always_open'
-export type CatalogSort = 'relevance' | 'name' | 'recent'
+export type CatalogSort = 'relevance' | 'name' | 'recent' | 'rating' | 'distance' | 'price'
+
+const CATALOG_SORTS: readonly CatalogSort[] = [
+  'relevance',
+  'name',
+  'recent',
+  'rating',
+  'distance',
+  'price',
+]
 
 export interface CatalogCity {
   slug: string
@@ -69,6 +78,8 @@ export interface CatalogSearchItem {
   categories: CatalogCategory[]
   cover: CatalogMedia | null
   isSponsored: boolean
+  /** "Vale hoje": a benefit of this place can still be used today. */
+  benefitToday?: boolean
 }
 
 export interface CatalogSearchMeta {
@@ -82,6 +93,8 @@ export interface CatalogSearchQuery {
   q: string
   category: string | null
   openNow: boolean
+  /** "Vale hoje": only places with a benefit still usable today. */
+  benefitToday?: boolean
   sort: CatalogSort
 }
 
@@ -325,8 +338,7 @@ function normalizedAvailability(value: string | null): CatalogAvailability {
 }
 
 function normalizedSort(value: string | null): CatalogSort {
-  if (value === 'name' || value === 'recent') return value
-  return 'relevance'
+  return CATALOG_SORTS.find((sort) => sort === value) ?? 'relevance'
 }
 
 function parseCity(value: unknown): CatalogCity | null {
@@ -475,6 +487,7 @@ function parseSearchItem(value: unknown, sponsored = false): CatalogSearchItem |
     categories,
     cover: parseMedia(recordValue(item, 'cover', 'cover_image', 'media')),
     isSponsored: booleanValue(item, 'is_sponsored') ?? sponsored,
+    benefitToday: booleanValue(item, 'benefit_today') ?? false,
   }
 }
 
@@ -550,6 +563,7 @@ export function catalogSearch(value: unknown): CatalogSearchResult {
       q: stringValue(query, 'q') ?? '',
       category: stringValue(query, 'category'),
       openNow: booleanValue(query, 'open_now') ?? false,
+      benefitToday: booleanValue(query, 'benefit_today') ?? false,
       sort: normalizedSort(stringValue(query, 'sort')),
     },
   }
@@ -753,7 +767,9 @@ export function pageHref(
   if (query.q) parameters.set('q', query.q)
   if (query.category) parameters.set('category', query.category)
   if (query.openNow) parameters.set('open_now', 'true')
-  if (query.sort !== 'relevance') parameters.set('sort', query.sort)
+  if (query.benefitToday) parameters.set('benefit_today', 'true')
+  // A page URL never holds a position, so nearest first cannot be one of its orders.
+  if (query.sort !== 'relevance' && query.sort !== 'distance') parameters.set('sort', query.sort)
   if (perPage && perPage !== 20) parameters.set('per_page', String(perPage))
   if (page > 1) parameters.set('page', String(page))
   const serialized = parameters.toString()

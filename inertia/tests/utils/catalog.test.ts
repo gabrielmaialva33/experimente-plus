@@ -114,7 +114,13 @@ describe('catalog projection adapters', () => {
     })
 
     expect(result.meta).toEqual({ total: 2, page: 2, perPage: 12, lastPage: 3 })
-    expect(result.query).toEqual({ q: 'cafe', category: 'cafes', openNow: true, sort: 'recent' })
+    expect(result.query).toEqual({
+      q: 'cafe',
+      category: 'cafes',
+      openNow: true,
+      benefitToday: false,
+      sort: 'recent',
+    })
     expect(result.context).toEqual({
       city: {
         slug: 'cornelio-procopio',

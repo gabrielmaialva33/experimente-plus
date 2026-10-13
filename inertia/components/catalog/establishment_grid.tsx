@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { MapPin, SearchX } from 'lucide-react'
+import { MapPin, SearchX, Ticket } from 'lucide-react'
 
 import {
   CatalogCoverImage,
@@ -42,6 +42,7 @@ export default function EstablishmentGrid({
         const titleId = `establishment-${paidPlacement ? 'sponsored' : 'organic'}-${entry.slug}`
         const statusId = `${titleId}-status`
         const sponsorshipId = `${titleId}-sponsorship`
+        const benefitId = `${titleId}-benefit`
         const location = [entry.district, entry.cityName || null, entry.stateCode]
           .filter(Boolean)
           .join(' · ')
@@ -51,7 +52,13 @@ export default function EstablishmentGrid({
             key={entry.slug}
             href={href}
             aria-labelledby={titleId}
-            aria-describedby={`${paidPlacement ? `${sponsorshipId} ` : ''}${statusId}`}
+            aria-describedby={[
+              paidPlacement ? sponsorshipId : null,
+              statusId,
+              entry.benefitToday ? benefitId : null,
+            ]
+              .filter(Boolean)
+              .join(' ')}
             className="group block min-w-0 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {/* Direction A's place card: the photo leads and carries the state. */}
@@ -85,6 +92,19 @@ export default function EstablishmentGrid({
                     businessStatus={entry.businessStatus}
                     isOpenNow={entry.isOpenNow}
                   />
+                  {/* "Vale hoje": a benefit of this place can still be used today. */}
+                  {entry.benefitToday ? (
+                    <Badge
+                      id={benefitId}
+                      variant="cta"
+                      appearance="light"
+                      shape="pill"
+                      className="border-cta/25"
+                    >
+                      <Ticket aria-hidden="true" />
+                      Vale hoje
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
               <div className="flex flex-1 flex-col p-4">

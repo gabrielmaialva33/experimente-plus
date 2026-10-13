@@ -4,6 +4,7 @@ import CatalogShell from '~/components/catalog/catalog_shell'
 import { CatalogSearchForm } from '~/components/catalog/catalog_search_form'
 import EstablishmentGrid from '~/components/catalog/establishment_grid'
 import { useCatalogSearchAnalytics } from '~/components/catalog/use_catalog_analytics'
+import { useNearbyCatalog } from '~/components/catalog/use_nearby_catalog'
 import { catalogSearch } from '~/lib/catalog'
 
 interface CatalogCategoryProps {
@@ -13,9 +14,12 @@ interface CatalogCategoryProps {
 }
 
 export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
-  const result = catalogSearch(catalog)
-  const canonicalCity = result.context.city
-  const canonicalCategory = result.context.category
+  const pageResult = catalogSearch(catalog)
+  const canonicalCity = pageResult.context.city
+  const canonicalCategory = pageResult.context.category
+  // "Mais perto" answers from the API, with the position in that request alone.
+  const nearby = useNearbyCatalog(canonicalCity.slug)
+  const result = nearby.result ?? pageResult
 
   if (!canonicalCategory) {
     throw new TypeError('Catalog category page is missing its canonical category')
@@ -55,6 +59,7 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
         sponsoredCount={result.sponsored.length}
         categoryLabel={categoryName}
         includeCategoryParam={false}
+        nearby={nearby}
       />
 
       {/* A page change lands here, below the sticky header: see CatalogPagination. */}
@@ -99,7 +104,12 @@ export default function CatalogCategory({ catalog }: CatalogCategoryProps) {
         </section>
       </div>
 
-      <CatalogPagination path={pagePath} query={paginationQuery} meta={result.meta} />
+      <CatalogPagination
+        path={pagePath}
+        query={paginationQuery}
+        meta={result.meta}
+        onNavigate={nearby.result ? (page) => void nearby.goToPage(page) : undefined}
+      />
     </CatalogShell>
   )
 }
