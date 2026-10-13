@@ -1219,6 +1219,137 @@ components:
           items:
             $ref: '#/components/schemas/WalletPass'
 
+    BenefitSavingsPlace:
+      type: object
+      required: [name, visits]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: The place's name as it was at its latest use.
+        visits:
+          type: integer
+          minimum: 1
+
+    BenefitSavingsEdition:
+      type: object
+      required: [id, name, year]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        year:
+          type: integer
+          description: Year the edition's usage window opens, on its city's clock.
+
+    BenefitSavingsCurrent:
+      type: object
+      required:
+        [
+          editions,
+          places_visited,
+          benefits_used,
+          savings_exact_cents,
+          savings_estimated_cents,
+          uses_without_estimate,
+          top_places,
+        ]
+      additionalProperties: false
+      properties:
+        editions:
+          type: array
+          description: Editions still open for use that the totals cover; empty before the first use.
+          items:
+            $ref: '#/components/schemas/BenefitSavingsEdition'
+        places_visited:
+          type: integer
+          minimum: 0
+          description: Distinct places with at least one use.
+        benefits_used:
+          type: integer
+          minimum: 0
+          description: Every use, whatever the benefit type.
+        savings_exact_cents:
+          type: integer
+          minimum: 0
+          description: Sum of the fixed-amount discounts used, in BRL cents.
+        savings_estimated_cents:
+          type: integer
+          minimum: 0
+          description: Percentage discounts applied to each place's "Ticket médio", in BRL cents. An estimate.
+        uses_without_estimate:
+          type: integer
+          minimum: 0
+          description: Uses of a money benefit whose value cannot be worked out, such as a percentage at a place without "Ticket médio".
+        top_places:
+          type: array
+          maxItems: 3
+          description: The most visited places, most uses first, then by name.
+          items:
+            $ref: '#/components/schemas/BenefitSavingsPlace'
+
+    BenefitSavingsPastEdition:
+      type: object
+      required:
+        [
+          edition,
+          places_visited,
+          benefits_used,
+          savings_exact_cents,
+          savings_estimated_cents,
+          uses_without_estimate,
+          top_places,
+        ]
+      additionalProperties: false
+      properties:
+        edition:
+          $ref: '#/components/schemas/BenefitSavingsEdition'
+        places_visited:
+          type: integer
+          minimum: 0
+          description: Distinct places with at least one use.
+        benefits_used:
+          type: integer
+          minimum: 0
+          description: Every use, whatever the benefit type.
+        savings_exact_cents:
+          type: integer
+          minimum: 0
+          description: Sum of the fixed-amount discounts used, in BRL cents.
+        savings_estimated_cents:
+          type: integer
+          minimum: 0
+          description: Percentage discounts applied to each place's "Ticket médio", in BRL cents. An estimate.
+        uses_without_estimate:
+          type: integer
+          minimum: 0
+          description: Uses of a money benefit whose value cannot be worked out, such as a percentage at a place without "Ticket médio".
+        top_places:
+          type: array
+          maxItems: 3
+          description: The most visited places, most uses first, then by name.
+          items:
+            $ref: '#/components/schemas/BenefitSavingsPlace'
+
+    BenefitSavings:
+      type: object
+      required: [currency, current, past]
+      additionalProperties: false
+      properties:
+        currency:
+          type: string
+          const: BRL
+        current:
+          $ref: '#/components/schemas/BenefitSavingsCurrent'
+        past:
+          type: array
+          description: Editions whose usage window has closed, newest first; only those with a use.
+          items:
+            $ref: '#/components/schemas/BenefitSavingsPastEdition'
+
     BenefitSummary:
       type: object
       required:
@@ -9934,6 +10065,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Wallet'
+        '400':
+          $ref: '#/components/responses/PrivateBadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/PrivateForbiddenError'
+        '429':
+          $ref: '#/components/responses/PrivateRateLimitError'
+
+  /api/v1/me/savings:
+    get:
+      operationId: getBenefitSavings
+      summary: Get what the consumer saved with their benefits
+      description: |
+        Places visited, benefits used and money saved by the signed-in person in the active
+        operation: the editions still open for use together under `current`, and each edition
+        whose usage window has closed under `past`, newest first (only editions with a use).
+        Everything is derived on read from the immutable uses; the client never recalculates it.
+
+        Every use counts, including those of an access revoked later (a full refund revokes the
+        access, not the uses already made). A fixed-amount discount adds its amount to
+        `savings_exact_cents`; the use keeps no copy of the amount, so it is read from the offer
+        and a later edit of a paused offer changes it, while a later change of type leaves the use
+        without a value. A percentage discount is an estimate: the percentage of the place's
+        public "Ticket médio" (category attribute `average_ticket`, reais per person), once per
+        use, in `savings_estimated_cents`. A place without one adds nothing and the use counts in
+        `uses_without_estimate`. Buy one get one, courtesy items and custom benefits count only as
+        uses. Clients must present any estimated value as approximate.
+      tags: [Benefits]
+      parameters:
+        - $ref: '#/components/parameters/tenantHeader'
+      responses:
+        '200':
+          description: Savings of the current editions and of each past edition, zeros before any use
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCacheControl'
+            X-Robots-Tag:
+              $ref: '#/components/headers/PrivateRobotsTag'
+            Referrer-Policy:
+              $ref: '#/components/headers/PrivateReferrerPolicy'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenefitSavings'
         '400':
           $ref: '#/components/responses/PrivateBadRequestError'
         '401':

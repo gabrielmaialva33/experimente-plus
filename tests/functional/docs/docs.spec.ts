@@ -205,6 +205,11 @@ const MOBILE_OPERATIONS: ReadonlyArray<{
     openApiPath: '/api/v1/me/wallet',
   },
   {
+    method: 'get',
+    runtimePath: '/api/v1/me/savings',
+    openApiPath: '/api/v1/me/savings',
+  },
+  {
     method: 'post',
     runtimePath: '/api/v1/me/benefits/presentations',
     openApiPath: '/api/v1/me/benefits/presentations',

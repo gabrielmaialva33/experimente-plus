@@ -77,6 +77,11 @@ router
   .use(middleware.tenant({ required: true }))
 
 router
+  .get('/api/v1/me/savings', [BenefitWalletController, 'savings'])
+  .use([middleware.auth(), privateResponseHeadersMiddleware, apiThrottle])
+  .use(middleware.tenant({ required: true }))
+
+router
   .group(() => {
     router
       .get('/establishments/:establishmentId/benefit-offers', [BenefitOffersController, 'index'])
