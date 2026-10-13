@@ -315,61 +315,73 @@ export default function PortalOrganizationPage({
             const statusMeta = establishmentStatusMeta(establishment)
 
             return (
-              <Link
-                key={establishment.id}
-                href={`/portal/establishments/${establishment.id}`}
-                className="group flex flex-col rounded-card border border-border-subtle bg-card p-5 outline-none transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 font-display text-lg font-bold tracking-[-0.01em]">
-                      <MapPin aria-hidden="true" className="size-4 shrink-0 text-primary" />
-                      <span className="truncate">{establishment.public_name}</span>
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          'inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-bold',
-                          statusMeta.className
-                        )}
-                      >
-                        {statusMeta.label}
-                      </span>
-                      {hasOpenRevisionAlongsidePublication(establishment) ? (
-                        <span className="text-xs text-muted-foreground">
-                          Versão publicada continua no ar
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <span className="shrink-0 font-display text-lg font-bold tabular-nums">
-                    {score}%
-                  </span>
-                </div>
-                <div
-                  className="mt-4 h-2 overflow-hidden rounded-full bg-border-subtle"
-                  role="progressbar"
-                  aria-label={`Dados preenchidos de ${establishment.public_name}`}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={score}
+              <div key={establishment.id} className="flex flex-col gap-1.5">
+                <Link
+                  href={`/portal/establishments/${establishment.id}`}
+                  className="group flex flex-1 flex-col rounded-card border border-border-subtle bg-card p-5 outline-none transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
                 >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 font-display text-lg font-bold tracking-[-0.01em]">
+                        <MapPin aria-hidden="true" className="size-4 shrink-0 text-primary" />
+                        <span className="truncate">{establishment.public_name}</span>
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span
+                          className={cn(
+                            'inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-bold',
+                            statusMeta.className
+                          )}
+                        >
+                          {statusMeta.label}
+                        </span>
+                        {hasOpenRevisionAlongsidePublication(establishment) ? (
+                          <span className="text-xs text-muted-foreground">
+                            Versão publicada continua no ar
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className="shrink-0 font-display text-lg font-bold tabular-nums">
+                      {score}%
+                    </span>
+                  </div>
                   <div
-                    className={cn(
-                      'h-full rounded-full',
-                      establishment.completeness.eligible ? 'bg-success' : 'bg-primary'
-                    )}
-                    style={{ width: `${score}%` }}
-                  />
-                </div>
-                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
-                  Ver dados do lugar
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
-                  />
-                </span>
-              </Link>
+                    className="mt-4 h-2 overflow-hidden rounded-full bg-border-subtle"
+                    role="progressbar"
+                    aria-label={`Dados preenchidos de ${establishment.public_name}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={score}
+                  >
+                    <div
+                      className={cn(
+                        'h-full rounded-full',
+                        establishment.completeness.eligible ? 'bg-success' : 'bg-primary'
+                      )}
+                      style={{ width: `${score}%` }}
+                    />
+                  </div>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
+                    Ver dados do lugar
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                    />
+                  </span>
+                </Link>
+                {/* Beside the card, not inside it: a link cannot hold another link. */}
+                {canReadAnalytics ? (
+                  <Link
+                    href={`/portal/establishments/${establishment.id}/performance`}
+                    aria-label={`Desempenho do lugar ${establishment.public_name}`}
+                    className="inline-flex h-10 items-center gap-1.5 self-start rounded-full px-3 text-sm font-bold text-primary outline-none transition-colors hover:bg-primary-soft focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11 motion-reduce:transition-none"
+                  >
+                    <BarChart3 aria-hidden="true" className="size-4" />
+                    Desempenho do lugar
+                  </Link>
+                ) : null}
+              </div>
             )
           })}
         </div>

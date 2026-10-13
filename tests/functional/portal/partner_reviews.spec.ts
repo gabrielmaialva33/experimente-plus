@@ -395,9 +395,19 @@ test.group('Partner portal — overview tasks and entry points', (group) => {
       .headers(headers)
       .loginAs(scenario.owner)
     performance.assertStatus(302)
-    performance.assertHeader('location', `/organizations/${scenario.organization.id}/analytics`)
+    performance.assertHeader('location', `/portal/establishments/${first.id}/performance`)
 
     const second = await createPublishedEstablishment(scenario, 'Casa de Petiscos')
+    const organizationPerformance = await client
+      .get('/portal/performance')
+      .redirects(0)
+      .headers(headers)
+      .loginAs(scenario.owner)
+    organizationPerformance.assertStatus(302)
+    organizationPerformance.assertHeader(
+      'location',
+      `/organizations/${scenario.organization.id}/analytics`
+    )
     const chooser = await client
       .get('/portal/establishments')
       .headers(headers)

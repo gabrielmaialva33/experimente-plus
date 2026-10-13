@@ -266,6 +266,30 @@ describe('PortalOrganizationPage', () => {
     expect(screen.queryByTestId('pilot-feedback-form')).not.toBeInTheDocument()
   })
 
+  it('links each place to its own performance only for roles that read analytics', () => {
+    const { unmount } = render(
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={allowedActions}
+      />
+    )
+
+    expect(
+      screen.getByRole('link', { name: 'Desempenho do lugar Café Central — Centro' })
+    ).toHaveAttribute('href', '/portal/establishments/8/performance')
+    unmount()
+
+    render(
+      <PortalOrganizationPage
+        organization={organization}
+        feedback_targets={feedbackTargets}
+        allowed_actions={{ ...allowedActions, analytics: { read: false } }}
+      />
+    )
+    expect(screen.queryByRole('link', { name: /Desempenho do lugar/ })).not.toBeInTheDocument()
+  })
+
   it('prioritizes an open workflow while keeping the current publication visible as context', () => {
     render(
       <PortalOrganizationPage

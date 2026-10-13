@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   ArrowLeft,
+  BarChart3,
   CheckCircle2,
   Clock3,
   Images,
@@ -335,6 +336,7 @@ export default function EstablishmentEditorPage({
   const editable = allowedActions.establishments.update
   const submitAllowed = allowedActions.establishments.submit
   const canManageBenefits = allowedActions.benefit_offers.list
+  const canReadPerformance = allowedActions.analytics.read
   const canSendFeedback = allowedActions.pilot_feedback.create
   const canCreateRevision =
     allowedActions.establishments.create_revision && revisionCreationSource !== null
@@ -752,6 +754,14 @@ export default function EstablishmentEditorPage({
           }
           actions={
             <>
+              {canReadPerformance ? (
+                <Button asChild variant="outline" size="lg" shape="pill">
+                  <Link href={`/portal/establishments/${establishment.id}/performance`}>
+                    <BarChart3 />
+                    Desempenho
+                  </Link>
+                </Button>
+              ) : null}
               {canManageBenefits ? (
                 <Button asChild variant="outline" size="lg" shape="pill">
                   <Link href={`/portal/establishments/${establishment.id}/benefits`}>

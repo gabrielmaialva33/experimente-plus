@@ -2,16 +2,21 @@ import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 
 import {
+  createEstablishmentScenario,
+  createPublishedEstablishment,
+} from '#tests/functional/establishments/helpers'
+import {
   createOperation,
   createOrganization,
   createUser,
 } from '#tests/functional/organizations/helpers'
 
 /**
- * "Desempenho" in the Portal menu opens the organization's analytics, or, with
- * several organizations, the places list where each one has its own link. That
- * landing says so in the address, so its "Ajuda desta página" can open the
- * performance task of the manual instead of the places one.
+ * "Desempenho" in the Portal menu opens the only place's numbers, the
+ * organization's analytics, or, with several organizations, the places list
+ * where each one has its own link. That landing says so in the address, so its
+ * "Ajuda desta página" can open the performance task of the manual instead of
+ * the places one.
  */
 test.group('Portal performance landing', (group) => {
   group.each.setup(() => testUtils.db().withGlobalTransaction())
@@ -29,6 +34,20 @@ test.group('Portal performance landing', (group) => {
 
     response.assertStatus(302)
     assert.equal(response.header('location'), `/organizations/${organization.id}/analytics`)
+  })
+
+  test('opens the numbers of the only place directly', async ({ client, assert }) => {
+    const scenario = await createEstablishmentScenario('performance-place')
+    const place = await createPublishedEstablishment(scenario, 'Lugar Único')
+
+    const response = await client
+      .get('/portal/performance')
+      .header('x-tenant-id', String(scenario.tenant.id))
+      .redirects(0)
+      .loginAs(scenario.owner)
+
+    response.assertStatus(302)
+    assert.equal(response.header('location'), `/portal/establishments/${place.id}/performance`)
   })
 
   test('marks the places list it opens for several organizations', async ({ client, assert }) => {

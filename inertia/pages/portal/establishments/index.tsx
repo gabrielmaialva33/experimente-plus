@@ -80,6 +80,17 @@ export default function PartnerPlacesPage({ organizations }: PartnerPlacesPagePr
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                    {organization.can_read_analytics ? (
+                      <Button asChild variant="ghost" size="md" shape="pill">
+                        <Link
+                          href={`/portal/establishments/${place.id}/performance`}
+                          aria-label={`Desempenho de ${place.name}`}
+                        >
+                          <BarChart3 aria-hidden="true" className="size-4" />
+                          Desempenho
+                        </Link>
+                      </Button>
+                    ) : null}
                     {place.can_list_benefits ? (
                       <Button asChild variant="ghost" size="md" shape="pill">
                         <Link href={`/portal/establishments/${place.id}/benefits`}>

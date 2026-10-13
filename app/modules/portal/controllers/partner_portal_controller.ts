@@ -184,9 +184,10 @@ export default class PartnerPortalController {
   }
 
   /**
-   * "Desempenho" in the partner menu. Discovery analytics belong to an
-   * organization, so one organization goes straight to its numbers and several
-   * choose on the places page, where each has its link.
+   * "Desempenho" in the partner menu. A partner with a single place goes
+   * straight to that place's numbers; otherwise one organization opens its
+   * numbers, where each place has its link, and several choose on the places
+   * page.
    */
   async performance({ auth, response, session, tenant }: HttpContext) {
     const actor = auth.getUserOrFail()
@@ -195,7 +196,11 @@ export default class PartnerPortalController {
     const readable = overview.organizations.filter(
       (organization) => organization.allowed_actions.analytics.read
     )
+    const places = readable.flatMap((organization) => organization.establishments)
 
+    if (places.length === 1) {
+      return response.redirect().toPath(`/portal/establishments/${places[0].id}/performance`)
+    }
     if (readable.length === 1) {
       return response.redirect().toPath(`/organizations/${readable[0].id}/analytics`)
     }
