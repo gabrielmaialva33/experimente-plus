@@ -73,3 +73,20 @@ export const forYouQueryValidator = vine.compile(
     city: vine.string().trim().minLength(1).maxLength(120),
   })
 )
+
+/**
+ * The city the app is showing, as a hint for an itinerary that has no located
+ * stop yet. Optional, and checked by the service as the catalogue checks it.
+ */
+export const suggestionsQueryValidator = vine.compile(
+  vine.object({
+    city: vine.string().trim().minLength(1).maxLength(120).optional(),
+  })
+)
+
+export const followingUpdatesQueryValidator = vine.compile(
+  vine.object({
+    page: vine.number().withoutDecimals().min(1).max(2147483647).optional(),
+    per_page: vine.number().withoutDecimals().min(1).max(50).optional(),
+  })
+)

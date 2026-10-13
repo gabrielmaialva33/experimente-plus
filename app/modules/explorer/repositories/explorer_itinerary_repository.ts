@@ -13,6 +13,41 @@ import {
 } from '#modules/explorer/repositories/explorer_cards'
 
 /**
+ * The public address of a stop, read from the same discoverable projection as
+ * its card: a place that left the catalogue gives neither.
+ */
+const STOP_ADDRESS_COLUMNS = `
+  projection.address->>'street' AS address_street,
+  projection.address->>'number' AS address_number,
+  (projection.address->>'without_number')::boolean AS address_without_number,
+  projection.address->>'complement' AS address_complement,
+  projection.address->>'district' AS address_district
+`
+
+interface StopAddressColumns {
+  address_street?: string | null
+  address_number?: string | null
+  address_without_number?: boolean | null
+  address_complement?: string | null
+  address_district?: string | null
+}
+
+const text = (value: string | null | undefined) => {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
+function addressOf(row: StopAddressColumns): IExplorer.StopAddress {
+  return {
+    street: text(row.address_street),
+    number: text(row.address_number),
+    without_number: row.address_without_number === true,
+    complement: text(row.address_complement),
+    district: text(row.address_district),
+  }
+}
+
+/**
  * Itineraries and their stops — ADR-0030.
  *
  * Every read is scoped by owner as well as tenant. An itinerary of another
@@ -107,7 +142,8 @@ export default class ExplorerItineraryRepository {
     // route its author wrote.
     const rows = await db.rawQuery(
       `
-      SELECT stop.id AS stop_id, stop.position, stop.note, ${ESTABLISHMENT_CARD_COLUMNS}
+      SELECT stop.id AS stop_id, stop.position, stop.note, ${ESTABLISHMENT_CARD_COLUMNS},
+        ${STOP_ADDRESS_COLUMNS}
       FROM explorer_itinerary_items stop
       LEFT JOIN (${discoverableEstablishmentsForTenantSql}) projection
         ON projection.establishment_id = stop.establishment_id
@@ -119,7 +155,8 @@ export default class ExplorerItineraryRepository {
     )
 
     const stops = rows.rows as Array<
-      Partial<CardColumns> & { stop_id: number; position: number; note: string | null }
+      Partial<CardColumns> &
+        StopAddressColumns & { stop_id: number; position: number; note: string | null }
     >
 
     return {
@@ -131,6 +168,7 @@ export default class ExplorerItineraryRepository {
         position: Number(row.position),
         note: row.note ?? null,
         establishment: row.card_id ? cardOf(row as CardColumns) : null,
+        address: row.card_id ? addressOf(row) : null,
       })),
       created_at: instant(itinerary.created_at?.toISO?.() ?? itinerary.created_at),
       updated_at: instant(itinerary.updated_at?.toISO?.() ?? itinerary.updated_at),

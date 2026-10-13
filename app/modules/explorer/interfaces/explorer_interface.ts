@@ -127,6 +127,94 @@ namespace IExplorer {
     position: number
     note: string | null
     establishment: EstablishmentCard | null
+    /**
+     * The public street address of the stop's place, from the same projection
+     * as its card, so the person can share the route with where each place is.
+     * Null with the card, when the place left the catalogue.
+     */
+    address: StopAddress | null
+  }
+
+  /** The public address fields a route needs: the street line and the district. */
+  export interface StopAddress {
+    street: string | null
+    number: string | null
+    without_number: boolean
+    complement: string | null
+    district: string | null
+  }
+
+  /** How many places "Sugestões para o roteiro" carries at most. */
+  export const SUGGESTIONS_LIMIT = 6
+
+  /** The window of establishment views that breaks ties between suggestions. */
+  export const SUGGESTIONS_POPULARITY_DAYS = 30
+
+  /**
+   * Places to add to an itinerary — discoverable, not in it yet.
+   *
+   * `nearby` when at least one stop has coordinates: the places closest to the
+   * stops' centroid, in steps of 100 m, ties broken by views. `popular` when no
+   * stop can be located: the most viewed places of the itinerary's city (its
+   * first stop's, or the city the app asked about), or of the operation. Views
+   * only order the list; no count is published, since a place's audience is
+   * its partner's analytics.
+   */
+  export interface ItinerarySuggestions {
+    basis: 'nearby' | 'popular'
+    data: ItinerarySuggestion[]
+  }
+
+  export interface ItinerarySuggestion {
+    establishment: EstablishmentCard
+    /** From the stops' centroid, in kilometres to one decimal; null when `popular`. */
+    distance_km: number | null
+  }
+
+  /** Page size of the followed places' updates, and the most a client may ask for. */
+  export const FOLLOWING_UPDATES_PER_PAGE = 20
+  export const FOLLOWING_UPDATES_MAX_PER_PAGE = 50
+
+  export const FOLLOWING_UPDATE_KINDS = ['experience', 'event', 'showcase_item'] as const
+  export type FollowingUpdateKind = (typeof FOLLOWING_UPDATE_KINDS)[number]
+
+  /**
+   * One public item of a followed establishment.
+   *
+   * Every field comes from the approved snapshot, as on the place's own page:
+   * an edit awaiting moderation was never published. An event is listed while
+   * it has not ended; the price of a showcase item is displayed, never charged.
+   */
+  export interface FollowingUpdate {
+    kind: FollowingUpdateKind
+    id: number
+    title: string
+    description: string | null
+    published_at: string
+    starts_at: string | null
+    ends_at: string | null
+    informational_price_cents: number | null
+    cover: { url: string; alt_text: string } | null
+    establishment: EstablishmentCard
+  }
+
+  export interface PageMeta {
+    total: number
+    per_page: number
+    current_page: number
+    last_page: number
+  }
+
+  /**
+   * What the places someone follows published, most recent first.
+   *
+   * `has_follows` separates "you follow nothing yet", which is worth an
+   * invitation, from "nothing new from the places you follow".
+   */
+  export interface FollowingUpdates {
+    data: FollowingUpdate[]
+    has_follows: boolean
+    meta: PageMeta
   }
 
   export interface ItineraryProjection {
@@ -160,6 +248,11 @@ namespace IExplorer {
 
   export interface ReorderPayload {
     stop_ids: number[]
+  }
+
+  export interface PageQuery {
+    page?: number
+    per_page?: number
   }
 }
 
