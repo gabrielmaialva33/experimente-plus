@@ -83,6 +83,7 @@ const APP_HELP_ANCHORS = [
 const SHOWN_ELSEWHERE: Record<string, string> = {
   'app-carteira': 'consumidor-apresentar',
   'app-validar': 'parceiro-validar',
+  'visitante-ordenar': 'visitante-buscar',
 }
 
 describe('manual content', () => {

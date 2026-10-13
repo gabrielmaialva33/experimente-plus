@@ -967,6 +967,48 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         keywords: ['busca', 'filtro', 'procurar', 'aberto agora', 'categoria'],
       },
       {
+        id: 'visitante-ordenar',
+        title: 'Como ordenar a lista e ver o que vale hoje',
+        intro:
+          'Para ver primeiro os mais bem avaliados, os mais perto ou os de menor preço, e só os lugares com benefício para hoje.',
+        blocks: [
+          steps(
+            'No quadro **Encontre um lugar** (o mesmo de [Como buscar e filtrar lugares](#visitante-buscar)), abra **Ordenar por** e escolha **Mais bem avaliados**, **Mais perto** ou **Menor preço**. **Relevância** é a ordem de sempre.',
+            'Em **Mais perto**, o navegador pergunta se pode usar sua localização. Toque em **Permitir**.',
+            'Para ver só os lugares com benefício que ainda dá para usar hoje, marque **Vale hoje** em **Disponibilidade**.',
+            'Toque em **Buscar**.'
+          ),
+          list(
+            '**Mais bem avaliados**: pela nota média; com a mesma nota, quem tem mais avaliações vem antes. Lugares ainda sem avaliação ficam no fim.',
+            '**Mais perto**: pela distância até você. Lugares sem endereço no mapa ficam no fim.',
+            '**Menor preço**: pelo **Ticket médio** que o lugar informa. Quem não informa fica no fim.',
+            '**Vale hoje**: o lugar tem um benefício que ainda dá para usar hoje, nos dias e horários da oferta. O cartão mostra a etiqueta **Vale hoje**. Ela não diz se você já tem o benefício: isso fica na **Carteira**.'
+          ),
+          info(
+            'Sua localização',
+            'Serve só para ordenar aquela busca: não vai para o endereço da página, não fica salva e não entra nas estatísticas. Por isso, ao compartilhar uma busca, a ordem **Mais perto** não vai junto.'
+          ),
+        ],
+        result:
+          'a lista aparece na ordem escolhida, e a ordem e **Vale hoje** aparecem como etiquetas embaixo do quadro.',
+        troubleshooting: [
+          'Você recusou a localização ou o navegador não conseguiu achá-la: a lista volta para **Relevância** e uma mensagem explica o motivo. Libere a localização deste site nas configurações do navegador e escolha **Mais perto** de novo.',
+          '**Vale hoje** sem resultados: nenhum benefício da cidade vale hoje com os outros filtros. Desmarque um filtro ou volte outro dia.',
+        ],
+        keywords: [
+          'ordenar',
+          'ordem',
+          'mais bem avaliados',
+          'mais perto',
+          'distância',
+          'localização',
+          'menor preço',
+          'ticket médio',
+          'vale hoje',
+          'benefício de hoje',
+        ],
+      },
+      {
         id: 'visitante-categorias',
         title: 'Como navegar por categorias',
         intro: 'Para ver a cidade organizada por tipo de lugar.',
@@ -2450,13 +2492,20 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             )
           ),
           p(
+            'Em **Ordenar**, escolha **Relevância**, **Mais bem avaliados**, **Mais perto** ou **Menor preço**; o filtro **Vale hoje** mostra só os lugares com benefício para hoje. As ordens funcionam como no site (veja [Como ordenar a lista e ver o que vale hoje](#visitante-ordenar)), e a lista e o mapa usam as mesmas escolhas.'
+          ),
+          p(
+            'Em **Mais perto**, o app pede a localização só naquela hora e só enquanto ele está aberto. Se você negar, a lista continua por relevância; se negou de vez, o app oferece **Abrir configurações**.'
+          ),
+          p(
             'Mais abaixo na aba ficam **Para você** (sugestões pelos seus interesses, quando você tem conta), a agenda, as novidades e o Concierge.'
           ),
         ],
         troubleshooting: [
           '**Nada encontrado**: toque em **Limpar filtros** ou em **Ver todos os lugares**.',
+          '**Mais perto** não funciona: ligue a localização do aparelho ou permita o acesso ao Experimente+ nas configurações e escolha a ordem de novo.',
         ],
-        keywords: ['explorar', 'buscar', 'filtros', 'cidade', 'para você'],
+        keywords: ['explorar', 'buscar', 'filtros', 'cidade', 'para você', 'ordenar', 'vale hoje'],
       },
       {
         id: 'app-mapa',
