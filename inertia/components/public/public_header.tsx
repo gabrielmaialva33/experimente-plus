@@ -24,8 +24,12 @@ export function PublicHeader() {
     <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)] short:static">
       <div className="app-container flex min-h-16 items-center justify-between gap-4 py-2">
         {/* Signed in, the bar carries up to five destinations: between 768 and 1024 px the
-            name was truncated to "Exp…", so there the mark stands alone (it keeps its label). */}
-        <AppBrand href="/" wordmarkClassName={authenticated ? 'md:max-lg:hidden' : undefined} />
+            logo has no room, so there the e+ tile stands alone (the link keeps its label). */}
+        <AppBrand
+          href="/"
+          wordmarkClassName={authenticated ? 'md:max-lg:hidden' : undefined}
+          markClassName={authenticated ? 'md:max-lg:flex' : undefined}
+        />
 
         <nav aria-label="Navegação principal" className="hidden items-center gap-1 md:flex">
           {navigation.map((item) => {

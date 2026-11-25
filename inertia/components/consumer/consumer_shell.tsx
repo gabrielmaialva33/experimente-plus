@@ -23,9 +23,7 @@ export function ConsumerShell({ children }: PropsWithChildren) {
       <SkipLink />
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)] short:static">
         <div className="app-container flex min-h-16 items-center gap-4 py-2">
-          {/* Beside three 44 px actions (help, theme, exit) a phone cut the tagline to
-              "Descoberta reg…", so phones show only the name. */}
-          <AppBrand href="/cidades" taglineClassName="max-[430px]:hidden" />
+          <AppBrand href="/cidades" />
 
           <nav
             className="ms-auto hidden items-center gap-1 md:flex"

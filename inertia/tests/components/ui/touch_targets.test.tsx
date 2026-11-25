@@ -73,8 +73,10 @@ describe('touch targets', () => {
   })
 
   it('keeps the brand link at least 44 x 44 px, also when only the mark shows', () => {
-    const { unmount } = render(<AppBrand href="/" wordmarkClassName="md:max-lg:hidden" />)
-    // The header hides the name between 768 and 1024 px: the mark alone is 36 px wide.
+    const { unmount } = render(
+      <AppBrand href="/" wordmarkClassName="md:max-lg:hidden" markClassName="md:max-lg:flex" />
+    )
+    // The header hides the logo between 768 and 1024 px: the e+ tile alone is 36 px wide.
     expect(screen.getByRole('link', { name: 'Experimente+' })).toHaveClass('min-h-11', 'min-w-11')
     unmount()
 

@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react'
 
+import { brandSymbol, fullLogo } from '~/components/brand_marks'
 import { useApp } from '~/hooks/use_app'
 import { cn } from '~/lib/utils'
 
@@ -8,17 +9,20 @@ interface AppBrandProps {
   href?: string
   className?: string
   onNavigate?: () => void
-  /** `inverse` sits on the authenticated chrome: a light plate for the mark, light text. */
+  /** `inverse` sits on the deep-purple chrome: the logo goes all white, as the brand asks. */
   tone?: 'default' | 'inverse'
-  /** Classes for the name beside the mark, e.g. to hide it where a header runs out of room. */
+  /** Classes for the full logo, e.g. to hide it where a header runs out of room. */
   wordmarkClassName?: string
-  /** Classes for the tagline under the name, e.g. to drop it on a phone too narrow for it. */
-  taglineClassName?: string
+  /**
+   * Classes for the e+ tile beside or instead of the logo. It is hidden unless
+   * collapsed, so a header that hides the logo shows it here (`hidden md:max-lg:flex`).
+   */
+  markClassName?: string
 }
 
 /**
- * The provisional E+ monogram of direction A (the app icon uses the same
- * shapes): a pill-built E in the tile's foreground, the + in the action color.
+ * The e+ symbol of the app icon on its tile: white on the brand violet, and on
+ * the chrome the light plate the sidebar already uses for the active item.
  */
 export function BrandMark({
   className,
@@ -31,26 +35,49 @@ export function BrandMark({
     <span
       aria-hidden="true"
       className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-md border',
+        'flex size-9 shrink-0 items-center justify-center rounded-[0.6rem]',
         tone === 'inverse'
-          ? 'border-chrome-active bg-chrome-active text-chrome-active-foreground'
-          : 'border-primary bg-primary text-primary-foreground',
+          ? 'bg-chrome-active text-chrome-active-foreground'
+          : 'bg-primary text-primary-foreground',
         className
       )}
     >
-      <svg viewBox="-280 -305 560 560" className="size-6" focusable="false">
-        <g fill="currentColor">
-          <rect x="-247" y="-224" width="100" height="448" rx="50" />
-          <rect x="-247" y="-224" width="250" height="100" rx="50" />
-          <rect x="-247" y="-50" width="214" height="100" rx="50" />
-          <rect x="-247" y="124" width="300" height="100" rx="50" />
-        </g>
-        <g className="fill-cta">
-          <rect x="47" y="-205" width="200" height="62" rx="31" />
-          <rect x="116" y="-274" width="62" height="200" rx="31" />
-        </g>
+      <svg viewBox={brandSymbol.viewBox} className="size-6" focusable="false">
+        <path fill="currentColor" d={brandSymbol.d} />
       </svg>
     </span>
+  )
+}
+
+/**
+ * The full "experimente+" logo. The letters follow the text color; the smile and
+ * the + are violet on a light page and white elsewhere (dark page, chrome), which
+ * is the brand's rule for dark backgrounds.
+ */
+export function BrandLogo({
+  className,
+  tone = 'default',
+}: {
+  className?: string
+  tone?: 'default' | 'inverse'
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox={fullLogo.viewBox}
+      focusable="false"
+      className={cn(
+        'h-7 w-auto shrink-0',
+        tone === 'inverse' ? 'text-chrome-foreground' : 'text-foreground',
+        className
+      )}
+    >
+      <path fill="currentColor" d={fullLogo.letters} />
+      <path
+        className={tone === 'inverse' ? 'fill-current' : 'fill-primary dark:fill-current'}
+        d={fullLogo.accents}
+      />
+    </svg>
   )
 }
 
@@ -61,7 +88,7 @@ export function AppBrand({
   onNavigate,
   tone = 'default',
   wordmarkClassName,
-  taglineClassName,
+  markClassName,
 }: AppBrandProps) {
   const application = useApp()
 
@@ -70,29 +97,20 @@ export function AppBrand({
       href={href}
       onClick={onNavigate}
       aria-label={application.name}
-      // 44 x 44 px at least, also where a header hides the name and only the mark shows.
+      // 44 x 44 px at least, also where a header hides the logo and only the mark shows.
       className={cn(
         'flex min-h-11 min-w-11 items-center gap-3',
         collapsed && 'justify-center',
         className
       )}
     >
-      <BrandMark tone={tone} />
-      {!collapsed && (
-        <span className={cn('min-w-0', wordmarkClassName)}>
-          <span className="block truncate font-display text-[1.125rem] font-extrabold tracking-[-0.02em]">
-            {application.name}
-          </span>
-          <span
-            className={cn(
-              'block truncate text-[0.68rem] font-semibold uppercase tracking-[0.14em]',
-              tone === 'inverse' ? 'text-chrome-muted' : 'text-muted-foreground',
-              taglineClassName
-            )}
-          >
-            Descoberta regional
-          </span>
-        </span>
+      {collapsed ? (
+        <BrandMark tone={tone} />
+      ) : (
+        <>
+          <BrandMark tone={tone} className={cn('hidden', markClassName)} />
+          <BrandLogo tone={tone} className={wordmarkClassName} />
+        </>
       )}
     </Link>
   )

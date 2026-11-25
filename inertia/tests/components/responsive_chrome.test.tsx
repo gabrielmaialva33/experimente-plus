@@ -187,7 +187,7 @@ describe('responsive chrome on short screens', () => {
     expect(screen.getByRole('main').parentElement).toHaveClass('min-h-dvh')
   })
 
-  it('drops the brand tagline beside the wallet actions (help, theme, exit) on a phone', () => {
+  it('shows the brand logo, without a tagline, beside the wallet actions', () => {
     pageState.user = { id: 7, full_name: 'Ana Souza', email: 'ana@example.com' }
     pageState.activeTenantId = 31
     render(
@@ -196,8 +196,8 @@ describe('responsive chrome on short screens', () => {
       </ConsumerShell>
     )
 
-    expect(within(screen.getByRole('banner')).getByText('Descoberta regional')).toHaveClass(
-      'max-[430px]:hidden'
-    )
+    const banner = within(screen.getByRole('banner'))
+    expect(banner.getByRole('link', { name: 'Experimente+' })).toBeInTheDocument()
+    expect(banner.queryByText('Descoberta regional')).not.toBeInTheDocument()
   })
 })

@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
-    <meta name="theme-color" content="#172641" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#13467c" />
+    <meta name="theme-color" content="#151319" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#2c145c" />
     <title>Sem conexão — Experimente+</title>
     <!--
       Shown by the service worker in place of a page that could not load for
@@ -23,55 +23,52 @@
     <style>
       :root {
         color-scheme: light;
-        --background: #f3f5f7;
-        --foreground: #1e2227;
-        --muted-foreground: #535961;
+        --background: #f8f5ef;
+        --foreground: #151319;
+        --muted-foreground: #4f4959;
         --card: #ffffff;
-        --border: #c7cbd0;
-        --border-subtle: #dde1e6;
-        --primary: #13467c;
-        --primary-hover: #0d3866;
+        --border: #cfc8be;
+        --border-subtle: #e2dcd2;
+        --primary: #5e39ed;
+        --primary-hover: #4c28d9;
         --primary-foreground: #ffffff;
-        --primary-soft: #e9f2fe;
-        --primary-accent: #13467c;
-        --cta: #e2661a;
-        --ring: #1a5695;
+        --primary-soft: #e8e0ff;
+        --primary-accent: #5e39ed;
+        --ring: #5e39ed;
       }
 
       @media (prefers-color-scheme: dark) {
         :root:not(.light) {
           color-scheme: dark;
-          --background: #11131c;
-          --foreground: #f7f6f2;
-          --muted-foreground: #cec6b6;
-          --card: #1d2134;
-          --border: #40486d;
-          --border-subtle: #2e334f;
-          --primary: #75b0f0;
-          --primary-hover: #9ac5f4;
-          --primary-foreground: #0f1324;
-          --primary-soft: #23374d;
-          --primary-accent: #9ecafa;
-          --cta: #f98c4d;
-          --ring: #75b0f0;
+          --background: #151319;
+          --foreground: #f8f5ef;
+          --muted-foreground: #d1cbc2;
+          --card: #251f33;
+          --border: #4b4062;
+          --border-subtle: #372e4a;
+          --primary: #b49dff;
+          --primary-hover: #c8b6ff;
+          --primary-foreground: #151319;
+          --primary-soft: #312358;
+          --primary-accent: #d2c4ff;
+          --ring: #b49dff;
         }
       }
 
       :root.dark {
         color-scheme: dark;
-        --background: #11131c;
-        --foreground: #f7f6f2;
-        --muted-foreground: #cec6b6;
-        --card: #1d2134;
-        --border: #40486d;
-        --border-subtle: #2e334f;
-        --primary: #75b0f0;
-        --primary-hover: #9ac5f4;
-        --primary-foreground: #0f1324;
-        --primary-soft: #23374d;
-        --primary-accent: #9ecafa;
-        --cta: #f98c4d;
-        --ring: #75b0f0;
+        --background: #151319;
+        --foreground: #f8f5ef;
+        --muted-foreground: #d1cbc2;
+        --card: #251f33;
+        --border: #4b4062;
+        --border-subtle: #372e4a;
+        --primary: #b49dff;
+        --primary-hover: #c8b6ff;
+        --primary-foreground: #151319;
+        --primary-soft: #312358;
+        --primary-accent: #d2c4ff;
+        --ring: #b49dff;
       }
 
       *,
@@ -147,10 +144,6 @@
         border-radius: 0.5rem;
         background: var(--primary);
         color: var(--primary-foreground);
-      }
-
-      .mark .plus {
-        fill: var(--cta);
       }
 
       .mark svg {
@@ -293,17 +286,8 @@
     <header>
       <div class="container bar">
         <span class="mark" aria-hidden="true">
-          <svg viewBox="-280 -305 560 560" focusable="false">
-            <g fill="currentColor">
-              <rect x="-247" y="-224" width="100" height="448" rx="50" />
-              <rect x="-247" y="-224" width="250" height="100" rx="50" />
-              <rect x="-247" y="-50" width="214" height="100" rx="50" />
-              <rect x="-247" y="124" width="300" height="100" rx="50" />
-            </g>
-            <g class="plus">
-              <rect x="47" y="-205" width="200" height="62" rx="31" />
-              <rect x="116" y="-274" width="62" height="200" rx="31" />
-            </g>
+          <svg viewBox="0 0 229.49 226.35" focusable="false">
+            <path fill="currentColor" d="M 45.39 74.82 L 87.6 74.82 C 90.44 74.82 92.54 74.33 93.87 73.35 C 95.21 72.37 95.88 70.46 95.88 67.6 C 95.88 64.4 94.9 61.59 92.94 59.19 C 90.98 56.79 88.35 54.92 85.06 53.58 C 81.76 52.24 77.98 51.58 73.7 51.58 C 68.18 51.58 63.29 52.65 59.01 54.78 C 54.74 56.92 51.4 59.77 49 63.33 C 46.59 66.9 45.39 70.72 45.39 74.82 M 73.97 153.89 C 61.51 153.89 50.77 151.84 41.78 147.74 C 32.79 143.65 25.44 138.26 19.75 131.58 C 14.04 124.91 9.81 117.47 7.05 109.28 C 4.29 101.09 2.91 92.9 2.91 84.7 C 2.91 71.34 5.94 59.51 12 49.17 C 18.05 38.85 26.42 30.7 37.11 24.73 C 47.79 18.77 60.08 15.78 73.97 15.78 C 84.3 15.78 93.25 17.43 100.82 20.72 C 108.39 24.02 114.62 28.3 119.52 33.55 C 124.41 38.8 128.07 44.46 130.47 50.51 C 132.88 56.56 134.08 62.35 134.08 67.87 C 134.08 77.67 131.72 84.93 127 89.65 C 122.28 94.36 116.27 96.72 108.97 96.72 L 45.39 96.72 C 45.75 101.35 47.39 105.27 50.33 108.48 C 53.27 111.68 56.97 114.18 61.42 115.96 C 65.87 117.74 70.58 118.63 75.57 118.63 C 79.85 118.63 83.59 118.41 86.79 117.96 C 90 117.52 92.76 116.89 95.07 116.09 C 97.39 115.29 99.52 114.48 101.49 113.69 C 103.44 112.89 105.18 112.22 106.69 111.68 C 108.21 111.15 109.67 110.79 111.11 110.61 C 113.78 110.44 116.22 111.19 118.45 112.89 C 120.67 114.58 122.68 117.12 124.46 120.5 C 125.7 122.46 126.55 124.33 127 126.11 C 127.44 127.89 127.67 129.67 127.67 131.45 C 127.67 135.72 125.48 139.56 121.12 142.94 C 116.76 146.32 110.61 148.99 102.69 150.95 C 94.76 152.91 85.19 153.89 73.97 153.89 M 227.74 33.51 C 226.57 31.74 225.01 30.64 223.06 30.21 C 221.1 29.78 219.02 29.56 216.81 29.56 L 199.92 29.56 L 199.92 12.67 C 199.92 10.59 199.7 8.57 199.28 6.61 C 198.85 4.65 197.75 3.06 195.97 1.83 C 194.19 0.61 191.29 0 187.25 0 C 183.08 0 180.12 0.61 178.35 1.83 C 176.57 3.06 175.47 4.59 175.04 6.43 C 174.61 8.26 174.4 10.28 174.4 12.48 L 174.4 29.56 L 157.5 29.56 C 155.3 29.56 153.22 29.78 151.26 30.21 C 149.3 30.64 147.71 31.71 146.49 33.42 C 145.26 35.14 144.65 38.14 144.65 42.42 C 144.65 46.46 145.23 49.4 146.39 51.23 C 147.55 53.07 149.05 54.17 150.89 54.54 C 152.73 54.9 154.63 55.09 156.58 55.09 L 174.4 55.09 L 174.4 71.98 C 174.4 74.18 174.61 76.27 175.04 78.22 C 175.47 80.18 176.57 81.78 178.35 83 C 180.12 84.22 183.03 84.83 187.06 84.83 C 191.23 84.83 194.19 84.22 195.97 83 C 197.75 81.78 198.85 80.18 199.28 78.22 C 199.7 76.27 199.92 74.25 199.92 72.17 L 199.92 55.09 L 217.55 55.09 C 219.63 55.09 221.56 54.9 223.33 54.54 C 225.11 54.17 226.57 53.1 227.74 51.32 C 228.9 49.55 229.49 46.64 229.49 42.6 C 229.49 38.32 228.9 35.29 227.74 33.51 M 139.41 169.94 C 135.48 169.94 131.77 171.77 129.35 174.88 C 116.99 190.7 97.73 200.87 76.09 200.87 C 54.45 200.87 35.19 190.7 22.83 174.88 C 20.41 171.77 16.7 169.94 12.77 169.94 C 2.16 169.94 -3.81 182.16 2.72 190.52 C 19.75 212.33 46.28 226.35 76.09 226.35 C 105.9 226.35 132.43 212.33 149.46 190.52 C 155.99 182.16 150.02 169.94 139.41 169.94" />
           </svg>
         </span>
         <span class="display wordmark">Experimente+</span>
