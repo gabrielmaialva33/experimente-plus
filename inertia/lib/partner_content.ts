@@ -35,7 +35,7 @@ export const partnerContentStatusMeta: Record<
     label: 'Rascunho',
     className: 'border-border bg-muted text-muted-foreground',
   },
-  // Direction A: blue "em análise", amber only for what waits on the partner.
+  // Direction A: petrol blue (`info`) "em análise", amber only for what waits on the partner.
   pending_review: {
     label: 'Em análise',
     className: 'border-info/30 bg-info-soft text-info-accent',

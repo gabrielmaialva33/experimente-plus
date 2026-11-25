@@ -13,7 +13,7 @@ export type OrganizationStatus =
   | 'suspended'
   | 'archived'
 
-/** Direction A: green live, blue in review, amber waiting on the business, red closed. */
+/** Direction A: green live, petrol blue (`info`) in review, amber waiting on the business, red closed. */
 export function organizationStatusVariant(status: string) {
   if (status === 'active') return 'success' as const
   if (status === 'pending_review') return 'info' as const

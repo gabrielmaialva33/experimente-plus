@@ -86,7 +86,7 @@ describe('Partner reviews page', () => {
       screen.getByText('Aparece abaixo da avaliação, no app e no site. A nota não muda.')
     ).toBeVisible()
 
-    // Replying is the navy primary action, never the orange conversion colour.
+    // Replying is the `primary` action, never the conversion role.
     const publish = screen.getByRole('button', { name: 'Publicar resposta' })
     expect(publish).toHaveClass('bg-primary', 'rounded-full', 'h-12')
     expect(publish).not.toHaveClass('bg-cta')

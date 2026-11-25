@@ -219,7 +219,7 @@ export default function ModerationRevisionPage({
           }
           actions={
             <>
-              {/* A moderation decision is not a conversion: the neutral main action is navy. */}
+              {/* A moderation decision is not a conversion: the neutral main action is `primary`. */}
               <Button asChild variant="primary" size="xl" shape="pill" className="sm:order-last">
                 <a href="#decisao">Decidir</a>
               </Button>

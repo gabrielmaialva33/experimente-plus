@@ -49,7 +49,7 @@ test('all runtime assets share the immutable public release prefix without authe
   assert.match(style.sprite, /assets\/sprites\/v4\/grayscale$/)
 })
 
-test('flat cool base leaves institutional blue and conversion orange to the application', () => {
+test('flat cool base leaves the brand violet, deep purple and lilac to the application', () => {
   const background = style.layers.find((layer) => layer.type === 'background')
   assert.equal(background.paint['background-color'], '#f3f5f7')
   for (const layer of style.layers) {
@@ -58,7 +58,7 @@ test('flat cool base leaves institutional blue and conversion orange to the appl
       assert.ok(!/halo|blur|gradient|pattern/.test(key), `${layer.id}: ${key}`)
     }
     const paint = JSON.stringify(layer.paint ?? {}).toLowerCase()
-    assert.ok(!paint.includes('#13467c') && !paint.includes('#e2661a'))
+    for (const brand of ['#5e39ed', '#2c145c', '#e8e0ff']) assert.ok(!paint.includes(brand))
   }
   const pois = style.layers.find((layer) => layer.id === 'pois')
   assert.ok(pois.layout['text-field'])
@@ -79,7 +79,7 @@ test('solid map surfaces keep the canonical text colors above 4.5:1', () => {
     for (const hex of JSON.stringify(color ?? '').match(/#[a-f\d]{6}/gi) ?? []) colors.add(hex)
   }
   assert.ok(colors.size >= 8)
-  for (const foreground of ['#1e2227', '#535961']) {
+  for (const foreground of ['#151319', '#4f4959']) {
     for (const surface of colors) {
       const ratio = (luminance(surface) + 0.05) / (luminance(foreground) + 0.05)
       assert.ok(ratio >= 4.5, `${foreground} on ${surface}: ${ratio}`)

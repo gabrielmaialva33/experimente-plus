@@ -63,7 +63,7 @@ describe('DashboardPage', () => {
   })
 
   // The band is chrome, not the action blue: `primary` turns light blue in the dark theme.
-  it('paints the Hoje band with the navy chrome in both themes', () => {
+  it('paints the Hoje band with the deep purple chrome in both themes', () => {
     mocks.permissions = ['establishments.list']
     render(<DashboardPage stats={stats} />)
 

@@ -102,7 +102,7 @@ interface PortalIndexProps {
 
 type StatusTone = 'success' | 'warning' | 'info' | 'neutral' | 'destructive'
 
-/** Direction A status colours: green live, blue in review, amber waiting on the partner. */
+/** Direction A status colours: green live, petrol blue (`info`) in review, amber waiting on the partner. */
 function statusTone(status: string): StatusTone {
   const tones: Record<string, StatusTone> = {
     active: 'success',

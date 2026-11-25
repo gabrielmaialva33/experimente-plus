@@ -28,7 +28,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
   // 404 without them, so a street or district is no reason to offer "Como chegar".
   const routeAvailable = detail.address.latitude !== null && detail.address.longitude !== null
   /*
-   * The page's main action is navy (`primary`), not orange: direction A keeps
+   * The page's main action is `primary`, not `cta`: direction A keeps
    * `cta` for converting a benefit or a purchase, the app's rule since audit A11.
    * Visiting comes first, as on the phone; without a route the first available
    * contact takes the place. The rest stay `contact`, so one action leads.

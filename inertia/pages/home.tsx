@@ -220,8 +220,9 @@ export default function Home() {
                 publicação depende de revisão.
               </p>
             </div>
-            {/* One orange per page: the visitor's path is the hero's; this one is navy. */}
-            <Button variant="primary" size="2xl" shape="pill" className="w-full sm:w-auto" asChild>
+            {/* One filled action per page: the visitor's path is the hero's; this one is outlined,
+                since `primary` and `cta` share the brand violet. */}
+            <Button variant="outline" size="2xl" shape="pill" className="w-full sm:w-auto" asChild>
               <Link href="/register">
                 <Store /> Cadastrar negócio
               </Link>

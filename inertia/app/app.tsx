@@ -18,7 +18,7 @@ setUpProgressiveWebApp()
 
 createInertiaApp({
   // Page loading is navigation feedback, so it takes the navigation role (and follows the
-  // theme); orange stays reserved for conversion.
+  // theme); the `cta` role stays reserved for conversion.
   progress: { color: 'var(--primary)' },
 
   title: (title) => formatDocumentTitle(title, appName),

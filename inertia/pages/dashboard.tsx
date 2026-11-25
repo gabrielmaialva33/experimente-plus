@@ -149,7 +149,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
               </div>
             </div>
             {/* Navigation, not conversion: the band speaks the sidebar's active-item colours,
-                and orange stays for buying. */}
+                and the conversion role (`cta`) stays for buying. */}
             <Button
               asChild
               variant="inverse"

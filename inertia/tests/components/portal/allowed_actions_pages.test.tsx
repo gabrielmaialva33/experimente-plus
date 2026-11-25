@@ -463,7 +463,7 @@ describe('Portal server-projected allowed actions', () => {
     expect(screen.getByRole('button', { name: 'Confirmar utilização' })).toHaveClass('bg-cta')
     expect(document.querySelectorAll('.bg-cta')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Conferir outro' })).toBeVisible()
-    // The ticket stub is navy chrome in both themes, never the light-blue dark `primary`.
+    // The ticket stub is deep purple chrome in both themes, never the light violet dark `primary`.
     expect(
       within(ticket).getByRole('heading', { name: 'Sobremesa cortesia' }).parentElement
     ).toHaveClass('bg-chrome', 'text-chrome-foreground')

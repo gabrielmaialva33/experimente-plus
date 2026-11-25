@@ -159,7 +159,7 @@ describe('Backoffice today', () => {
 
     const late = rows[0]
     expect(within(late).getAllByText('Denúncia')).not.toHaveLength(0)
-    // A report asks for attention (amber); orange is reserved for conversion.
+    // A report asks for attention (amber); `cta` is reserved for conversion.
     for (const badge of within(late).getAllByText('Denúncia')) {
       expect(badge).toHaveClass('bg-warning-soft', 'text-warning-accent')
       expect(badge.className).not.toMatch(/\bbg-cta\b/)

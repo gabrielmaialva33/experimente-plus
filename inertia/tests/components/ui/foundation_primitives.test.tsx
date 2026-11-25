@@ -130,7 +130,7 @@ describe('foundation primitives', () => {
     expect(input).toHaveClass('read-only:cursor-not-allowed', 'read-only:bg-muted/70')
   })
 
-  it('offers direction A pill actions at 48 and 52 px, keeping navy and orange apart', () => {
+  it('offers direction A pill actions at 48 and 52 px, keeping the primary and conversion roles apart', () => {
     const cta = buttonVariants({ variant: 'cta', size: '2xl', shape: 'pill' })
     expect(cta).toContain('h-13')
     expect(cta).toContain('rounded-full')

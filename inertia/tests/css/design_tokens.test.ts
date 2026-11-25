@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const projectFile = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
@@ -198,18 +198,30 @@ describe('flat foundation token contract', () => {
     }
   })
 
-  it('preserves the brand while separating a luminous conversion accent from low-chroma surfaces', () => {
+  it('preserves the brand while separating the single action color from the chrome and from low-chroma surfaces', () => {
     const block = blockFor(':root')
     for (const [token, hex] of [
-      ['background', '#f3f5f7'],
+      ['background', '#f8f5ef'],
       ['card', '#ffffff'],
       ['popover', '#ffffff'],
-      ['primary', '#13467c'],
-      ['cta', '#e2661a'],
-      ['muted', '#e8ecf1'],
+      ['foreground', '#151319'],
+      ['primary', '#5e39ed'],
+      ['cta', '#5e39ed'],
+      ['primary-soft', '#e8e0ff'],
+      ['chrome', '#2c145c'],
+      ['muted', '#ede8df'],
     ])
       expect(hexColor(colorToken(block, token))).toBe(hex)
-    expect(colorToken(block, 'cta')[0] - colorToken(block, 'primary')[0]).toBeGreaterThan(0.25)
+    // The brand has one action color: conversion keeps its role and shares the violet, in
+    // both themes; what the action stands apart from is the structural chrome.
+    for (const selector of [':root', '.dark']) {
+      const theme = blockFor(selector)
+      for (const role of ['', '-hover', '-foreground', '-soft', '-accent']) {
+        expect(colorToken(theme, `cta${role}`)).toEqual(colorToken(theme, `primary${role}`))
+      }
+      expect(colorToken(theme, 'primary')[0] - colorToken(theme, 'chrome')[0]).toBeGreaterThan(0.2)
+    }
+    expect(hexColor(colorToken(blockFor('.dark'), 'primary'))).toBe('#b49dff')
     expect(colorToken(block, 'surface-base')[1]).toBeLessThan(0.015)
     expect(colorToken(block, 'surface-context')).toEqual(colorToken(block, 'background'))
     expect(colorToken(block, 'cta')[1]).toBeGreaterThan(colorToken(block, 'surface-context')[1] * 4)
@@ -241,13 +253,14 @@ describe('flat foundation token contract', () => {
     }
   })
 
-  it('separates cool roles from each other and anchors subtle fills against the paper', () => {
+  it('separates neutral roles from each other and anchors subtle fills against the paper', () => {
     const block = blockFor(':root')
+    // Neutral fills stay quiet and share the warm hue of the off-white paper.
+    const paperHue = colorToken(block, 'surface-base')[2]
     for (const role of ['content-absent', 'temporal-emphasis', 'status-neutral']) {
       const [, c, h] = colorToken(block, role)
-      expect(c).toBeLessThanOrEqual(0.01)
-      expect(h).toBeGreaterThanOrEqual(245)
-      expect(h).toBeLessThanOrEqual(265)
+      expect(c).toBeLessThanOrEqual(0.02)
+      expect(Math.abs(h - paperHue)).toBeLessThanOrEqual(10)
     }
     for (const edge of ['content-absent-border', 'temporal-emphasis-border']) {
       expect(
@@ -427,32 +440,51 @@ describe('flat foundation token contract', () => {
   })
 
   it('keeps the browser chrome and loaded font aligned with the product brand', () => {
-    expect(inertiaLayout).toContain('<meta name="theme-color" content="#13467c" />')
-    expect(inertiaLayout).toContain('instrument-sans:400,500,600,700')
+    expect(inertiaLayout).toContain('<meta name="theme-color" content="#2c145c" />')
+    expect(inertiaLayout).toContain('plus-jakarta-sans:400,500,600,700')
+    expect(inertiaLayout).not.toContain('instrument-sans')
+    expect(tailwindCss.match(/--font-sans:\s*([^;]+);/)?.[1].trim()).toMatch(/^'Plus Jakarta Sans'/)
     expect(appCss).toContain('font-family: var(--font-sans)')
-    // The page-loading bar is navigation feedback: the navy role, never the conversion orange.
+    // The page-loading bar is navigation feedback: the `primary` role, never `cta`.
     expect(projectFile('inertia/app/app.tsx')).toContain("progress: { color: 'var(--primary)' }")
   })
 
   it.each(['verify_email_html', 'password_reset_html'])(
-    'sends the %s email in the brand navy with a pill action',
+    'sends the %s email in the brand violet with a pill action',
     (template) => {
       const email = projectFile(`resources/views/emails/${template}.edge`)
-      expect(email).toContain('background: #13467c')
+      expect(email).toContain('background: #5e39ed')
+      expect(email).not.toMatch(/#13467c|Instrument Sans/)
       expect(email).toContain('border-radius: 999px')
       expect(email).toContain('border-radius: 20px')
       expect(email).not.toMatch(/#2563eb|#f4f4f5|#71717a/)
     }
   )
 
-  it('loads the direction A display face and exposes it apart from the text face', () => {
-    expect(inertiaLayout).toContain('plus-jakarta-sans:600,700,800')
+  it('loads the display face up to its heaviest weight and exposes it apart from the text face', () => {
+    // Fredoka stops at 700: an 800 would be drawn by the browser, not by the face.
+    expect(inertiaLayout).toContain('fredoka:600,700')
     const display = tailwindCss.match(/--font-display:\s*([^;]+);/)?.[1] ?? ''
-    expect(display.trim().startsWith("'Plus Jakarta Sans'")).toBe(true)
+    expect(display.trim().startsWith("'Fredoka', 'Plus Jakarta Sans'")).toBe(true)
     expect(display).toContain('ui-sans-serif')
     expect(tailwindCss).toContain('--radius-card: 1.25rem')
     expect(tailwindCss).toContain('--color-border-subtle: var(--border-subtle)')
     expect(tailwindCss).toContain('--color-chrome: var(--chrome)')
+  })
+
+  it('keeps the display face within its weights and away from tabular numbers', () => {
+    // Fredoka stops at 700 and has no tabular figures: prices, counters and dates use the text face.
+    const offenders = readdirSync(resolve(process.cwd(), 'inertia'), { recursive: true })
+      .map(String)
+      .filter((path) => path.endsWith('.tsx') && !path.startsWith('tests'))
+      .flatMap((path) =>
+        projectFile(join('inertia', path))
+          .split('\n')
+          .filter((line) => /\bfont-display\b/.test(line))
+          .filter((line) => /\b(?:font-extrabold|font-black|tabular-nums)\b/.test(line))
+          .map((line) => `${path}: ${line.trim()}`)
+      )
+    expect(offenders).toEqual([])
   })
 
   it.each([':root', '.dark'])(

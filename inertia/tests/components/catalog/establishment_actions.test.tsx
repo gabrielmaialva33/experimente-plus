@@ -34,9 +34,9 @@ describe('establishment action hierarchy', () => {
     vi.mocked(trackAnalyticsEvents).mockClear()
   })
 
-  // Direction A, as the app settled it (audit A11): orange is kept for converting
-  // a benefit or a purchase, so the place's main action is the brand's navy.
-  it('leads with a navy route, paints nothing orange and keeps the four tracked destinations', () => {
+  // Direction A, as the app settled it (audit A11): `cta` is kept for converting
+  // a benefit or a purchase, so the place's main action takes the `primary` role.
+  it('leads with a primary route, paints no conversion action and keeps the four tracked destinations', () => {
     const { container } = render(
       <EstablishmentActions
         detail={detailFor(
