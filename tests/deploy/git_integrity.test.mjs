@@ -71,7 +71,9 @@ async function repository(t, { shallow = false } = {}) {
         ...extraEnv,
       },
       encoding: 'utf8',
-      timeout: 30000,
+      // A guard against a hung harness, not a speed budget: the snapshot cases take
+      // ~7 s here, ~17 s on ubuntu-24.04 runners and over 30 s on ubuntu-26.04.
+      timeout: 120000,
     })
   }
   function commitWithEntry(path, mode, contents) {
