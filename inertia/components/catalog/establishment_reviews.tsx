@@ -76,14 +76,14 @@ export function EstablishmentReviews({
           </p>
           <h2
             id="reviews-title"
-            className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
+            className="mt-1 font-display text-[1.3125rem] font-bold leading-tight"
           >
             Avaliações
           </h2>
         </div>
         {summary.average !== null && summary.count > 0 ? (
           <p className="flex items-center gap-2 text-[0.9375rem] font-semibold">
-            <span className="font-display text-2xl font-extrabold leading-tight">
+            <span className="text-2xl font-bold leading-tight tabular-nums">
               {formatRating(summary.average)}
             </span>
             <RatingStars value={summary.average} size={18} />

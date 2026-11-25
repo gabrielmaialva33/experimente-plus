@@ -178,7 +178,7 @@ export function CatalogSearchForm({
           </p>
           <h2
             id="catalog-search-title"
-            className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+            className="mt-1 font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]"
           >
             Encontre um lugar
           </h2>

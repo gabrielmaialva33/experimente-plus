@@ -97,9 +97,7 @@ export default function FilesPage({ files }: FilesPageProps) {
           <Card>
             <CardHeader>
               <CardHeading>
-                <CardTitle className="font-display text-lg font-extrabold">
-                  Enviar arquivo
-                </CardTitle>
+                <CardTitle className="font-display text-lg font-bold">Enviar arquivo</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Selecione um arquivo compatível de até 10 MB.
                 </p>
@@ -115,9 +113,7 @@ export default function FilesPage({ files }: FilesPageProps) {
         <Card id="arquivos" className="scroll-mt-24">
           <CardHeader>
             <CardHeading>
-              <CardTitle className="font-display text-lg font-extrabold">
-                Arquivos da operação
-              </CardTitle>
+              <CardTitle className="font-display text-lg font-bold">Arquivos da operação</CardTitle>
             </CardHeading>
           </CardHeader>
           <CardContent className="p-0">

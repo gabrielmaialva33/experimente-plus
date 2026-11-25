@@ -138,7 +138,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
               <div>
                 <h2
                   id="dashboard-today-heading"
-                  className="font-display text-xl font-extrabold tracking-[-0.01em]"
+                  className="font-display text-xl font-bold tracking-[-0.01em]"
                 >
                   O que pede atenção hoje
                 </h2>
@@ -204,9 +204,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardHeading>
-                <CardTitle className="font-display text-lg font-extrabold">
-                  Novos usuários
-                </CardTitle>
+                <CardTitle className="font-display text-lg font-bold">Novos usuários</CardTitle>
                 <p className="text-sm text-muted-foreground">Cadastros nos últimos seis meses</p>
               </CardHeading>
             </CardHeader>
@@ -235,7 +233,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
           <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardHeading>
-                <CardTitle className="font-display text-lg font-extrabold">
+                <CardTitle className="font-display text-lg font-bold">
                   Distribuição mensal
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
@@ -262,9 +260,7 @@ export default function DashboardPage({ stats }: DashboardPageProps) {
         <Card className="overflow-hidden">
           <CardHeader>
             <CardHeading>
-              <CardTitle className="font-display text-lg font-extrabold">
-                Usuários recentes
-              </CardTitle>
+              <CardTitle className="font-display text-lg font-bold">Usuários recentes</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Pessoas adicionadas mais recentemente à operação
               </p>

@@ -135,9 +135,7 @@ export function ManualBlocks({ blocks }: { blocks: readonly ManualBlock[] }) {
                   className={cn('mt-0.5 size-5 shrink-0', tone.iconClassName)}
                 />
                 <div className="min-w-0">
-                  <p className="font-display font-extrabold leading-tight text-foreground">
-                    {block.title}
-                  </p>
+                  <p className="font-bold leading-tight text-foreground">{block.title}</p>
                   <p className="mt-1.5 text-sm leading-6 sm:text-[0.9375rem]">
                     <ManualText text={block.text} />
                   </p>
@@ -208,7 +206,7 @@ function ManualTable({ block }: { block: Extract<ManualBlock, { kind: 'table' }>
             key={row[0]}
             className="break-inside-avoid rounded-card border border-border-subtle bg-card p-4"
           >
-            <p className="font-display font-extrabold leading-tight">
+            <p className="font-bold leading-tight">
               <span className="sr-only">{first}: </span>
               <ManualText text={row[0]} />
             </p>

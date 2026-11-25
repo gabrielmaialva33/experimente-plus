@@ -398,7 +398,7 @@ export default function PartnerContentPage({
               >
                 {label}
               </Badge>
-              <p className="font-display text-2xl font-extrabold tabular-nums min-[22.5rem]:mt-3 min-[22.5rem]:text-3xl">
+              <p className="text-2xl font-bold tabular-nums min-[22.5rem]:mt-3 min-[22.5rem]:text-3xl">
                 {count}
               </p>
             </div>

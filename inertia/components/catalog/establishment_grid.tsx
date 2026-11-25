@@ -116,7 +116,7 @@ export default function EstablishmentGrid({
 
                 <h3
                   id={titleId}
-                  className="mt-1 font-display text-[1.1875rem] font-extrabold leading-tight tracking-[-0.01em] underline-offset-4 group-hover:underline"
+                  className="mt-1 font-display text-[1.1875rem] font-bold leading-tight tracking-[-0.01em] underline-offset-4 group-hover:underline"
                 >
                   {entry.name}
                 </h3>

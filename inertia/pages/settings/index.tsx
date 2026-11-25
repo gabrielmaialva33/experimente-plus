@@ -74,7 +74,7 @@ function ProfileTab({ profile }: { profile: SettingsProfile }) {
     <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle className="font-display text-lg font-extrabold">Dados pessoais</CardTitle>
+          <CardTitle className="font-display text-lg font-bold">Dados pessoais</CardTitle>
           <p className="text-sm text-muted-foreground">
             Atualize como seu nome aparece na sua conta.
           </p>
@@ -164,7 +164,7 @@ function AppearanceTab() {
     <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle className="font-display text-lg font-extrabold">Aparência</CardTitle>
+          <CardTitle className="font-display text-lg font-bold">Aparência</CardTitle>
           <p className="text-sm text-muted-foreground">
             Escolha um tema. A preferência fica salva neste navegador.
           </p>
@@ -236,7 +236,7 @@ function AccountTab() {
     <Card className="max-w-3xl border-destructive/40">
       <CardHeader>
         <CardHeading>
-          <CardTitle className="font-display text-lg font-extrabold text-destructive">
+          <CardTitle className="font-display text-lg font-bold text-destructive">
             Segurança e exclusão
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -351,7 +351,7 @@ function OperationsTab() {
     <Card className="max-w-3xl">
       <CardHeader>
         <CardHeading>
-          <CardTitle className="font-display text-lg font-extrabold">Operações</CardTitle>
+          <CardTitle className="font-display text-lg font-bold">Operações</CardTitle>
           <p className="text-sm text-muted-foreground">
             Operações isolam dados privados. Cidades e organizações continuam dentro da operação
             selecionada.

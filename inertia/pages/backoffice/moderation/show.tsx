@@ -237,7 +237,7 @@ export default function ModerationRevisionPage({
           <div className="min-w-0 space-y-5">
             {comparison ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-display text-xl font-extrabold">
+                <h2 className="font-display text-xl font-bold">
                   {firstPublication
                     ? 'Tudo o que aparecerá na página'
                     : `Comparado à versão publicada ${comparison.published_version ?? ''}`.trim()}
@@ -367,7 +367,7 @@ export default function ModerationRevisionPage({
         </div>
 
         <section id="decisao" aria-labelledby="decisao-titulo" className="scroll-mt-24 space-y-4">
-          <h2 id="decisao-titulo" className="font-display text-2xl font-extrabold">
+          <h2 id="decisao-titulo" className="font-display text-2xl font-bold">
             Decisão
           </h2>
           <ModerationActions

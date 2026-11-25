@@ -48,9 +48,7 @@ function Stat({
       <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </dt>
-      <dd className="mt-2 font-display text-2xl font-extrabold leading-tight tabular-nums">
-        {value}
-      </dd>
+      <dd className="mt-2 text-2xl font-bold leading-tight tabular-nums">{value}</dd>
     </div>
   )
 }
@@ -91,7 +89,7 @@ export function WalletSavings({ savings }: { savings: BenefitSavings }) {
             <div className="min-w-0">
               <h2
                 id="wallet-savings-title"
-                className="font-display text-[1.3125rem] font-extrabold leading-tight"
+                className="font-display text-[1.3125rem] font-bold leading-tight"
               >
                 Sua economia
               </h2>
@@ -176,7 +174,7 @@ export function WalletSavings({ savings }: { savings: BenefitSavings }) {
                     <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                       {recap.edition.name}
                     </p>
-                    <p className="mt-1.5 font-display text-lg font-extrabold leading-snug">
+                    <p className="mt-1.5 font-display text-lg font-bold leading-snug">
                       {recapSentence(recap.edition.year, recap)}
                     </p>
                   </li>

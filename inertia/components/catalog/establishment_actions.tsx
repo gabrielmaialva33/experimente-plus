@@ -92,7 +92,7 @@ export function EstablishmentActions({ detail }: EstablishmentActionsProps) {
         </p>
         <h2
           id="contact-actions-title"
-          className="mt-1 font-display text-lg font-extrabold leading-tight"
+          className="mt-1 font-display text-lg font-bold leading-tight"
         >
           Entre em contato
         </h2>

@@ -12,7 +12,7 @@ export function ManualSection({ section }: { section: Section }) {
     <section id={section.id} aria-labelledby={titleId} className="scroll-mt-24">
       <h3
         id={titleId}
-        className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em] print:break-after-avoid"
+        className="font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em] print:break-after-avoid"
       >
         {section.title}
       </h3>

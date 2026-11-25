@@ -93,7 +93,7 @@ export function ReportDialog({
       </DialogTrigger>
       <DialogContent className="max-w-lg rounded-card">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl font-extrabold leading-tight">
+          <DialogTitle className="font-display text-xl font-bold leading-tight">
             {title}
           </DialogTitle>
           <DialogDescription>
@@ -105,7 +105,7 @@ export function ReportDialog({
 
         {protocol !== null ? (
           <div className="flex flex-col items-start gap-3" role="status">
-            <p className="font-display text-lg font-extrabold leading-tight">Denúncia registrada</p>
+            <p className="font-display text-lg font-bold leading-tight">Denúncia registrada</p>
             {protocol ? (
               <p className="text-sm text-muted-foreground">
                 Guarde o protocolo para acompanhar o caso:{' '}

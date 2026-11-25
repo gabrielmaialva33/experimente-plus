@@ -256,7 +256,7 @@ export default function PartnerReviewsPage({
               aria-label="Dicas para responder"
               className="space-y-3 rounded-card bg-primary-soft p-5.5 text-sm"
             >
-              <h2 className="font-display text-lg font-extrabold text-primary-accent">
+              <h2 className="font-display text-lg font-bold text-primary-accent">
                 Uma boa resposta
               </h2>
               <ul className="list-disc space-y-2 pl-5 text-[0.9375rem] leading-snug">

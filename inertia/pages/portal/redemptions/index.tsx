@@ -85,9 +85,7 @@ export default function PartnerRedemptionsPage({
                     className="group grid gap-1 px-5 py-4 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.3fr)_11rem] md:items-center md:gap-4"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-display font-bold">
-                        {redemption.offer.title}
-                      </span>
+                      <span className="block truncate font-bold">{redemption.offer.title}</span>
                       <span className="block truncate text-sm text-muted-foreground">
                         {redemption.establishment.name}
                       </span>

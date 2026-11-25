@@ -342,9 +342,7 @@ export default function PortalOrganizationPage({
                         ) : null}
                       </div>
                     </div>
-                    <span className="shrink-0 font-display text-lg font-bold tabular-nums">
-                      {score}%
-                    </span>
+                    <span className="shrink-0 text-lg font-bold tabular-nums">{score}%</span>
                   </div>
                   <div
                     className="mt-4 h-2 overflow-hidden rounded-full bg-border-subtle"
@@ -468,7 +466,7 @@ export default function PortalOrganizationPage({
               className="rounded-card border border-border-subtle bg-card p-4 sm:p-5"
             >
               <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="mt-2 font-display text-3xl font-extrabold tabular-nums">{value}</p>
+              <p className="mt-2 text-3xl font-bold tabular-nums">{value}</p>
             </article>
           ))}
         </section>

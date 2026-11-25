@@ -15,13 +15,14 @@
  */
 @theme inline {
   --font-sans:
-    'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
   --font-sans--font-feature-settings: 'rlig' 1, 'calt' 1;
-  /* Direction A: a display face for titles, names and headline numbers; text stays in Instrument Sans. */
+  /* Identity v3: Fredoka is the display face for titles and names, up to weight 700. Text and
+     every number (prices, dates, counters, codes) stay in Plus Jakarta Sans, which has tabular figures. */
   --font-display:
-    'Plus Jakarta Sans', 'Instrument Sans', ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    'Fredoka', 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
 
   --container-app: 80rem;
 

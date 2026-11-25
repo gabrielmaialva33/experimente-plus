@@ -91,7 +91,7 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
           </p>
           <h2
             id="concierge-policy-heading"
-            className="mb-6 font-display text-xl font-extrabold tracking-[-0.01em]"
+            className="mb-6 font-display text-xl font-bold tracking-[-0.01em]"
           >
             Parâmetros do assistente
           </h2>
@@ -122,7 +122,7 @@ export default function BackofficeConcierge({ policy, infrastructure }: Concierg
             <div>
               <h2
                 id="concierge-infrastructure-heading"
-                className="font-display text-xl font-extrabold tracking-[-0.01em]"
+                className="font-display text-xl font-bold tracking-[-0.01em]"
               >
                 Infraestrutura
               </h2>

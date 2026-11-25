@@ -298,7 +298,7 @@ export default function OrganizationInvitationAcceptPage(
               <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                 Seu papel
               </p>
-              <p className="mt-1 font-display text-lg font-extrabold">
+              <p className="mt-1 font-display text-lg font-bold">
                 {organizationRoleLabel(invitation.role)}
               </p>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">

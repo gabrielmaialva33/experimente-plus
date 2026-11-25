@@ -294,7 +294,7 @@ export default function PartnerPortalIndex({
           <section className="space-y-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="font-display text-[1.3125rem] font-extrabold tracking-[-0.01em]">
+                <h2 className="font-display text-[1.3125rem] font-bold tracking-[-0.01em]">
                   Organizações disponíveis
                 </h2>
                 <p className="mt-1 text-[0.9375rem] text-muted-foreground">
@@ -376,9 +376,7 @@ export default function PartnerPortalIndex({
                             <dt className="mt-0.5 text-[0.8125rem] text-muted-foreground">
                               {label}
                             </dt>
-                            <dd className="font-display text-2xl font-extrabold tabular-nums">
-                              {value}
-                            </dd>
+                            <dd className="text-2xl font-bold tabular-nums">{value}</dd>
                           </div>
                         ))}
                       </dl>

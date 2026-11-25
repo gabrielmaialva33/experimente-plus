@@ -41,7 +41,7 @@ export function CatalogSectionHeader({
         <Heading
           id={id}
           className={cn(
-            'font-display font-extrabold leading-tight tracking-[-0.01em]',
+            'font-display font-bold leading-tight tracking-[-0.01em]',
             level === 2 ? 'text-[1.3125rem] sm:text-2xl' : 'text-lg',
             overline ? 'mt-1' : null
           )}

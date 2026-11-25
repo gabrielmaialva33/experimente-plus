@@ -132,7 +132,7 @@ export default function PilotFeedbackForm({
           <MessageSquareText aria-hidden="true" className="size-4" />
         </span>
         <div>
-          <p className="font-display text-base font-bold">Feedback do piloto</p>
+          <p className="text-base font-bold">Feedback do piloto</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Conte o que funcionou e o que ainda atrapalha sua operação.
           </p>

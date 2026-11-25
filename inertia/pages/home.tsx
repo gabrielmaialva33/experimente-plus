@@ -69,7 +69,7 @@ export default function Home() {
             <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent sm:text-[0.8125rem]">
               Descoberta regional no Norte do Paraná
             </p>
-            <h1 className="mt-4 text-balance font-display text-[2.5rem] font-extrabold leading-[1.08] tracking-[-0.02em] sm:text-[3.5rem] lg:text-[4rem]">
+            <h1 className="mt-4 text-balance font-display text-[2.5rem] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[3.5rem] lg:text-[4rem]">
               Encontre lugares e serviços na sua cidade.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
@@ -93,7 +93,7 @@ export default function Home() {
                 <span className="flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                   <MapPinned aria-hidden="true" className="size-5" />
                 </span>
-                <h2 className="mt-4 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]">
+                <h2 className="mt-4 font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]">
                   Informação para decidir
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -129,7 +129,7 @@ export default function Home() {
           </p>
           <h2
             id="categories-title"
-            className="mt-2 font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+            className="mt-2 font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
           >
             O que você pode encontrar
           </h2>
@@ -154,7 +154,7 @@ export default function Home() {
                 <span className="flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
-                <h3 className="mt-4 font-display text-lg font-extrabold leading-tight">
+                <h3 className="mt-4 font-display text-lg font-bold leading-tight">
                   {category.label}
                 </h3>
                 <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
@@ -174,7 +174,7 @@ export default function Home() {
             </p>
             <h2
               id="how-title"
-              className="mt-2 font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+              className="mt-2 font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
             >
               Da cidade até o contato
             </h2>
@@ -190,13 +190,11 @@ export default function Home() {
               >
                 <span
                   aria-hidden="true"
-                  className="font-display text-[2.5rem] font-extrabold leading-none tracking-[-0.02em] text-primary-accent"
+                  className="font-display text-[2.5rem] font-bold leading-none tracking-[-0.02em] text-primary-accent"
                 >
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <h3 className="mt-3 font-display text-lg font-extrabold leading-tight">
-                  {step.title}
-                </h3>
+                <h3 className="mt-3 font-display text-lg font-bold leading-tight">{step.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
               </li>
             ))}
@@ -213,7 +211,7 @@ export default function Home() {
               </p>
               <h2
                 id="partner-title"
-                className="mt-2 text-balance font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+                className="mt-2 text-balance font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
               >
                 Seu negócio atende em uma das cidades da plataforma?
               </h2>

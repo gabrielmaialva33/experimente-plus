@@ -223,10 +223,7 @@ export default function OrganizationQueuePage({
 
         <section aria-labelledby="claims-title" className="space-y-3">
           <div>
-            <h2
-              id="claims-title"
-              className="font-display text-xl font-extrabold tracking-[-0.01em]"
-            >
+            <h2 id="claims-title" className="font-display text-xl font-bold tracking-[-0.01em]">
               Reivindicações
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">

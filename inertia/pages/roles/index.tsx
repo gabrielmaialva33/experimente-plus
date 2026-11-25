@@ -73,7 +73,7 @@ function RoleCard({ role }: { role: RoleRow }) {
               <ShieldCheck aria-hidden="true" className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <CardTitle className="flex items-center gap-2 font-display text-lg font-extrabold">
+              <CardTitle className="flex items-center gap-2 font-display text-lg font-bold">
                 {globalRoleLabel(role.slug, role.name)}
               </CardTitle>
               <p className="mt-0.5 text-sm text-muted-foreground">

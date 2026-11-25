@@ -331,7 +331,7 @@ export default function BenefitsBackofficePage({
                   <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                     {editingId ? 'Editar edição' : canCreate ? 'Nova edição' : 'Edição existente'}
                   </p>
-                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-[-0.01em]">
+                  <h2 className="mt-1 font-display text-xl font-bold tracking-[-0.01em]">
                     {editingId
                       ? 'Ajuste o período e a apresentação'
                       : canCreate
@@ -596,7 +596,7 @@ export default function BenefitsBackofficePage({
                           <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                             {edition.city.name} · {edition.city.state_code}
                           </p>
-                          <h2 className="mt-1 font-display text-lg font-extrabold leading-snug tracking-[-0.01em] text-balance">
+                          <h2 className="mt-1 font-display text-lg font-bold leading-snug tracking-[-0.01em] text-balance">
                             {edition.name}
                           </h2>
                         </div>

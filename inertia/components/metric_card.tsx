@@ -48,9 +48,7 @@ export function MetricCard({
       <CardContent className="flex min-h-32 items-start justify-between gap-4 p-5">
         <div className="min-w-0">
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <p className="mt-2 font-display text-3xl font-extrabold tracking-[-0.02em] tabular-nums">
-            {value}
-          </p>
+          <p className="mt-2 text-3xl font-bold tracking-[-0.02em] tabular-nums">{value}</p>
           {helper && <div className="mt-1.5 text-xs text-muted-foreground">{helper}</div>}
           {href && (
             <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:underline group-hover:underline-offset-4">

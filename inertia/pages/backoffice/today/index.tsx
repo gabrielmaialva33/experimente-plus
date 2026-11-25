@@ -244,7 +244,7 @@ export default function BackofficeTodayPage({ counts, inbox }: BackofficeTodayPr
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
             <h2
               id="inbox-heading"
-              className="font-display text-[1.3125rem] font-extrabold tracking-[-0.01em]"
+              className="font-display text-[1.3125rem] font-bold tracking-[-0.01em]"
             >
               Caixa de moderação
             </h2>

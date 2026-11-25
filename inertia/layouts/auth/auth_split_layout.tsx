@@ -60,7 +60,7 @@ export function AuthSplitLayout({
       >
         <div className={cn('w-full', contentWidth === 'wide' ? 'max-w-[32rem]' : 'max-w-[28rem]')}>
           <header className="mb-6">
-            <h1 className="font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.125rem]">
+            <h1 className="font-display text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[2.125rem]">
               {title}
             </h1>
             <p className="mt-2 text-[0.9375rem] leading-6 text-muted-foreground sm:text-base">
@@ -88,9 +88,7 @@ export function AuthSplitLayout({
                 </span>
                 <div>
                   {contextTitle ? (
-                    <h2 className="font-display text-[0.9375rem] font-extrabold leading-tight">
-                      {contextTitle}
-                    </h2>
+                    <h2 className="text-[0.9375rem] font-bold leading-tight">{contextTitle}</h2>
                   ) : null}
                   {contextDescription ? (
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">

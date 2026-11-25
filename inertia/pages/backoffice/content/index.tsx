@@ -312,7 +312,7 @@ export default function BackofficePartnerContentPage({
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2
                   id={'section-' + section.kind}
-                  className="font-display text-xl font-extrabold tracking-[-0.01em]"
+                  className="font-display text-xl font-bold tracking-[-0.01em]"
                 >
                   {kindLabel(section.kind)}{' '}
                   <span className="text-sm font-semibold text-muted-foreground">
@@ -433,7 +433,7 @@ function ModerationItem({
 
         <h3
           id={'content-' + kind + '-' + id}
-          className="mt-3 font-display text-lg font-extrabold tracking-[-0.01em]"
+          className="mt-3 font-display text-lg font-bold tracking-[-0.01em]"
         >
           {title}
         </h3>

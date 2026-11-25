@@ -370,9 +370,7 @@ export default function OrganizationTeamPage({
                   </span>
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="truncate font-display font-bold">
-                        {member.user.full_name}
-                      </span>
+                      <span className="truncate font-bold">{member.user.full_name}</span>
                       {member.is_self ? (
                         <Badge variant="neutral" appearance="light" shape="pill" size="md">
                           Você
@@ -533,7 +531,7 @@ export default function OrganizationTeamPage({
                       <Mail className="size-4" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-display font-bold">{invitation.email}</p>
+                      <p className="truncate font-bold">{invitation.email}</p>
                       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
                         <Clock3 aria-hidden="true" className="size-3.5" />
                         {invitation.state === 'expired'

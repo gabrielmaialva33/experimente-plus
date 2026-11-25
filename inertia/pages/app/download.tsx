@@ -179,7 +179,7 @@ function SiteInstall() {
         <div className="max-w-2xl">
           <h2
             id="site-install-title"
-            className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+            className="font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]"
           >
             Ou instale o site
           </h2>
@@ -236,7 +236,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
                 Beta
               </Badge>
             </div>
-            <h1 className="mt-4 text-balance font-display text-[2.5rem] font-extrabold leading-[1.08] tracking-[-0.02em] sm:text-[3.5rem]">
+            <h1 className="mt-4 text-balance font-display text-[2.5rem] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[3.5rem]">
               O Experimente+ no seu celular.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
@@ -291,7 +291,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
               <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary-accent">
                 <Smartphone aria-hidden="true" className="size-5" />
               </span>
-              <h2 className="mt-4 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]">
+              <h2 className="mt-4 font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]">
                 Está no computador?
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -313,7 +313,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
         <div className="rounded-card border border-warning/30 bg-warning/10 p-5 sm:p-6">
           <h2
             id="beta-title"
-            className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+            className="font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]"
           >
             Esta é uma versão beta
           </h2>
@@ -334,7 +334,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
         </p>
         <h2
           id="install-title"
-          className="mt-2 font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+          className="mt-2 font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
         >
           Como instalar
         </h2>
@@ -349,7 +349,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
                   >
                     {index + 1}
                   </span>
-                  <h3 className="mt-4 font-display text-lg font-extrabold leading-tight">
+                  <h3 className="mt-4 font-display text-lg font-bold leading-tight">
                     {step.title}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
@@ -378,7 +378,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
           </p>
           <h2
             id="ios-title"
-            className="mt-2 font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+            className="mt-2 font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
           >
             Instale no iPhone
           </h2>
@@ -397,7 +397,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
                     >
                       {index + 1}
                     </span>
-                    <h3 className="mt-4 font-display text-lg font-extrabold leading-tight">
+                    <h3 className="mt-4 font-display text-lg font-bold leading-tight">
                       {step.title}
                     </h3>
                     <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -418,7 +418,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
       <section aria-labelledby="features-title" className="app-container py-12 sm:py-16">
         <h2
           id="features-title"
-          className="font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+          className="font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
         >
           O que dá para fazer no app
         </h2>
@@ -432,7 +432,7 @@ export default function AppDownload({ android, qrSvg }: AppDownloadProps) {
                 <Icon aria-hidden="true" className="size-5" />
               </span>
               <div>
-                <h3 className="font-display text-base font-extrabold leading-tight">{title}</h3>
+                <h3 className="text-base font-bold leading-tight">{title}</h3>
                 <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{description}</p>
               </div>
             </li>

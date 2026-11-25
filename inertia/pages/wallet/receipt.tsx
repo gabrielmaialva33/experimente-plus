@@ -89,7 +89,7 @@ export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
               aria-labelledby="receipt-terms-title"
               className="rounded-2xl border border-border-subtle p-4"
             >
-              <h3 id="receipt-terms-title" className="font-display text-[0.9375rem] font-extrabold">
+              <h3 id="receipt-terms-title" className="text-[0.9375rem] font-bold">
                 Regras vigentes no momento da utilização
               </h3>
               <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">

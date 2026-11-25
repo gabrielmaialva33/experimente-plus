@@ -77,10 +77,7 @@ export function ResourceSection({
             <Icon aria-hidden="true" className="size-4.5" />
           </span>
           <div>
-            <h2
-              id={`${id}-heading`}
-              className="font-display text-xl font-extrabold tracking-[-0.01em]"
-            >
+            <h2 id={`${id}-heading`} className="font-display text-xl font-bold tracking-[-0.01em]">
               {title}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>

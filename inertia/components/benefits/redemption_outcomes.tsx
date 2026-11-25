@@ -102,7 +102,7 @@ export function PresentedBenefit({
         <h2
           ref={headingRef}
           tabIndex={-1}
-          className="mt-2 scroll-mt-28 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em] outline-none"
+          className="mt-2 scroll-mt-28 font-display text-2xl font-bold leading-tight tracking-[-0.02em] outline-none"
         >
           {preview.benefit.offer_title}
         </h2>
@@ -257,7 +257,7 @@ export function RefusalPanel({ refusal, headingRef, onScan, onType }: RefusalPan
             id="validation-refusal-title"
             ref={headingRef}
             tabIndex={-1}
-            className="flex scroll-mt-28 items-center gap-2 font-display text-xl font-extrabold leading-tight outline-none sm:text-2xl"
+            className="flex scroll-mt-28 items-center gap-2 font-display text-xl font-bold leading-tight outline-none sm:text-2xl"
           >
             <Icon aria-hidden="true" className="size-6 shrink-0 text-warning-accent sm:hidden" />
             {refusal.title}
@@ -300,7 +300,7 @@ export function RequestProblemPanel({
         id="validation-problem-title"
         ref={headingRef}
         tabIndex={-1}
-        className="flex scroll-mt-28 items-center gap-2 font-display text-xl font-extrabold outline-none"
+        className="flex scroll-mt-28 items-center gap-2 font-display text-xl font-bold outline-none"
       >
         <WifiOff aria-hidden="true" className="size-6 shrink-0 text-warning-accent" />
         {copy.title}

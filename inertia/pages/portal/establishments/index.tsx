@@ -67,7 +67,7 @@ export default function PartnerPlacesPage({ organizations }: PartnerPlacesPagePr
                       <MapPin aria-hidden="true" className="size-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-display font-bold">{place.name}</p>
+                      <p className="truncate font-bold">{place.name}</p>
                       <Badge
                         variant={PLACE_STATE[place.state].variant}
                         appearance="light"

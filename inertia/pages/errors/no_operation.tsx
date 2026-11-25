@@ -21,7 +21,7 @@ export default function NoOperation() {
           </span>
           <h1
             id="no-operation-title"
-            className="mt-6 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
+            className="mt-6 text-balance font-display text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
           >
             Área indisponível para sua conta
           </h1>

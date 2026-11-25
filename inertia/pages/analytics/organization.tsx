@@ -187,7 +187,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
               </div>
-              <p className="mt-1 font-display text-3xl font-extrabold tabular-nums tracking-[-0.02em] sm:text-4xl">
+              <p className="mt-1 text-3xl font-bold tabular-nums tracking-[-0.02em] sm:text-4xl">
                 {compactNumber(value)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
@@ -293,9 +293,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                     <Icon aria-hidden="true" className="size-4 text-primary" />
                     {label}
                   </span>
-                  <strong className="font-display text-lg tabular-nums">
-                    {compactNumber(value)}
-                  </strong>
+                  <strong className="text-lg tabular-nums">{compactNumber(value)}</strong>
                 </div>
               ))}
               <p className="pt-2 text-xs leading-5 text-muted-foreground">
@@ -324,7 +322,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                       key={establishment.establishment_id}
                       className="rounded-2xl bg-background px-4 py-3"
                     >
-                      <p className="font-display font-bold">
+                      <p className="font-bold">
                         <Link
                           href={`/portal/establishments/${establishment.establishment_id}/performance`}
                           className="underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -343,9 +341,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                         ).map(([label, value]) => (
                           <div key={label} className="flex items-baseline justify-between gap-2">
                             <dt className="text-muted-foreground">{label}</dt>
-                            <dd className="font-display font-bold tabular-nums">
-                              {compactNumber(value)}
-                            </dd>
+                            <dd className="font-bold tabular-nums">{compactNumber(value)}</dd>
                           </div>
                         ))}
                       </dl>
@@ -387,7 +383,7 @@ export default function OrganizationAnalytics({ dashboard }: OrganizationAnalyti
                           key={establishment.establishment_id}
                           className="border-b border-border-subtle last:border-0"
                         >
-                          <th scope="row" className="px-3 py-4 text-left font-display font-bold">
+                          <th scope="row" className="px-3 py-4 text-left font-bold">
                             <Link
                               href={`/portal/establishments/${establishment.establishment_id}/performance`}
                               className="underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

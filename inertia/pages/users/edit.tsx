@@ -63,9 +63,7 @@ export default function EditUserPage({ user, operation = null }: EditUserPagePro
         <form onSubmit={handleSubmit} aria-busy={processing}>
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle className="font-display text-lg font-extrabold">
-                Dados do usuário
-              </CardTitle>
+              <CardTitle className="font-display text-lg font-bold">Dados do usuário</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field
@@ -103,7 +101,7 @@ export default function EditUserPage({ user, operation = null }: EditUserPagePro
         {operation ? (
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display text-lg font-extrabold">
+              <CardTitle className="flex items-center gap-2 font-display text-lg font-bold">
                 <Building2 aria-hidden="true" className="size-4 text-primary" />
                 Operação
               </CardTitle>

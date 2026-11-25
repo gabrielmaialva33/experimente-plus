@@ -57,7 +57,7 @@ function CategoryCard({
         <div className="flex shrink-0 items-start justify-between gap-4">
           <span
             aria-hidden="true"
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-lg font-extrabold leading-tight text-primary-accent"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-lg font-bold leading-tight text-primary-accent"
           >
             {category.name.charAt(0).toLocaleUpperCase('pt-BR')}
           </span>
@@ -68,7 +68,7 @@ function CategoryCard({
         <div className="flex min-w-0 flex-1 flex-col sm:mt-5">
           <Heading
             id={`category-${category.slug}`}
-            className="font-display text-lg font-extrabold leading-tight tracking-[-0.01em] sm:text-xl"
+            className="font-display text-lg font-bold leading-tight tracking-[-0.01em] sm:text-xl"
           >
             {category.name}
           </Heading>

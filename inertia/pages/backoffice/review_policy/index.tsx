@@ -179,10 +179,7 @@ function RuleSection({
           <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
             {overline}
           </p>
-          <h2
-            id={`${id}-heading`}
-            className="font-display text-xl font-extrabold tracking-[-0.01em]"
-          >
+          <h2 id={`${id}-heading`} className="font-display text-xl font-bold tracking-[-0.01em]">
             {title}
           </h2>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
@@ -337,7 +334,7 @@ export default function BackofficeReviewPolicy({
               <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                 Concierge IA
               </p>
-              <h2 className="font-display text-xl font-extrabold tracking-[-0.01em]">
+              <h2 className="font-display text-xl font-bold tracking-[-0.01em]">
                 Limites do assistente
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">

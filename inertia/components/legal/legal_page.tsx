@@ -35,7 +35,7 @@ export function LegalPage({
           <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
             Versão do piloto · 26 de setembro de 2026
           </p>
-          <h1 className="mt-2 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]">
+          <h1 className="mt-2 text-balance font-display text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]">
             {title}
           </h1>
           <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">{description}</p>
@@ -54,7 +54,7 @@ export function LegalPage({
             >
               <h2
                 id={`legal-section-${index}`}
-                className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+                className="font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]"
               >
                 {section.title}
               </h2>

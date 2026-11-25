@@ -231,7 +231,7 @@ export default function BenefitAccessesPage({
                   <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
                     Nova concessão
                   </p>
-                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-[-0.01em]">
+                  <h2 className="mt-1 font-display text-xl font-bold tracking-[-0.01em]">
                     Liberar uma carteira
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -454,7 +454,7 @@ export default function BenefitAccessesPage({
                       </div>
 
                       <p className="mt-4 break-all text-sm font-semibold">{access.holder.email}</p>
-                      <h2 className="mt-2 font-display text-lg font-extrabold tracking-[-0.01em]">
+                      <h2 className="mt-2 font-display text-lg font-bold tracking-[-0.01em]">
                         {access.edition.name}
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">

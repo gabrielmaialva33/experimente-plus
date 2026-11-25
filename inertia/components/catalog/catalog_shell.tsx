@@ -88,7 +88,7 @@ export function CatalogShell({
                 )}
                 {eyebrow}
               </p>
-              <h1 className="mt-2 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]">
+              <h1 className="mt-2 text-balance font-display text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]">
                 {title}
               </h1>
               <p className="mt-3 max-w-2xl text-[0.9375rem] leading-6 text-muted-foreground sm:text-base sm:leading-7">

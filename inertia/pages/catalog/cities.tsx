@@ -55,7 +55,7 @@ export default function CatalogCities({ catalog }: CatalogCitiesProps) {
                   </div>
                   <h3
                     id={`city-${city.slug}`}
-                    className="mt-5 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em]"
+                    className="mt-5 font-display text-2xl font-bold leading-tight tracking-[-0.02em]"
                   >
                     {city.name}
                   </h3>

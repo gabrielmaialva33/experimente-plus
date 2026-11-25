@@ -114,7 +114,7 @@ function usePassed(id: string) {
 function PrintContents() {
   return (
     <nav aria-label="Sumário para impressão" className="hidden print:block">
-      <p className="font-display text-xl font-extrabold">Sumário</p>
+      <p className="font-display text-xl font-bold">Sumário</p>
       <ol className="mt-3 space-y-3 text-sm">
         {MANUAL_CHAPTERS.map((chapter, index) => (
           <li key={chapter.id} className="break-inside-avoid">
@@ -169,7 +169,7 @@ export default function ManualPage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent sm:text-[0.8125rem]">
               Manual de uso
             </p>
-            <h1 className="mt-3 max-w-3xl text-balance font-display text-[2.25rem] font-extrabold leading-[1.08] tracking-[-0.02em] sm:text-[3rem]">
+            <h1 className="mt-3 max-w-3xl text-balance font-display text-[2.25rem] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[3rem]">
               Como usar o Experimente+
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
@@ -202,10 +202,7 @@ export default function ManualPage() {
                 className="mt-0.5 size-5 shrink-0 text-warning-accent"
               />
               <div>
-                <p
-                  id="manual-beta-title"
-                  className="font-display font-extrabold leading-tight text-foreground"
-                >
+                <p id="manual-beta-title" className="font-bold leading-tight text-foreground">
                   Versão beta em homologação
                 </p>
                 <p className="mt-1.5 text-sm leading-6 sm:text-[0.9375rem]">
@@ -230,7 +227,7 @@ export default function ManualPage() {
       >
         <h2
           id="manual-start-title"
-          className="font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+          className="font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]"
         >
           Por onde começar: qual é o seu perfil?
         </h2>
@@ -247,9 +244,7 @@ export default function ManualPage() {
                     <Icon aria-hidden="true" className="size-5" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-display text-base font-extrabold leading-tight">
-                      {card.title}
-                    </span>
+                    <span className="block text-base font-bold leading-tight">{card.title}</span>
                     <span className="mt-1 block text-sm leading-6 text-muted-foreground">
                       {card.text}
                     </span>
@@ -319,7 +314,7 @@ export default function ManualPage() {
                       </p>
                       <h2
                         id={`${chapter.id}-titulo`}
-                        className="mt-1 text-balance font-display text-[1.75rem] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
+                        className="mt-1 text-balance font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2rem]"
                       >
                         {chapter.title}
                       </h2>

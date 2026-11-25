@@ -258,7 +258,7 @@ export function EstablishmentPartnerContent({
         </p>
         <h2
           id="partner-content-title"
-          className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight"
+          className="mt-1 font-display text-[1.3125rem] font-bold leading-tight"
         >
           Descubra mais neste lugar
         </h2>
@@ -273,9 +273,7 @@ export function EstablishmentPartnerContent({
             <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
               {section.eyebrow}
             </p>
-            <h3 className="mt-1 font-display text-lg font-extrabold leading-tight">
-              {section.title}
-            </h3>
+            <h3 className="mt-1 font-display text-lg font-bold leading-tight">{section.title}</h3>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {section.items.map((item, _index, items) => {
@@ -333,7 +331,7 @@ export function EstablishmentPartnerContent({
 
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
-                        <h4 className="font-display font-extrabold leading-6">{item.title}</h4>
+                        <h4 className="font-bold leading-6">{item.title}</h4>
                         {price ? (
                           <span className="shrink-0 text-sm font-semibold text-cta-accent">
                             {price}

@@ -433,7 +433,7 @@ export default function PartnerValidationPage({
               <p className="mt-2 text-sm leading-6 text-foreground">
                 Confira o titular e o benefício antes de confirmar.
               </p>
-              <p className="mt-4 font-display text-3xl font-extrabold tabular-nums">
+              <p className="mt-4 text-3xl font-bold tabular-nums">
                 {previewStage.preview.benefit.remaining_redemptions}
               </p>
               <p className="text-sm text-foreground">

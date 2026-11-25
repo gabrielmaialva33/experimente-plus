@@ -23,7 +23,7 @@ export default function NotFound() {
           </p>
           <h1
             id="not-found-title"
-            className="mt-2 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
+            className="mt-2 text-balance font-display text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
           >
             Página não encontrada
           </h1>

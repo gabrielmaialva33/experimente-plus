@@ -57,7 +57,7 @@ export function TaskCard({
         <p
           data-slot="task-card-value"
           className={cn(
-            'font-display text-[2.75rem] font-extrabold leading-none tabular-nums',
+            'text-[2.75rem] font-bold leading-none tabular-nums',
             tone === 'primary' ? 'text-primary' : 'text-muted-foreground'
           )}
         >

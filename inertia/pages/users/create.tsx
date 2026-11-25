@@ -55,9 +55,7 @@ export default function CreateUserPage({ operation = null }: CreateUserPageProps
         <form onSubmit={handleSubmit} aria-busy={processing}>
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle className="font-display text-lg font-extrabold">
-                Dados do usuário
-              </CardTitle>
+              <CardTitle className="font-display text-lg font-bold">Dados do usuário</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <Field

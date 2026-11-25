@@ -33,7 +33,7 @@ export default function ServerError({ error }: ServerErrorProps) {
           </p>
           <h1
             id="server-error-title"
-            className="mt-2 text-balance font-display text-[1.875rem] font-extrabold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
+            className="mt-2 text-balance font-display text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[2.5rem]"
           >
             Não foi possível concluir
           </h1>

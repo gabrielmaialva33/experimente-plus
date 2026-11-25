@@ -333,9 +333,7 @@ export default function UsersPage({ users, search, sortBy, direction }: UsersPag
         <Card>
           <CardHeader>
             <CardHeading>
-              <CardTitle className="font-display text-lg font-extrabold">
-                Todos os usuários
-              </CardTitle>
+              <CardTitle className="font-display text-lg font-bold">Todos os usuários</CardTitle>
             </CardHeading>
             <CardToolbar className="w-full sm:w-auto">
               <form

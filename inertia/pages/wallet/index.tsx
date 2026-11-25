@@ -73,9 +73,7 @@ function SummaryItem({ label, value }: { label: string; value: number }) {
         <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
           {label}
         </p>
-        <p className="mt-2 font-display text-[2.5rem] font-extrabold leading-none tabular-nums">
-          {value}
-        </p>
+        <p className="mt-2 text-[2.5rem] font-bold leading-none tabular-nums">{value}</p>
       </CardContent>
     </Card>
   )
@@ -137,7 +135,7 @@ export default function WalletPage({ wallet, savings }: WalletPageProps) {
                     <MapPin className="size-3.5" aria-hidden="true" />
                     {edition.city.name} · {edition.city.state_code}
                   </p>
-                  <h2 className="mt-1.5 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]">
+                  <h2 className="mt-1.5 font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]">
                     {access.offer_id
                       ? 'Voucher avulso · ' + (benefits[0]?.title ?? edition.name)
                       : edition.name}
@@ -211,7 +209,7 @@ export default function WalletPage({ wallet, savings }: WalletPageProps) {
                               {meta.label}
                             </Badge>
 
-                            <h3 className="mt-3 font-display text-lg font-extrabold leading-tight">
+                            <h3 className="mt-3 font-display text-lg font-bold leading-tight">
                               {benefit.title}
                             </h3>
                             <p className="mt-1 text-sm font-semibold text-muted-foreground">

@@ -121,7 +121,7 @@ export default function PermissionsPage({ permissions }: PermissionsPageProps) {
                       <KeyRound aria-hidden="true" className="size-4" />
                     </span>
                     {/* Wraps on a phone: a clipped area name ("Acessos a ediç…") hides which one it is. */}
-                    <span className="min-w-0 font-display font-extrabold leading-snug">
+                    <span className="min-w-0 font-bold leading-snug">
                       {permissionResourceLabel(resource)}
                     </span>
                   </span>

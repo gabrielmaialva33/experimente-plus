@@ -229,7 +229,7 @@ export default function PurchasesPage({
                       ) : null}
                     </div>
                     <div className="shrink-0 sm:text-right">
-                      <p className="font-display text-2xl font-extrabold tabular-nums">
+                      <p className="text-2xl font-bold tabular-nums">
                         {money(purchase.amount_cents, purchase.currency)}
                       </p>
                       <p className="text-sm text-muted-foreground">

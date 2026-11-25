@@ -33,9 +33,7 @@ export function EmptyState({
           <Icon className="size-5" aria-hidden="true" />
         </span>
       )}
-      <Heading className="text-balance font-display text-lg font-extrabold leading-6">
-        {title}
-      </Heading>
+      <Heading className="text-balance font-display text-lg font-bold leading-6">{title}</Heading>
       {description && (
         <p className="mt-1.5 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
       )}

@@ -83,7 +83,7 @@ export function PerformanceStat({
         </span>
       </div>
       {value !== undefined ? (
-        <p className="mt-1 font-display text-3xl font-extrabold tabular-nums tracking-[-0.02em] sm:text-4xl">
+        <p className="mt-1 text-3xl font-bold tabular-nums tracking-[-0.02em] sm:text-4xl">
           {value}
         </p>
       ) : null}

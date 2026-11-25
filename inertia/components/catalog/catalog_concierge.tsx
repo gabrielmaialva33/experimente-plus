@@ -105,7 +105,7 @@ export function CatalogConcierge({ citySlug, cityName }: CatalogConciergeProps) 
           </p>
           <h2
             id="catalog-concierge-title"
-            className="mt-1 font-display text-[1.3125rem] font-extrabold leading-tight tracking-[-0.01em]"
+            className="mt-1 font-display text-[1.3125rem] font-bold leading-tight tracking-[-0.01em]"
           >
             O que você quer fazer em {cityName}?
           </h2>

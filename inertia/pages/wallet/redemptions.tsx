@@ -74,7 +74,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
                 <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
                   {redemption.establishment.name}
                 </p>
-                <h2 className="mt-1 font-display text-lg font-extrabold leading-tight">
+                <h2 className="mt-1 font-display text-lg font-bold leading-tight">
                   {redemption.offer.title}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">{redemption.edition.name}</p>

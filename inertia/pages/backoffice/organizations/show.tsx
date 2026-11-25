@@ -349,7 +349,7 @@ export default function OrganizationReviewPage({
             className="scroll-mt-24 space-y-4 rounded-card border border-border-subtle bg-card p-5 sm:p-6"
           >
             <div>
-              <h2 id="decisao-titulo" className="font-display text-2xl font-extrabold">
+              <h2 id="decisao-titulo" className="font-display text-2xl font-bold">
                 Decisão
               </h2>
               <p className="mt-1 max-w-3xl text-sm text-muted-foreground">

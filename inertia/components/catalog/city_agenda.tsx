@@ -236,7 +236,7 @@ function DateTile({ startsAt, timeZone }: { startsAt: string; timeZone: string |
       <span className="text-[0.6875rem] font-extrabold tracking-[0.1em] text-primary-accent">
         {parts.weekday}
       </span>
-      <span className="font-display text-[1.625rem] font-extrabold leading-none">{parts.day}</span>
+      <span className="font-display text-[1.625rem] font-bold leading-none">{parts.day}</span>
       <span className="mt-0.5 text-[0.6875rem] font-bold text-muted-foreground">{parts.month}</span>
     </span>
   )
@@ -299,7 +299,7 @@ function AgendaCard({
 
             <h4
               id={titleId}
-              className="mt-1.5 font-display text-[1.0625rem] font-extrabold leading-snug underline-offset-4 group-hover:underline"
+              className="mt-1.5 font-display text-[1.0625rem] font-bold leading-snug underline-offset-4 group-hover:underline"
             >
               {item.title}
             </h4>

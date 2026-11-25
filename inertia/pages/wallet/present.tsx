@@ -73,7 +73,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
             <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-primary-accent">
               {benefit.establishment_name}
             </p>
-            <h2 className="mt-1.5 font-display text-[1.625rem] font-extrabold leading-tight tracking-[-0.02em]">
+            <h2 className="mt-1.5 font-display text-[1.625rem] font-bold leading-tight tracking-[-0.02em]">
               {benefit.offer_title}
             </h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -92,7 +92,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
             </div>
 
             <p
-              className="mt-4 flex items-center gap-2 font-display text-lg font-extrabold tabular-nums"
+              className="mt-4 flex items-center gap-2 text-lg font-bold tabular-nums"
               aria-hidden="true"
             >
               <Clock3 className="size-5 text-primary-accent" />
@@ -150,7 +150,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
                 <dt className="text-xs font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
                   Utilizações restantes
                 </dt>
-                <dd className="mt-1 font-display text-2xl font-extrabold leading-tight tabular-nums">
+                <dd className="mt-1 text-2xl font-bold leading-tight tabular-nums">
                   {benefit.remaining_redemptions}
                 </dd>
               </div>
@@ -161,10 +161,7 @@ export default function PresentBenefitPage({ presentation }: PresentBenefitPageP
                 aria-labelledby="benefit-terms-title"
                 className="mt-5 rounded-2xl border border-border-subtle p-4"
               >
-                <h3
-                  id="benefit-terms-title"
-                  className="font-display text-[0.9375rem] font-extrabold"
-                >
+                <h3 id="benefit-terms-title" className="text-[0.9375rem] font-bold">
                   Regras do benefício
                 </h3>
                 <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
