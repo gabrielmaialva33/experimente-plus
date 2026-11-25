@@ -198,7 +198,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'inicio-home',
-              'Página inicial do Experimente+ com o título "Encontre lugares e serviços na sua cidade" e o botão laranja "Escolher uma cidade" destacado.',
+              'Página inicial do Experimente+ com o título "Encontre lugares e serviços na sua cidade" e o botão roxo "Escolher uma cidade" destacado.',
               'A página inicial. O botão Escolher uma cidade leva direto ao catálogo.'
             )
           ),
@@ -231,14 +231,14 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         blocks: [
           steps(
             'No celular Android, abra a página [Baixar o app](/app). O link também está no rodapé de todas as páginas públicas, em **Baixar o app**. Se estiver no computador, aponte a câmera do celular para o QR da página.',
-            'Toque no botão laranja **Baixar para Android**. Se puder, use o Wi-Fi.',
+            'Toque no botão roxo **Baixar para Android**. Se puder, use o Wi-Fi.',
             'Abra o arquivo baixado. O Android pede para permitir apps desta fonte: permita. É o esperado, porque o app ainda não está na loja.',
             'Toque em **Instalar** e depois em **Abrir**.'
           ),
           figures(
             image(
               'inicio-app',
-              'Página "O Experimente+ no seu celular" com o selo Beta e o botão laranja "Baixar para Android" destacado; o código QR da página aparece coberto.',
+              'Página "O Experimente+ no seu celular" com o selo Beta e o botão roxo "Baixar para Android" destacado; o código QR da página aparece coberto.',
               'A página /app. O botão Baixar para Android fica logo abaixo do título.'
             )
           ),
@@ -298,7 +298,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             ],
             [
               'Membro da operação, Responsável pela operação',
-              'Aparecem embaixo do menu azul e em **Conta**. Dizem só como a conta está ligada à operação e não dão permissões. Responsável pela operação não é o mesmo que **Responsável técnico**, o papel da equipe do Experimente+ que pode tudo na plataforma.',
+              'Aparecem embaixo do menu roxo-escuro e em **Conta**. Dizem só como a conta está ligada à operação e não dão permissões. Responsável pela operação não é o mesmo que **Responsável técnico**, o papel da equipe do Experimente+ que pode tudo na plataforma.',
             ],
             [
               'Organização (negócio)',
@@ -517,12 +517,12 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             'Para quem só valida no balcão, escolha **Editor**. Não existe um papel só de validação: o Editor também edita dados e ofertas.'
           ),
           p(
-            'Todos começam no **Portal**, na **Visão geral**. O menu azul da esquerda mostra só o que o seu papel permite.'
+            'Todos começam no **Portal**, na **Visão geral**. O menu roxo-escuro da esquerda mostra só o que o seu papel permite.'
           ),
           figures(
             image(
               'parceiro-menu',
-              'Menu lateral azul do Portal do parceiro com Visão geral, Validar benefício, Utilizações, Avaliações, Experiências e eventos, Dados do lugar, Desempenho e Equipe (destacado).',
+              'Menu lateral roxo-escuro do Portal do parceiro com Visão geral, Validar benefício, Utilizações, Avaliações, Experiências e eventos, Dados do lugar, Desempenho e Equipe (destacado).',
               'O menu do Portal, para um Administrador do negócio.'
             )
           ),
@@ -779,7 +779,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
             ),
             image(
               'parceiro-validar-previa-celular',
-              'Prévia no celular com o benefício Café filtrado de cortesia, o lugar, o titular (e-mail borrado), a validade do código, as regras, o quadro Apresentação válida e o botão laranja Confirmar utilização destacado.',
+              'Prévia no celular com o benefício Café filtrado de cortesia, o lugar, o titular (e-mail borrado), a validade do código, as regras, o quadro Apresentação válida e o botão roxo Confirmar utilização destacado.',
               'A prévia: nada é usado até você confirmar.'
             ),
             image(
@@ -1069,7 +1069,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'visitante-como-chegar',
-              'Quadro "Entre em contato" com o botão azul Como chegar destacado, seguido de Visitar o site e Compartilhar.',
+              'Quadro "Entre em contato" com o botão roxo Como chegar destacado, seguido de Visitar o site e Compartilhar.',
               'Como chegar abre a rota no Google Maps.'
             )
           ),
@@ -1398,7 +1398,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'carteira',
-              'Carteira no computador com os benefícios de um pacote; o botão laranja Usar benefício de um benefício disponível está destacado.',
+              'Carteira no computador com os benefícios de um pacote; o botão roxo Usar benefício de um benefício disponível está destacado.',
               'Os benefícios de um pacote.'
             ),
             image(
@@ -1500,7 +1500,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           steps(
             'Entre com a sua conta. O Portal abre na **Visão geral**. Se você também é explorador, toque em **Negócios**, no topo.',
             'Veja os três quadros: **Avaliações sem resposta**, **Dados do lugar** e **Experiências e eventos**. O link de cada um leva à tarefa.',
-            'Para validar um benefício, use o botão laranja **Validar benefício**, no topo da Visão geral.'
+            'Para validar um benefício, use o botão roxo **Validar benefício**, no topo da Visão geral.'
           ),
           figures(
             image(
@@ -2545,14 +2545,14 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
         needs: ['um celular Android 7.0 ou mais novo'],
         blocks: [
           steps(
-            'No celular, abra a página [Baixar o app](/app) e toque no botão laranja **Baixar para Android**.',
+            'No celular, abra a página [Baixar o app](/app) e toque no botão roxo **Baixar para Android**.',
             'Abra o arquivo e permita instalar apps desta fonte quando o Android pedir.',
             'Toque em **Instalar** e depois em **Abrir**.'
           ),
           figures(
             image(
               'app-instalar',
-              'Página /app no celular com o selo Beta e o botão laranja Baixar para Android destacado, acima de Usar no navegador.',
+              'Página /app no celular com o selo Beta e o botão roxo Baixar para Android destacado, acima de Usar no navegador.',
               'Baixar para Android, na página /app.'
             )
           ),
@@ -2654,7 +2654,7 @@ export const MANUAL_CHAPTERS: readonly ManualChapter[] = [
           figures(
             image(
               'app-lugar',
-              'Página do Ateliê do Café no app com Compartilhar, Favoritar e Mais opções (1), Como chegar, seguir e roteiro (2) e o botão laranja Ver oferta (3) destacados.',
+              'Página do Ateliê do Café no app com Compartilhar, Favoritar e Mais opções (1), Como chegar, seguir e roteiro (2) e o botão roxo Ver oferta (3) destacados.',
               'As ações do topo (1), de visita (2) e o benefício (3).'
             ),
             image(
