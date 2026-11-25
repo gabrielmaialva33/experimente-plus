@@ -16,7 +16,7 @@ export default class InertiaAppDownloadController {
       type: 'svg',
       margin: 1,
       errorCorrectionLevel: 'M',
-      color: { dark: '#13467c', light: '#ffffff' },
+      color: { dark: '#2c145c', light: '#ffffff' },
     })
 
     return inertia.render('app/download', {

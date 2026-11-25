@@ -8,8 +8,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#13467c",
-  "background_color": "#f3f5f7",
+  "theme_color": "#2c145c",
+  "background_color": "#f8f5ef",
   "categories": ["travel", "food", "lifestyle"],
   "icons": [
     {

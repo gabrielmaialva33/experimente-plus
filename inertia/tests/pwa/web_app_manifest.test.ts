@@ -47,11 +47,11 @@ describe('web app manifest', () => {
     expect(manifest.description).toMatch(/norte do Paraná/)
   })
 
-  it('uses the brand navy and the light canvas, matching the page chrome', () => {
-    expect(manifest.theme_color).toBe('#13467c')
+  it('uses the brand deep purple and the light canvas, matching the page chrome', () => {
+    expect(manifest.theme_color).toBe('#2c145c')
     expect(layout).toContain(`<meta name="theme-color" content="${manifest.theme_color}" />`)
-    // --surface-base in inertia/css/app.css, oklch(0.969 0.003 247.9) in sRGB.
-    expect(manifest.background_color).toBe('#f3f5f7')
+    // --surface-base in inertia/css/app.css, oklch(0.9708 0.0086 84.57) in sRGB.
+    expect(manifest.background_color).toBe('#f8f5ef')
   })
 
   it('ships 192 and 512 icons, plus maskable ones, at their declared sizes', () => {
@@ -133,12 +133,12 @@ describe('page head for installation', () => {
     expect(png('/apple-touch-icon.png')).toEqual({ width: 180, height: 180, alpha: false })
   })
 
-  it('declares the dark chrome color before the navy fallback, since the first match wins', () => {
+  it('declares the dark canvas color before the deep purple fallback, since the first match wins', () => {
     const dark = layout.indexOf(
-      '<meta name="theme-color" content="#172641" media="(prefers-color-scheme: dark)" />'
+      '<meta name="theme-color" content="#151319" media="(prefers-color-scheme: dark)" />'
     )
     expect(dark).toBeGreaterThan(-1)
-    expect(dark).toBeLessThan(layout.indexOf('<meta name="theme-color" content="#13467c" />'))
+    expect(dark).toBeLessThan(layout.indexOf('<meta name="theme-color" content="#2c145c" />'))
   })
 })
 
