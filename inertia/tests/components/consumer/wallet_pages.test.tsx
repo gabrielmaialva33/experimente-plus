@@ -192,6 +192,43 @@ describe('consumer wallet pages', () => {
     expect(within(benefit!).getByText('1 utilização restante')).toBeVisible()
     expect(within(benefit!).getByText('Disponível agora')).toBeVisible()
     expect(within(benefit!).getAllByRole('link')).toHaveLength(1)
+    // Ready to use speaks the brand's action color, on a deep purple stub; green is not used.
+    expect(within(benefit!).getByText('Disponível agora')).toHaveClass(
+      'bg-primary-soft',
+      'text-primary-accent'
+    )
+    expect(within(benefit!).getByText('Benefício').parentElement).toHaveClass(
+      'bg-chrome',
+      'text-chrome-foreground'
+    )
+    expect(within(benefit!).getByRole('link', { name: 'Usar benefício' })).toHaveClass('bg-cta')
+    expect(benefit!.querySelector('[class*="success"]')).toBeNull()
+  })
+
+  it('shows a used benefit as neutral, with when it was used and no action', () => {
+    const used = structuredClone(walletWithBenefit)
+    Object.assign(used.passes[0].benefits[0], {
+      availability: 'redeemed',
+      remaining_redemptions: 0,
+      latest_redemption: {
+        id: '9',
+        receipt_code: 'EXP-ABC123',
+        redeemed_at: '2026-09-12T22:05:00.000Z',
+      },
+    })
+    render(<WalletPage wallet={used} />)
+
+    const benefit = screen
+      .getByRole('heading', { name: 'Café cortesia' })
+      .closest<HTMLElement>('[data-slot="card"]')
+    expect(within(benefit!).getByText('Utilizado')).toBeVisible()
+    expect(within(benefit!).getByText('Utilizado em 12/09 às 19:05')).toBeVisible()
+    expect(within(benefit!).getByText('Benefício').parentElement).toHaveClass(
+      'bg-status-neutral',
+      'text-status-neutral-foreground'
+    )
+    expect(within(benefit!).queryByRole('link')).not.toBeInTheDocument()
+    expect(benefit!.querySelector('[class*="success"], .bg-chrome, .bg-cta')).toBeNull()
   })
 
   it('uses a canonical empty state for Utilizações', () => {

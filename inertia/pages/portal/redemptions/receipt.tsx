@@ -34,14 +34,14 @@ export default function PartnerReceiptPage({ receipt }: PartnerReceiptPageProps)
           aria-labelledby="receipt-title"
           className="mx-auto max-w-2xl overflow-hidden rounded-card border border-border-subtle bg-card"
         >
-          <div className="bg-success-soft px-6 py-5 sm:px-8">
-            <p className="flex items-center gap-2 font-bold text-success-accent">
+          <div className="bg-status-neutral px-6 py-5 sm:px-8">
+            <p className="flex items-center gap-2 font-bold text-status-neutral-foreground">
               <CheckCircle2 aria-hidden="true" className="size-6" />
               Utilização confirmada
             </p>
             <h1
               id="receipt-title"
-              className="mt-3 font-display text-2xl font-extrabold tracking-[-0.02em] sm:text-3xl"
+              className="mt-3 font-display text-2xl font-bold tracking-[-0.02em] sm:text-3xl"
             >
               {receipt.offer.title}
             </h1>

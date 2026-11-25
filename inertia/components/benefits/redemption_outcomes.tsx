@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCheck,
   CheckCircle2,
+  History,
   Keyboard,
   LockKeyhole,
   PauseCircle,
@@ -21,6 +22,7 @@ import type { Ref } from 'react'
 
 import { Button } from '~/components/ui/button'
 import type { RedemptionRequestProblem } from '~/lib/redemption_validation'
+import { cn } from '~/lib/utils'
 import type {
   RedemptionPreviewView,
   RedemptionReceipt,
@@ -87,7 +89,7 @@ function NextButtons({ onScan, onType, scanLabel }: NextActions & { scanLabel: s
   )
 }
 
-/** The benefit as the customer's ticket: the navy stub names it, the body says where and who. */
+/** The benefit as the customer's ticket: the deep purple stub names it, the body says where and who. */
 export function PresentedBenefit({
   preview,
   headingRef,
@@ -163,18 +165,31 @@ export function ReceiptPanel({ receipt, replay, headingRef, onScan, onType }: Re
   return (
     <section
       aria-labelledby="validation-receipt-title"
-      className="overflow-hidden rounded-card border border-success/25 bg-card"
+      className={cn(
+        'overflow-hidden rounded-card border bg-card',
+        replay ? 'border-status-neutral-border' : 'border-success/25'
+      )}
     >
-      <div className="bg-success-soft px-5 py-5 sm:px-6">
-        <p className="flex items-center gap-2 font-bold text-success-accent">
-          <CheckCircle2 aria-hidden="true" className="size-6 shrink-0" />
+      {/* Green belongs to a use registered now; a code confirmed before reads neutral. */}
+      <div className={cn('px-5 py-5 sm:px-6', replay ? 'bg-status-neutral' : 'bg-success-soft')}>
+        <p
+          className={cn(
+            'flex items-center gap-2 font-bold',
+            replay ? 'text-status-neutral-foreground' : 'text-success-accent'
+          )}
+        >
+          {replay ? (
+            <History aria-hidden="true" className="size-6 shrink-0" />
+          ) : (
+            <CheckCircle2 aria-hidden="true" className="size-6 shrink-0" />
+          )}
           {replay ? 'Este QR code já tinha sido confirmado' : 'Utilização registrada'}
         </p>
         <h2
           id="validation-receipt-title"
           ref={headingRef}
           tabIndex={-1}
-          className="mt-3 scroll-mt-28 font-display text-2xl font-extrabold leading-tight tracking-[-0.02em] outline-none sm:text-3xl"
+          className="mt-3 scroll-mt-28 font-display text-2xl font-bold leading-tight tracking-[-0.02em] outline-none sm:text-3xl"
         >
           {receipt.offer.title}
         </h2>

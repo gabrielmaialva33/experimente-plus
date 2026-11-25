@@ -38,13 +38,13 @@ export default function WalletReceiptPage({ receipt }: WalletReceiptPageProps) {
       </Head>
 
       <Card className="mx-auto max-w-3xl overflow-hidden border border-border-subtle bg-card">
-        <CardHeader className="flex-col items-start bg-success-soft">
-          <Badge variant="success" appearance="outline" shape="pill" size="lg">
+        <CardHeader className="flex-col items-start bg-status-neutral">
+          <Badge variant="secondary" appearance="outline" shape="pill" size="lg">
             <CheckCircle2 aria-hidden="true" />
             Utilização confirmada
           </Badge>
           <div>
-            <h2 className="font-display text-[1.625rem] font-extrabold leading-tight tracking-[-0.02em]">
+            <h2 className="font-display text-[1.625rem] font-bold leading-tight tracking-[-0.02em]">
               {receipt.offer.title}
             </h2>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">

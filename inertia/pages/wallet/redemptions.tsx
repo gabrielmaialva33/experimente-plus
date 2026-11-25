@@ -64,7 +64,7 @@ export default function WalletRedemptionsPage({ history }: WalletRedemptionsPage
             <Card key={redemption.id} className="h-full border border-border-subtle bg-card">
               <CardContent className="flex h-full flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-full bg-success-soft text-success-accent">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-status-neutral text-status-neutral-foreground">
                     <CheckCircle2 className="size-5" aria-hidden="true" />
                   </span>
                   <code className="rounded-full border border-border-subtle bg-background px-3 py-1 text-xs font-semibold">

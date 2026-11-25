@@ -1,11 +1,11 @@
 import { Head, Link } from '@inertiajs/react'
 import {
   CalendarClock,
-  CheckCircle2,
   Clock3,
   History,
   MapPin,
   PauseCircle,
+  Ticket,
   TicketCheck,
 } from 'lucide-react'
 
@@ -15,6 +15,7 @@ import { EmptyState } from '~/components/empty_state'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
+import { cn } from '~/lib/utils'
 import type { BenefitWallet, WalletBenefit } from '~/types/benefit'
 import type { BenefitSavings } from '~/types/benefit_savings'
 
@@ -23,11 +24,13 @@ interface WalletPageProps {
   savings?: BenefitSavings
 }
 
-type BadgeVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'destructive'
+type BadgeVariant = 'primary' | 'secondary' | 'info' | 'warning' | 'destructive'
 
+// Ready to use takes the brand's action color; used is neutral. Green is kept for the live
+// confirmation at the counter, so a past use never reads as a fresh validation.
 const stateMeta: Record<string, { label: string; variant: BadgeVariant; icon: typeof Clock3 }> = {
-  available: { label: 'Disponível agora', variant: 'success', icon: CheckCircle2 },
-  upcoming: { label: 'Em breve', variant: 'primary', icon: CalendarClock },
+  available: { label: 'Disponível agora', variant: 'primary', icon: Ticket },
+  upcoming: { label: 'Em breve', variant: 'info', icon: CalendarClock },
   outside_schedule: { label: 'Fora do horário', variant: 'warning', icon: Clock3 },
   paused: { label: 'Temporariamente pausado', variant: 'warning', icon: PauseCircle },
   expired: { label: 'Encerrado', variant: 'secondary', icon: Clock3 },
@@ -44,6 +47,18 @@ function formatDate(value: string | null | undefined): string {
     year: 'numeric',
     timeZone: 'America/Sao_Paulo',
   }).format(new Date(value))
+}
+
+function formatUsedAt(value: string): string {
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).formatToParts(new Date(value))
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('day')}/${part('month')} às ${part('hour')}:${part('minute')}`
 }
 
 function benefitLabel(benefit: WalletBenefit): string {
@@ -176,18 +191,28 @@ export default function WalletPage({ wallet, savings }: WalletPageProps) {
                       )
                       const canUse =
                         state === 'available' && benefit.offer_id > 0 && benefit.access_id > 0
+                      const usedAt =
+                        state === 'redeemed' ? benefit.latest_redemption?.redeemed_at : null
 
                       return (
                         <Card
                           key={benefit.key}
                           className="relative h-full overflow-hidden border border-border-subtle bg-card"
                         >
-                          {/* Direction A's ticket: a navy stub carries the benefit itself. */}
-                          <div className="bg-primary px-5 pb-5 pt-4 text-primary-foreground">
+                          {/* Direction A's ticket: a deep purple stub carries the benefit itself;
+                              a used ticket keeps a neutral stub. */}
+                          <div
+                            className={cn(
+                              'px-5 pb-5 pt-4',
+                              state === 'redeemed'
+                                ? 'bg-status-neutral text-status-neutral-foreground'
+                                : 'bg-chrome text-chrome-foreground'
+                            )}
+                          >
                             <p className="text-xs font-extrabold uppercase tracking-[0.1em] opacity-85">
                               Benefício
                             </p>
-                            <p className="mt-1 font-display text-[1.375rem] font-extrabold leading-tight">
+                            <p className="mt-1 font-display text-[1.375rem] font-bold leading-tight">
                               {benefitLabel(benefit)}
                             </p>
                           </div>
@@ -239,9 +264,11 @@ export default function WalletPage({ wallet, savings }: WalletPageProps) {
                                 </Button>
                               ) : (
                                 <p className="rounded-2xl border border-border-subtle bg-status-neutral px-4 py-3 text-center text-xs leading-5 text-status-neutral-foreground">
-                                  {state === 'redeemed'
-                                    ? 'Todas as utilizações foram concluídas.'
-                                    : 'Este benefício não pode ser apresentado agora.'}
+                                  {usedAt
+                                    ? `Utilizado em ${formatUsedAt(usedAt)}`
+                                    : state === 'redeemed'
+                                      ? 'Todas as utilizações foram concluídas.'
+                                      : 'Este benefício não pode ser apresentado agora.'}
                                 </p>
                               )}
                               <p className="mt-2 text-center text-xs font-semibold text-muted-foreground">

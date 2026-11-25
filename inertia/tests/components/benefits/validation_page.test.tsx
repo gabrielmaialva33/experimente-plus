@@ -187,6 +187,8 @@ describe('Validar benefício', () => {
 
     const receipt = await screen.findByRole('region', { name: 'Sobremesa cortesia' })
     expect(within(receipt).getByText('Utilização registrada')).toBeVisible()
+    // Green belongs to the use registered now.
+    expect(within(receipt).getByText('Utilização registrada')).toHaveClass('text-success-accent')
     expect(within(receipt).getByText('EXP-0123456789ABCDEF')).toBeVisible()
     expect(within(receipt).getByRole('link', { name: 'Abrir comprovante' })).toHaveAttribute(
       'href',
@@ -257,6 +259,11 @@ describe('Validar benefício', () => {
 
     const receipt = await screen.findByRole('region', { name: 'Sobremesa cortesia' })
     expect(within(receipt).getByText('Este QR code já tinha sido confirmado')).toBeVisible()
+    // A code confirmed before reads neutral: it must not pass for a fresh validation.
+    expect(within(receipt).getByText('Este QR code já tinha sido confirmado')).toHaveClass(
+      'text-status-neutral-foreground'
+    )
+    expect(receipt.querySelector('[class*="success"]')).toBeNull()
     expect(within(receipt).getByText(/Nenhuma utilização nova foi registrada/)).toBeVisible()
     expect(within(receipt).getByText('EXP-0123456789ABCDEF')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Confirmar utilização' })).not.toBeInTheDocument()

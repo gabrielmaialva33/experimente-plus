@@ -14,6 +14,7 @@ export interface WalletBenefit {
   terms: string | null
   max_redemptions_per_access: number
   remaining_redemptions?: number
+  latest_redemption?: { id: string; receipt_code: string; redeemed_at: string } | null
   establishment: {
     id: number
     public_name: string
