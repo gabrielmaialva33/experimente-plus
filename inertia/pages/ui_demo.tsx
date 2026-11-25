@@ -3,7 +3,6 @@ import { Head } from '@inertiajs/react'
 import { FileText, Users, DollarSign, TrendingUp, Calendar, CheckCircle, Clock } from 'lucide-react'
 import { MainLayout } from '~/layouts'
 import { AnimatedPage } from '~/components/animated_page'
-import { ThemeCustomizer } from '~/components/theme_customizer'
 import { ThemeStatus } from '~/components/theme/theme_status'
 import { EmptyState } from '~/components/empty_state'
 import { Button } from '~/components/ui/core/button'
@@ -374,9 +373,6 @@ export default function UiDemoPage() {
           </Tabs>
         </div>
       </AnimatedPage>
-
-      {/* Theme Customizer */}
-      <ThemeCustomizer />
     </MainLayout>
   )
 }
